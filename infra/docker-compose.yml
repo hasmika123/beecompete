@@ -1,0 +1,41 @@
+# Local development infrastructure (F4): Postgres + Redis.
+#
+# This is a DEV convenience only — NOT the deployment target. Prod/staging Postgres is
+# managed off-box (Neon) and is never in Compose (architecture §2/§14). Redis holds only
+# cache + rate-limit counters, so it runs without persistence (ADR 10 — nothing durable).
+#
+# Usage: `docker compose -f infra/docker-compose.yml up -d` (values come from the repo
+# root .env — see .env.example).
+name: beecompete
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-beecompete}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-beecompete}
+      POSTGRES_DB: ${POSTGRES_DB:-beecompete}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-beecompete} -d ${POSTGRES_DB:-beecompete}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    # No volume by design: cache + rate-limit counters only, nothing to persist (ADR 10).
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

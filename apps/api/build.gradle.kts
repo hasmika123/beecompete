@@ -28,7 +28,18 @@ dependencies {
 	}
 	implementation("org.springframework.boot:spring-boot-starter-undertow")
 
+	// Persistence (F4): Spring Data JPA + Hibernate, PostgreSQL, Liquibase migrations
+	// (architecture §3 Persistence). No entities yet — R1-1 adds the first schema.
+	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+	implementation("org.liquibase:liquibase-core")
+	runtimeOnly("org.postgresql:postgresql")
+
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
+	// Integration tests run against a real Postgres via Testcontainers (needs Docker) —
+	// no H2, so JSONB/FTS behave as in prod. @ServiceConnection wires the datasource.
+	testImplementation("org.springframework.boot:spring-boot-testcontainers")
+	testImplementation("org.testcontainers:junit-jupiter")
+	testImplementation("org.testcontainers:postgresql")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
