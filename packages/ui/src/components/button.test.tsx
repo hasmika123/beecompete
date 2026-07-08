@@ -18,7 +18,7 @@ describe('Button', () => {
     );
     const btn = screen.getByRole('button', { name: 'Browse' });
     expect(btn.className).toContain('bg-brand-gold');
-    expect(btn.className).toContain('h-11');
+    expect(btn.className).toContain('h-10.5');
   });
 
   it('buttonClasses merges custom classes with variant classes', () => {

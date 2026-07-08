@@ -12,6 +12,7 @@ import {
   Textarea,
 } from '@beecompete/ui';
 import {
+  ArrowRight,
   Calendar,
   GraduationCap,
   Heart,
@@ -148,9 +149,6 @@ export default function DesignPage() {
                 weight="duotone"
                 className="size-14 text-brand-gold drop-shadow-none transition-transform group-hover:scale-105"
               />
-              <Badge variant="verified" className="absolute top-3 right-3">
-                Verified
-              </Badge>
             </div>
             <CardHeader>
               <div className="flex flex-wrap items-center gap-1.5">
@@ -160,30 +158,69 @@ export default function DesignPage() {
                 <Badge variant="outline">Grades 8–10</Badge>
               </div>
               <CardTitle className="pt-1.5">AMC 10</CardTitle>
+              {/* Organizer attribution — the ORG is what's verified (DQ13), so the seal
+                  sits on the org, icon-only. */}
+              <div className="flex items-center gap-2 pt-0.5">
+                <span
+                  aria-hidden="true"
+                  className="flex size-6 shrink-0 items-center justify-center rounded-full bg-surface text-[10px] font-semibold text-muted"
+                >
+                  MA
+                </span>
+                <span className="truncate text-sm text-muted">
+                  Mathematical Association of America
+                </span>
+                <VerifiedSeal
+                  weight="fill"
+                  className="size-4 shrink-0 text-success"
+                  aria-label="Verified organizer"
+                  role="img"
+                />
+              </div>
               <CardDescription>
                 The classic 25-question contest for students in grade 10 and below.
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-4">
-              {/* Deadline + prize: bold, fixed position (page-blueprints shared components). */}
-              <div className="grid gap-1.5 rounded-[var(--radius-field)] bg-surface px-3.5 py-2.5 text-sm">
-                <span className="inline-flex items-center gap-2">
-                  <Calendar aria-hidden="true" className="size-4 text-muted" />
-                  <strong className="font-semibold text-foreground">Closes Nov 8</strong>
-                </span>
-                <span className="inline-flex items-center gap-2">
-                  <Trophy aria-hidden="true" className="size-4 text-muted" />
-                  <strong className="font-semibold text-foreground">Medals + AIME invite</strong>
-                </span>
-                <span className="inline-flex items-center gap-2 text-muted">
-                  <MapPin aria-hidden="true" className="size-4" /> In person · Nationwide
-                </span>
+              {/* Prize / entry / format panel — labeled rows, hairline-divided. */}
+              <div className="divide-y divide-border rounded-[var(--radius-field)] border border-border text-sm">
+                <div className="flex items-center gap-3 px-3.5 py-2.5">
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-gold-soft">
+                    <Trophy aria-hidden="true" className="size-4 text-foreground" />
+                  </span>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="text-xs text-muted">Prize</span>
+                    <span className="truncate font-semibold text-foreground">
+                      Medals + AIME invite
+                    </span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 px-3.5 py-2.5">
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface">
+                    <MapPin aria-hidden="true" className="size-4 text-muted" />
+                  </span>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="text-xs text-muted">Format</span>
+                    <span className="truncate font-medium text-foreground">
+                      In person · Nationwide · Free entry
+                    </span>
+                  </span>
+                </div>
               </div>
             </CardContent>
             <CardFooter className="justify-between">
-              <span className="text-sm font-medium text-muted">Free entry</span>
-              <Button variant="secondary" size="sm">
-                View details
+              {/* Deadline gets the anchor slot — the card's most important fact. */}
+              <span className="inline-flex items-center gap-1.5 text-sm">
+                <Calendar aria-hidden="true" className="size-4 text-muted" />
+                <strong className="font-semibold text-foreground">Closes Nov 8</strong>
+              </span>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="size-8 px-0"
+                aria-label="View details"
+              >
+                <ArrowRight aria-hidden="true" />
               </Button>
             </CardFooter>
           </Card>
