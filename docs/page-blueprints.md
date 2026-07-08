@@ -1,6 +1,6 @@
 # BeeCompete — Page Blueprints
 
-**Status:** ✅ Owner-approved structure (2026-07-07) · Depends on: `feature-registry.md`, `phase-1-plan.md`, `design-brief.md`
+**Status:** ✅ Owner-approved structure (2026-07-07 · revised 2026-07-08) · Depends on: `feature-registry.md`, `phase-1-plan.md`, `design-brief.md`
 
 Structural specs for the public pages: **layout, content, interactions, and component reuse per
 section — no code.** These are the implementation contract; structure doesn't change during build
@@ -16,23 +16,31 @@ All motion respects `prefers-reduced-motion`.
 
 **NavBar** — identical on all pages. Sticky on scroll with a subtle shadow once scrolled.
 - **Left:** logo, immediately followed by a **"Beta" tag** (→ R1-13).
-- **Center:** links — **Competitions · Categories · About Us** *(Categories → category index page,
-  part of the M15 landing-page set; owner addition 2026-07-07)*. *(Organizations link deferred to
-  Phase 3 with the org directory, → M32. Persistent nav search also deferred to Phase 3.)*
+- **Center:** links — **Competitions · Categories · How It Works** *(renamed from "About Us" —
+  owner 2026-07-08; the page is restructured as How It Works, see Page 4)*. A **"For Educators"**
+  link joins the nav **when that page ships** (page deferred — see Deferred pages).
+  *(Organizations link deferred to Phase 3 with the org directory, → M32. Persistent nav search
+  also deferred to Phase 3.)*
 - **Right:** Sign In / Sign Up buttons **[R2]** — hidden at R1 (no accounts exist); slot reserved.
 
-**CompetitionCard** — used in: Landing §2 (carousel), Competitions §4 (grid), Details §3c (related row).
+**CompetitionCard** — used in: Landing §2 (carousel), Competitions §4 (grid), Details §3c (related row), Categories index §6.
 - **Top:** cover image — **default = generated category-based cover art** (owner-approved; asset
-  system built alongside F7), real art when a listing has it.
+  system built alongside F7), real art when a listing has it. **Each category has an assigned
+  accent hue** used in its generated default cover **and** its tinted meta tag (owner 2026-07-08)
+  — keeps card grids scannable (no wall-of-sameness) and visually reinforces cross-subject breadth.
 - **Below image:** competition name (one line, truncate).
 - **Next row:** organization logo avatar + organization name. ⚠ Logo = nominative use at avatar
   scale; fallback letter-avatar; honor takedowns (compliance §8).
 - **Bottom:** key details in one consistent, regular format across every card: grade band · next
-  deadline · format chip (individual/team) · **trust badge** (→ DQ13).
+  deadline · prize (when any) · format chip (individual/team) · **trust badge** (→ DQ13).
+  **Deadline and prize render bold, always in the same position on every card** (owner
+  2026-07-08). Deadline renders **relative ("Closes in 9 days") inside a proximity window
+  (~14 days)**, absolute date otherwise — factual urgency only; countdown timers stay banned
+  (design-brief anti-references).
 - **Interaction:** whole card clicks through to the Details page; hover = slight lift/scale.
 
 **Footer** — all pages: Privacy · Terms · Cookie Policy · **affiliate disclosure** (→ DQ10) · beta
-disclaimer (→ R1-13) · contact/support · social links (→ R1-12).
+disclaimer (→ R1-13) · contact/support · social links (→ R1-12) · Suggest a Competition (Page 6).
 
 ---
 
@@ -40,18 +48,30 @@ disclaimer (→ R1-13) · contact/support · social links (→ R1-12).
 
 **1. Hero** *(directly below nav)*
 - **Layout:** 50/50 split. **Left half:** large bold headline — "Search. Compete. Participate." —
-  smaller subtext below, **two CTAs** below that: primary **"Browse competitions"** → /competitions
-  (→ M1); secondary "How it works" → anchor to §7. **Right half:** placeholder SVG of a child
-  (final asset later), with **two satellite SVGs**: competition-card graphic **top-right**,
-  tracker/timeline graphic **bottom-left**.
-- **Motion:** satellites animate in on load (staggered fade/slide).
+  with **subtext that carries the value proposition** (owner 2026-07-08): names the audience
+  (K-12 / "your student"), names 2–3 subjects (math, science, debate…), and states the
+  one-place promise. **Two CTAs** below: primary **"Browse competitions"** → /competitions (→ M1)
+  — **on hover/focus it opens an animated quick-match panel**: Grade + Subject selectors →
+  "Find competitions" → pre-filtered /competitions (a link-builder onto the M3 filter URLs, not
+  search; owner 2026-07-08). Secondary **"How it works"** → the How It Works page (Page 4; the
+  section moved off Landing). **Right half:** placeholder SVG of a child (final asset later), with
+  **two satellite SVGs**: competition-card graphic **top-right**, tracker/timeline graphic
+  **bottom-left**.
+- **Hero base strip:** a **horizontally scrolling row of compact category tiles** (icon + name)
+  with side arrow buttons, each → its category URL (→ M15). **Replaces the former full-bleed
+  Category highlight section** (owner 2026-07-08).
+- **Motion:** satellites animate in on load (staggered fade/slide); the quick-match panel opens
+  with the same restraint. On touch devices the panel opens on tap.
 - *(No search here or in the nav at launch — search lives on the Competitions page; nav search
   revisited in Phase 3.)*
 
 **2. Featured Competitions carousel** (→ M4, M6; *later:* labeled Promoted slots → M28)
 - **Layout:** section row — heading **"Featured Competitions"** left-aligned, **"See More"**
-  right-aligned on the same row → /competitions. Below: a **carousel of CompetitionCards**
-  (Material-carousel style reference).
+  right-aligned on the same row → /competitions, **carrying a live count** ("184 more
+  competitions"; owner 2026-07-08). Below: a **carousel of CompetitionCards**.
+- **Carousel rules (owner 2026-07-08):** **no auto-advance** (user-driven only) · the next card
+  visibly **peeks** at the edge so scrollability is obvious · **6–10 cards max** — overflow lives
+  behind "See More".
 - **Content @R1:** curated picks — deadline-closing-soon + editor selections (urgency lives here).
 - **Motion:** subtle scroll-triggered entrance as the section enters the viewport.
 
@@ -60,47 +80,35 @@ disclaimer (→ R1-13) · contact/support · social links (→ R1-12).
   rounded, portrait-oriented full-image cards side by side**; **right half: 2–4 large stats** about
   how competing improves college-admissions odds (numbers large/prominent, labels smaller).
 - **Interaction:** each image card, on hover, shows an opaque tint overlay with link text →
-  relevant page/section.
-- ⚠ **Temp copy at build** (owner-approved): placeholder numbers clearly marked in code as
-  `TODO(owner)`; owner supplies final sourced stats before the R1 gate.
+  relevant page/section (⚠ overlay text follows the scrim rule, design-brief §4).
+- ⚠ **Stat credibility rules (owner 2026-07-08), folded into the TODO(owner) gate:** every stat
+  carries a **small source-attribution line** (e.g., "— NACAC survey") and phrasing **avoids
+  causal claims** — prefer "X% of admissions officers say…" over "competing makes you 3× more
+  likely…". Placeholder numbers clearly marked `TODO(owner)`; owner supplies final sourced stats
+  before the R1 gate.
 
-**4. Demo video**
-- **Layout:** full-width rectangular card, short height: title → video → subtext.
-- **Interaction:** on click, the video expands/pops up to roughly a quarter of the screen.
-- ⚠ **Placeholder asset** (owner-approved) until the real demo video is produced.
-
-*(Logo marquee — **deferred to Phase 3**, owner decision 2026-07-07: re-enters between §4 and §5
-once real partners/permissions exist. Compliance §8: permission-based logos only.)*
-
-**5. Stats & imagery grid**
-- **Layout:** heading + subtext on top; **four rounded landscape cards in a 2×2 grid** — Row 1:
-  image (left) · stat with graph/visual (right); Row 2: stat with visual (left) · image (right).
-- ⚠ Same temp-copy rule as §3.
-
-**6. Category highlight** (→ M15)
-- **Layout:** full-width, **full-bleed background image** (not a card). **Left:** **9 square cards**
-  in a grid — frosted/translucent background, rounded corners, icon + category name, each → its
-  category landing page. **Right:** large bold white headline, subtext, CTA button(s) — "Explore
-  all categories" → /competitions.
-- *(We seed ~10 categories; 9 tiles + the CTA covers the rest.)*
-
-**7. How It Works**
-- **Layout:** heading "How It Works"; horizontal visual timeline — Step 1 → arrow → Step 2 → arrow
-  → Step 3 — the process of finding and registering for a competition through BeeCompete (register
-  step is outbound-to-host at R1; honest about that).
-
-**8. Audience cards** (→ H46)
+**4. Audience cards** (→ H46)
 - **Layout:** three cards in one row — **"For Parents" · "For Educators" · "For Organizers"** — each
   with an image and a CTA. Organizers CTA = interest capture ("Get early access") → host waitlist.
+  The For Parents / For Educators pages are **deferred**; until they exist, those two cards link to
+  the weekly-digest band (§5 anchor; owner 2026-07-08).
 - **Interaction:** hover = card expands/grows.
 
-**9. Email subscription** (→ R1-15)
-- **Layout:** simple capture band — heading, input, submit (Brevo).
+**5. Weekly digest signup** (→ R1-15) *(reframed — owner 2026-07-08)*
+- **Layout:** capture band branded as a **weekly personalized competitions digest** — heading
+  promises a weekly list of **new competitions matching the reader's preferences**; email input +
+  submit (Brevo).
+- **Flow:** subscribing asks 2–3 quick preference questions (grade, category/interests, region);
+  the weekly send lists new/matching competitions. *(Also segments the list for R2 activation.)*
 
-**10. Footer** — shared component.
+**6. Footer** — shared component.
 
-**Mobile:** single column; hero stacks (text above image); carousel & related rows become swipe;
-category grid 3×3 → 2-col; audience cards stack.
+*Moved to the How It Works page (owner 2026-07-08): the demo video, the stats & imagery grid, and
+the How It Works timeline. Removed: the full-bleed Category highlight section (replaced by the
+hero category strip).*
+
+**Mobile:** single column; hero stacks (text above image; quick-match opens on tap); category
+strip stays a swipe row; carousel & related rows become swipe; audience cards stack.
 
 ---
 
@@ -114,16 +122,27 @@ category grid 3×3 → 2-col; audience cards stack.
 - **Layout:** one row — **Search** input · **Sort** (deadline / popularity / newest) · **Filter**
   button · **total count** ("184 competitions").
 - When filters are active, a removable-chip row appears directly below the toolbar.
+- **Grade quick-chips** directly above the grid: **All · Elementary · Middle School · High School**
+  — one-tap coarse narrowing (owner 2026-07-08); fine-grained grades stay in the filter panel.
 
 **4. Competition listings** (→ M1, X10)
 - **Layout:** grid of **CompetitionCards** — **4 per row** default; clicking **Filter** opens a
-  **left filter panel** and the grid reflows to **3 per row**. Filter facets: category, grade,
-  state/region, cost, individual/team, delivery, deadline window (→ M3).
-- **Scroll:** continuous scroll **with pagination links** (owner decision — keeps crawlable
-  paginated URLs for SEO while browsing stays fluid).
-- **Zero-results state:** friendly message + **"Suggest a competition"** CTA (→ DQ15); query
-  logged (→ X20).
-- **Mobile:** filter panel becomes a bottom sheet behind the Filter button; grid 1–2 per row.
+  **left filter panel** and the grid reflows to **3 per row**. **Facet order (owner 2026-07-08):
+  Grade → Category → State/Region → Deadline window → Cost → Format (individual/team) → Delivery**
+  (→ M3). **Per-option result counts on the Grade and Category facets only** ("Grade 5 (37)").
+- **Scroll:** **"Load more" button** — loads the next page inline (never auto-loads on scroll),
+  with crawlable `?page=N` pagination URLs behind it (owner 2026-07-08 — refines the 2026-07-07
+  continuous-scroll decision; keeps the footer reachable and back-button position stable).
+- **Zero-results state:** friendly message + **"Suggest a competition"** CTA (→ DQ15, links to
+  Page 6) + **2–3 near-miss cards** — relax the least-important active filter and explain the
+  relaxation ("Nothing for Grade 3 in Debate — these accept Grade 4"); the grid is never literally
+  empty (owner 2026-07-08). Query logged (→ X20).
+- **Category URLs (owner 2026-07-08 — hybrid model, → M15):** canonical category paths
+  (`/competitions/<category-slug>`) render this same page pre-filtered **plus** a category header
+  (icon · name · one-liner · live count) and an indexable **"About [category] competitions" text
+  block below the grid** — the per-category SEO surface without a separate page to maintain.
+- **Mobile:** filter panel becomes a bottom sheet behind the Filter button; grade quick-chips
+  scroll horizontally; grid 1–2 per row.
 
 ---
 
@@ -132,50 +151,130 @@ category grid 3×3 → 2-col; audience cards stack.
 **1. NavBar** — shared component.
 
 **2. Header section**
-- **Back button** (breadcrumb exists only as structured data, not visually).
-- **Left/main:** competition title · org avatar + name + **verification badge** (→ DQ13) · basic key
-  details · small **Share** icon (→ M21).
+- **Visible breadcrumb** — `Competitions › [Category] › [Competition]` — small and quiet, above
+  the title; **replaces the back button** (owner 2026-07-08, supersedes the 2026-07-07 decision).
+  Matches the BreadcrumbList structured data and gives every Details page crawlable links up to
+  its category hub (organic landers have no in-site "back").
+- **Left/main:** competition title · org avatar + name + **verification badge** (→ DQ13) ·
+  **"At a glance" strip** — icons + values in the identical order on every competition:
+  **Grades · Next deadline · Cost · Location/Online · Prize** (owner 2026-07-08; the 10-second
+  answer — the Spine tab below stays the full version) · small **Share** icon (→ M21).
 - **Right:** **cover-image card** with a **"Register" button below it** → official external
-  registration page (`registration_url`, opens ↗). **[R2]** after click-through, prompt "Did you
+  registration page (`registration_url`, opens ↗). **Microcopy under the button:** "Registration
+  happens on the organizer's official site ↗" (owner 2026-07-08 — frames the handoff as a
+  feature, preserves trust at the redirect moment). **[R2]** after click-through, prompt "Did you
   register? Track it" (→ M23).
 
 **3. Main content — left column (majority width)**
 - **a. Tabbed section** — default tab **"Key Facts & Details"**: the standardized, easy-to-scan
   Spine layout identical across all competitions (grades, region/scope, cost, format, evaluation
   type, recurrence → M5) + the category-specific attributes block rendered from the Category
-  Template (→ X9). Second tab: **"About"** (long description). *(Further tabs only when real
-  content demands them.)*
+  Template (→ X9). Second tab: **"About"** (long description). Third tab: **"FAQ" [R1]** (owner
+  2026-07-08) — 3–5 curated per-competition Q&As ("how do I prepare," "can homeschoolers enter,"
+  "when are results announced") rendered with **FAQPage structured data** — the long-tail SEO
+  block on the primary SEO surface.
 - **b. Resources row** (→ M11) — horizontally scrollable row of resource cards with side scroll
   buttons; each resource (document, video, textbook…) shows a preview image. ⚠ **Affiliate
   disclosure displayed with this row** (→ DQ10).
 - **c. Related competitions** (→ M25) — heading + "See More" right-aligned → filtered /competitions;
   below, a row of **CompetitionCards**.
 
-**4. Main content — right column (sidebar), top to bottom**
+**4. Main content — right column (sidebar), top to bottom — sticky on desktop once scrolled**
+*(owner 2026-07-08: the Follow CTA is the page's conversion event; it never leaves view)*
 - **a. "Follow this Competition" button** — R1 = follow-by-email capture (→ M29); R2 = Save (→ M7).
 - **b. Vertical timeline** of the edition's key dates/events (reg opens → closes → rounds → results,
-  → M6), current/next date emphasized.
+  → M6), current/next date emphasized **with an add-to-calendar link (ics + Google Calendar) at
+  R1** — no account needed (owner 2026-07-08).
 - **c. Trust & attribution panel** (→ DQ1, DQ13) — trust tier badge · source + confidence · "Last
   verified …" · **"Listing maintained by BeeCompete Curation Team"** (flips to the host org after
   claim; locked wording — *maintained*, never *managed*).
 - **d. "Claim this Competition" button** (→ H46) — deliberately adjacent to the attribution line
   ("maintained by BeeCompete" + "claim it" = the host-recruitment hook).
 - **e. "Suggest a Correction" button** (→ DQ6) — opens the correction form (task R1-3b).
+- **f. [R2] Social-proof counter** ("N students tracking this") — displayed **only above a
+  cold-start threshold (~25)**; never shown below it (owner 2026-07-08).
 
-**Mobile:** sidebar stacks below the header (Follow button stays visible in header area); left
-column then sidebar remainder.
+**Mobile:** sidebar stacks below the header; a **slim sticky bottom bar with Follow + Register**
+appears once the header scrolls out of view (owner 2026-07-08); left column then sidebar remainder.
 
 ---
 
-## Deferred pages *(do not design yet — owner, 2026-07-07)*
+## Page 4: How It Works *(new 2026-07-08 — replaces "About Us" in the nav; job: explain the model honestly, build trust, capture email)*
+
+**1. NavBar** — shared component.
+
+**2. Mission intro** — the one-line vision + a short, honest origin story ("competitions are
+scattered across hundreds of sites…"); who maintains the catalog.
+
+**3. How It Works timeline** — heading; horizontal visual timeline — Step 1 → arrow → Step 2 →
+arrow → Step 3: finding and registering for a competition through BeeCompete (register step is
+outbound-to-host at R1; honest about that) — **plus a ghosted/dashed 4th step** teasing the R2
+tracker ("Track it all in one place — coming soon") linking to the digest band (owner 2026-07-08;
+removed when the tracker ships).
+
+**4. Demo video** *(moved from Landing)* — full-width rectangular card, short height: title →
+video → subtext; on click, expands to ~quarter screen. ⚠ **Placeholder asset** until produced.
+
+**5. Stats & imagery grid** *(moved from Landing)* — heading + subtext; **four rounded landscape
+cards in a 2×2 grid** — Row 1: image (left) · stat with graph/visual (right); Row 2: stat with
+visual (left) · image (right). Content leans on **platform/catalog stats** (live counts —
+competitions, categories, states covered, update cadence). ⚠ temp-copy rule applies; any
+outcome/admissions stats follow the source + framing rules (Landing §3).
+
+**6. Contact + weekly digest band** → **Footer**.
+
+**Mobile:** single column; timeline stacks vertically.
+
+---
+
+## Page 5: Categories (index) *(nav "Categories" target — owner-approved 2026-07-08, may be tuned at prototype; job: give every browse angle a crawlable entry point)*
+
+**1. NavBar** — shared component.
+
+**2. Page heading + subtext.**
+
+**3. Browse by category** — tile per category (icon · name · live count · one-liner) → its
+canonical category URL (`/competitions/<slug>`, Page 2 hybrid).
+
+**4. Browse by grade level** — **Elementary · Middle School · High School** tiles → grade-filtered
+competitions; crawlable grade-hub URLs (the "competitions for 5th graders" long-tail).
+
+**5. Browse by state/region** — compact state list/tiles → region-filtered listings.
+
+**6. Closing soon** — row of **CompetitionCards** with deadlines in the next ~30 days → the
+deadline-filtered view.
+
+**7. Weekly digest band** → **Footer**.
+
+**Mobile:** single column; tile grids 2-col; closing-soon row becomes swipe.
+
+---
+
+## Page 6: Suggest a Competition *(→ DQ15 — owner-approved 2026-07-08; linked from zero-results + footer)*
+
+- **Multi-step wizard form** — one question per step, click/selection advances to the next step,
+  with a progress indicator (owner 2026-07-08: designed to feel effortless, not like a form):
+  competition name → organization → official URL → category → optional extras (grades, deadline,
+  anything else) → submit.
+- **Confirmation step** states what happens next ("our curation team reviews suggestions within
+  X days") — closing that loop is what makes people submit.
+- Zero-results referrals prefill the first step from the logged query when possible (→ X20).
+
+---
+
+## Deferred pages *(do not design yet — owner)*
 
 - **Tracker ("My Competitions") [R2]** and **Parent Dashboard [R2]** — prior feature inventories
-  preserved in git history; re-blueprint when the owner picks them up.
+  preserved in git history; re-blueprint when the owner picks them up. *(2026-07-07)*
+- **For Parents · For Educators** audience pages — deferred (owner 2026-07-08). Until they exist,
+  the Landing audience cards link to the digest band; when For Educators ships it also gets the
+  reserved NavBar link.
 
 ---
 
-## Decisions log (all open questions resolved 2026-07-07)
+## Decisions log
 
+**2026-07-07 (all open questions resolved):**
 1. **Organizations page** → dropped until **Phase 3** (org directory + profiles, → M32); nav link removed at R1.
 2. **Nav search** → deferred to **Phase 3** as a suggestion; search lives on the Competitions page at launch.
 3. **Logo marquee** → dropped until **Phase 3** (permission-based partners only).
@@ -185,13 +284,40 @@ column then sidebar remainder.
 
 Also resolved by the owner's structural prompt: pagination (continuous scroll + pagination links) ·
 Follow placement (sidebar top) · audience-band position (below how-it-works) · back button instead
-of visual breadcrumb.
+of visual breadcrumb *(superseded 2026-07-08, see below)*.
+
+**2026-07-08 (market/UX review — all owner-selected):**
+1. **Hero:** slogan headline kept; **subtext carries the descriptive value prop** (K-12, named subjects, one-place promise).
+2. **Quick-match panel:** "Browse competitions" opens an animated Grade + Subject panel on hover/focus → pre-filtered /competitions.
+3. **Hero category strip** (horizontal scroll, side buttons) **replaces the full-bleed Category highlight section**.
+4. **Relocations:** demo video, stats & imagery grid, and the How It Works timeline move to the new **How It Works page** (nav tab renamed from "About Us"); Landing keeps the admissions-stats value-prop split.
+5. **Landing order** is now: Hero → Featured carousel → Value-prop split → Audience cards → Digest band → Footer.
+6. **Stat credibility:** every admissions stat needs a source-attribution line + non-causal (survey-opinion) framing before the R1 gate.
+7. **Catalog count:** shown only as a live "N more competitions" label on "See More"; full platform stats live on How It Works.
+8. **Carousel rules:** no auto-advance · peek affordance · 6–10 cards max.
+9. **Digest reframe:** email capture = weekly personalized competitions digest with preference questions (grade, interests, region) on subscribe.
+10. **Facet order:** Grade first (Grade → Category → State/Region → Deadline → Cost → Format → Delivery); per-facet counts on Grade + Category only.
+11. **Grade quick-chips** (All · Elementary · Middle · High) above the listing grid.
+12. **Card data:** deadline + prize bold, fixed position; relative deadline wording within ~14 days.
+13. **Load more button** (never auto-load) + crawlable `?page=N` URLs — refines decision #(pagination) above.
+14. **Zero-results near-miss cards** (2–3, with the relaxed-filter explanation).
+15. **Per-category accent hues** on generated covers + meta tags (F7 asset system).
+16. **Category URLs:** hybrid — canonical `/competitions/<slug>` = filtered listing + category header + indexable SEO text block.
+17. **Details:** visible breadcrumb **replaces the back button** (supersedes 2026-07-07); "At a glance" strip (Grades · Deadline · Cost · Location · Prize); Register microcopy ("on the organizer's official site ↗"); **FAQ third tab at R1** with FAQPage schema; **sticky sidebar** on desktop; **add-to-calendar** (ics + Google) on the timeline at R1; mobile **sticky bottom bar** (Follow + Register).
+18. **[R2] social-proof counter** with a ~25 cold-start threshold (hidden below it).
+19. **New pages approved:** How It Works (Page 4) · Categories index (Page 5) · Suggest a Competition wizard (Page 6). **Deferred:** For Parents / For Educators (audience cards → digest anchor meanwhile; educators nav link reserved).
+20. **Cross-cutting style rules** recorded in `design-brief.md` §3/§4: Inter Display + heavy-weight headline scale · gold = fills/accents only (never text/strokes on white) · scrim required behind text over imagery.
+21. **Student Privacy Pledge:** investigate during R1, target signing ~R2 — tracked in `go-to-market.md` §5.
 
 ## Status
 | Page | Blueprint | Style prototype | Built |
 |---|---|---|---|
-| Landing | ✅ approved (2026-07-07) | 🔍 round 2 in review (Inter locked; flat buttons; card/tile sizing tuned) | — |
-| Competitions (listing) | ✅ approved (2026-07-07) | — | — |
-| Competition details | ✅ approved (2026-07-07) | — | — |
+| Landing | ✅ approved (2026-07-07 · rev 2026-07-08) | 🔍 round 2 in review — re-prototype hero (quick-match + category strip) & new order | — |
+| Competitions (listing) | ✅ approved (2026-07-07 · rev 2026-07-08) | — | — |
+| Competition details | ✅ approved (2026-07-07 · rev 2026-07-08) | — | — |
+| How It Works | ✅ approved (2026-07-08) | — | — |
+| Categories (index) | ✅ approved (2026-07-08, may be tuned) | — | — |
+| Suggest a Competition | ✅ approved (2026-07-08) | — | — |
+| For Parents / For Educators | ⛔ deferred (2026-07-08) | — | — |
 | Tracker | ⛔ deferred — do not design yet | — | — |
 | Parent dashboard | ⛔ deferred — do not design yet | — | — |

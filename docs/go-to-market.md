@@ -49,6 +49,7 @@ closing (see `competitive-analysis.md` §5).
 ## 5. Open GTM items
 
 - **Problem interviews** (`vision-prd.md` §7.1): 8–12 each with students, parents, educators — run during R0/R1; **required input to the R2 go/no-go validation gate** (`phase-1-plan.md` sequencing notes).
+- **Student Privacy Pledge** (studentprivacypledge.org): investigate eligibility + obligations during R1; target signing around R2 when accounts (and real student-data collection) begin. The badge is the recognized trust signal educators/districts look for (owner 2026-07-08).
 - Keyword-research pass (feeds seeding order, task S2).
 - Community list for launch shares (collect as we go).
 - Referral program design (M27, Phase 2).

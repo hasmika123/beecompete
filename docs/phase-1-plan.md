@@ -1,6 +1,6 @@
 # BeeCompete — Phase 1 Build Plan
 
-**Status:** Draft for approval · **Last updated:** 2026-07-06 · Depends on: `domain-model.md`, `architecture.md`, `rfc-p1-auth-consent.md`, `development-process.md`
+**Status:** Draft for approval · **Last updated:** 2026-07-08 · Depends on: `domain-model.md`, `architecture.md`, `rfc-p1-auth-consent.md`, `development-process.md`
 
 The ordered, buildable task list for Phase 1. **Every task below becomes a GitHub Issue** (titled with its
 task ID + registry refs) before coding — that's the required per-phase step. Build in the listed order;
@@ -30,7 +30,7 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
 ## Release R1 — Browse-only marketplace *(no accounts)*
 
 **Data & catalog**
-- **R1-1** — Core schema migration: `Category`, `CategoryTemplate`, `Region`, `Competition`, `Edition`, `EditionRegion`, `KeyDate`, `Resource`, `CorrectionProposal` + provenance/verification/`archived_at` fields — per the locked modeling decisions (domain-model §7: grade encoding, Division placement, Edition-level regions, soft-delete D7). (X9, catalog)
+- **R1-1** — Core schema migration: `Category`, `CategoryTemplate`, `Region`, `Competition`, `Edition`, `EditionRegion`, `KeyDate`, `Resource`, `CorrectionProposal` + provenance/verification/`archived_at` fields — per the locked modeling decisions (domain-model §7: grade encoding, Division placement, Edition-level regions, soft-delete D7). Include storage for **curated per-competition FAQ entries** (details-page FAQ tab, page-blueprints §3a — exact shape decided at build per domain-model rules). (X9, catalog)
 - **R1-2** — Category taxonomy + templates seeded (~10 K-12 categories) with JSON-Schema validation of `attributes`. (X9)
 - **R1-3** — **Admin curation tooling v0** (X16, DQ13): minimal internal web admin — CRUD for `Competition`/`Edition`/`KeyDate`/`Resource`/`Category`(+templates), **import-review queue** (approve/edit/reject records from the S3 extraction pipeline — S4's 20–30 approvals/day throughput depends on this UI, so scripts alone don't cut it), and verification-state + provenance controls. Every admin write stamps provenance. **Access: behind Cloudflare Access (email allow-list) on the admin route — no app auth exists at R1; migrates to real RBAC at R2-7.**
 - **R1-3b** — **Corrections intake + review** (DQ6): public "Suggest a correction" form on detail pages → `CorrectionProposal` rows (domain-model D7); admin review queue — approve applies the diff and writes an audit record, reject discards. DQ15 "suggest a competition" submissions (R1-15b) land in this same queue.
@@ -40,8 +40,9 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
 - **R1-5** — Search & filter API: Postgres FTS + `pg_trgm`; filters (category, grade, region, cost, format, individual/team, deadline), sort. (M2, M3, M4, X10)
 
 **Frontend**
-- **R1-6** — Marketplace: browse + search + filters + sort. (M1–M4)
-- **R1-7** — Competition detail page + edition/dates/status display. (M5, M6)
+- **R1-6** — Marketplace: browse + search + filters + sort, per `page-blueprints.md` Page 2 (grade quick-chips, Grade-first facets, "Load more" + crawlable pagination, zero-results near-miss cards, hybrid category URLs with SEO text block). (M1–M4, M15)
+- **R1-6b** — Public page set per `page-blueprints.md`: **Landing** (Page 1, incl. quick-match panel + hero category strip), **How It Works** (Page 4), **Categories index** (Page 5). Structure is the approved blueprint; style via the hero design pass (design-brief §5). (M15, H46, R1-13)
+- **R1-7** — Competition detail page + edition/dates/status display, per `page-blueprints.md` Page 3 — incl. breadcrumb, "At a glance" strip, **FAQ tab** (FAQPage structured data; content curated via R1-3), sticky sidebar, and **per-date add-to-calendar links (ics + Google)**. (M5, M6)
 - **R1-8** — Resources section + affiliate links + **affiliate disclosure**. 🔒 (M11, DQ10)
 - **R1-9** — Trust/verification badges (Curated/Verified). (DQ13)
 - **R1-10** — SEO: SSG/ISR, metadata/OpenGraph, clean URLs, per-competition & per-category landing pages, **structured data** (schema.org `Event` markup on listings — rich results with dates), sitemap. (M15)
@@ -51,8 +52,8 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
 - **R1-12** — Legal pages: Privacy, Terms, Cookie Policy, affiliate disclosure. 🔒 (compliance)
 - **R1-13** — **Beta tag + disclaimer** across the app. (registry)
 - **R1-14** — Privacy-first analytics (Cloudflare Web Analytics + PostHog). (X20)
-- **R1-15** — Waitlist / email-subscription capture (Brevo). (M26 precursor)
-- **R1-15b** — Listing-page captures (Brevo/queue-backed, no accounts needed): **per-competition follow-by-email** (M29), **"Suggest a competition"** form → curation queue (DQ15), **"Are you the organizer?" host-interest CTA** → host waitlist (H46).
+- **R1-15** — **Weekly Digest signup** (Brevo): email capture + 2–3 preference questions (grade, category/interests, region) per `page-blueprints.md` Landing §5. ⚠ Scope note: R1 ships the *capture + segmentation*; early digest sends are manual/curated via Brevo — the **automated personalized matching send is M26 (Phase 2)**. (M26 precursor)
+- **R1-15b** — Listing-page captures (Brevo/queue-backed, no accounts needed): **per-competition follow-by-email** (M29), **"Suggest a competition"** multi-step wizard form (page-blueprints Page 6) → curation queue (DQ15), **"Are you the organizer?" host-interest CTA** → host waitlist (H46).
 - **R1-16** — In-app **bug/feedback report**. (DQ7 precursor)
 - **R1-17** — **R1 release gate** (dev-process §8): a11y (WCAG AA) on public pages, WAF/rate-limit on, backups tested, legal pages live, **legal foundation done** (entity + insurance + trademark search — setup-runbook §1b), **content gate met** (see "Data seeding & catalog readiness" below) → **tag R1, deploy to prod.**
 

@@ -47,8 +47,8 @@ Start context: `docs/README.md` → `docs/vision-prd.md`, `docs/glossary.md`.
 - **Mobile-first, fully responsive.** WCAG 2.1 AA on new UI. Light + dark via tokens.
 - **Palette:** gold `#F5C330` + ink `#030201`. **Typeface: Inter** (self-hosted, no font CDN).
   Buttons: flat gold fill + near-black text, ~12px radius, **no glow/colored shadows**.
-- Hero pages (Landing, Competitions, Details) follow the approved blueprints; changing their structure
-  means updating `docs/page-blueprints.md` first.
+- Hero pages (Landing, Competitions, Details, How It Works, Categories index, Suggest a Competition)
+  follow the approved blueprints; changing their structure means updating `docs/page-blueprints.md` first.
 
 ## How we work (`docs/development-process.md`)
 - Trunk-based; short-lived branches `feat/<ID>-<slug>`; squash-merge; `main` always deployable behind

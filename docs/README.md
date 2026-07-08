@@ -35,7 +35,7 @@ The planning corpus. Read order for a newcomer is top-to-bottom; day-to-day, jum
 | Doc | What it answers |
 |---|---|
 | [design-brief.md](design-brief.md) | Aesthetic direction, locked palette/type, per-page input |
-| [page-blueprints.md](page-blueprints.md) | Structural specs for Landing / Competitions / Details (approved) |
+| [page-blueprints.md](page-blueprints.md) | Structural specs for the six approved public pages (Landing / Competitions / Details / How It Works / Categories / Suggest) |
 
 ## Conventions
 - Docs cite each other by filename; decisions carry a **date** and supersede explicitly.

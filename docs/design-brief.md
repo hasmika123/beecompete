@@ -41,6 +41,9 @@ read this doc the way they read the glossary — decisions live here, not in cha
   **more rounded (~12px)**, and **A's card meta tags** (tinted, rounded).
 - **Typography:** ✅ **locked 2026-07-07: Inter** (display + body; Segoe UI as the system proxy in
   prototypes). Self-host the font files in `packages/ui` (no Google Fonts CDN — privacy + CSP).
+  **Headline energy (owner 2026-07-08):** warmth comes from weight/scale contrast, not a second
+  font — use the **Inter Display** optical variant at large sizes, heavy weights (700–800), tight
+  tracking, big size jumps between levels, and oversized friendly numerals for stats.
 - **Density & shape:** ✅ (from the locked prototype) airy-but-efficient spacing on an 8px scale;
   **~12px radius** on buttons and cards; **hairline 1px borders** as the primary separator;
   **minimal shadows** — a soft lift on card hover only, no ambient/glow shadows.
@@ -57,8 +60,17 @@ read this doc the way they read the glossary — decisions live here, not in cha
 - **Do:** flat filled-accent buttons on a crisp B-style ground; **CompetitionCards taller and
   narrower** (~220px wide, generous cover + body); **compact category tiles**; **Verified badge =
   subtle green** (✓, muted green on soft green tint), Curated = quiet neutral.
+- **Do (owner 2026-07-08):** **per-category accent hues** — each of the ~10 categories gets an
+  assigned hue used in its generated default cover **and** its tinted card meta tag (F7 asset
+  system); **deadline + prize bold and in a fixed position** on every CompetitionCard; **any text
+  over imagery gets a darkening scrim** sufficient for WCAG AA, verified per breakpoint (hover
+  overlays, hero strips, image cards).
 - **Don't:** yellow-on-black (or any accent-on-black) button styling; **no glow/colored shadows on
   buttons**; no oversized tile grids.
+- **Don't (owner 2026-07-08):** **gold `#F5C330` as text-on-white, thin icon strokes, or hairline
+  borders** — gold is a fill/background/accent-shape color only (it fails WCAG contrast on white);
+  text on gold is always ink. **No auto-advancing carousels** — user-driven only, with a peek
+  affordance.
 
 ## 4b. Page structure *(as important as visual style — owner directive 2026-07-07)*
 
@@ -73,9 +85,13 @@ The hero design pass is therefore two checkpoints: 🧑 approve the **blueprint*
 
 | Page | Release | Structure | Style prototype |
 |---|---|---|---|
-| Landing | R1 | ✅ approved | round 2 (Inter, flat buttons, tuned cards) — awaiting final sign-off |
-| Competitions (listing) | R1 | ✅ approved | not started |
-| Competition detail | R1 | ✅ approved | not started |
+| Landing | R1 | ✅ approved (rev 2026-07-08) | round 2 — re-prototype hero (quick-match + category strip) & new section order |
+| Competitions (listing) | R1 | ✅ approved (rev 2026-07-08) | not started |
+| Competition detail | R1 | ✅ approved (rev 2026-07-08) | not started |
+| How It Works | R1 | ✅ approved (2026-07-08) | not started |
+| Categories (index) | R1 | ✅ approved (2026-07-08, may be tuned) | not started |
+| Suggest a Competition (wizard form) | R1 | ✅ approved (2026-07-08) | light pass (step-form interaction only) |
+| For Parents / For Educators | — | ⛔ deferred (2026-07-08) | — |
 | Tracker ("My Competitions") | R2 | ⛔ deferred | — |
 | Parent dashboard | R2 | ⛔ deferred | — |
 
@@ -88,6 +104,7 @@ The hero design pass is therefore two checkpoints: 🧑 approve the **blueprint*
   covers for CompetitionCards — built alongside F7; real per-competition art overrides when available.
 - **Landing hero SVGs**: child illustration + two satellites (competition-card graphic,
   tracker-timeline graphic) — placeholders until owner supplies finals.
-- **Demo video** (Landing §4) — placeholder until produced.
-- **Value-prop & stats imagery** (Landing §3/§5) — stock/placeholder until finals; stats copy is
-  `TODO(owner)` until sourced numbers are supplied (required before the R1 gate).
+- **Demo video** (How It Works §4 — relocated from Landing 2026-07-08) — placeholder until produced.
+- **Value-prop & stats imagery** (Landing §3 · How It Works §5) — stock/placeholder until finals;
+  stats copy is `TODO(owner)` until sourced numbers are supplied (required before the R1 gate),
+  **with a source-attribution line and non-causal framing per stat** (owner 2026-07-08).

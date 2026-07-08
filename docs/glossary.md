@@ -1,6 +1,6 @@
 # BeeCompete — Glossary (Ubiquitous Language)
 
-**Status:** Living document · **Last updated:** 2026-07-06
+**Status:** Living document · **Last updated:** 2026-07-08
 
 The single source of truth for **what we call things**. Every other doc, conversation, UI label,
 and eventually every table/field name uses these exact terms. When a term has tempting synonyms,
@@ -62,6 +62,8 @@ the **canonical** term is bolded and the synonyms-to-avoid are listed so we stay
 | **Participant+** | The **paid, per-Competition** prep package (launch tier). | Scoped to one Competition. |
 | **Participant²** | The deferred **premium** prep tier ("participant squared" — mocks, analytics, AI tutoring). Working name. | Not built at launch. |
 | **Resource** | A curated prep/reference link on a listing (book, past paper, guide), often with an affiliate link. | Content model #1. |
+| **Weekly Digest** | The free weekly email listing *new competitions matching the subscriber's preferences* (grade, category/interests, region), collected at signup. The R1 email-capture product (→ R1-15, Brevo). | Canonical UI label. Avoid "newsletter", "subscription", "mailing list". Distinct from *Promotion* digest inclusion (paid placement inside this send, Phase 3+). |
+| **Quick-Match** | The hero panel (Grade + Subject → "Find competitions") that deep-links into pre-filtered Marketplace results. Not search — a filter-URL builder. | Landing §1 (page-blueprints, 2026-07-08). |
 
 ## Host-facing concepts
 
