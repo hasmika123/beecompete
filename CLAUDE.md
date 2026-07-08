@@ -1,0 +1,70 @@
+# CLAUDE.md — working rules for BeeCompete
+
+Read this every session. It's the always-on guardrail; the full reasoning lives in `docs/`.
+When in doubt, `docs/` is the source of truth and this file points to it.
+
+## What this project is
+A minors-facing, payments-handling marketplace for K-12 academic competitions. **Users are minors and
+money moves** — security, privacy, and COPPA compliance are first-class, not afterthoughts.
+Start context: `docs/README.md` → `docs/vision-prd.md`, `docs/glossary.md`.
+
+## Non-negotiables
+- **Glossary first.** Use the canonical term from `docs/glossary.md` for every name (entity, field, UI
+  label). New concept? Add it to the glossary first, then use it.
+- **Scope is the registry.** If a feature isn't in `docs/feature-registry.md`, it isn't planned. Respect
+  phase order and the 14 foundation hooks.
+- **Compliance gates are hard.** Anything touching user data honors COPPA/consent, no student-data
+  selling or behavioral ad-targeting to minors, affiliate disclosure with affiliate links. See
+  `docs/compliance.md`.
+- **Server is the source of truth.** Client validation mirrors server rules for UX; server-side Bean
+  Validation + authorization is the real gate. Never trust the client.
+- **Secrets via env only**, never committed.
+
+## Architecture rules (`docs/architecture.md`)
+- **Modular monolith.** Spring Boot (Java 21) API split into domain modules; cross-module calls go
+  through service interfaces. Next.js (TS) web + BFF. Don't reach for microservices.
+- **Session-based auth** (Spring Session JDBC → Postgres). **No JWT / refresh-token machinery** (ADR 9).
+- **Postgres for everything durable** — sessions and the job queue (JobRunr/db-scheduler,
+  `FOR UPDATE SKIP LOCKED`). **Redis is cache + rate-limit counters only** (ADR 10). Never put a
+  must-not-lose job in Redis.
+- **Neon:** app (incl. job queue) uses the pooled `-pooler` URL; Liquibase migrations use the direct
+  URL. Migrations are additive-only.
+- **Files** in private S3 via pre-signed URLs — never proxy, never public.
+
+## Data model rules (`docs/domain-model.md`)
+- Typed **Spine** columns for anything you filter/sort/join on; validated **JSONB `attributes`** (per
+  Category Template JSON Schema) for category-specific fields.
+- **Competition ↔ Edition** are separate (evergreen vs. one running). **Region join is Edition-level**
+  (`EditionRegion`); one registration = one Edition.
+- Progress is **derived from the `ActivityEvent` log** — never add bespoke progress columns.
+- `ParticipantProfile` stores **`grad_year`** (grade is derived). Grade encoding: Pre-K −1, K 0, 1–12.
+- **Soft-delete** curated data (`archived_at`); corrections go through the `CorrectionProposal` queue.
+- **Payer ≠ beneficiary** in entitlements.
+
+## Frontend / design rules (`docs/design-brief.md`, `docs/page-blueprints.md`)
+- **All shared UI comes from `packages/ui`.** Search there before creating any component. **Never inline
+  SVGs or hand-roll styles** for shared things.
+- **Mobile-first, fully responsive.** WCAG 2.1 AA on new UI. Light + dark via tokens.
+- **Palette:** gold `#F5C330` + ink `#030201`. **Typeface: Inter** (self-hosted, no font CDN).
+  Buttons: flat gold fill + near-black text, ~12px radius, **no glow/colored shadows**.
+- Hero pages (Landing, Competitions, Details) follow the approved blueprints; changing their structure
+  means updating `docs/page-blueprints.md` first.
+
+## How we work (`docs/development-process.md`)
+- Trunk-based; short-lived branches `feat/<ID>-<slug>`; squash-merge; `main` always deployable behind
+  feature flags. Conventional Commits.
+- **Two-tier loop.** Full loop (investigate → clarify-if-unclear → plan → 🧑 approve → build → test →
+  fresh review → merge) for 🔒/schema/L-XL/new-subsystem work. Light loop (investigate-lite → build →
+  test → merge) for small tasks inside existing patterns. **The reuse-scan investigation is never
+  skipped** — check `packages/ui` + neighboring modules before writing anything new.
+- After ~5–10 light-loop merges and before each release tag, run a `/simplify` or `/code-review` pass.
+
+## 🛑 Hard stops — do NOT design or build ahead
+- **Judging** (H12–H17, H25) and the **science-fair compliance system** (HC*) are deliberately not
+  designed until their Phase-3 deep-dives (Gate A / Gate B, `docs/development-process.md` §6a). If work
+  reaches either gate, **stop and tell the user** — don't research, schema, or implement gated items.
+- Reserved/[deferred-design] entities are sketches, not contracts — don't harden them early.
+
+## Current state
+Planning complete. **Pre-flight setup in progress — no app code yet.** Next build task is **F1**
+(monorepo skeleton) per `docs/phase-1-plan.md`.

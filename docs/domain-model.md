@@ -1,0 +1,231 @@
+# BeeCompete — Domain & Data Model
+
+**Status:** Living document · **Last updated:** 2026-07-06 · Depends on: `glossary.md`, `feature-registry.md`
+
+The foundation. This turns the strategy, feature registry, and foundation hooks into an actual
+data model that supports **all three facets from day one** — even though we build them in phases.
+Terms are as defined in `glossary.md`. Assumes a **relational DB with strong JSON support
+(Postgres)**; final stack is confirmed in the Architecture doc.
+
+> **Scope note:** entities marked **[P1]** are built for the Phase-1 marketplace. Entities marked
+> **[reserve]** are *modeled now but built later* — we define the shape so there's no migration,
+> and detail them in each facet's just-in-time deep-dive. This is the "design-in hook" discipline.
+>
+> A third marker, **[deferred-design]** (added 2026-07-07), covers judging and science-fair
+> compliance: **deliberately not designed yet** — no shape is committed until their 🛑 design gates
+> (`development-process.md` §6a, Gates A/B). P1's only obligation for these is to avoid *blocking*
+> assumptions: stable IDs to hang future tables on; no single-round / single-level assumptions
+> baked into `Edition`.
+
+---
+
+## 1. Design principles (the big decisions)
+
+**D1 — Typed Spine + validated JSON attributes.** The central challenge (one schema for every
+competition type) is solved with a hybrid:
+- **Typed columns** for the *Spine* — the fields we filter, sort, or join on (category, grade
+  range, region, dates, cost, format). Fast and indexable.
+- A **validated `attributes` JSONB bag** for category-specific fields (e.g., ISEF form set,
+  robotics league). Each Category has a **Category Template** holding a **JSON Schema** that
+  validates the bag.
+- **Rule:** *filter/sort/join on it → typed column; display-only or category-specific → JSONB.*
+
+**D2 — Two-level Competition ↔ Edition.** Evergreen `Competition` owns identity/resources/reputation;
+`Edition` owns dates/registration/results. Never merge them.
+
+**D3 — Timeline as data, not columns.** An Edition's dates are rows in `KeyDate` (typed events),
+not fixed columns — so any timeline shape works.
+
+**D4 — Generic parties & payments.** `User`, `Organization`, `Entitlement` are generic so that
+host/school/sponsor and payer≠beneficiary all fall out without special cases (keeps "free for
+schools" and "sponsorship" as later config, not migrations).
+
+**D5 — Derive progress from an Event Log.** No bespoke progress columns anywhere. All progress
+(participant, cohort, parent views) is aggregated from one append-only `ActivityEvent` stream.
+
+**D6 — Structure is entities, not flags.** Divisions, Rounds, and Advancement are first-class
+records because K-12 competitions are multi-division, multi-round, and multi-level.
+
+**D7 — Soft-delete + event-log audit; no temporal tables** *(locked 2026-07-07)*. Curated records
+are **never hard-deleted** (their slugs carry SEO and inbound links): archive via `archived_at` /
+status instead. Field-level change history = `ActivityEvent` rows (verb `updated`, payload = diff) —
+no separate versioning/history tables. User-submitted corrections (DQ6) are rows in a
+**`CorrectionProposal`** queue that curators approve; the main tables are never versioned.
+
+---
+
+## 2. The six open questions — resolved
+
+| # | Question | Decision |
+|---|---|---|
+| Q1 | **Category set** for launch | A two-level taxonomy (Category → Subcategory), seeded with ~10 top K-12 categories: Math · Science & Engineering · Computer Science/Coding · Robotics · Debate & Speech · Business/Entrepreneurship (CTSO) · Writing & Essay · Arts & Music · Academic Bowl/Quiz · History/Geography/Civics · (+ "Other"). This is **seed config, not schema** — the taxonomy table grows freely. |
+| Q2 | **Grade/age** representation | Store **both**: a normalized **grade range** (`min_grade`/`max_grade`) as the *primary* eligibility/filter axis, and an optional **age range** (`min_age`/`max_age`) for age-gated or international competitions. A Participant has a grade + DOB (→ age). **Encoding locked (2026-07-07):** `smallint` — **Pre-K = −1, K = 0, grades 1–12 = 1–12; 13 = post-high-school (reserved, unused at launch — keeps collegiate expansion migration-free)**. Homeschool/ungraded map to the age-equivalent grade. Age-gated comps filter on age (from DOB); grade-gated on grade. **Profile storage (locked 2026-07-07):** participants store **`grad_year`** as canonical; grade is *derived* (UI asks grade, converts on save) — so profiles never go stale at school-year rollover. |
+| Q3 | **Region** granularity | Structured geo, not free text: **Country → State → County/District → City**, plus a special **"Virtual/Online"**. Each Edition has a `scope_level` (national/state/regional/local/virtual) + associated region(s). US-first ⇒ **State** is the primary filter granularity; District enables chapter scoping. **Multi-region rule locked (2026-07-07):** the region join is **Edition-level** (`EditionRegion`). Test: **one registration = one Edition** — same dates + same registration + same results ⇒ **one** Edition tagged with many regions (e.g., AMC 10 2026 nationwide); operationally distinct regional runnings (own dates/registration/results) ⇒ **separate** Editions (e.g., Dallas vs. Houston regional fairs), linked upward via `advances_to_edition_id` — exactly the advancement chain. A Competition's region facet in search is *derived* from its Editions. |
+| Q4 | **Division** representation | A generic `Division` per Competition with a name + flexible criteria (grade range and/or skill label). Not hard-coded — each Competition defines its own (Junior/Senior, Novice/Varsity, etc.). A participant maps to a Division at registration. **Placement locked (2026-07-07): `Division` lives on `Competition`** (stable identity across years — needed for history/analytics) with an **`active` flag**; restructures add new rows + deactivate old ones, never edit existing rows. `Registration` **snapshots the resolved division** at registration time, so later definition changes never rewrite past records. No per-Edition division copies. |
+| Q5 | **Round / advancement** | Two mechanisms: **`Round`** = a sequential phase *within* an Edition; **Edition linkage** (`advances_to_edition_id`) = multi-level advancement *across* Editions (school→regional→state→national). `AdvancementRule` (top-N / threshold / judge-selected) attaches to a Round or linkage. Structure is represented at launch; *enforcement* is Phase 4. Rules are data, not code. |
+| Q6 | **Team composition** | A `Team` is Edition-scoped (name, division) with `TeamMember` rows. A `Registration` is polymorphic — registrant is **either** a Participant **or** a Team. Teams form via a Group (coordinator) or self-organize (team-finder). Size bounds come from the Competition's Format. |
+
+---
+
+## 3. Entity catalog
+
+### 3a. Competition domain
+
+**`Competition`** [P1] — the evergreen entity.
+`id, slug, name, organizer_org_id?, official_url, logo, description, category_id, tags[],
+participation_mode (individual|team|both), team_size_min?, team_size_max?, delivery
+(in_person|virtual|hybrid), evaluation_type[], min_grade?, max_grade?, min_age?, max_age?,
+cost_type (free|paid), recurrence (annual|one_off|rolling), attributes (JSONB), provenance{...},
+verification_state, archived_at?, created_at` *(soft-delete per D7)*
+
+**`Edition`** [P1] — one running of a Competition.
+`id, competition_id, cycle_label ("2026"), status (upcoming|open|closed|ongoing|archived),
+registration_url, entry_fee?, currency?, scope_level, advances_to_edition_id?, attributes (JSONB),
+provenance{...}, archived_at?, created_at` *(soft-delete per D7)*
+
+**`KeyDate`** [P1] — typed timeline events on an Edition.
+`id, edition_id, type (reg_open|reg_close|round_start|submission_due|results|custom), label,
+starts_at, ends_at?, timezone`
+
+**`Category`** [P1] — taxonomy node. `id, parent_id?, name, slug`
+**`CategoryTemplate`** [P1] — `id, category_id, json_schema (JSONB), ui_hints (JSONB)` — validates a Competition's `attributes`.
+
+**`Division`** [reserve] — `id, competition_id, name, min_grade?, max_grade?, skill_label?, criteria (JSONB), active (bool)` — on Competition (locked, Q4); `Registration` snapshots the resolved division.
+**`Round`** [reserve] — `id, edition_id, sequence, name, type (qualifier|regional|final|custom), evaluation_type`
+**`AdvancementRule`** [reserve] — `id, round_id? | edition_link?, rule_type (top_n|threshold|judge_selected), params (JSONB)`
+
+**`Region`** [P1] — `id, parent_id?, level (country|state|county|city), name, code`
+**`EditionRegion`** [P1] — join: which regions an **Edition** covers *(locked 2026-07-07; renamed from `CompetitionRegion` — the join is Edition-level, never Competition-level)*. One registration = one Edition (Q3); the Competition's region filter is derived from its Editions.
+
+**`Resource`** [P1] — curated prep/reference link on a Competition.
+`id, competition_id, title, url, type (book|past_paper|guide|video|other), is_affiliate, affiliate_meta (JSONB)`
+
+### 3b. Parties, accounts & groups
+
+**`User`** [P1] — base account. `id, email, auth{...}, display_name, primary_persona
+(participant|parent|educator|host|admin), created_at`
+*(A user can hold multiple roles/profiles — persona is a UX default, not a hard type.)*
+
+**`ParticipantProfile`** [P1] — for student users.
+`user_id, date_of_birth, grad_year, region_id?, interests[], consent_state`
+*(Canonical field is **`grad_year`** — graduation year; **grade is derived** from grad_year + the
+current school year. The UI still asks "grade" and converts on save. Locked 2026-07-07: prevents
+profiles silently rotting every fall as students advance a grade — no rollover job needed.)*
+
+**`GuardianLink`** [P1] — parent↔child. `id, guardian_user_id, child_user_id, relationship, status(pending|active|revoked), consent_record_id, created_at`
+
+**`ConsentRecord`** [P1] — COPPA consent audit trail. `id, child_user_id, guardian_user_id, method(email_plus|payment|id), scope, disclosures_version, granted_at, confirmed_at?, revoked_at?, ip` — the legal record of *who* consented, *when*, and *to what version* of our disclosures. See `rfc-p1-auth-consent.md`. *(Auth-mechanics entities — `AuthCredential`, `Session` (Spring Session JDBC; no refresh tokens — sessions decision 2026-07-07), `AuthToken` — also live in the accounts module per that RFC.)*
+
+**`Organization`** [P1] — generic institutional party.
+`id, name, type (host|school|sponsor|other), domain?, verification_state, provenance{...}`
+
+**`Membership`** [P1] — `id, user_id, org_id, role_id, status`
+**`Role`** / **`Permission`** [P1] — org-scoped RBAC. `Role{id, org_id?, name}`, `Permission{role_id, action, resource}`
+
+**`Group`** [reserve] — educator-managed set. `id, owner_user_id?, org_id?, name, type (class|club|cohort|chapter)`
+**`GroupMembership`** [reserve] — `id, group_id, participant_user_id, added_by`
+
+**`Team`** [reserve] — `id, edition_id, name, division_id?`
+**`TeamMember`** [reserve] — `id, team_id, participant_user_id, role_in_team?`
+
+### 3c. Journey, tracker & progress
+
+**`ParticipantCompetition`** [P1] — the Journey record; backbone of the Tracker.
+`id, participant_user_id, competition_id, edition_id?, status (saved|registered|preparing|
+submitted|completed|result), is_external (bool), saved_at, updated_at`
+*(Works for external competitions: `edition_id` null, `is_external` true. Coarse status lives here;
+detailed progress is derived from the Event Log.)*
+
+**`ActivityEvent`** [P1] — append-only event log (Foundation Hook #9).
+`id, actor_user_id?, subject_type, subject_id, verb, payload (JSONB), occurred_at`
+*(All progress views — participant, cohort P25/E6, parent PA4 — are aggregations over this.)*
+
+### 3d. Money & entitlements
+
+**`Product`** [reserve, minimal P1] — catalog. `id, code (participant_plus|host_starter|host_pro|
+host_championship|promotion|sponsorship), tier, pricing (JSONB)`
+
+**`Entitlement`** [reserve] — the one abstraction behind every purchase (Hook #12).
+`id, product_id, scope_type (competition|edition|category|platform), scope_id, beneficiary_type
+(user|org), beneficiary_id, payer_type (user|org), payer_id, status, valid_from, valid_to`
+
+**`Order`** / **`Payment`** [reserve] — `Order{id, payer_id, total, status}` → many `Entitlement`s;
+`Payment{id, order_id, stripe_ref, amount, status}`.
+*(Bulk/cohort = one Order → many Entitlements allocated to students. Promotion & sponsorship = an
+Entitlement with a broader `scope_type`. Nothing special-cased.)*
+
+### 3e. Content, prep & host-side *(mostly reserved — detailed in Phase 2/3/4 deep-dives)*
+
+- **`PrepPackage`** [reserve] — Participant+/² content bundle attached to a Competition; access gated by Entitlement.
+- **`Registration`** [reserve] — participant **or** team ↔ Edition (polymorphic registrant).
+- **`Submission`** [reserve] — entry to an Edition, belongs to a Registration.
+- **`JudgingAssignment` / `Score` / `Rubric`** [deferred-design] — 🛑 **no shape committed**; designed at **Gate B** (judging deep-dive, `development-process.md` §6a), driven by what Gate-A fairs actually need. Basic judging builds in Phase 3, advanced modes Phase 4.
+- **`Listing` state** is not a separate table — it's the `Competition` + `Edition` + `verification_state`/provenance a Host manages.
+- **`ComplianceForm` / `ReviewCommittee`** [deferred-design] — 🛑 **no shape committed**; designed at **Gate A** (science-fair wedge deep-dive, `development-process.md` §6a) from fair-director research. Consent is partly P1 via `GuardianLink`/`consent_state`.
+
+### 3f. Provenance & trust (embedded)
+Provenance is a reusable embedded structure on Competition/Edition/Organization:
+`provenance{ source (curated|import|host_submitted|crowdsourced), last_verified_at, confidence }`
+plus `verification_state (curated|claimed|verified|unverified)`. Host verification records and the
+moderation queue (DQ11–DQ14) reference these.
+
+**`CorrectionProposal`** [P1] — user-submitted corrections queue (DQ6, per D7):
+`id, subject_type (competition|edition|resource), subject_id, submitted_by_user_id?, payload (JSONB
+field-level diff), note?, status (pending|approved|rejected), reviewed_by?, reviewed_at?, created_at`
+— curators approve/reject; approved diffs are applied to the main record (and logged as
+`ActivityEvent`s). The main tables are never versioned.
+
+---
+
+## 4. Relationship map (core)
+
+```
+Category ──< Competition >── Organization (organizer / host)
+   │             │  │
+CategoryTemplate │  ├──< Edition ──< KeyDate
+                 │  │        ├──< Round ──< AdvancementRule
+                 │  │        └──< EditionRegion >── Region
+                 │  ├──< Division
+                 │  └──< Resource
+                 │
+User ─┬─ ParticipantProfile ──< ParticipantCompetition >── Competition/Edition
+      ├─ GuardianLink ── (child) User
+      ├─ Membership >── Organization ──< Role
+      └─ GroupMembership >── Group ──(forms)──< Team ──< TeamMember
+
+Entitlement ── Product ;  Entitlement.scope → Competition|Edition|Category|Platform
+Order ──< Entitlement ;  Order ── Payment
+ActivityEvent → (any subject)   // progress derived here
+```
+
+---
+
+## 5. What we actually build in Phase 1
+
+To avoid over-building, Phase 1 implements only:
+- `Competition`, `Edition`, `KeyDate`, `Category`, `CategoryTemplate`, `Region`, `EditionRegion`, `Resource`
+- `User`, `ParticipantProfile`, `GuardianLink`, `Organization`, `Membership`, `Role`/`Permission`
+- `ParticipantCompetition` (Tracker), `ActivityEvent`
+- `provenance`/`verification_state` fields; `CorrectionProposal` (DQ6 corrections queue); minimal `Product` stub
+
+Everything else (`Division`, `Round`, `Team`, `Entitlement`, `Registration`, `Submission`, prep,
+judging, compliance) is **reserved** — the columns/relations are designed here so later phases add
+tables and logic without reshaping the Phase-1 core.
+
+---
+
+## 6. Deferred to per-phase deep-dives
+- **Phase 2:** PrepPackage content model, entitlement/checkout flows, Group/cohort mechanics, progress-derivation queries.
+- **Phase 3:** Registration/Submission, host verification workflow, Team formation, promotion placement, **science-fair wedge** — compliance (ComplianceForm/ReviewCommittee), basic judging (Rubric/Score), multi-level advancement enforcement. 🛑 All wedge/judging design happens at **Gates A/B** (`development-process.md` §6a) — never ahead of them.
+- **Phase 4:** Advanced judging (modes, normalization, blind/COI), UGC creator content model.
+
+## 7. Open modeling questions — status (updated 2026-07-07)
+
+**Resolved — locked above, no ambiguity remains:**
+- ✅ **Grade encoding** → Q2: `smallint`; Pre-K = −1, K = 0, grades 1–12 = 1–12; 13 reserved for post-high-school.
+- ✅ **Division placement** → Q4: on `Competition`, `active` flag, snapshot at registration.
+- ✅ **Soft-delete / versioning** → D7: soft-delete (`archived_at`) + `ActivityEvent` diffs + `CorrectionProposal` queue; no temporal/history tables.
+
+- ✅ **Multi-region Editions** → Q3: region join is **Edition-level** (`EditionRegion`); rule = *one registration = one Edition* — same dates/registration/results ⇒ one Edition, many regions; operationally distinct runnings ⇒ separate Editions linked via `advances_to_edition_id`.
+
+**All pre-R1-1 modeling blockers are resolved (2026-07-07) — the R1-1 schema migration is unblocked.**

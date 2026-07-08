@@ -1,0 +1,56 @@
+# --- Secrets / env (NEVER commit) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.md
+**/application-local.yml
+**/application-local.properties
+
+# --- Node / Next.js / pnpm ---
+node_modules/
+.pnpm-store/
+.next/
+out/
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+.eslintcache
+
+# --- Java / Gradle / Spring ---
+.gradle/
+**/build/
+!**/src/**/build/
+*.class
+bin/
+target/
+
+# --- Docker ---
+*.local.yml
+!docker-compose.yml
+!docker-compose.staging.yml
+
+# --- IDE / editor ---
+.idea/
+.vscode/
+!.vscode/extensions.json
+*.iml
+*.swp
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Logs / coverage / tmp ---
+*.log
+npm-debug.log*
+coverage/
+.nyc_output/
+tmp/
+temp/
+
+# --- Claude Code local ---
+.claude/settings.local.json

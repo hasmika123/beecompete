@@ -1,0 +1,16 @@
+# Normalize line endings — LF in the repo, checked out native on Windows.
+* text=auto eol=lf
+
+# Scripts must stay LF (they run in bash/containers).
+*.sh text eol=lf
+
+# Common binaries — never touch.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
