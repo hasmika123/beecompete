@@ -97,12 +97,12 @@ read this doc the way they read the glossary — decisions live here, not in cha
 - **Primary buttons / dark fills (owner r5, 2026-07-08):** **neutral** dark gray (`#363636` —
   neither cool nor warm), **not black**. (Earlier warm `#3d3929` read brown, cool `#32343a` read
   blue — both rejected.) Light ground is near-white with only a hair of warmth (`#fdfdfc`).
-- **Data-aware facts (owner r5/r8/r9, 2026-07-08):** competition-card facts are styled by *what
-  the data means to a family*, not uniformly. **All four logistics facts** (cost · format ·
-  region · entry pathway) render as a **labeled 2×2 grid of fixed slots** (owner r9 — supersedes
-  the r8 dot-line, which got ambiguous and shifted as values changed): each fact always occupies
-  the same cell, the muted micro-label disambiguates any value, each value truncates
-  independently; **Cost = "Free" reads positive** (success green). **Footer follows the Kaggle
+- **Data-aware facts (owner r5–r10, 2026-07-08):** competition-card facts are styled by *what
+  the data means to a family*, not uniformly. **Cards carry only two logistics facts — Cost +
+  Region** (owner r10; format and entry pathway live on the details page and in filters),
+  rendered as **icon + value pairs in fixed half-width slots on one row**: the ticket and map-pin
+  icons carry the labels, values stay large and scannable, each truncates independently.
+  **Cost = "Free" reads positive** (success green, icon included). **Footer follows the Kaggle
   competition-card pattern (owner r8): PRIZE is the bold prominent fact** (gold trophy +
   semibold, truncates) **and the deadline is quiet muted "N days to go" text** (nowrap; flips to
   a danger tint only in the final days, not at 14). Deadline + prize share the footer row, pinned

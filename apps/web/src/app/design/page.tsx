@@ -18,6 +18,7 @@ import {
   Heart,
   MapPin,
   Search,
+  Ticket,
   Trophy,
   Users,
   VerifiedSeal,
@@ -207,28 +208,20 @@ export default function DesignPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-4 pt-3">
-              {/* All four facts in LABELED fixed slots (owner r9 — a bare dot line gets
-                  ambiguous and shifts around as values change): each fact always sits in
-                  the same cell, the label disambiguates any value, and each value
-                  truncates independently. Cost keeps its positive treatment. */}
-              <dl className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border pt-3">
-                <div className="flex min-w-0 flex-col leading-tight">
-                  <dt className="text-[11px] text-muted">Cost</dt>
-                  <dd className="truncate text-[13px] font-semibold text-success">Free</dd>
-                </div>
-                <div className="flex min-w-0 flex-col leading-tight">
-                  <dt className="text-[11px] text-muted">Format</dt>
-                  <dd className="truncate text-[13px] font-medium text-foreground">In person</dd>
-                </div>
-                <div className="flex min-w-0 flex-col leading-tight">
-                  <dt className="text-[11px] text-muted">Region</dt>
-                  <dd className="truncate text-[13px] font-medium text-foreground">Nationwide</dd>
-                </div>
-                <div className="flex min-w-0 flex-col leading-tight">
-                  <dt className="text-[11px] text-muted">Entry</dt>
-                  <dd className="truncate text-[13px] font-medium text-foreground">Individual</dd>
-                </div>
-              </dl>
+              {/* Only the two card-level facts (owner r10): Cost + Region — format and
+                  entry pathway live on the details page / filters. Icon + value pairs
+                  in fixed half-width slots: the ticket and map-pin icons carry the
+                  labels, values stay large and scannable, each truncates independently. */}
+              <div className="grid grid-cols-2 gap-x-3 border-t border-border pt-3">
+                <span className="inline-flex min-w-0 items-center gap-1.5">
+                  <Ticket aria-hidden="true" className="size-4 shrink-0 text-success" />
+                  <span className="truncate text-sm font-semibold text-success">Free</span>
+                </span>
+                <span className="inline-flex min-w-0 items-center gap-1.5">
+                  <MapPin aria-hidden="true" className="size-4 shrink-0 text-muted" />
+                  <span className="truncate text-sm font-medium text-foreground">Nationwide</span>
+                </span>
+              </div>
             </CardContent>
             {/* Footer, Kaggle-style: PRIZE is the bold, prominent fact; the deadline is
                 quiet muted "N days to go" text (flips to a danger tint only in the final
