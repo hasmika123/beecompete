@@ -47,6 +47,14 @@ though we build them later. Those feed directly into the Domain & Data Model doc
 > the **free host tier = claimed-listing management + capped private competitions** (registration,
 > roster, announcements, submissions; participant cap 🔬). Claiming curated listings stays free.
 > H1/H2/H48 notes updated.
+>
+> **Rev 9 (2026-07-08):** **Community (articles) expansion + admin-managed landing content**
+> (owner). **M19** revised: canonical entity **Article**, public surface named **"Community"** —
+> admin-published articles (rich text, images, links) with **linked Competitions** rendered in the
+> article. Added **M34** (article reactions like/love + share), **M35** (article comments —
+> login-required, **disabled for minors**, moderated via DQ8), **M36** (admin-managed landing
+> content: hero cards + featured-carousel picks, Phase 1 — extends X16/R1-3). Foundation hook #15
+> added. **Not forums** — B6 stays deferred; no user-authored posts.
 
 ---
 
@@ -139,7 +147,7 @@ though we build them later. Those feed directly into the Domain & Data Model doc
 | M16 | Reviews & ratings | 2 | M | Moderated via DQ8 |
 | M17 | Past-participant Q&A / discussion | 3 | M | Public + moderated only — **no 1:1 private messaging with minors** (anti-decision, Rev 7; compliance §1) |
 | M18 | Team-finder / teammate matching | 3 | L | Network-effect lever. 🔒 **Consent-upgrade:** makes a child's profile visible to others (third-party disclosure) → stronger parental consent required (see `rfc-p1-auth-consent.md` §5). Invites go by **member ID**, never by exposing a minor's email (Rev 7) |
-| M19 | Editorial guides / blog | 2 | M | SEO + content marketing |
+| M19 | **Community articles** — admin-published articles (rich text, images, links) with **linked Competitions** shown in-article (reuses CompetitionCard row) | 2 | M | SEO + content marketing. Canonical entity **Article**; public surface = **"Community"** (glossary). Publishing reuses R1-3 admin patterns; reading needs no account. *Not* forums (B6 deferred) — no user-authored posts (Rev 9) |
 | M20 | Verified competition record / student profile | 4 | L | Admissions currency (verified; cf. M24 self-reported) |
 | M21 | Share competition | 1 | S | |
 | M22 | Compare competitions side-by-side | Backlog | S | Park |
@@ -154,6 +162,9 @@ though we build them later. Those feed directly into the Domain & Data Model doc
 | M31 | Social proof on listings ("N students tracking", shown above a minimum threshold) | 1 | S | Trust/urgency for users + demand teaser that motivates hosts to claim; uses tracker counts |
 | M32 | Organization directory + public org profile pages | 3 | M | Deferred from R1 nav (owner, 2026-07-07); ships with host claiming/profiles. Persistent **nav search** also revisited in Phase 3 (extends M2) |
 | M33 | **Past winners / results history on curated listings** | 2 | M | SEO + credibility asset for *external* competitions (H16/H35 only cover platform-hosted results); curation-fed, top competitions first (Rev 7) |
+| M34 | Article reactions (like/love) + share | 2 | S | On M19 articles. **Reactions: logged-in users only, disabled for minors** (age from DOB/grade signal, R2-5 age gate). **Share = plain link action, no login** (matches M21; collects nothing). Reaction counts public; reactors never listed (Rev 9) |
+| M35 | Article comments | 2 | M | 🔒 On M19 articles. **Login-required + disabled for minors** (adult-authored only — avoids child-UGC COPPA disclosure entirely) **+ moderated via DQ8** with DQ7 reporting — audience is minors, so moderation is required regardless of who authors. Builds only after R2 accounts + DQ8 exist (Rev 9) |
+| M36 | Admin-managed landing content — **3 hero cards** (image, link, hover-scrim description) + **featured-carousel picks** (ordered) | 1 | M | Extends X16; admin CRUD in R1-3, rendered by R1-6b. Entities: `HeroCard`, `FeaturedSlot` (R1-1 schema). Editorial picks — distinct from paid promotion, which arrives as labeled M28 slots later (Rev 9) |
 
 ## P · Facet 2 — Participant+ *(real revenue #1)*
 
@@ -343,6 +354,7 @@ reserve room for them now** to avoid a migration. Each feeds the Domain & Data M
 12. **Payer ≠ beneficiary** in payments/entitlements (X15) — parent or educator pays; student holds the entitlement.
 13. **Compliance from launch** — affiliate disclosure (DQ10) ships with affiliate links; trust/safety reporting + moderation (DQ7, DQ8) present given minors + any user-generated content.
 14. **Compliance/consent/advancement — room, not schema** (HC1, HC3, HC5) — P1 only avoids *blocking* assumptions: stable IDs to hang future tables on; no single-round / single-level assumptions baked into `Edition`. The actual entities are **deliberately designed at Gate A** (`development-process.md` §6a), informed by fair-director research — never ahead of it. Ties to Hook #7 (competition structure).
+15. **Community articles are additive-by-design** (M19, M34, M35) — no P1 schema reserved: `Article` and its joins (`ArticleCompetitionLink`, `ArticleReaction`, `ArticleComment`) hang off stable `Competition`/`User` IDs and the existing moderation substrate (X14 status fields, DQ8 queue) when built in Phase 2. The only P1 prerequisite it leans on is the **age/DOB signal** (already on `ParticipantProfile`) for the minor-disable rule on reactions/comments. Landing content (`HeroCard`, `FeaturedSlot` — M36) *is* P1 schema, in R1-1.
 
 ---
 
