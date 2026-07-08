@@ -85,7 +85,7 @@ The hero design pass is therefore two checkpoints: 🧑 approve the **blueprint*
 
 | Page | Release | Structure | Style prototype |
 |---|---|---|---|
-| Landing | R1 | ✅ approved (rev 2026-07-08) | round 2 — re-prototype hero (quick-match + category strip) & new section order |
+| Landing | R1 | ✅ approved (rev 2026-07-09) | round 2 — re-prototype hero (plain Browse button + category strip) & new section order |
 | Competitions (listing) | R1 | ✅ approved (rev 2026-07-08) | not started |
 | Competition detail | R1 | ✅ approved (rev 2026-07-08) | not started |
 | How It Works | R1 | ✅ approved (2026-07-08) | not started |

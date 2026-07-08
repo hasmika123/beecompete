@@ -41,7 +41,7 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
 
 **Frontend**
 - **R1-6** — Marketplace: browse + search + filters + sort, per `page-blueprints.md` Page 2 (grade quick-chips, Grade-first facets, "Load more" + crawlable pagination, zero-results near-miss cards, hybrid category URLs with SEO text block). (M1–M4, M15)
-- **R1-6b** — Public page set per `page-blueprints.md`: **Landing** (Page 1, incl. quick-match panel + hero category strip), **How It Works** (Page 4), **Categories index** (Page 5). Structure is the approved blueprint; style via the hero design pass (design-brief §5). (M15, H46, R1-13)
+- **R1-6b** — Public page set per `page-blueprints.md`: **Landing** (Page 1, incl. plain Browse-competitions button + hero category strip), **How It Works** (Page 4), **Categories index** (Page 5). Structure is the approved blueprint; style via the hero design pass (design-brief §5). (M15, H46, R1-13)
 - **R1-7** — Competition detail page + edition/dates/status display, per `page-blueprints.md` Page 3 — incl. breadcrumb, "At a glance" strip (Grades · Deadline · Cost · Location · Prize · **Entry pathway**), **FAQ tab** (FAQPage structured data; content curated via R1-3), sticky sidebar, and **per-date add-to-calendar links (ics + Google)**. (M5, M6)
 - **R1-8** — Resources section + affiliate links + **affiliate disclosure**. 🔒 (M11, DQ10)
 - **R1-9** — Trust/verification badges (Curated/Verified). (DQ13)

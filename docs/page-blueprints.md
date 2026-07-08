@@ -50,18 +50,17 @@ disclaimer (→ R1-13) · contact/support · social links (→ R1-12) · Suggest
 - **Layout:** 50/50 split. **Left half:** large bold headline — "Search. Compete. Participate." —
   with **subtext that carries the value proposition** (owner 2026-07-08): names the audience
   (K-12 / "your student"), names 2–3 subjects (math, science, debate…), and states the
-  one-place promise. **Two CTAs** below: primary **"Browse competitions"** → /competitions (→ M1)
-  — **on hover/focus it opens an animated quick-match panel**: Grade + Subject selectors →
-  "Find competitions" → pre-filtered /competitions (a link-builder onto the M3 filter URLs, not
-  search; owner 2026-07-08). Secondary **"How it works"** → the How It Works page (Page 4; the
+  one-place promise. **Two CTAs** below: primary **"Browse competitions"** → a plain button that
+  navigates to /competitions (→ M1) — **no dropdown, no panel** (owner 2026-07-09, supersedes the
+  hover quick-match panel). Secondary **"How it works"** → the How It Works page (Page 4; the
   section moved off Landing). **Right half:** placeholder SVG of a child (final asset later), with
   **two satellite SVGs**: competition-card graphic **top-right**, tracker/timeline graphic
   **bottom-left**.
 - **Hero base strip:** a **horizontally scrolling row of compact category tiles** (icon + name)
   with side arrow buttons, each → its category URL (→ M15). **Replaces the former full-bleed
-  Category highlight section** (owner 2026-07-08).
-- **Motion:** satellites animate in on load (staggered fade/slide); the quick-match panel opens
-  with the same restraint. On touch devices the panel opens on tap.
+  Category highlight section** (owner 2026-07-08). *(This strip is where per-category entry now
+  lives, since the Browse button no longer surfaces categories.)*
+- **Motion:** satellites animate in on load (staggered fade/slide).
 - *(No search here or in the nav at launch — search lives on the Competitions page; nav search
   revisited in Phase 3.)*
 
@@ -107,8 +106,8 @@ disclaimer (→ R1-13) · contact/support · social links (→ R1-12) · Suggest
 the How It Works timeline. Removed: the full-bleed Category highlight section (replaced by the
 hero category strip).*
 
-**Mobile:** single column; hero stacks (text above image; quick-match opens on tap); category
-strip stays a swipe row; carousel & related rows become swipe; audience cards stack.
+**Mobile:** single column; hero stacks (text above image); category strip stays a swipe row;
+carousel & related rows become swipe; audience cards stack.
 
 ---
 
@@ -291,7 +290,7 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
 
 **2026-07-08 (market/UX review — all owner-selected):**
 1. **Hero:** slogan headline kept; **subtext carries the descriptive value prop** (K-12, named subjects, one-place promise).
-2. **Quick-match panel:** "Browse competitions" opens an animated Grade + Subject panel on hover/focus → pre-filtered /competitions.
+2. ~~**Quick-match panel:** "Browse competitions" opens an animated Grade + Subject panel on hover/focus → pre-filtered /competitions.~~ **Superseded 2026-07-09** — the Browse button is a plain button that navigates to /competitions; no dropdown/panel (see 2026-07-09 entry below). Per-category entry lives in the hero category strip (decision #3).
 3. **Hero category strip** (horizontal scroll, side buttons) **replaces the full-bleed Category highlight section**.
 4. **Relocations:** demo video, stats & imagery grid, and the How It Works timeline move to the new **How It Works page** (nav tab renamed from "About Us"); Landing keeps the admissions-stats value-prop split.
 5. **Landing order** is now: Hero → Featured carousel → Value-prop split → Audience cards → Digest band → Footer.
@@ -316,10 +315,13 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
 22. **Entry pathway** added to the filter facets (Page 2) and the Details at-a-glance strip (Page 3).
 23. Prize on cards/at-a-glance is backed by typed `prize_summary`/`prize_value`/`prize_currency` on Edition (domain model 2026-07-08).
 
+**2026-07-09 (owner):**
+24. **Hero "Browse competitions" is a plain button** → /competitions. No hover dropdown / side panel / quick-match (supersedes decision #2). Category entry stays in the hero category strip (#3).
+
 ## Status
 | Page | Blueprint | Style prototype | Built |
 |---|---|---|---|
-| Landing | ✅ approved (2026-07-07 · rev 2026-07-08) | 🔍 round 2 in review — re-prototype hero (quick-match + category strip) & new order | — |
+| Landing | ✅ approved (2026-07-07 · rev 2026-07-09) | 🔍 round 2 in review — re-prototype hero (plain Browse button + category strip) & new order | — |
 | Competitions (listing) | ✅ approved (2026-07-07 · rev 2026-07-08) | — | — |
 | Competition details | ✅ approved (2026-07-07 · rev 2026-07-08) | — | — |
 | How It Works | ✅ approved (2026-07-08) | — | — |
