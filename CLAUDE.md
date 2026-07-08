@@ -51,8 +51,10 @@ Start context: `docs/README.md` → `docs/vision-prd.md`, `docs/glossary.md`.
 - **Mobile-first, fully responsive.** WCAG 2.1 AA on new UI. Light + dark via tokens.
 - **Palette:** gold `#F5C330` + ink `#030201`. **Type: display serif for headlines + Inter for
   body/UI** (self-hosted, no font CDN; exact serif face/size/weight = builder judgment at F7 —
-  design-brief §3, rev 2026-07-08). Buttons: flat gold fill + near-black text, ~12px radius,
-  **no glow/colored shadows**.
+  design-brief §3, rev 2026-07-08). **Buttons: pill-rounded, primary = ink fill + white text,
+  gold = "brand" variant** (builder-delegated 2026-07-08); cards/dropdowns + expanded panels/
+  inputs ≥12–16px radius; **no glow/colored shadows**; owner steers reactively with reference
+  photos (design-brief §1).
 - Hero pages (Landing, Competitions, Details, How It Works, Categories index, Suggest a Competition)
   follow the approved blueprints; changing their structure means updating `docs/page-blueprints.md` first.
 
