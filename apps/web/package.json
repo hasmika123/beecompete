@@ -2,15 +2,31 @@
   "name": "@beecompete/web",
   "version": "0.0.0",
   "private": true,
-  "description": "BeeCompete web app + BFF (Next.js, App Router, TS). Skeleton — real app lands in F3.",
+  "description": "BeeCompete web app + BFF (Next.js, App Router, TS). F3 skeleton: app shell + light/dark theming; real pages land in R1.",
+  "type": "module",
   "scripts": {
-    "dev": "echo \"(F3 placeholder) next dev — Next.js app not scaffolded yet\"",
-    "build": "echo \"(F3 placeholder) next build — Next.js app not scaffolded yet\"",
-    "lint": "echo \"(F3 placeholder) next lint\"",
-    "typecheck": "echo \"(F3 placeholder) tsc --noEmit\""
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@beecompete/config": "workspace:*",
-    "@beecompete/ui": "workspace:*"
+    "@beecompete/ui": "workspace:*",
+    "next": "^16.0.0",
+    "next-themes": "^0.4.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@tailwindcss/postcss": "^4.0.0",
+    "eslint": "^9.17.0",
+    "eslint-config-next": "^16.0.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.2"
   }
 }

@@ -1,0 +1,59 @@
+@import 'tailwindcss';
+
+/*
+ * F3 THEMING MECHANISM — placeholder tokens only.
+ *
+ * This file establishes HOW theming works (CSS variables + a `.dark` class toggled
+ * by next-themes), not the final design language. F7 replaces the values below with
+ * the real design-token system from packages/ui (full palette, spacing, radius,
+ * typography, per-category accent hues — see docs/design-brief.md §3).
+ *
+ * Locked brand constants (design-brief §3): gold #F5C330 (fill/accent only — never
+ * text-on-white, fails WCAG on white) + ink #030201. Text on gold is always ink.
+ */
+
+/* Enable class-based dark mode for Tailwind v4 (next-themes sets class="dark"). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --brand-gold: #f5c330;
+  --brand-ink: #030201;
+
+  /* Semantic placeholders — light. */
+  --background: #ffffff;
+  --foreground: #030201;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --surface: #f9fafb;
+}
+
+.dark {
+  /* Semantic placeholders — dark. */
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+  --muted: #9ca3af;
+  --border: #26262a;
+  --surface: #141417;
+}
+
+/* Expose the CSS variables as Tailwind utilities (bg-background, text-foreground, …). */
+@theme inline {
+  --color-brand-gold: var(--brand-gold);
+  --color-brand-ink: var(--brand-ink);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-surface: var(--surface);
+
+  /* Placeholder font stack — Inter is self-hosted in packages/ui at F7 (no font CDN). */
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
