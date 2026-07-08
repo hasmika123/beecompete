@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: beecompete-api
+  # Java 21 virtual threads for I/O scalability (architecture §3).
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  # Undertow serves on 8080 by default; graceful shutdown drains in-flight requests.
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Only health + info are exposed. Never expose the full actuator surface publicly.
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+info:
+  app:
+    name: BeeCompete API
+    description: K-12 academic-competition marketplace API (modular monolith)

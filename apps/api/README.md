@@ -4,10 +4,29 @@ The single deployable backend: a **modular monolith** on Spring Boot (Java 21 LT
 built with **Gradle**. Not a pnpm workspace member — it builds via Gradle, in the same
 monorepo.
 
-> **Skeleton only.** The Spring Boot project (Gradle, Actuator, Bean Validation, the
-> module packages below) is scaffolded in **F2**. Postgres + Liquibase baseline is **F4**.
-> See [`docs/phase-1-plan.md`](../../docs/phase-1-plan.md) and
-> [`docs/architecture.md`](../../docs/architecture.md) §4.
+> **F2 skeleton.** Spring Boot 3.5 · Java 21 · Gradle (Kotlin DSL) · Undertow · Actuator ·
+> Bean Validation. It boots, serves versioned JSON, and reports health — **no DB, no auth,
+> no entities yet** (Postgres + Liquibase = F4; auth/sessions = R2). See
+> [`docs/phase-1-plan.md`](../../docs/phase-1-plan.md) and
+> [`docs/architecture.md`](../../docs/architecture.md) §3–§4.
+
+## Run & build
+
+Uses the committed **Gradle wrapper** — no local Gradle install needed. The app targets
+**Java 21**; the wrapper's Foojay resolver auto-provisions a JDK 21 toolchain if one isn't
+installed (the Gradle daemon itself runs on any JDK ≥ 17).
+
+```bash
+cd apps/api
+./gradlew build       # compile + test
+./gradlew bootRun     # start on http://localhost:8080
+```
+
+Wiring checks: `GET /api/v1/ping` (versioned JSON; `?name=` is Bean-Validated) and
+`GET /actuator/health`.
+
+**Config:** `src/main/resources/application.yml` is committed (no secrets).
+Local overrides go in a git-ignored `application-local.yml`; secrets via environment only.
 
 ## Module layout (domain clusters — architecture §4)
 

@@ -4,6 +4,10 @@
 # Scripts must stay LF (they run in bash/containers).
 *.sh text eol=lf
 
+# Gradle wrapper: gradlew stays LF, the Windows .bat stays CRLF, the jar is binary.
+gradlew text eol=lf
+*.bat text eol=crlf
+
 # Common binaries — never touch.
 *.png binary
 *.jpg binary
@@ -14,3 +18,4 @@
 *.woff binary
 *.woff2 binary
 *.pdf binary
+*.jar binary
