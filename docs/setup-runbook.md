@@ -19,9 +19,11 @@ never committed).
 ## 1. GitHub repo + branch protection  *(Foundation)*
 1. Create the repo (private to start).
 2. Push the monorepo skeleton.
-3. **Settings → Branches → Add rule** for `main`: require PR before merge, require **status checks (CI)** to pass, require branches up to date, no direct pushes, no force-push.
+3. **Branch protection on `main`** — require PR before merge, require **status checks (CI)** to pass, up-to-date branches, no direct pushes, no force-push.
+   - ⚠️ **Free-plan reality (confirmed 2026-07-07):** branch protection **and** rulesets are unavailable on **private** repos on the Free plan (both return "upgrade to Pro or make public"). Options: **(a)** keep private + **defer protection until GitHub Pro (~$4/mo)** — do this when CI matters; **(b)** make the repo public (free protection + unlimited Actions, but exposes the strategy corpus — not chosen); **(c)** stay unprotected through Foundation.
+   - **Decision:** protection is **premature until F5 anyway** — enforcing "require the `ci` check" before `ci.yml` exists would block your own Foundation commits. So: **stay private + unprotected through Milestone F; at F5 (CI lands), upgrade to Pro and enable protection** (or revisit public). CI still *runs* on PRs meanwhile; only *enforcement* waits.
 4. Settings → Actions: allow GitHub Actions; add repo **secrets** (filled in as later steps produce them).
-- **Outputs:** repo URL; branch protection on `main`.
+- **Outputs:** repo URL; branch protection deferred to F5 (see above).
 
 ## 1b. Legal foundation  *(before R1 goes public — not needed to start coding)*
 A minors-facing, payments-bound platform should not launch publicly as an unincorporated individual.

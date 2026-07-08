@@ -47,20 +47,12 @@ New-Milestone 'R1 - Browse-only marketplace'   'Public browse-only launch; light
 New-Milestone 'R2 - Accounts + tracker'        'COPPA consent, tracker, the core beta (phase-1-plan.md R2)'
 
 Write-Host "==> 4. Branch protection on main (require PR + CI check, no force-push/delete)" -ForegroundColor Cyan
-$protection = @{
-  required_status_checks        = @{ strict = $true; contexts = @('ci') }
-  enforce_admins                = $false
-  required_pull_request_reviews = @{ required_approving_review_count = 0 }
-  restrictions                  = $null
-  allow_force_pushes            = $false
-  allow_deletions               = $false
-} | ConvertTo-Json -Depth 6
-$protection | gh api -X PUT "repos/$slug/branches/main/protection" -H "Accept: application/vnd.github+json" --input -
-if ($LASTEXITCODE -eq 0) {
-  Write-Host "   protection set"
-} else {
-  Write-Host "   (protection needs 'main' pushed first; re-run this step after the first push)"
-}
+Write-Host "   NOTE: skipped by design until F5 (CI). Branch protection is unavailable on Free-plan"
+Write-Host "   private repos anyway, and enforcing a 'ci' check before ci.yml exists would block your"
+Write-Host "   own Foundation commits. Enable this at F5 (upgrade to GitHub Pro, or make the repo"
+Write-Host "   public). See setup-runbook.md section 1, step 3. To enable then, run:"
+Write-Host '     $b = @{ required_status_checks=@{strict=$true;contexts=@("ci")}; enforce_admins=$false; required_pull_request_reviews=@{required_approving_review_count=0}; restrictions=$null; allow_force_pushes=$false; allow_deletions=$false } | ConvertTo-Json -Depth 6'
+Write-Host "     `$b | gh api -X PUT repos/$slug/branches/main/protection -H `"Accept: application/vnd.github+json`" --input -"
 
 Write-Host ""
 Write-Host "Done. Next:" -ForegroundColor Green
