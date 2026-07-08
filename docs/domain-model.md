@@ -203,8 +203,10 @@ sketches, not contracts:
   (article, user). **Logged-in non-minor users only** (age from `ParticipantProfile` DOB/grad-year);
   counts public, reactors never listed.
 - **`ArticleComment`** [reserve] — `article_id, user_id, body, status (pending|approved|rejected|
-  removed), created_at` — **login-required, disabled for minors, moderated via DQ8**, reportable
-  via DQ7. Builds only after R2 accounts + the moderation queue exist.
+  removed), created_at` — **adult-visible-only, read and write** (owner 2026-07-08): the comment
+  section renders only for logged-in non-minor users; minors and logged-out visitors never see it.
+  Moderated via DQ8 (post-moderation viable — no minor audience), reportable via DQ7. Builds only
+  after R2 accounts + the moderation queue exist.
 
 ### 3e-bis. Site content (Landing) *(P1 — M36, Rev 9)*
 

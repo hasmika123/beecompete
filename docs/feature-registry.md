@@ -55,6 +55,9 @@ though we build them later. Those feed directly into the Domain & Data Model doc
 > login-required, **disabled for minors**, moderated via DQ8), **M36** (admin-managed landing
 > content: hero cards + featured-carousel picks, Phase 1 — extends X16/R1-3). Foundation hook #15
 > added. **Not forums** — B6 stays deferred; no user-authored posts.
+> *Amended same-day (owner):* **M35 comments are adult-visible-only, read and write** — the
+> comment section is hidden from minors and logged-out visitors entirely, taking comment content
+> out of the child-directed standard and enabling post-moderation.
 
 ---
 
@@ -163,7 +166,7 @@ though we build them later. Those feed directly into the Domain & Data Model doc
 | M32 | Organization directory + public org profile pages | 3 | M | Deferred from R1 nav (owner, 2026-07-07); ships with host claiming/profiles. Persistent **nav search** also revisited in Phase 3 (extends M2) |
 | M33 | **Past winners / results history on curated listings** | 2 | M | SEO + credibility asset for *external* competitions (H16/H35 only cover platform-hosted results); curation-fed, top competitions first (Rev 7) |
 | M34 | Article reactions (like/love) + share | 2 | S | On M19 articles. **Reactions: logged-in users only, disabled for minors** (age from DOB/grade signal, R2-5 age gate). **Share = plain link action, no login** (matches M21; collects nothing). Reaction counts public; reactors never listed (Rev 9) |
-| M35 | Article comments | 2 | M | 🔒 On M19 articles. **Login-required + disabled for minors** (adult-authored only — avoids child-UGC COPPA disclosure entirely) **+ moderated via DQ8** with DQ7 reporting — audience is minors, so moderation is required regardless of who authors. Builds only after R2 accounts + DQ8 exist (Rev 9) |
+| M35 | Article comments | 2 | M | 🔒 On M19 articles. **Adult-visible-only, read AND write** (owner 2026-07-08, amends Rev 9): the comment section is **hidden from minors and logged-out visitors** — only logged-in non-minor users see or write comments. Removes the child-directed standard from comment content (a moderation miss can't reach a kid) and makes **post-moderation** (publish + act on reports) defensible. Still moderated via DQ8 + DQ7 reporting (adult spaces still get spam/harassment; infra ships anyway). No child UGC. Builds only after R2 accounts + DQ8 exist |
 | M36 | Admin-managed landing content — **3 hero cards** (image, link, hover-scrim description) + **featured-carousel picks** (ordered) | 1 | M | Extends X16; admin CRUD in R1-3, rendered by R1-6b. Entities: `HeroCard`, `FeaturedSlot` (R1-1 schema). Editorial picks — distinct from paid promotion, which arrives as labeled M28 slots later (Rev 9) |
 
 ## P · Facet 2 — Participant+ *(real revenue #1)*
