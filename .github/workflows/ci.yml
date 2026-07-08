@@ -56,9 +56,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
+      - uses: pnpm/action-setup@v4 # version comes from package.json "packageManager"
       - uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
@@ -109,7 +107,7 @@ jobs:
 
       - name: Dependency scan — Trivy (advisory)
         continue-on-error: true
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
