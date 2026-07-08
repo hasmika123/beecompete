@@ -139,33 +139,52 @@ export default function DesignPage() {
 
       <Section title="Cards">
         <div className="grid gap-5 sm:grid-cols-2">
-          <Card interactive className="overflow-hidden">
-            <div className="flex h-32 items-end bg-brand-gold-soft p-4">
-              <Badge variant="gold">
-                <GraduationCap aria-hidden="true" className="size-3.5" /> Math
+          {/* CompetitionCard direction study — the real component ships with R1-6
+              (per-category cover art system lands alongside the catalog). */}
+          <Card interactive className="group overflow-hidden">
+            <div className="relative flex h-36 items-center justify-center bg-linear-to-br from-brand-gold-soft to-brand-gold/45">
+              <Trophy
+                aria-hidden="true"
+                weight="duotone"
+                className="size-14 text-brand-gold drop-shadow-none transition-transform group-hover:scale-105"
+              />
+              <Badge variant="verified" className="absolute top-3 right-3">
+                Verified
               </Badge>
             </div>
             <CardHeader>
-              <CardTitle>AMC 10</CardTitle>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge variant="gold">
+                  <GraduationCap aria-hidden="true" className="size-3.5" /> Math
+                </Badge>
+                <Badge variant="outline">Grades 8–10</Badge>
+              </div>
+              <CardTitle className="pt-1.5">AMC 10</CardTitle>
               <CardDescription>
                 The classic 25-question contest for students in grade 10 and below.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col gap-1.5 pt-3 text-sm text-muted">
-              <span className="inline-flex items-center gap-1.5">
-                <Calendar aria-hidden="true" className="size-4" />
-                <strong className="font-semibold text-foreground">Deadline Nov 8</strong>
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Trophy aria-hidden="true" className="size-4" />
-                <strong className="font-semibold text-foreground">Medals + AIME invite</strong>
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <MapPin aria-hidden="true" className="size-4" /> In person · Nationwide
-              </span>
+            <CardContent className="pt-4">
+              {/* Deadline + prize: bold, fixed position (page-blueprints shared components). */}
+              <div className="grid gap-1.5 rounded-[var(--radius-field)] bg-surface px-3.5 py-2.5 text-sm">
+                <span className="inline-flex items-center gap-2">
+                  <Calendar aria-hidden="true" className="size-4 text-muted" />
+                  <strong className="font-semibold text-foreground">Closes Nov 8</strong>
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <Trophy aria-hidden="true" className="size-4 text-muted" />
+                  <strong className="font-semibold text-foreground">Medals + AIME invite</strong>
+                </span>
+                <span className="inline-flex items-center gap-2 text-muted">
+                  <MapPin aria-hidden="true" className="size-4" /> In person · Nationwide
+                </span>
+              </div>
             </CardContent>
-            <CardFooter>
-              <Badge variant="verified">Verified</Badge>
+            <CardFooter className="justify-between">
+              <span className="text-sm font-medium text-muted">Free entry</span>
+              <Button variant="secondary" size="sm">
+                View details
+              </Button>
             </CardFooter>
           </Card>
 
