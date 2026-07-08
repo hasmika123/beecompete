@@ -12,7 +12,7 @@ import {
   Textarea,
 } from '@beecompete/ui';
 import {
-  ArrowRight,
+  ArrowUpRight,
   Calendar,
   GraduationCap,
   Heart,
@@ -142,7 +142,15 @@ export default function DesignPage() {
         <div className="grid gap-5 sm:grid-cols-2">
           {/* CompetitionCard direction study — the real component ships with R1-6
               (per-category cover art system lands alongside the catalog). */}
-          <Card interactive className="group overflow-hidden">
+          {/* The whole card is the link in the real component (R1-6); the corner arrow
+              is a hover affordance, not a separate control. */}
+          <Card interactive className="group relative overflow-hidden">
+            {/* View affordance — top-right, appears on hover, no circle. */}
+            <ArrowUpRight
+              aria-hidden="true"
+              weight="bold"
+              className="absolute top-4 right-4 z-10 size-5 text-foreground opacity-0 transition-opacity group-hover:opacity-100"
+            />
             <div className="relative flex h-36 items-center justify-center bg-linear-to-br from-brand-gold-soft to-brand-gold/45">
               <Trophy
                 aria-hidden="true"
@@ -163,7 +171,7 @@ export default function DesignPage() {
               <div className="flex items-center gap-2 pt-0.5">
                 <span
                   aria-hidden="true"
-                  className="flex size-6 shrink-0 items-center justify-center rounded-full bg-surface text-[10px] font-semibold text-muted"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface text-xs font-semibold text-muted"
                 >
                   MA
                 </span>
@@ -182,46 +190,30 @@ export default function DesignPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-4">
-              {/* Prize / entry / format panel — labeled rows, hairline-divided. */}
-              <div className="divide-y divide-border rounded-[var(--radius-field)] border border-border text-sm">
-                <div className="flex items-center gap-3 px-3.5 py-2.5">
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-gold-soft">
-                    <Trophy aria-hidden="true" className="size-4 text-foreground" />
-                  </span>
-                  <span className="flex min-w-0 flex-col">
-                    <span className="text-xs text-muted">Prize</span>
-                    <span className="truncate font-semibold text-foreground">
-                      Medals + AIME invite
-                    </span>
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 px-3.5 py-2.5">
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface">
-                    <MapPin aria-hidden="true" className="size-4 text-muted" />
-                  </span>
-                  <span className="flex min-w-0 flex-col">
-                    <span className="text-xs text-muted">Format</span>
-                    <span className="truncate font-medium text-foreground">
-                      In person · Nationwide · Free entry
-                    </span>
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="justify-between">
-              {/* Deadline gets the anchor slot — the card's most important fact. */}
-              <span className="inline-flex items-center gap-1.5 text-sm">
-                <Calendar aria-hidden="true" className="size-4 text-muted" />
-                <strong className="font-semibold text-foreground">Closes Nov 8</strong>
+              {/* Format / entry — muted supporting line. */}
+              <span className="inline-flex items-center gap-2 text-sm text-muted">
+                <MapPin aria-hidden="true" className="size-4" />
+                In person · Nationwide · Free entry
               </span>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="size-8 px-0"
-                aria-label="View details"
-              >
-                <ArrowRight aria-hidden="true" />
-              </Button>
+            </CardContent>
+            {/* Footer anchors the two key facts: deadline (left) + prize (right). */}
+            <CardFooter className="mt-1 justify-between border-t border-border pt-4">
+              <span className="flex min-w-0 flex-col">
+                <span className="text-xs text-muted">Closes</span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Calendar aria-hidden="true" className="size-4 text-muted" />
+                  <strong className="font-semibold text-foreground">Nov 8</strong>
+                </span>
+              </span>
+              <span className="flex min-w-0 flex-col text-right">
+                <span className="text-xs text-muted">Prize</span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Trophy aria-hidden="true" className="size-4 text-brand-gold" />
+                  <strong className="truncate font-semibold text-foreground">
+                    Medals + AIME invite
+                  </strong>
+                </span>
+              </span>
             </CardFooter>
           </Card>
 

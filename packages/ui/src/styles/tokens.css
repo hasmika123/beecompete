@@ -72,18 +72,19 @@
   --brand-ink: #030201; /* logo/brand constant — text-on-gold; NOT a UI fill */
   --brand-gold-soft: #f9f0d2; /* tinted chip/highlight ground */
 
-  /* Neutral foundation — warm paper ground (owner 2026-07-08; Claude-like) */
-  --background: #faf9f5;
-  --foreground: #29281e; /* warm charcoal text — never #000 */
-  --surface: #f0eee6; /* soft fill: secondary buttons, wells, code */
+  /* Neutral foundation — near-white ground, faint warmth (owner 2026-07-08 r4:
+   * whiter + less warm than the earlier cream). */
+  --background: #fcfcfa;
+  --foreground: #26251f; /* soft charcoal text — never #000 */
+  --surface: #f3f2ee; /* soft fill: secondary buttons, wells, code */
   --surface-raised: #ffffff; /* cards, popovers */
-  --muted: #6e6c60; /* secondary text */
-  --border: #e4e2d8; /* warm hairline separators */
-  --ring: #52503f; /* focus ring (gold fails 3:1 on light) */
+  --muted: #6c6a61; /* secondary text */
+  --border: #e8e7e0; /* hairline separators */
+  --ring: #4a4a44; /* focus ring (gold fails 3:1 on light) */
 
-  /* Interactive */
-  --primary: #3d3929; /* primary button fill — soft warm charcoal, not black */
-  --primary-foreground: #faf9f5;
+  /* Interactive — cool dark charcoal (owner r4: was reading brown), not black */
+  --primary: #32343a; /* primary button fill — cool graphite */
+  --primary-foreground: #fcfcfa;
 
   /* Status */
   --success: #1a7f4b; /* verified green — text/icon */
