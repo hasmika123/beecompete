@@ -148,8 +148,10 @@ export default function DesignPage() {
           {/* CompetitionCard direction study — the real component ships with R1-6
               (per-category cover art system lands alongside the catalog). */}
           {/* The whole card is the link in the real component (R1-6); the corner arrow
-              is a hover affordance, not a separate control. */}
-          <Card interactive className="group relative overflow-hidden">
+              is a hover affordance, not a separate control. Cards in a grid must all be
+              the SAME height: flex column + mt-auto footer, title/prize truncate,
+              description clamped. */}
+          <Card interactive className="group relative flex flex-col overflow-hidden">
             {/* View affordance — top-right, appears on hover, no circle. */}
             <ArrowUpRight
               aria-hidden="true"
@@ -163,17 +165,17 @@ export default function DesignPage() {
                 className="size-14 text-brand-gold drop-shadow-none transition-transform group-hover:scale-105"
               />
             </div>
-            <CardHeader>
+            <CardHeader className="p-4 pb-0">
               <div className="flex flex-wrap items-center gap-1.5">
                 <Badge variant="gold">
                   <GraduationCap aria-hidden="true" className="size-3.5" /> Math
                 </Badge>
                 <Badge variant="outline">Grades 8–10</Badge>
               </div>
-              <CardTitle className="pt-1.5">AMC 10</CardTitle>
+              <CardTitle className="truncate pt-1">AMC 10</CardTitle>
               {/* Organizer attribution — the ORG is what's verified (DQ13), so the seal
                   sits on the org, icon-only. */}
-              <div className="flex items-center gap-2 pt-0.5">
+              <div className="flex items-center gap-2">
                 <span
                   aria-hidden="true"
                   className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface text-xs font-semibold text-muted"
@@ -190,73 +192,66 @@ export default function DesignPage() {
                   role="img"
                 />
               </div>
-              <CardDescription>
+              <CardDescription className="line-clamp-1">
                 The classic 25-question contest for students in grade 10 and below.
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-4">
+            <CardContent className="p-4 pt-3.5">
               {/* "At a glance" — each fact's treatment reflects what it MEANS to a
                   student/family: format & region are logistics (neutral icons); cost
                   reads positive when free (success tone — a real decision driver). */}
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-                <div className="flex items-center gap-2.5">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface">
-                    <Users aria-hidden="true" className="size-4 text-muted" />
+              <dl className="grid grid-cols-2 gap-x-3 gap-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface">
+                    <Users aria-hidden="true" className="size-3.5 text-muted" />
                   </span>
                   <span className="flex min-w-0 flex-col leading-tight">
-                    <dt className="text-xs text-muted">Format</dt>
+                    <dt className="text-[11px] text-muted">Format</dt>
                     <dd className="truncate text-sm font-medium text-foreground">In person</dd>
                   </span>
                 </div>
-                <div className="flex items-center gap-2.5">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface">
-                    <Globe aria-hidden="true" className="size-4 text-muted" />
+                <div className="flex items-center gap-2">
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface">
+                    <Globe aria-hidden="true" className="size-3.5 text-muted" />
                   </span>
                   <span className="flex min-w-0 flex-col leading-tight">
-                    <dt className="text-xs text-muted">Region</dt>
+                    <dt className="text-[11px] text-muted">Region</dt>
                     <dd className="truncate text-sm font-medium text-foreground">Nationwide</dd>
                   </span>
                 </div>
-                <div className="flex items-center gap-2.5">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-success-soft">
-                    <Ticket aria-hidden="true" className="size-4 text-success" />
+                <div className="flex items-center gap-2">
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-success-soft">
+                    <Ticket aria-hidden="true" className="size-3.5 text-success" />
                   </span>
                   <span className="flex min-w-0 flex-col leading-tight">
-                    <dt className="text-xs text-muted">Cost</dt>
+                    <dt className="text-[11px] text-muted">Cost</dt>
                     <dd className="truncate text-sm font-semibold text-success">Free</dd>
                   </span>
                 </div>
-                <div className="flex items-center gap-2.5">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface">
-                    <User aria-hidden="true" className="size-4 text-muted" />
+                <div className="flex items-center gap-2">
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface">
+                    <User aria-hidden="true" className="size-3.5 text-muted" />
                   </span>
                   <span className="flex min-w-0 flex-col leading-tight">
-                    <dt className="text-xs text-muted">Entry</dt>
+                    <dt className="text-[11px] text-muted">Entry</dt>
                     <dd className="truncate text-sm font-medium text-foreground">Individual</dd>
                   </span>
                 </div>
               </dl>
             </CardContent>
-            {/* Footer anchors the two time-and-reward facts. Deadline is time-critical:
-                within ~14 days it flips to relative wording + a warning tint (the state
-                shown here); prize is the motivator, in brand gold. */}
-            <CardFooter className="mt-1 items-stretch justify-between gap-3 border-t border-border pt-4">
-              <span className="flex min-w-0 flex-col justify-center leading-tight">
-                <span className="text-xs text-muted">Deadline</span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Clock aria-hidden="true" className="size-4 text-danger" />
-                  <strong className="font-semibold text-danger">Closes in 9 days</strong>
-                </span>
-                <span className="pl-5.5 text-xs text-muted">Nov 8</span>
+            {/* Footer: one row, pinned to the bottom (mt-auto) so every card in a grid
+                shares the same baseline. Deadline never wraps (time-critical, relative
+                wording + warning tint inside ~14 days); prize truncates instead. */}
+            <CardFooter className="mt-auto items-center justify-between gap-3 border-t border-border p-4 py-3">
+              <span className="inline-flex shrink-0 items-center gap-1.5 text-sm whitespace-nowrap">
+                <Clock aria-hidden="true" className="size-4 text-danger" />
+                <strong className="font-semibold text-danger">Closes in 9 days</strong>
               </span>
-              <span className="flex min-w-0 flex-col justify-center text-right leading-tight">
-                <span className="text-xs text-muted">Prize</span>
-                <span className="inline-flex items-center justify-end gap-1.5">
-                  <Trophy aria-hidden="true" className="size-4 shrink-0 text-brand-gold" />
-                  <strong className="truncate font-semibold text-foreground">
-                    Medals + AIME invite
-                  </strong>
-                </span>
+              <span className="inline-flex min-w-0 items-center gap-1.5 text-sm">
+                <Trophy aria-hidden="true" className="size-4 shrink-0 text-brand-gold" />
+                <strong className="truncate font-semibold text-foreground">
+                  Medals + AIME invite
+                </strong>
               </span>
             </CardFooter>
           </Card>
