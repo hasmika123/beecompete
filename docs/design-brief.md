@@ -42,11 +42,12 @@ read this doc the way they read the glossary — decisions live here, not in cha
 - **Typography:** ✅ **revised 2026-07-08 (owner, from supplied reference images — supersedes
   "Inter everywhere" 2026-07-07 and the heavy-weight "headline energy" rule):** a **two-font
   pairing** in the style of the reference (Mindly-like editorial landing):
-  - **Display serif for headlines** (hero, section headings, card question-style titles):
-    **working pick = Instrument Serif** (OFL — free to self-host; closest open-source match to
-    the reference). Regular weight at large sizes — headline presence comes from the serif's
-    contrast + scale, **not** bold weights or tight tracking. *Exact cut 🔶 confirmed at the F7
-    type specimen* (alternatives if it reads wrong at size: Fraunces, Playfair Display).
+  - **Display serif for headlines** (hero, section headings, card question-style titles) —
+    *similar* to the reference, not a clone. **Exact face, sizes, weights, and tracking are
+    delegated to builder judgment at F7** (owner 2026-07-08 — no blocking specimen approval;
+    the hero *prototype* approvals in §5 remain the owner checkpoint). Leading candidate:
+    Instrument Serif (OFL); Fraunces / Playfair Display acceptable — pick whatever reads best
+    at size in the real UI. Must be open-license (self-hostable).
   - **Inter stays for body/UI** (paragraphs, buttons, forms, labels, nav — matches the sans in
     the reference images). Segoe UI remains the system proxy in prototypes (serif proxy:
     Georgia).
