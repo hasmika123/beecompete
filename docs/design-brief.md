@@ -15,7 +15,15 @@ read this doc the way they read the glossary — decisions live here, not in cha
 - **Before each hero page is built (§5):** its row gets your references/preferences → Claude builds a
   **throwaway HTML prototype** (screenshots/preview for you to react to) → 🧑 **you approve the look**
   → the real page is implemented with `packages/ui` primitives and must match the approved prototype.
-- **Utility pages** (settings, admin, plain forms) need no entry here — they assemble from primitives.
+- **Before styling any new UI element type (owner rule, 2026-07-08):** when an element or surface
+  gets its *first* styling — buttons, sign-in/auth pages, dropdowns, modals, cards, empty states,
+  etc. — **ask the owner for reference images** rather than inventing a look. Check this doc first:
+  if a locked reference/decision already covers the element (e.g., buttons in §3), build from that;
+  if not, request references, then **record them here** so each element type is asked once. Detail
+  execution (exact sizes/weights/spacing within a supplied direction) stays builder judgment, per
+  the typography precedent.
+- **Utility pages** (settings, admin, plain forms) need no entry here — they assemble from primitives
+  *(whose styling followed the reference-image rule above)*.
 
 ## 2. Brand personality *(locked 2026-07-07)*
 
