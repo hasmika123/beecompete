@@ -38,6 +38,13 @@ Rule of thumb for minors:
 
 So: personalize organic recommendations freely; keep paid promotions to minors **contextual, not behavioral**. *(Confirm the promotion-targeting approach with counsel.)*
 
+### Direct contact with minors *(anti-decision, 2026-07-08)*
+**No 1:1 private messaging between hosts/adults and minor participants — ever.** All
+host↔participant communication is either **broadcast** (announcements, H9) or **public and
+moderated** (Q&A/discussion, M17 via DQ8). The legacy prototype had private Messages; we
+deliberately do not (grooming/safety surface, moderation burden, and a COPPA disclosure trap).
+Any future exception (e.g., judge clarifications) must be org-visible, logged, and counsel-reviewed.
+
 ## 2. Educational data (the school path)
 
 | Regime | What it is | What we must do | Kicks in |

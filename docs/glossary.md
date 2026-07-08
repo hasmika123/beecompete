@@ -24,13 +24,16 @@ the **canonical** term is bolded and the synonyms-to-avoid are listed so we stay
 | **Round** (a.k.a. **Stage**) | A sequential phase of an Edition (e.g., qualifier → regional → final). | An Edition has one or more Rounds. |
 | **Advancement** | Moving a participant/team from one Round or fair level to the next (e.g., school → regional → state → national). | "Qualification" = the *rule* that decides advancement. |
 | **Format** | How a Competition runs: participation mode (individual / team / both), delivery (in-person / virtual / hybrid), and evaluation type (submission / exam / live-performance / interview / portfolio). | |
-| **Eligibility** | Who may enter — grade/age band, region, school type, other criteria. | |
+| **Eligibility** | Who may enter — grade/age band, region, school type, other criteria. | Age rules may be anchored to an **age cutoff date** ("under 19 as of June 1"). |
+| **Entry Pathway** | *How* you enter a Competition: **individual** (register yourself), **school/chapter** (only through a participating school or chapter — e.g., MATHCOUNTS, AMC), or **either**. | Spine column + filter facet (2026-07-08). Distinct from Eligibility (who may enter). |
+| **Award** | A defined prize on an Edition — place, type (monetary / non-monetary / scholarship / travel grant), value + currency. | Reserved entity (→ H47). The card/at-a-glance "Prize" renders the Edition's typed prize summary. |
 
 ## People (actors)
 
 | Term | Definition | Notes |
 |---|---|---|
 | **Participant** | A student who discovers, tracks, and competes. Also the name of the **free** participant experience. | Canonical for the person *and* the free tier. |
+| **Member ID** | A user's public BeeCompete handle (reserved on `User`, 2026-07-08). Team/roster invites go by Member ID so a minor's email is never exposed. | → H7/M18 (Phase 3). |
 | **Parent / Guardian** | The adult linked to a minor Participant — holds consent, pays, and oversees. | Primary payer. |
 | **Educator** (a.k.a. **Coordinator**) | An adult who manages a Group of participants across competitions (teacher, club sponsor, GT coordinator, homeschool co-op leader). The B2B2C growth actor. | Anchored to *group registration + multi-org coordination*. |
 | **Coach / Mentor** | The same actor as Educator but at *individual* granularity (guides a few students). Represented as a role, not a separate account. | Not a distinct account type. |
@@ -49,7 +52,7 @@ the **canonical** term is bolded and the synonyms-to-avoid are listed so we stay
 | **Role** | A permission set within an Organization (owner, staff, judge, coach, etc.). RBAC. | |
 | **Group** (a.k.a. **Cohort**, **Roster**) | A set of Participants managed by an Educator (a class, club, or co-op). "Roster" = its membership list. | The generic coordinator-managed set. |
 | **Team** | A set of Participants who enter a Competition *together as one unit*. Competition-scoped. | Distinct from Group — a Group may form several Teams. |
-| **Chapter** | A *persistent, formally-affiliated* Group tied to an Organization (e.g., a school's DECA chapter). | A specific kind of Group + Organization link. |
+| **Chapter** | A *persistent, formally-affiliated* Group tied to an Organization (e.g., a school's DECA chapter). | A specific kind of Group + Organization link. May be a **host-affiliated network chapter** (CTSO-style: join codes, founding applications, lead/co-lead/mentor/student roles), not only educator-created (2026-07-08). |
 
 ## Participant-facing concepts
 

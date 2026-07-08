@@ -1,6 +1,6 @@
 # BeeCompete — Domain & Data Model
 
-**Status:** Living document · **Last updated:** 2026-07-06 · Depends on: `glossary.md`, `feature-registry.md`
+**Status:** Living document · **Last updated:** 2026-07-08 · Depends on: `glossary.md`, `feature-registry.md`
 
 The foundation. This turns the strategy, feature registry, and foundation hooks into an actual
 data model that supports **all three facets from day one** — even though we build them in phases.
@@ -62,7 +62,7 @@ no separate versioning/history tables. User-submitted corrections (DQ6) are rows
 | Q2 | **Grade/age** representation | Store **both**: a normalized **grade range** (`min_grade`/`max_grade`) as the *primary* eligibility/filter axis, and an optional **age range** (`min_age`/`max_age`) for age-gated or international competitions. A Participant has a grade + DOB (→ age). **Encoding locked (2026-07-07):** `smallint` — **Pre-K = −1, K = 0, grades 1–12 = 1–12; 13 = post-high-school (reserved, unused at launch — keeps collegiate expansion migration-free)**. Homeschool/ungraded map to the age-equivalent grade. Age-gated comps filter on age (from DOB); grade-gated on grade. **Profile storage (locked 2026-07-07):** participants store **`grad_year`** as canonical; grade is *derived* (UI asks grade, converts on save) — so profiles never go stale at school-year rollover. |
 | Q3 | **Region** granularity | Structured geo, not free text: **Country → State → County/District → City**, plus a special **"Virtual/Online"**. Each Edition has a `scope_level` (national/state/regional/local/virtual) + associated region(s). US-first ⇒ **State** is the primary filter granularity; District enables chapter scoping. **Multi-region rule locked (2026-07-07):** the region join is **Edition-level** (`EditionRegion`). Test: **one registration = one Edition** — same dates + same registration + same results ⇒ **one** Edition tagged with many regions (e.g., AMC 10 2026 nationwide); operationally distinct regional runnings (own dates/registration/results) ⇒ **separate** Editions (e.g., Dallas vs. Houston regional fairs), linked upward via `advances_to_edition_id` — exactly the advancement chain. A Competition's region facet in search is *derived* from its Editions. |
 | Q4 | **Division** representation | A generic `Division` per Competition with a name + flexible criteria (grade range and/or skill label). Not hard-coded — each Competition defines its own (Junior/Senior, Novice/Varsity, etc.). A participant maps to a Division at registration. **Placement locked (2026-07-07): `Division` lives on `Competition`** (stable identity across years — needed for history/analytics) with an **`active` flag**; restructures add new rows + deactivate old ones, never edit existing rows. `Registration` **snapshots the resolved division** at registration time, so later definition changes never rewrite past records. No per-Edition division copies. |
-| Q5 | **Round / advancement** | Two mechanisms: **`Round`** = a sequential phase *within* an Edition; **Edition linkage** (`advances_to_edition_id`) = multi-level advancement *across* Editions (school→regional→state→national). `AdvancementRule` (top-N / threshold / judge-selected) attaches to a Round or linkage. Structure is represented at launch; *enforcement* is Phase 4. Rules are data, not code. |
+| Q5 | **Round / advancement** | Two mechanisms: **`Round`** = a sequential phase *within* an Edition; **Edition linkage** (`advances_to_edition_id`) = multi-level advancement *across* Editions (school→regional→state→national). `AdvancementRule` (top-N / threshold / judge-selected) attaches to a Round or linkage. Structure is represented at launch; *enforcement* lands with the Phase-3 host tools (H25/HC5 — moved 4→3 by registry Rev 5; designed at Gates A/B). Rules are data, not code. |
 | Q6 | **Team composition** | A `Team` is Edition-scoped (name, division) with `TeamMember` rows. A `Registration` is polymorphic — registrant is **either** a Participant **or** a Team. Teams form via a Group (coordinator) or self-organize (team-finder). Size bounds come from the Competition's Format. |
 
 ---
@@ -74,14 +74,26 @@ no separate versioning/history tables. User-submitted corrections (DQ6) are rows
 **`Competition`** [P1] — the evergreen entity.
 `id, slug, name, organizer_org_id?, official_url, logo, description, category_id, tags[],
 participation_mode (individual|team|both), team_size_min?, team_size_max?, delivery
-(in_person|virtual|hybrid), evaluation_type[], min_grade?, max_grade?, min_age?, max_age?,
-cost_type (free|paid), recurrence (annual|one_off|rolling), attributes (JSONB), provenance{...},
-verification_state, archived_at?, created_at` *(soft-delete per D7)*
+(in_person|virtual|hybrid), entry_pathway (individual|school_or_chapter|either), evaluation_type[],
+min_grade?, max_grade?, min_age?, max_age?, cost_type (free|paid), recurrence
+(annual|one_off|rolling), attributes (JSONB), provenance{...}, verification_state, archived_at?,
+created_at` *(soft-delete per D7)*
+*(`entry_pathway` added 2026-07-08, legacy review: whether a student can enter independently or
+only through a school/chapter — filterable, shown in the Details at-a-glance strip.)*
+
+> **Standard attributes-bag keys** *(2026-07-08 — conventional JSONB keys, not Spine columns;
+> validated per Category Template where relevant):* `eligible_countries[]`,
+> `citizenship_countries[]`, `student_status_required` (international/eligibility depth) and
+> `syllabus` / `topics[]` (feeds Participant+ practice content + recommender, → P8).
 
 **`Edition`** [P1] — one running of a Competition.
 `id, competition_id, cycle_label ("2026"), status (upcoming|open|closed|ongoing|archived),
-registration_url, entry_fee?, currency?, scope_level, advances_to_edition_id?, attributes (JSONB),
-provenance{...}, archived_at?, created_at` *(soft-delete per D7)*
+registration_url, entry_fee?, currency?, age_cutoff_date?, prize_summary?, prize_value?,
+prize_currency?, scope_level, advances_to_edition_id?, attributes (JSONB), provenance{...},
+archived_at?, created_at` *(soft-delete per D7)*
+*(2026-07-08 additions: `age_cutoff_date` — age eligibility computed "as of" this date, the way
+competitions actually state age rules; `prize_summary`/`prize_value`/`prize_currency` — the typed
+display/sort fields behind the card + at-a-glance Prize; structured detail lives on `Award`.)*
 
 **`KeyDate`** [P1] — typed timeline events on an Edition.
 `id, edition_id, type (reg_open|reg_close|round_start|submission_due|results|custom), label,
@@ -93,6 +105,11 @@ starts_at, ends_at?, timezone`
 **`Division`** [reserve] — `id, competition_id, name, min_grade?, max_grade?, skill_label?, criteria (JSONB), active (bool)` — on Competition (locked, Q4); `Registration` snapshots the resolved division.
 **`Round`** [reserve] — `id, edition_id, sequence, name, type (qualifier|regional|final|custom), evaluation_type`
 **`AdvancementRule`** [reserve] — `id, round_id? | edition_link?, rule_type (top_n|threshold|judge_selected), params (JSONB)`
+**`Award`** [reserve] — `id, edition_id, division_id?, round_id?, name, place?, award_type
+(monetary|non_monetary|scholarship|travel_grant|other), value?, currency?, description?,
+display_order` *(added 2026-07-08 → H47; shape informed by the legacy prototype,
+`legacy-reference.md`. Assignment of Awards to winners is judging territory — designed at Gate B,
+never before.)*
 
 **`Region`** [P1] — `id, parent_id?, level (country|state|county|city), name, code`
 **`EditionRegion`** [P1] — join: which regions an **Edition** covers *(locked 2026-07-07; renamed from `CompetitionRegion` — the join is Edition-level, never Competition-level)*. One registration = one Edition (Q3); the Competition's region filter is derived from its Editions.
@@ -102,9 +119,11 @@ starts_at, ends_at?, timezone`
 
 ### 3b. Parties, accounts & groups
 
-**`User`** [P1] — base account. `id, email, auth{...}, display_name, primary_persona
-(participant|parent|educator|host|admin), created_at`
-*(A user can hold multiple roles/profiles — persona is a UX default, not a hard type.)*
+**`User`** [P1] — base account. `id, email, auth{...}, display_name, member_id? (unique, reserved),
+primary_persona (participant|parent|educator|host|admin), created_at`
+*(A user can hold multiple roles/profiles — persona is a UX default, not a hard type. `member_id`
+= public member handle, reserved 2026-07-08: Phase-3 team/roster invites go by member ID so a
+minor's email is never exposed — → H7/M18.)*
 
 **`ParticipantProfile`** [P1] — for student users.
 `user_id, date_of_birth, grad_year, region_id?, interests[], consent_state`
@@ -123,6 +142,11 @@ profiles silently rotting every fall as students advance a grade — no rollover
 **`Role`** / **`Permission`** [P1] — org-scoped RBAC. `Role{id, org_id?, name}`, `Permission{role_id, action, resource}`
 
 **`Group`** [reserve] — educator-managed set. `id, owner_user_id?, org_id?, name, type (class|club|cohort|chapter)`
+*(Chapter note, 2026-07-08: a chapter Group may be **affiliated to a Host organization** — a
+CTSO-style network chapter with join codes, founding applications, and lead/co-lead/mentor/student
+roles — not only an educator-created school group. Phase-3 registration (H7/E8) must support
+host-network chapters as the entry vehicle for `entry_pathway = school_or_chapter` competitions.
+Mechanics reference: `legacy-reference.md` §2.)*
 **`GroupMembership`** [reserve] — `id, group_id, participant_user_id, added_by`
 
 **`Team`** [reserve] — `id, edition_id, name, division_id?`
@@ -184,6 +208,7 @@ Category ──< Competition >── Organization (organizer / host)
    │             │  │
 CategoryTemplate │  ├──< Edition ──< KeyDate
                  │  │        ├──< Round ──< AdvancementRule
+                 │  │        ├──< Award [reserve]
                  │  │        └──< EditionRegion >── Region
                  │  ├──< Division
                  │  └──< Resource
@@ -215,6 +240,9 @@ tables and logic without reshaping the Phase-1 core.
 ---
 
 ## 6. Deferred to per-phase deep-dives
+*(Reusable design detail from the legacy prototype — state machines for Registration/Team/stages,
+form-builder taxonomy, practice engine, chapter mechanics — is preserved in `legacy-reference.md`;
+mine it when each phase opens.)*
 - **Phase 2:** PrepPackage content model, entitlement/checkout flows, Group/cohort mechanics, progress-derivation queries.
 - **Phase 3:** Registration/Submission, host verification workflow, Team formation, promotion placement, **science-fair wedge** — compliance (ComplianceForm/ReviewCommittee), basic judging (Rubric/Score), multi-level advancement enforcement. 🛑 All wedge/judging design happens at **Gates A/B** (`development-process.md` §6a) — never ahead of them.
 - **Phase 4:** Advanced judging (modes, normalization, blind/COI), UGC creator content model.

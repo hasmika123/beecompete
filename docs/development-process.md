@@ -120,10 +120,13 @@ needs instead of competitor feature lists. Two mandatory gates:
 - **Gate A — Science-fair wedge deep-dive** *(opens Phase 3; blocks ALL Phase-3 wedge work: HC1–HC8,
   H4–H7 as used by fairs, advancement H25).* Inputs required before design starts: fair-director
   interview notes (outreach runs through Phases 1–2 — see `go-to-market.md` §3), the zFairs /
-  STEM Wizard feature bar, ISEF form requirements. Output: the wedge RFCs (registration,
-  compliance/consent chain, advancement) + `phase-3-plan.md`. Only then build.
+  STEM Wizard feature bar, ISEF form requirements, and the **legacy-prototype reference**
+  (`legacy-reference.md` §2 — registration/team/stage state machines, chapter mechanics). Output:
+  the wedge RFCs (registration, compliance/consent chain, advancement) + `phase-3-plan.md`. Only
+  then build.
 - **Gate B — Judging deep-dive** *(blocks all judging tasks: H12–H17, H25 rule enforcement).* Design
-  the Rubric / Score / JudgingAssignment model from what the Gate-A fairs actually need. Typically
+  the Rubric / Score / JudgingAssignment model from what the Gate-A fairs actually need. Inputs
+  include the deliberately-unmined legacy judging artifacts (`legacy-reference.md` §3). Typically
   runs inside Phase 3 once wedge work makes judging the next slice.
 
 **Claude: when work reaches either gate, STOP and tell the user the gate has been reached** — do not

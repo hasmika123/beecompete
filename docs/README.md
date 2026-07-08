@@ -20,6 +20,7 @@ The planning corpus. Read order for a newcomer is top-to-bottom; day-to-day, jum
 |---|---|
 | [feature-registry.md](feature-registry.md) | **Every feature, every phase** — the single source of scope + the 14 foundation hooks |
 | [domain-model.md](domain-model.md) | The data model; the locked modeling decisions (grade, division, regions, soft-delete) |
+| [legacy-reference.md](legacy-reference.md) | Design detail preserved from the legacy Lovable prototype (state machines, chapters, form builder); Gate A/B input |
 | [compliance.md](compliance.md) | The legal map (COPPA, FERPA, PCI, WCAG…) and the launch gate |
 
 ## How we're building it

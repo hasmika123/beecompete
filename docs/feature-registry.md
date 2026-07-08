@@ -1,6 +1,6 @@
 # BeeCompete — Feature Registry
 
-**Status:** Living document · **Owner:** Product · **Last updated:** 2026-07-06
+**Status:** Living document · **Owner:** Product · **Last updated:** 2026-07-08
 
 The master list of every feature across all three facets and all phases. This is the
 **single source of truth for scope** and the **anti-creep tool**: if a feature isn't here,
@@ -33,6 +33,13 @@ though we build them later. Those feed directly into the Domain & Data Model doc
 > competition), **H46** (host claim-interest CTA), **B11** (embed badge); **M10** upgraded to a
 > subscribable iCal feed; **X20** gains zero-result search tracking. Domain model: `ParticipantProfile`
 > now stores **`grad_year`** (grade derived) so profiles don't rot at school-year rollover.
+>
+> **Rev 7 (2026-07-08):** legacy-prototype review integrated (see `legacy-reference.md`). Spine gains
+> **entry pathway** (M3 facet; domain-model column) + `age_cutoff_date` + typed prize summary; added
+> **H47** (award structures), **H48** (listing visibility control), **M33** (past winners on curated
+> listings); **H4** gains waitlist; member-ID invites noted on H7/M18; host-affiliated chapter
+> networks noted on X8/H7; topics/syllabus noted on P8; anti-decision recorded: **no 1:1 DMs with
+> minors** (compliance §1, M17).
 
 ---
 
@@ -66,7 +73,7 @@ though we build them later. Those feed directly into the Domain & Data Model doc
 | X5 | RBAC — roles & permissions | 1 | L | 🪝 Org-scoped; v1 ships minimal roles but model is complete. Covers host staff, judges, coach/mentor roles |
 | X6 | Organization entity (host orgs, schools, chapters) | 1 | M | 🪝 First-class `Organization` even if barely used in v1 |
 | X7 | Membership model (User ↔ Org w/ role) | 1 | M | 🪝 Multi-user orgs & chapters become additive later |
-| X8 | Roster / Group model (coordinator ↔ students) | 2 | M | 🪝 Reserve in P1; powers educator cohorts + team registration |
+| X8 | Roster / Group model (coordinator ↔ students) | 2 | M | 🪝 Reserve in P1; powers educator cohorts + team registration. Chapters may be **host-affiliated networks** (CTSO-style, join codes + applications), not only educator-created groups (Rev 7; `legacy-reference.md`) |
 | X9 | Taxonomy + category templates (spine + per-category schema) | 1 | XL | **CORE.** Standardized-yet-flexible schema. Now also carries divisions/rounds/advancement (see hooks) |
 | X10 | Search & faceted filtering infrastructure | 1 | L | |
 | X11 | Notifications (email + in-app) + preferences | 1 | M | |
@@ -109,7 +116,7 @@ though we build them later. Those feed directly into the Domain & Data Model doc
 |---|---|---|---|---|
 | M1 | Browse competitions | 1 | S | |
 | M2 | Keyword search | 1 | M | |
-| M3 | Faceted filters (category, grade, region, cost, format, individual/team, deadline) | 1 | M | |
+| M3 | Faceted filters (category, grade, region, cost, format, individual/team, **entry pathway**, deadline) | 1 | M | Entry pathway = individual vs. school/chapter-only entry (Rev 7) — a top parent eligibility question |
 | M4 | Sort (deadline, popularity, newest) | 1 | S | |
 | M5 | Standardized competition detail page | 1 | M | Renders the spine |
 | M6 | Edition display (dates / registration / status) | 1 | M | Two-level model surfaces here |
@@ -123,8 +130,8 @@ though we build them later. Those feed directly into the Domain & Data Model doc
 | M14 | New-competition alerts matching interests | 1 | S | |
 | M15 | SEO landing pages (per competition & category) | 1 | M | Primary organic growth channel |
 | M16 | Reviews & ratings | 2 | M | Moderated via DQ8 |
-| M17 | Past-participant Q&A / discussion | 3 | M | |
-| M18 | Team-finder / teammate matching | 3 | L | Network-effect lever. 🔒 **Consent-upgrade:** makes a child's profile visible to others (third-party disclosure) → stronger parental consent required (see `rfc-p1-auth-consent.md` §5) |
+| M17 | Past-participant Q&A / discussion | 3 | M | Public + moderated only — **no 1:1 private messaging with minors** (anti-decision, Rev 7; compliance §1) |
+| M18 | Team-finder / teammate matching | 3 | L | Network-effect lever. 🔒 **Consent-upgrade:** makes a child's profile visible to others (third-party disclosure) → stronger parental consent required (see `rfc-p1-auth-consent.md` §5). Invites go by **member ID**, never by exposing a minor's email (Rev 7) |
 | M19 | Editorial guides / blog | 2 | M | SEO + content marketing |
 | M20 | Verified competition record / student profile | 4 | L | Admissions currency (verified; cf. M24 self-reported) |
 | M21 | Share competition | 1 | S | |
@@ -139,6 +146,7 @@ though we build them later. Those feed directly into the Domain & Data Model doc
 | M30 | **Edition-cycle re-engagement** — alert followers/trackers when a followed Competition announces a new Edition/dates | 1 | M | The annual "it's back" resurrection loop — key retention mechanic for annual competitions. Extends M14/X11; keyed off Edition creation |
 | M31 | Social proof on listings ("N students tracking", shown above a minimum threshold) | 1 | S | Trust/urgency for users + demand teaser that motivates hosts to claim; uses tracker counts |
 | M32 | Organization directory + public org profile pages | 3 | M | Deferred from R1 nav (owner, 2026-07-07); ships with host claiming/profiles. Persistent **nav search** also revisited in Phase 3 (extends M2) |
+| M33 | **Past winners / results history on curated listings** | 2 | M | SEO + credibility asset for *external* competitions (H16/H35 only cover platform-hosted results); curation-fed, top competitions first (Rev 7) |
 
 ## P · Facet 2 — Participant+ *(real revenue #1)*
 
@@ -153,7 +161,7 @@ though we build them later. Those feed directly into the Domain & Data Model doc
 | P5 | Structured study plan | 2 | M | |
 | P6 | Practice sets / quizzes | 2 | L | |
 | P7 | Package progress tracking | 2 | L | 🪝 Derived from X13 event log |
-| P8 | AI-generated practice (+ expert review) | 2 | L | Content model #2 |
+| P8 | AI-generated practice (+ expert review) | 2 | L | Content model #2. Practice content keys off competition **syllabus/topics** (attributes-bag keys, Rev 7); question shape + answer-verification reference in `legacy-reference.md` |
 | P9 | Expert review workflow (internal) | 2 | M | |
 | P10 | AI tutoring / hints | 4 | L | |
 | P11 | UGC creator onboarding | 4 | L | Content model #3. Moved 3→4 (Rev 5) |
@@ -189,10 +197,10 @@ judging deep-dive** (`development-process.md` §6a) — the model is shaped by w
 | H1 | Claim existing (seeded) listing | 3 | M | |
 | H2 | Self-serve create / manage listing | 3 | L | Reuses X9 schema |
 | H3 | Edition management (yearly instances) | 3 | M | |
-| H4 | Registration management (open/close/capacity) | 3 | M | 🔒 **Consent-upgrade:** registering a child with a host discloses child data to a third party → requires stronger parental consent than R2 email-plus (see `rfc-p1-auth-consent.md` §5) |
+| H4 | Registration management (open/close/capacity + **waitlist** with auto-promote on withdrawal) | 3 | M | Waitlist added Rev 7. 🔒 **Consent-upgrade:** registering a child with a host discloses child data to a third party → requires stronger parental consent than R2 email-plus (see `rfc-p1-auth-consent.md` §5) |
 | H5 | Custom registration forms | 3 | L | |
 | H6 | Roster / registrant list | 3 | M | |
-| H7 | Team / hierarchical registration (org→team→students) | 3 | L | Uses X8; convergence with educator. 🔒 **Consent-upgrade** (discloses child data — see `rfc-p1-auth-consent.md` §5) |
+| H7 | Team / hierarchical registration (org→team→students) | 3 | L | Uses X8; convergence with educator. Must support **host-affiliated chapter networks** (join codes, chapter applications, lead-registers-students — the entry vehicle for entry_pathway=school/chapter comps) and **invite-by-member-ID** (Rev 7; design detail in `legacy-reference.md`). 🔒 **Consent-upgrade** (discloses child data — see `rfc-p1-auth-consent.md` §5) |
 | H8 | Entry-fee collection | 3 | M | Uses X15 |
 | H9 | Announcements / broadcast | 3 | M | Uses X11 |
 | H10 | Submission collection (files/links/forms) | 3 | L | |
@@ -232,6 +240,8 @@ judging deep-dive** (`development-process.md` §6a) — the model is shaped by w
 | H44 | Program/edition duplication (clone prior season) | 3 | S | OpenWater, Evalato |
 | H45 | AI / automation (auto-score, rules & triggers, AI summaries, fraud detection) | Backlog | L | Submittable; later differentiator |
 | H46 | **"Are you the organizer?" claim-interest CTA + host waitlist** on listing pages | 1 | S | Supply-side pipeline from day one; builds the warm R4 launch list (`go-to-market.md` §3–4). Actual claiming stays H1 (Phase 3) |
+| H47 | **Award structures** — per-Edition award list (place, monetary/non-monetary/travel-grant, value + currency, display order) managed by hosts; assignment to winners lands with judging (Gate B) | 3 | M | 🪝 `Award` entity reserved in P1 (domain-model, Rev 7); typed prize summary on Edition ships R1 for display |
+| H48 | **Listing visibility control** — public / unlisted-by-link / private-invite-only for self-managed competitions (school-internal contests etc.) | 3 | M | Rev 7. Guardrail: **public visibility is NEVER tier-gated** — free tier always includes full public listing (rejects the legacy model; `monetization.md` §1) |
 
 ## HC · Host — Compliance, Consent & Advancement *(the K-12 science-fair moat)*
 

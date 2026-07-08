@@ -11,6 +11,9 @@
   - 2026-07-08: blueprint revision (page-blueprints.md decisions log) -> R1-6b created as #33;
     bodies of #9 (R1-1), #15 (R1-6), #16 (R1-7), #23 (R1-15) updated via gh issue edit.
     Entries below were updated to match, so this file mirrors the live issues.
+  - 2026-07-08: legacy-prototype review (registry Rev 7, legacy-reference.md) -> bodies of
+    #9 (R1-1: entry_pathway, age_cutoff_date, prize fields, member_id), #14 (R1-5: entry-pathway
+    filter), #16 (R1-7: entry pathway in at-a-glance) updated via gh issue edit; mirrored below.
 #>
 param([string]$Owner = 'hasmika123')
 
@@ -30,19 +33,19 @@ $issues = @(
   @{ id='F8'; t='Observability wiring'; m=$F; l=@('phase:1','type:chore'); b='Sentry (web + api), structured JSON logs, uptime monitor.' }
 
   # --- R1 data & catalog ---
-  @{ id='R1-1'; t='Core schema migration'; m=$R1; l=@('phase:1','type:feat','foundation-hook'); b='Category, CategoryTemplate, Region, Competition, Edition, EditionRegion, KeyDate, Resource, CorrectionProposal + provenance/verification/archived_at. Per locked modeling decisions (domain-model.md section 7: grade encoding, Division on Competition, Edition-level regions, soft-delete D7). Include storage for curated per-competition FAQ entries (details-page FAQ tab, page-blueprints section 3a).' }
+  @{ id='R1-1'; t='Core schema migration'; m=$R1; l=@('phase:1','type:feat','foundation-hook'); b='Category, CategoryTemplate, Region, Competition, Edition, EditionRegion, KeyDate, Resource, CorrectionProposal + provenance/verification/archived_at. Per locked modeling decisions (domain-model.md section 7: grade encoding, Division on Competition, Edition-level regions, soft-delete D7). Include storage for curated per-competition FAQ entries (details-page FAQ tab, page-blueprints section 3a). 2026-07-08 additions (legacy review): entry_pathway on Competition; age_cutoff_date + prize_summary/prize_value/prize_currency on Edition; reserved member_id on User.' }
   @{ id='R1-2'; t='Category taxonomy + templates seeded'; m=$R1; l=@('phase:1','type:feat'); b='~10 K-12 categories with JSON-Schema validation of attributes (X9).' }
   @{ id='R1-3'; t='Admin curation tooling v0'; m=$R1; l=@('phase:1','type:feat'); b='Minimal internal admin: CRUD for catalog entities, import-review queue (S3 pipeline output), verification/provenance controls. Behind Cloudflare Access at R1; migrates to RBAC at R2-7. Registry X16, DQ13.' }
   @{ id='R1-3b'; t='Corrections intake + review (DQ6)'; m=$R1; l=@('phase:1','type:feat'); b='Public suggest-a-correction form -> CorrectionProposal rows; admin review queue (approve applies diff + audit). DQ15 suggest-a-competition lands here too.' }
 
   # --- R1 backend ---
   @{ id='R1-4'; t='Catalog API'; m=$R1; l=@('phase:1','type:feat','facet:marketplace'); b='list/detail competitions + editions; verification_state/provenance exposed (M5, M6, DQ1).' }
-  @{ id='R1-5'; t='Search & filter API'; m=$R1; l=@('phase:1','type:feat','facet:marketplace'); b='Postgres FTS + pg_trgm; filters (category, grade, region, cost, format, individual/team, deadline), sort (M2, M3, M4, X10).' }
+  @{ id='R1-5'; t='Search & filter API'; m=$R1; l=@('phase:1','type:feat','facet:marketplace'); b='Postgres FTS + pg_trgm; filters (category, grade, region, cost, format, individual/team, entry pathway, deadline), sort (M2, M3, M4, X10).' }
 
   # --- R1 frontend ---
   @{ id='R1-6'; t='Marketplace: browse + search + filters + sort'; m=$R1; l=@('phase:1','type:feat','facet:marketplace','a11y'); b='Competitions listing page per page-blueprints.md Page 2 (rev 2026-07-08): grade quick-chips, Grade-first facets, per-facet counts on Grade + Category only, 4->3 col filter panel, chips, Load-more button + crawlable pagination URLs, zero-results near-miss cards, hybrid category URLs with SEO text block. M1-M4, M15.' }
   @{ id='R1-6b'; t='Public page set (Landing, How It Works, Categories index)'; m=$R1; l=@('phase:1','type:feat','facet:marketplace','a11y'); b='Per page-blueprints.md: Landing (Page 1, incl. quick-match panel + hero category strip + weekly digest band), How It Works (Page 4), Categories index (Page 5). Style via hero design pass (design-brief section 5). M15, H46, R1-13.' }
-  @{ id='R1-7'; t='Competition detail page'; m=$R1; l=@('phase:1','type:feat','facet:marketplace','a11y'); b='Per page-blueprints.md Page 3 (rev 2026-07-08): visible breadcrumb, At-a-glance strip (Grades/Deadline/Cost/Location/Prize), cover/register + external-registration microcopy, tabs Key Facts + About + FAQ (FAQPage schema), resources row, related; sticky sidebar (follow, timeline with add-to-calendar links, trust+attribution, claim, correction); mobile sticky bottom bar. M5, M6.' }
+  @{ id='R1-7'; t='Competition detail page'; m=$R1; l=@('phase:1','type:feat','facet:marketplace','a11y'); b='Per page-blueprints.md Page 3 (rev 2026-07-08): visible breadcrumb, At-a-glance strip (Grades/Deadline/Cost/Location/Prize/Entry pathway), cover/register + external-registration microcopy, tabs Key Facts + About + FAQ (FAQPage schema), resources row, related; sticky sidebar (follow, timeline with add-to-calendar links, trust+attribution, claim, correction); mobile sticky bottom bar. M5, M6.' }
   @{ id='R1-8'; t='Resources + affiliate links + disclosure'; m=$R1; l=@('phase:1','type:feat','facet:marketplace','compliance'); b='Resources section + affiliate links + affiliate disclosure (M11, DQ10). COMPLIANCE: FTC disclosure ships with affiliate links.' }
   @{ id='R1-9'; t='Trust/verification badges + maintainer attribution'; m=$R1; l=@('phase:1','type:feat','facet:marketplace'); b='Curated/Verified badges + "Listing maintained by BeeCompete Curation Team" line (DQ13). Verified = subtle green.' }
   @{ id='R1-10'; t='SEO'; m=$R1; l=@('phase:1','type:feat','facet:marketplace'); b='SSG/ISR, metadata/OpenGraph, schema.org Event + BreadcrumbList structured data, clean URLs, per-competition/category landing pages, sitemap (M15).' }

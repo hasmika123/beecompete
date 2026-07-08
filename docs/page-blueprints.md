@@ -127,9 +127,11 @@ strip stays a swipe row; carousel & related rows become swipe; audience cards st
 
 **4. Competition listings** (→ M1, X10)
 - **Layout:** grid of **CompetitionCards** — **4 per row** default; clicking **Filter** opens a
-  **left filter panel** and the grid reflows to **3 per row**. **Facet order (owner 2026-07-08):
-  Grade → Category → State/Region → Deadline window → Cost → Format (individual/team) → Delivery**
-  (→ M3). **Per-option result counts on the Grade and Category facets only** ("Grade 5 (37)").
+  **left filter panel** and the grid reflows to **3 per row**. **Facet order (owner 2026-07-08;
+  entry pathway added same day, legacy review): Grade → Category → State/Region → Deadline window →
+  Cost → Format (individual/team) → Entry pathway (individual / school-or-chapter / either) →
+  Delivery** (→ M3). **Per-option result counts on the Grade and Category facets only**
+  ("Grade 5 (37)").
 - **Scroll:** **"Load more" button** — loads the next page inline (never auto-loads on scroll),
   with crawlable `?page=N` pagination URLs behind it (owner 2026-07-08 — refines the 2026-07-07
   continuous-scroll decision; keeps the footer reachable and back-button position stable).
@@ -157,8 +159,9 @@ strip stays a swipe row; carousel & related rows become swipe; audience cards st
   its category hub (organic landers have no in-site "back").
 - **Left/main:** competition title · org avatar + name + **verification badge** (→ DQ13) ·
   **"At a glance" strip** — icons + values in the identical order on every competition:
-  **Grades · Next deadline · Cost · Location/Online · Prize** (owner 2026-07-08; the 10-second
-  answer — the Spine tab below stays the full version) · small **Share** icon (→ M21).
+  **Grades · Next deadline · Cost · Location/Online · Prize · Entry pathway** (owner 2026-07-08;
+  entry pathway added same day, legacy review — "how do you enter" is a top parent question; the
+  10-second answer — the Spine tab below stays the full version) · small **Share** icon (→ M21).
 - **Right:** **cover-image card** with a **"Register" button below it** → official external
   registration page (`registration_url`, opens ↗). **Microcopy under the button:** "Registration
   happens on the organizer's official site ↗" (owner 2026-07-08 — frames the handoff as a
@@ -308,6 +311,10 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
 19. **New pages approved:** How It Works (Page 4) · Categories index (Page 5) · Suggest a Competition wizard (Page 6). **Deferred:** For Parents / For Educators (audience cards → digest anchor meanwhile; educators nav link reserved).
 20. **Cross-cutting style rules** recorded in `design-brief.md` §3/§4: Inter Display + heavy-weight headline scale · gold = fills/accents only (never text/strokes on white) · scrim required behind text over imagery.
 21. **Student Privacy Pledge:** investigate during R1, target signing ~R2 — tracked in `go-to-market.md` §5.
+
+**2026-07-08 (legacy-prototype review — registry Rev 7, `legacy-reference.md`):**
+22. **Entry pathway** added to the filter facets (Page 2) and the Details at-a-glance strip (Page 3).
+23. Prize on cards/at-a-glance is backed by typed `prize_summary`/`prize_value`/`prize_currency` on Edition (domain model 2026-07-08).
 
 ## Status
 | Page | Blueprint | Style prototype | Built |
