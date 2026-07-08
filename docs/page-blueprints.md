@@ -320,7 +320,7 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
 17. **Details:** visible breadcrumb **replaces the back button** (supersedes 2026-07-07); "At a glance" strip (Grades · Deadline · Cost · Location · Prize); Register microcopy ("on the organizer's official site ↗"); **FAQ third tab at R1** with FAQPage schema; **sticky sidebar** on desktop; **add-to-calendar** (ics + Google) on the timeline at R1; mobile **sticky bottom bar** (Follow + Register).
 18. **[R2] social-proof counter** with a ~25 cold-start threshold (hidden below it).
 19. **New pages approved:** How It Works (Page 4) · Categories index (Page 5) · Suggest a Competition wizard (Page 6). **Deferred:** For Parents / For Educators (audience cards → digest anchor meanwhile; educators nav link reserved).
-20. **Cross-cutting style rules** recorded in `design-brief.md` §3/§4: Inter Display + heavy-weight headline scale · gold = fills/accents only (never text/strokes on white) · scrim required behind text over imagery.
+20. **Cross-cutting style rules** recorded in `design-brief.md` §3/§4: ~~Inter Display + heavy-weight headline scale~~ *(typography superseded by #28)* · gold = fills/accents only (never text/strokes on white) · scrim required behind text over imagery.
 21. **Student Privacy Pledge:** investigate during R1, target signing ~R2 — tracked in `go-to-market.md` §5.
 
 **2026-07-08 (legacy-prototype review — registry Rev 7, `legacy-reference.md`):**
@@ -334,6 +334,7 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
 25. **Hero right half = image cards, not SVG illustrations** (supersedes the child-SVG + satellite-SVG plan): one **main HeroCard** (a link; hover/focus = translucent WCAG-AA scrim + short destination description) + two satellite HeroCards (top-right, bottom-left, image-only). **All three admin-managed** (→ M36) — image/alt on all, link + description on the main card.
 26. **Featured-carousel picks are admin-managed ordered slots** (`FeaturedSlot`, → M36; CRUD in R1-3). Same carousel rules (#8); paid Promotion slots remain a separate, labeled, later thing (M28).
 27. **Community pages approved as a Phase-2 surface** (public label "Community", entity Article — M19/M34/M35): admin-published articles with linked-competition cards, like/love + share, and comments that are **adult-visible-only, read and write** (hidden from minors and logged-out visitors; amended same day). Blueprint before build; added to Deferred pages meanwhile.
+28. **Typography revised from owner reference images** (supersedes #20's Inter-Display clause; details `design-brief.md` §3): **display serif for headlines** (working pick Instrument Serif — confirm at the F7 specimen) at regular weight + large scale; **Inter stays for body/UI**. Self-hosted, no font CDN, as before. Hero/section headings across all blueprints render in the display serif.
 
 ## Status
 | Page | Blueprint | Style prototype | Built |

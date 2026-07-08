@@ -13,7 +13,9 @@ export default function Home() {
       <span className="inline-block rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-muted">
         Foundation · F3 skeleton
       </span>
-      <h1 className="mt-4 text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
+      {/* Headlines use the display serif at regular weight (design-brief §3, rev 2026-07-08) —
+          Georgia as the proxy until F7 self-hosts the real face. */}
+      <h1 className="font-display mt-4 text-4xl font-normal text-foreground sm:text-5xl">
         {APP_NAME} web app is wired up.
       </h1>
       <p className="mt-4 text-lg text-muted">

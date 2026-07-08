@@ -39,11 +39,19 @@ read this doc the way they read the glossary — decisions live here, not in cha
   cool paper ground, hairline borders, tight tracking; **B's cards**), blended with: **A's button
   treatment** (filled accent + soft shadow — **never accent-on-black / yellow-on-black**), buttons
   **more rounded (~12px)**, and **A's card meta tags** (tinted, rounded).
-- **Typography:** ✅ **locked 2026-07-07: Inter** (display + body; Segoe UI as the system proxy in
-  prototypes). Self-host the font files in `packages/ui` (no Google Fonts CDN — privacy + CSP).
-  **Headline energy (owner 2026-07-08):** warmth comes from weight/scale contrast, not a second
-  font — use the **Inter Display** optical variant at large sizes, heavy weights (700–800), tight
-  tracking, big size jumps between levels, and oversized friendly numerals for stats.
+- **Typography:** ✅ **revised 2026-07-08 (owner, from supplied reference images — supersedes
+  "Inter everywhere" 2026-07-07 and the heavy-weight "headline energy" rule):** a **two-font
+  pairing** in the style of the reference (Mindly-like editorial landing):
+  - **Display serif for headlines** (hero, section headings, card question-style titles):
+    **working pick = Instrument Serif** (OFL — free to self-host; closest open-source match to
+    the reference). Regular weight at large sizes — headline presence comes from the serif's
+    contrast + scale, **not** bold weights or tight tracking. *Exact cut 🔶 confirmed at the F7
+    type specimen* (alternatives if it reads wrong at size: Fraunces, Playfair Display).
+  - **Inter stays for body/UI** (paragraphs, buttons, forms, labels, nav — matches the sans in
+    the reference images). Segoe UI remains the system proxy in prototypes (serif proxy:
+    Georgia).
+  - Unchanged: **self-host all font files in `packages/ui`** (no Google Fonts CDN — privacy +
+    CSP); oversized friendly numerals for stats (now set in the display serif).
 - **Density & shape:** ✅ (from the locked prototype) airy-but-efficient spacing on an 8px scale;
   **~12px radius** on buttons and cards; **hairline 1px borders** as the primary separator;
   **minimal shadows** — a soft lift on card hover only, no ambient/glow shadows.
