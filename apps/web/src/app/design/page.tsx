@@ -15,14 +15,12 @@ import {
   ArrowUpRight,
   Calendar,
   Clock,
-  Globe,
   GraduationCap,
   Heart,
   MapPin,
   Search,
   Ticket,
   Trophy,
-  User,
   Users,
   VerifiedSeal,
 } from '@beecompete/ui';
@@ -144,14 +142,20 @@ export default function DesignPage() {
       </Section>
 
       <Section title="Cards">
-        <div className="grid gap-5 sm:grid-cols-2">
+        <p className="mb-3 text-sm text-muted">
+          CompetitionCard shown at its real listing width — 4 per row on desktop (~270px).
+        </p>
+        <div className="flex flex-wrap items-start gap-5">
           {/* CompetitionCard direction study — the real component ships with R1-6
               (per-category cover art system lands alongside the catalog). */}
           {/* The whole card is the link in the real component (R1-6); the corner arrow
               is a hover affordance, not a separate control. Cards in a grid must all be
               the SAME height: flex column + mt-auto footer, title/prize truncate,
               description clamped. */}
-          <Card interactive className="group relative flex flex-col overflow-hidden">
+          <Card
+            interactive
+            className="group relative flex w-[270px] shrink-0 flex-col overflow-hidden"
+          >
             {/* View affordance — top-right, appears on hover, no circle. */}
             <ArrowUpRight
               aria-hidden="true"
@@ -192,15 +196,15 @@ export default function DesignPage() {
                   role="img"
                 />
               </div>
-              <CardDescription className="line-clamp-1">
+              <CardDescription className="line-clamp-2">
                 The classic 25-question contest for students in grade 10 and below.
               </CardDescription>
             </CardHeader>
             <CardContent className="p-4 pt-3.5">
-              {/* "At a glance" — each fact's treatment reflects what it MEANS to a
-                  student/family: format & region are logistics (neutral icons); cost
-                  reads positive when free (success tone — a real decision driver). */}
-              <dl className="grid grid-cols-2 gap-x-3 gap-y-2">
+              {/* "At a glance" — only the two decision drivers on the card (owner r7):
+                  Cost (reads positive when free) + Format. Region and entry pathway
+                  live on the details page / filters. */}
+              <dl className="grid grid-cols-2 gap-x-3">
                 <div className="flex items-center gap-2">
                   <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface">
                     <Users aria-hidden="true" className="size-3.5 text-muted" />
@@ -208,15 +212,6 @@ export default function DesignPage() {
                   <span className="flex min-w-0 flex-col leading-tight">
                     <dt className="text-[11px] text-muted">Format</dt>
                     <dd className="truncate text-sm font-medium text-foreground">In person</dd>
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface">
-                    <Globe aria-hidden="true" className="size-3.5 text-muted" />
-                  </span>
-                  <span className="flex min-w-0 flex-col leading-tight">
-                    <dt className="text-[11px] text-muted">Region</dt>
-                    <dd className="truncate text-sm font-medium text-foreground">Nationwide</dd>
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -228,24 +223,15 @@ export default function DesignPage() {
                     <dd className="truncate text-sm font-semibold text-success">Free</dd>
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface">
-                    <User aria-hidden="true" className="size-3.5 text-muted" />
-                  </span>
-                  <span className="flex min-w-0 flex-col leading-tight">
-                    <dt className="text-[11px] text-muted">Entry</dt>
-                    <dd className="truncate text-sm font-medium text-foreground">Individual</dd>
-                  </span>
-                </div>
               </dl>
             </CardContent>
             {/* Footer: one row, pinned to the bottom (mt-auto) so every card in a grid
-                shares the same baseline. Deadline never wraps (time-critical, relative
-                wording + warning tint inside ~14 days); prize truncates instead. */}
-            <CardFooter className="mt-auto items-center justify-between gap-3 border-t border-border p-4 py-3">
+                shares the same baseline. Deadline gets the space it needs (compact
+                relative wording, never wraps); prize takes the rest and trails off. */}
+            <CardFooter className="mt-auto items-center justify-between gap-2.5 border-t border-border p-4 py-3">
               <span className="inline-flex shrink-0 items-center gap-1.5 text-sm whitespace-nowrap">
                 <Clock aria-hidden="true" className="size-4 text-danger" />
-                <strong className="font-semibold text-danger">Closes in 9 days</strong>
+                <strong className="font-semibold text-danger">9 days left</strong>
               </span>
               <span className="inline-flex min-w-0 items-center gap-1.5 text-sm">
                 <Trophy aria-hidden="true" className="size-4 shrink-0 text-brand-gold" />

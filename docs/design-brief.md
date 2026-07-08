@@ -97,19 +97,21 @@ read this doc the way they read the glossary — decisions live here, not in cha
 - **Primary buttons / dark fills (owner r5, 2026-07-08):** **neutral** dark gray (`#363636` —
   neither cool nor warm), **not black**. (Earlier warm `#3d3929` read brown, cool `#32343a` read
   blue — both rejected.) Light ground is near-white with only a hair of warmth (`#fdfdfc`).
-- **Data-aware facts (owner r5, 2026-07-08):** competition-card facts are styled by *what the data
-  means to a family*, not uniformly: **Cost = "Free" reads positive** (success/green — it's a real
-  decision driver); **Deadline is time-critical** — within ~14 days it flips to relative wording
-  ("Closes in 9 days") + a warning tint; **Prize** carries the brand gold; **Format / Region /
-  Entry-pathway** are neutral logistics with distinct icons (people / globe / single-person). The
-  two time-and-reward facts (deadline + prize) anchor the card footer (page-blueprints Page 1/3).
+- **Data-aware facts (owner r5/r7, 2026-07-08):** competition-card facts are styled by *what the
+  data means to a family*, not uniformly: **Cost = "Free" reads positive** (success/green — it's a
+  real decision driver); **Deadline is time-critical** — within ~14 days it flips to compact
+  relative wording ("9 days left") + a warning tint, and **never wraps** (prize truncates instead);
+  **Prize** carries the brand gold. **Cards show only the two decision drivers — Cost + Format**
+  (owner r7); region and entry pathway live on the details page and in filters. Deadline + prize
+  anchor the card footer on one row (page-blueprints Page 1/3).
 
 ## 4. Do / Don't *(grows over time — add whenever you give feedback)*
 
-- **Do:** pill buttons (ink primary / gold brand variant, §3) on a crisp B-style ground;
-  **CompetitionCards taller and narrower** (~220px wide, generous cover + body); **compact
-  category tiles**; **Verified badge = subtle green** (✓, muted green on soft green tint),
-  Curated = quiet neutral.
+- **Do:** pill buttons (neutral-graphite primary / gold brand variant, §3) on a crisp near-white
+  ground; **CompetitionCards taller and narrower — 4 per row on desktop (~270px wide; owner r7
+  2026-07-08, supersedes ~220px)**, generous cover + body, **all cards in a row equal height**
+  (flex column, clamped text, footer pinned); **compact category tiles**; **Verified badge =
+  subtle green** (✓, muted green on soft green tint), Curated = quiet neutral.
 - **Do (owner 2026-07-08):** **per-category accent hues** — each of the ~10 categories gets an
   assigned hue used in its generated default cover **and** its tinted card meta tag (F7 asset
   system); **deadline + prize bold and in a fixed position** on every CompetitionCard; **any text
