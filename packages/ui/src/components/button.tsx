@@ -28,8 +28,8 @@ const variants: Record<ButtonVariant, string> = {
 
 const sizes: Record<ButtonSize, string> = {
   sm: 'h-8 px-3.5 text-sm',
-  md: 'h-9.5 px-4.5 text-sm',
-  lg: 'h-10.5 px-5 text-base',
+  md: 'h-9 px-4 text-sm',
+  lg: 'h-10 px-4.5 text-[0.95rem]',
 };
 
 export function buttonClasses(opts?: {

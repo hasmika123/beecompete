@@ -94,6 +94,15 @@ read this doc the way they read the glossary — decisions live here, not in cha
 - **Light + dark mode:** ✅ both required (architecture §8), delivered via design tokens. Prototypes
   are **light-first**; dark mode is a token swap in F7, not a separate design pass. The dark
   category-highlight band is a *section treatment*, not dark mode.
+- **Primary buttons / dark fills (owner r5, 2026-07-08):** **neutral** dark gray (`#363636` —
+  neither cool nor warm), **not black**. (Earlier warm `#3d3929` read brown, cool `#32343a` read
+  blue — both rejected.) Light ground is near-white with only a hair of warmth (`#fdfdfc`).
+- **Data-aware facts (owner r5, 2026-07-08):** competition-card facts are styled by *what the data
+  means to a family*, not uniformly: **Cost = "Free" reads positive** (success/green — it's a real
+  decision driver); **Deadline is time-critical** — within ~14 days it flips to relative wording
+  ("Closes in 9 days") + a warning tint; **Prize** carries the brand gold; **Format / Region /
+  Entry-pathway** are neutral logistics with distinct icons (people / globe / single-person). The
+  two time-and-reward facts (deadline + prize) anchor the card footer (page-blueprints Page 1/3).
 
 ## 4. Do / Don't *(grows over time — add whenever you give feedback)*
 

@@ -72,19 +72,19 @@
   --brand-ink: #030201; /* logo/brand constant — text-on-gold; NOT a UI fill */
   --brand-gold-soft: #f9f0d2; /* tinted chip/highlight ground */
 
-  /* Neutral foundation — near-white ground, faint warmth (owner 2026-07-08 r4:
-   * whiter + less warm than the earlier cream). */
-  --background: #fcfcfa;
+  /* Neutral foundation — near-white ground, only a hair of warmth (owner 2026-07-08
+   * r5: whiter still). */
+  --background: #fdfdfc;
   --foreground: #26251f; /* soft charcoal text — never #000 */
-  --surface: #f3f2ee; /* soft fill: secondary buttons, wells, code */
+  --surface: #f4f4f1; /* soft fill: secondary buttons, wells, code */
   --surface-raised: #ffffff; /* cards, popovers */
   --muted: #6c6a61; /* secondary text */
-  --border: #e8e7e0; /* hairline separators */
+  --border: #e9e8e2; /* hairline separators */
   --ring: #4a4a44; /* focus ring (gold fails 3:1 on light) */
 
-  /* Interactive — cool dark charcoal (owner r4: was reading brown), not black */
-  --primary: #32343a; /* primary button fill — cool graphite */
-  --primary-foreground: #fcfcfa;
+  /* Interactive — NEUTRAL dark gray (owner r5: neither cool nor warm), not black */
+  --primary: #363636; /* primary button fill — true-neutral graphite */
+  --primary-foreground: #fdfdfc;
 
   /* Status */
   --success: #1a7f4b; /* verified green — text/icon */

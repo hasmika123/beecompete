@@ -43,8 +43,10 @@ export {
   ShareNetwork as Share,
   Sparkle as Sparkles,
   Sun,
+  Ticket,
   Trophy,
-  Users,
+  User,
+  UsersThree as Users,
   WarningCircle as CircleAlert,
   X,
 } from '@phosphor-icons/react/dist/ssr';

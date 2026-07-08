@@ -14,11 +14,16 @@ import {
 import {
   ArrowUpRight,
   Calendar,
+  Clock,
+  Globe,
   GraduationCap,
   Heart,
   MapPin,
   Search,
+  Ticket,
   Trophy,
+  User,
+  Users,
   VerifiedSeal,
 } from '@beecompete/ui';
 import { SelectDemo } from './select-demo';
@@ -190,25 +195,64 @@ export default function DesignPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-4">
-              {/* Format / entry — muted supporting line. */}
-              <span className="inline-flex items-center gap-2 text-sm text-muted">
-                <MapPin aria-hidden="true" className="size-4" />
-                In person · Nationwide · Free entry
-              </span>
+              {/* "At a glance" — each fact's treatment reflects what it MEANS to a
+                  student/family: format & region are logistics (neutral icons); cost
+                  reads positive when free (success tone — a real decision driver). */}
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface">
+                    <Users aria-hidden="true" className="size-4 text-muted" />
+                  </span>
+                  <span className="flex min-w-0 flex-col leading-tight">
+                    <dt className="text-xs text-muted">Format</dt>
+                    <dd className="truncate text-sm font-medium text-foreground">In person</dd>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface">
+                    <Globe aria-hidden="true" className="size-4 text-muted" />
+                  </span>
+                  <span className="flex min-w-0 flex-col leading-tight">
+                    <dt className="text-xs text-muted">Region</dt>
+                    <dd className="truncate text-sm font-medium text-foreground">Nationwide</dd>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-success-soft">
+                    <Ticket aria-hidden="true" className="size-4 text-success" />
+                  </span>
+                  <span className="flex min-w-0 flex-col leading-tight">
+                    <dt className="text-xs text-muted">Cost</dt>
+                    <dd className="truncate text-sm font-semibold text-success">Free</dd>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface">
+                    <User aria-hidden="true" className="size-4 text-muted" />
+                  </span>
+                  <span className="flex min-w-0 flex-col leading-tight">
+                    <dt className="text-xs text-muted">Entry</dt>
+                    <dd className="truncate text-sm font-medium text-foreground">Individual</dd>
+                  </span>
+                </div>
+              </dl>
             </CardContent>
-            {/* Footer anchors the two key facts: deadline (left) + prize (right). */}
-            <CardFooter className="mt-1 justify-between border-t border-border pt-4">
-              <span className="flex min-w-0 flex-col">
-                <span className="text-xs text-muted">Closes</span>
+            {/* Footer anchors the two time-and-reward facts. Deadline is time-critical:
+                within ~14 days it flips to relative wording + a warning tint (the state
+                shown here); prize is the motivator, in brand gold. */}
+            <CardFooter className="mt-1 items-stretch justify-between gap-3 border-t border-border pt-4">
+              <span className="flex min-w-0 flex-col justify-center leading-tight">
+                <span className="text-xs text-muted">Deadline</span>
                 <span className="inline-flex items-center gap-1.5">
-                  <Calendar aria-hidden="true" className="size-4 text-muted" />
-                  <strong className="font-semibold text-foreground">Nov 8</strong>
+                  <Clock aria-hidden="true" className="size-4 text-danger" />
+                  <strong className="font-semibold text-danger">Closes in 9 days</strong>
                 </span>
+                <span className="pl-5.5 text-xs text-muted">Nov 8</span>
               </span>
-              <span className="flex min-w-0 flex-col text-right">
+              <span className="flex min-w-0 flex-col justify-center text-right leading-tight">
                 <span className="text-xs text-muted">Prize</span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Trophy aria-hidden="true" className="size-4 text-brand-gold" />
+                <span className="inline-flex items-center justify-end gap-1.5">
+                  <Trophy aria-hidden="true" className="size-4 shrink-0 text-brand-gold" />
                   <strong className="truncate font-semibold text-foreground">
                     Medals + AIME invite
                   </strong>
