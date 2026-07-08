@@ -1,0 +1,5 @@
+# JS/TS workspace members. apps/api is Spring Boot (Gradle) and is intentionally
+# NOT a pnpm package — it lives in the same monorepo but builds via Gradle (F2).
+packages:
+  - apps/web
+  - packages/*

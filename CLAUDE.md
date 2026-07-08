@@ -65,6 +65,15 @@ Start context: `docs/README.md` → `docs/vision-prd.md`, `docs/glossary.md`.
   reaches either gate, **stop and tell the user** — don't research, schema, or implement gated items.
 - Reserved/[deferred-design] entities are sketches, not contracts — don't harden them early.
 
+## Repo layout (F1)
+pnpm + Turbo monorepo. JS/TS members: `apps/web` (`@beecompete/web`), `packages/ui`
+(`@beecompete/ui`), `packages/config` (`@beecompete/config`). `apps/api` is Spring/Gradle (not a
+pnpm member). `infra/` (compose + Caddy) and `.github/workflows/` (CI/deploy) fill in later F-tasks.
+Root scripts run through Turbo: `pnpm dev|build|lint|typecheck|test|format`. Shared TS config:
+`tsconfig.base.json`. Most app internals are still skeleton placeholders — F2 (Spring), F3 (Next),
+F4 (Postgres/compose), F5/F6 (CI/deploy), F7 (`packages/ui` design system) fill them.
+
 ## Current state
-Planning complete. **Pre-flight setup in progress — no app code yet.** Next build task is **F1**
-(monorepo skeleton) per `docs/phase-1-plan.md`.
+Planning complete. **Foundation in progress.** **F1 done** — monorepo skeleton (pnpm/Turbo workspace,
+shared TS/Prettier config, placeholder packages, PR template). Next build task is **F2** (Spring Boot
+skeleton) per `docs/phase-1-plan.md`.

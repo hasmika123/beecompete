@@ -1,0 +1,16 @@
+{
+  "name": "@beecompete/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "BeeCompete web app + BFF (Next.js, App Router, TS). Skeleton — real app lands in F3.",
+  "scripts": {
+    "dev": "echo \"(F3 placeholder) next dev — Next.js app not scaffolded yet\"",
+    "build": "echo \"(F3 placeholder) next build — Next.js app not scaffolded yet\"",
+    "lint": "echo \"(F3 placeholder) next lint\"",
+    "typecheck": "echo \"(F3 placeholder) tsc --noEmit\""
+  },
+  "dependencies": {
+    "@beecompete/config": "workspace:*",
+    "@beecompete/ui": "workspace:*"
+  }
+}
