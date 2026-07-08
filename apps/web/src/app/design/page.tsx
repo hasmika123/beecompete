@@ -156,9 +156,10 @@ export default function DesignPage() {
             className="group relative flex w-[270px] shrink-0 flex-col overflow-hidden"
           >
             {/* Top-right corner: social-proof count (→ M31, thresholded at R2) that
-                crossfades to the right-facing view arrow on hover. The count sits in a
-                translucent pill so it stays readable over any cover art (scrim rule). */}
-            <span className="absolute top-3 right-3 z-10 grid place-items-center">
+                crossfades to the grey view arrow on hover. The count sits in a
+                translucent pill so it stays readable over any cover art (scrim rule);
+                the arrow is right-aligned in the stack so it lands in the corner. */}
+            <span className="absolute top-3 right-2.5 z-10 grid items-center justify-items-end">
               <span className="col-start-1 row-start-1 inline-flex items-center gap-1 rounded-full bg-background/85 px-2 py-0.5 text-xs font-medium text-foreground transition-opacity group-hover:opacity-0">
                 <Users aria-hidden="true" className="size-3.5 text-muted" />
                 1.2k registered
@@ -166,7 +167,7 @@ export default function DesignPage() {
               <ArrowRight
                 aria-hidden="true"
                 weight="bold"
-                className="col-start-1 row-start-1 size-5 text-foreground opacity-0 transition-opacity group-hover:opacity-100"
+                className="col-start-1 row-start-1 size-5 text-muted opacity-0 transition-opacity group-hover:opacity-100"
               />
             </span>
             <div className="relative flex h-36 items-center justify-center bg-linear-to-br from-brand-gold-soft to-brand-gold/45">
