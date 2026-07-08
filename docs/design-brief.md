@@ -48,8 +48,12 @@ read this doc the way they read the glossary — decisions live here, not in cha
 
 - **Color:** ✅ **logo colors corrected 2026-07-07: `#F5C330` (honey gold) + `#030201` (near-black
   ink)** — the bee palette after all *(supersedes the mistyped `#2596be`; the gold-vs-blue open
-  question is dead — gold IS the brand)*. Gold = primary accent; `#030201` = ink. Neutral
-  foundation stays cool (Direction B).
+  question is dead — gold IS the brand)*. Gold = primary accent; `#030201` = ink (a **brand/logo
+  constant** — text-on-gold — not a UI fill). **Neutral foundation is WARM, not cool (owner
+  feedback 2026-07-08, supersedes "cool Direction B ground"): no harsh #000 blacks anywhere** —
+  warm paper ground (`#faf9f5`), warm charcoal text/fills (`#29281e`/`#3d3929`), and **dark mode
+  is a warm Claude-style dark gray (`#262624` ground), never black.** Token values live in
+  `packages/ui/src/styles/tokens.css`.
 - **Buttons (owner delegated to builder 2026-07-08 — supersedes the round-2 "flat gold fill"
   lock):** treatment is the builder's call, guided by the reference aesthetic: **pill-rounded**;
   primary = **ink fill + white text** (Mindly-style); **gold moves to a "brand" variant** (gold
@@ -64,11 +68,12 @@ read this doc the way they read the glossary — decisions live here, not in cha
   "Inter everywhere" 2026-07-07 and the heavy-weight "headline energy" rule):** a **two-font
   pairing** in the style of the reference (Mindly-like editorial landing):
   - **Display serif for headlines** (hero, section headings, card question-style titles) —
-    *similar* to the reference, not a clone. **Exact face, sizes, weights, and tracking are
-    delegated to builder judgment at F7** (owner 2026-07-08 — no blocking specimen approval;
-    the hero *prototype* approvals in §5 remain the owner checkpoint). Leading candidate:
-    Instrument Serif (OFL); Fraunces / Playfair Display acceptable — pick whatever reads best
-    at size in the real UI. Must be open-license (self-hostable).
+    *similar* to the reference, not a clone. **Decided at F7 (owner feedback 2026-07-08):
+    Fraunces** (OFL, variable weight + optical size) at **~560 weight — titles must never look
+    thin** (Instrument Serif's single thin cut was rejected for exactly that). **Italic serif
+    accents are welcome sparingly** — an italic word in a headline, a pull-quote — for the
+    Airbnb-warm touch (owner). Sizes/tracking remain builder judgment; hero *prototype*
+    approvals in §5 remain the owner checkpoint.
   - **Inter stays for body/UI** (paragraphs, buttons, forms, labels, nav — matches the sans in
     the reference images). Segoe UI remains the system proxy in prototypes (serif proxy:
     Georgia).
@@ -80,11 +85,12 @@ read this doc the way they read the glossary — decisions live here, not in cha
   separator; **minimal shadows** — a soft lift on card hover only, no ambient/glow shadows.
   Overall feel: **organized and clean — never overwhelming or messy, but never empty**; build to
   current trending styles per the delegation (§1).
-- **Illustration/iconography:** ✅ *confirmed at F7 (2026-07-08):* **Lucide** line icons,
-  re-exported through `@beecompete/ui` (`src/icons.ts` — app code never imports the icon lib
-  directly); gold/filled treatments for active states applied per-use. Small spot illustrations
-  for hero/audience/empty states remain 🔶 (decided when those surfaces build). **Emoji in the
-  prototypes are placeholders.** No mascot at launch (bee lives in the logo/mark).
+- **Illustration/iconography:** ✅ *confirmed at F7, revised same day (owner: "better icons"):*
+  **Phosphor** icons, re-exported through `@beecompete/ui` (`src/icons.ts` — app code never
+  imports the icon lib directly). Regular weight by default; **bold/fill/duotone weights** for
+  emphasis and active states (e.g., gold duotone trophy, filled verified seal). Small spot
+  illustrations for hero/audience/empty states remain 🔶 (decided when those surfaces build).
+  **Emoji in the prototypes are placeholders.** No mascot at launch (bee lives in the logo/mark).
 - **Light + dark mode:** ✅ both required (architecture §8), delivered via design tokens. Prototypes
   are **light-first**; dark mode is a token swap in F7, not a separate design pass. The dark
   category-highlight band is a *section treatment*, not dark mode.
@@ -102,6 +108,9 @@ read this doc the way they read the glossary — decisions live here, not in cha
   overlays, hero strips, image cards).
 - **Don't:** yellow-on-black (or any accent-on-black) button styling; **no glow/colored shadows on
   buttons**; no oversized tile grids.
+- **Don't (owner 2026-07-08):** **no harsh `#000`/near-black fills or text** — use warm charcoals;
+  dark mode is warm dark gray (Claude-like), never black. No thin/spindly display type — serif
+  titles carry real weight (~560).
 - **Don't (owner 2026-07-08):** **gold `#F5C330` as text-on-white, thin icon strokes, or hairline
   borders** — gold is a fill/background/accent-shape color only (it fails WCAG contrast on white);
   text on gold is always ink. **No auto-advancing carousels** — user-driven only, with a peek

@@ -94,8 +94,8 @@ secret scan blocking, Semgrep/Trivy advisory, cached, cancel-in-progress); F6 de
 (`apps/{web,api}/Dockerfile`, `infra/docker-compose.{staging,prod}.yml` + `infra/Caddyfile`,
 `deploy-staging.yml` on `main`-push + `deploy-prod.yml` on `R*`-tag, build-once-promote to a VPS via
 GHCR; images built + run-verified locally, but live deploy needs the VPS/DNS/secrets setup in
-setup-runbook §8); F7 design system (`packages/ui`: `styles/tokens.css` = semantic light/dark
-tokens + Tailwind `@theme`, self-hosted Instrument Serif + Inter Variable, pill
-Button/Input/Textarea/Select/Card/Badge/Logo/ThemeToggle, curated Lucide icon re-exports, Vitest
-tests; live showcase at `/design` in apps/web). Foundation is complete except **F8**
-(observability) — next per `docs/phase-1-plan.md`.
+setup-runbook §8); F7 design system (`packages/ui`: `styles/tokens.css` = warm semantic light/dark
+tokens (no harsh blacks; Claude-style warm dark mode) + Tailwind `@theme`, self-hosted Fraunces +
+Inter Variable, pill Button/Input/Textarea/Select/Card/Badge/Logo/ThemeToggle, curated Phosphor
+icon re-exports, Vitest tests; live showcase at `/design` in apps/web). Foundation is complete
+except **F8** (observability) — next per `docs/phase-1-plan.md`.

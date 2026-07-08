@@ -11,7 +11,15 @@ import {
   Input,
   Textarea,
 } from '@beecompete/ui';
-import { Calendar, GraduationCap, MapPin, Search, Trophy } from '@beecompete/ui';
+import {
+  Calendar,
+  GraduationCap,
+  Heart,
+  MapPin,
+  Search,
+  Trophy,
+  VerifiedSeal,
+} from '@beecompete/ui';
 import { SelectDemo } from './select-demo';
 
 export const metadata: Metadata = { title: 'Design system' };
@@ -43,9 +51,12 @@ export default function DesignPage() {
       </p>
 
       <Section title="Type">
-        <p className="font-display text-5xl text-foreground">Search. Compete. Participate.</p>
-        <p className="font-display mt-2 text-2xl text-muted italic">
-          Display serif — Instrument Serif, regular weight.
+        <p className="font-display text-5xl text-foreground">
+          Search. Compete. <em>Participate.</em>
+        </p>
+        <p className="font-display mt-2 text-2xl text-muted">
+          Display serif — Fraunces, weighted so titles never look thin.{' '}
+          <em>Italic accents, used sparingly.</em>
         </p>
         <p className="mt-4 max-w-prose text-base text-foreground">
           Body and UI text is Inter — a clean, readable sans for paragraphs, labels, buttons, and
@@ -54,6 +65,24 @@ export default function DesignPage() {
         <p className="font-display mt-4 text-4xl text-foreground">
           1,204 <span className="text-lg text-muted">competitions tracked</span>
         </p>
+      </Section>
+
+      <Section title="Icons">
+        <p className="mb-3 text-sm text-muted">
+          Phosphor, via <code className="rounded bg-surface px-1.5 py-0.5">@beecompete/ui</code> —
+          regular by default; <code className="rounded bg-surface px-1.5 py-0.5">weight</code>{' '}
+          variants (bold · fill · duotone) for emphasis and active states.
+        </p>
+        <div className="flex flex-wrap items-center gap-4 text-foreground">
+          <Search aria-hidden="true" className="size-6" />
+          <Calendar aria-hidden="true" className="size-6" />
+          <Trophy aria-hidden="true" className="size-6" />
+          <GraduationCap aria-hidden="true" className="size-6" />
+          <MapPin aria-hidden="true" className="size-6" />
+          <Trophy aria-hidden="true" weight="duotone" className="size-6 text-brand-gold" />
+          <Heart aria-hidden="true" weight="fill" className="size-6 text-danger" />
+          <VerifiedSeal aria-hidden="true" weight="fill" className="size-6 text-success" />
+        </div>
       </Section>
 
       <Section title="Buttons">

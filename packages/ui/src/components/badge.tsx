@@ -1,5 +1,5 @@
 import type { HTMLAttributes } from 'react';
-import { BadgeCheck } from 'lucide-react';
+import { SealCheck } from '@phosphor-icons/react/dist/ssr';
 import { cn } from '../lib/cn';
 
 /**
@@ -32,7 +32,9 @@ export function Badge({ variant = 'neutral', className, children, ...props }: Ba
       )}
       {...props}
     >
-      {variant === 'verified' && <BadgeCheck aria-hidden="true" className="size-3.5" />}
+      {variant === 'verified' && (
+        <SealCheck aria-hidden="true" weight="fill" className="size-3.5" />
+      )}
       {children}
     </span>
   );

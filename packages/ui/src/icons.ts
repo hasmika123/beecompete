@@ -1,44 +1,50 @@
 /**
- * Icon set — Lucide line icons (design-brief §3), re-exported through @beecompete/ui
- * so app code never imports an icon library (or inlines SVGs) directly. Curated:
- * add icons here as features need them, keeping usage searchable in one place.
+ * Icon set — Phosphor (design-brief §3, owner 2026-07-08: richer than plain line
+ * icons; weights available per-use: regular · bold · fill · duotone via the `weight`
+ * prop). Re-exported through @beecompete/ui so app code never imports an icon library
+ * (or inlines SVGs) directly. The `/dist/ssr` entry is context-free, so these work in
+ * both server and client components.
+ *
+ * Curated: add icons here as features need them, keeping usage searchable.
+ * Some names are aliased to keep call sites descriptive and stable.
  */
 export {
   ArrowLeft,
   ArrowRight,
   ArrowUpRight,
-  BadgeCheck,
+  ArrowSquareOut as ExternalLink,
   Bell,
-  Bookmark,
-  Calendar,
+  BookmarkSimple as Bookmark,
+  CalendarBlank as Calendar,
   CalendarPlus,
+  CaretDown as ChevronDown,
+  CaretLeft as ChevronLeft,
+  CaretRight as ChevronRight,
+  CaretUp as ChevronUp,
+  ChatCircleText as MessageCircle,
   Check,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-  CircleAlert,
-  CircleHelp,
+  CircleNotch as Spinner,
   Clock,
-  DollarSign,
-  ExternalLink,
-  Filter,
+  CurrencyDollar as DollarSign,
   Flag,
+  FunnelSimple as Filter,
   Globe,
   GraduationCap,
   Heart,
   Info,
   Link as LinkIcon,
-  Loader2,
+  ListBullets as ListIcon,
+  MagnifyingGlass as Search,
   MapPin,
   Medal,
-  Menu,
   Moon,
-  Search,
-  Share2,
-  Sparkles,
+  Question as CircleHelp,
+  SealCheck as VerifiedSeal,
+  ShareNetwork as Share,
+  Sparkle as Sparkles,
   Sun,
   Trophy,
   Users,
+  WarningCircle as CircleAlert,
   X,
-} from 'lucide-react';
+} from '@phosphor-icons/react/dist/ssr';

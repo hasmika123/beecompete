@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from 'react';
 import { useTheme } from 'next-themes';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun } from '@phosphor-icons/react/dist/ssr';
 import { Button } from './button';
 
 /**

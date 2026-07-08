@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Check, ChevronDown } from 'lucide-react';
+import { CaretDown, Check } from '@phosphor-icons/react/dist/ssr';
 import { cn } from '../lib/cn';
 
 /**
@@ -175,7 +175,7 @@ export function Select({
         {...aria}
       >
         <span className="truncate">{selected?.label ?? placeholder}</span>
-        <ChevronDown
+        <CaretDown
           aria-hidden="true"
           className={cn('size-4 shrink-0 text-muted transition-transform', open && 'rotate-180')}
         />
