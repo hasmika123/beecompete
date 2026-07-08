@@ -1,0 +1,95 @@
+name: Deploy — production
+
+# Production updates ONLY on a deliberate release tag (git tag R1 && git push origin R1)
+# or manual dispatch. It promotes the EXACT image already validated on staging (build
+# once, promote) — no rebuild — then refreshes the prod Compose stack + health-checks it.
+on:
+  push:
+    tags: ['R*']
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 12-char image tag (commit SHA) already built + tested on staging
+        required: true
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write # add release/prod tags to the existing images
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+            echo "release=manual-${{ github.run_id }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+            echo "release=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Re-tag the tested :sha image as the release + a moving :prod alias. No rebuild.
+      - name: Promote images (no rebuild)
+        run: |
+          set -euo pipefail
+          for svc in web api; do
+            src="ghcr.io/${{ github.repository }}-$svc:${{ steps.meta.outputs.tag }}"
+            docker buildx imagetools create "$src" \
+              --tag "ghcr.io/${{ github.repository }}-$svc:${{ steps.meta.outputs.release }}" \
+              --tag "ghcr.io/${{ github.repository }}-$svc:prod"
+          done
+
+  deploy:
+    needs: promote
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy infra files to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: infra/docker-compose.prod.yml,infra/Caddyfile
+          target: ~/beecompete-prod
+          strip_components: 1
+
+      - name: Deploy + health check over SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd ~/beecompete-prod
+            export IMAGE_REPO="${{ github.repository }}"
+            export IMAGE_TAG="${{ needs.promote.outputs.tag }}"
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d
+            for i in $(seq 1 20); do
+              if docker compose -f docker-compose.prod.yml exec -T api wget -qO- http://localhost:8080/actuator/health | grep -q '"status":"UP"'; then
+                echo "API healthy"; docker logout ghcr.io; exit 0
+              fi
+              echo "waiting for API health ($i/20)…"; sleep 6
+            done
+            echo "API did not become healthy — rolling back is manual (see infra/README). Log:"
+            docker compose -f docker-compose.prod.yml logs --tail=80 api
+            exit 1

@@ -18,9 +18,20 @@ Kept cheap: `dorny/paths-filter` skips unchanged trees, pnpm/Gradle caching, and
 Security, so we use Semgrep + Trivy + gitleaks instead. Required-status-check enforcement
 (branch protection) needs the repo to be public or on Pro — CI still runs and reports today.
 
-> **Still skeleton:** **F6** adds `deploy-staging.yml` (push to `main` → staging) and
-> `deploy-prod.yml` (release tag `R*` / manual dispatch → prod) with the Liquibase
-> migration step, health checks, and rollback.
+## `deploy-staging.yml` + `deploy-prod.yml` (F6)
+
+**Build once, promote.** A merge to `main` triggers `deploy-staging.yml`: it builds the web
++ api images (`:sha` + `:staging`), pushes to GHCR, then SSHes to the VPS to refresh the
+staging Compose stack and waits for `/actuator/health` = UP. A release tag
+(`git tag R1 && git push origin R1`) triggers `deploy-prod.yml`: it **re-tags the exact
+`:sha` image staging validated** (no rebuild) and refreshes the prod stack. Liquibase
+migrates on API startup (DIRECT_URL). Both use GitHub **Environments** (`staging`,
+`production`) for their secrets.
+
+**Requires (one-time, see [`docs/setup-runbook.md`](../../docs/setup-runbook.md) §8):**
+repo secrets `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `GHCR_TOKEN`; the `staging`/`production`
+Environments; and a per-env `.env` on the VPS (`SITE_ADDRESS`, `DATABASE_URL`, `DIRECT_URL`,
+…). These workflows can't run until that infra exists.
 
 See [`docs/development-process.md`](../../docs/development-process.md) §5 and
 [`docs/architecture.md`](../../docs/architecture.md) §14.

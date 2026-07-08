@@ -1,0 +1,22 @@
+# Keep the Docker build context small + reproducible. Anything needed for the build is
+# NOT listed here; everything else (installed deps, build outputs, secrets, git) is.
+.git
+**/node_modules
+**/.next
+**/dist
+**/build
+.turbo
+**/.gradle
+*.tsbuildinfo
+
+# Secrets / local env — never send to the build.
+.env
+.env.*
+!.env.example
+
+# Docs, CI, IDE — irrelevant to image builds.
+docs
+.github
+.idea
+.vscode
+**/*.md

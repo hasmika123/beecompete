@@ -1,0 +1,100 @@
+name: Deploy — staging
+
+# A plain merge to main deploys STAGING only (never prod). Builds both images, pushes to
+# GHCR, then SSHes to the VPS to refresh the staging Compose stack + health-checks it.
+# Prod is a separate, deliberate act (deploy-prod.yml on a release tag).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false # never interrupt an in-flight deploy
+
+permissions:
+  contents: read
+  packages: write # push images to GHCR
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: staging
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        run: echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}-web:${{ steps.meta.outputs.tag }}
+            ghcr.io/${{ github.repository }}-web:staging
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,scope=web,mode=max
+
+      - name: Build & push api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}-api:${{ steps.meta.outputs.tag }}
+            ghcr.io/${{ github.repository }}-api:staging
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,scope=api,mode=max
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      # Keep the VPS copy of the Compose stack + Caddyfile in sync with the repo.
+      - name: Copy infra files to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: infra/docker-compose.staging.yml,infra/Caddyfile
+          target: ~/beecompete-staging
+          strip_components: 1
+
+      - name: Deploy + health check over SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd ~/beecompete-staging
+            export IMAGE_REPO="${{ github.repository }}"
+            export IMAGE_TAG="${{ needs.build.outputs.tag }}"
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            docker compose -f docker-compose.staging.yml pull
+            docker compose -f docker-compose.staging.yml up -d
+            # Liquibase migrates on API startup (DIRECT_URL). Wait for health before calling it done.
+            for i in $(seq 1 20); do
+              if docker compose -f docker-compose.staging.yml exec -T api wget -qO- http://localhost:8080/actuator/health | grep -q '"status":"UP"'; then
+                echo "API healthy"; docker logout ghcr.io; exit 0
+              fi
+              echo "waiting for API health ($i/20)…"; sleep 6
+            done
+            echo "API did not become healthy — rolling log:"; docker compose -f docker-compose.staging.yml logs --tail=80 api
+            exit 1

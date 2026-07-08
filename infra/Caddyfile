@@ -1,0 +1,22 @@
+# Caddy reverse proxy with automatic HTTPS (Let's Encrypt). One config for staging + prod;
+# the site address is injected per-stack via the SITE_ADDRESS env var (e.g.
+# staging.beecompete.com, beecompete.com, or an <ip>.sslip.io during bootstrap).
+#
+# Only the Next.js container is public. The Spring API is internal (BFF pattern —
+# architecture §4/§5): the browser talks to Next, and Next forwards to api:8080 over the
+# private Docker network. So there is deliberately no route to the API here.
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	# Defense-in-depth headers (Cloudflare sets some of these too). HTTPS/HSTS is safe
+	# because Caddy terminates TLS. App-level noindex is handled in the Next metadata.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	reverse_proxy web:3000
+}

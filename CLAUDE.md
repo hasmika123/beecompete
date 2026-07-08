@@ -74,7 +74,7 @@ Root scripts run through Turbo: `pnpm dev|build|lint|typecheck|test|format`. Sha
 design system). Local infra (Postgres + Redis) runs via `infra/docker-compose.yml`.
 
 ## Current state
-Planning complete. **Foundation in progress.** **F1–F5 done** — F1 monorepo skeleton (pnpm/Turbo,
+Planning complete. **Foundation in progress.** **F1–F6 done** — F1 monorepo skeleton (pnpm/Turbo,
 shared TS/Prettier config, PR template); F2 Spring Boot skeleton (`apps/api`: Java 21, modular
 packages, Actuator, Bean Validation, `/api/v1/ping`); F3 Next.js skeleton (`apps/web`: App Router +
 TS, Tailwind v4, `@beecompete/ui`/`@beecompete/config` via `transpilePackages`, app shell +
@@ -82,6 +82,10 @@ light/dark theming, placeholder logo/icon); F4 persistence baseline (`apps/api`:
 PostgreSQL + Liquibase baseline changelog, HikariCP tuned for Neon, Testcontainers integration test;
 `infra/docker-compose.yml` = Postgres + Redis; root `.env.example`). No domain entities yet — the
 first schema is R1-1; F5 CI (`.github/workflows/ci.yml`: path-filtered web + API build/test, gitleaks
-secret scan blocking, Semgrep/Trivy advisory, cached, cancel-in-progress). `packages/ui` primitives
-and real design tokens are still `TODO(F7)`. Next build task is **F6** (deploy pipeline:
-`deploy-staging.yml` + `deploy-prod.yml`, Caddy) per `docs/phase-1-plan.md`.
+secret scan blocking, Semgrep/Trivy advisory, cached, cancel-in-progress); F6 deploy pipeline
+(`apps/{web,api}/Dockerfile`, `infra/docker-compose.{staging,prod}.yml` + `infra/Caddyfile`,
+`deploy-staging.yml` on `main`-push + `deploy-prod.yml` on `R*`-tag, build-once-promote to a VPS via
+GHCR; images built + run-verified locally, but live deploy needs the VPS/DNS/secrets setup in
+setup-runbook §8). `packages/ui` primitives and real design tokens are still `TODO(F7)`. Foundation is
+effectively complete except **F7** (design system) and **F8** (observability) — next per
+`docs/phase-1-plan.md`.

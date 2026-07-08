@@ -18,9 +18,30 @@ Config comes from the repo-root `.env` (copy `.env.example`). Defaults: Postgres
 reads `DATABASE_URL`; Liquibase applies the baseline changelog on startup. Integration
 tests use Testcontainers, so they need Docker running but **not** this compose stack.
 
-> **Still skeleton:** prod/staging Compose stacks + `Caddyfile` + deploy scripts land in
-> **F6**. See [`docs/architecture.md`](../docs/architecture.md) §2/§14 and
-> [`docs/setup-runbook.md`](../docs/setup-runbook.md).
+## Deploy stacks (F6)
+
+- **`docker-compose.staging.yml`** / **`docker-compose.prod.yml`** — the VPS stacks: Caddy
+  + web + api, images pulled from **GHCR**. Managed Postgres stays **off-box** (never in
+  these files). Deployed by the `deploy-*.yml` workflows; a sibling `.env` on the VPS holds
+  each environment's secrets (`SITE_ADDRESS`, `DATABASE_URL`, `DIRECT_URL`, …).
+- **`Caddyfile`** — one config for both stacks; the site address is injected via
+  `SITE_ADDRESS`. Auto-HTTPS. Only the web container is public (BFF pattern — the API is
+  internal on the Docker network).
+- **`apps/web/Dockerfile`** / **`apps/api/Dockerfile`** — build from the **repo root** as
+  context (`docker build -f apps/web/Dockerfile .`).
+
+**Flow (build once, promote):** merge to `main` → `deploy-staging.yml` builds `:sha` images
+and refreshes staging. A release tag (`git tag R1 && git push origin R1`) → `deploy-prod.yml`
+*re-tags the exact tested image* and refreshes prod. Liquibase migrates on API startup
+(DIRECT_URL); the deploy waits for `/actuator/health` = UP before finishing.
+
+**Manual rollback:** re-run `deploy-prod.yml` (workflow_dispatch) with the previous known-good
+12-char image tag, or on the VPS: `export IMAGE_TAG=<prev>; docker compose -f
+docker-compose.prod.yml up -d`.
+
+> **Still skeleton:** first-time VPS/DNS/secret setup is a manual runbook — see
+> [`docs/setup-runbook.md`](../docs/setup-runbook.md) §8. Architecture context:
+> [`docs/architecture.md`](../docs/architecture.md) §2/§14.
 
 ## Principles (architecture §2, §14)
 
