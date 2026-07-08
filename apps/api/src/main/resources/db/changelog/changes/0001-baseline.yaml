@@ -1,0 +1,11 @@
+# F4 baseline. Establishes the migration infrastructure and tags the empty starting
+# point — NO domain schema here. The first real tables (Category, Competition, Edition,
+# …) land in R1-1 as 0002+. Building schema ahead of R1-1 is a hard stop (CLAUDE.md).
+databaseChangeLog:
+  - changeSet:
+      id: 0001-baseline
+      author: beecompete
+      comment: F4 baseline — empty starting point; tags the DB for rollback reference.
+      changes:
+        - tagDatabase:
+            tag: baseline

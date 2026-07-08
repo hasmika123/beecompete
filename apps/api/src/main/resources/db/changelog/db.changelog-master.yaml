@@ -1,0 +1,6 @@
+# Liquibase master changelog. Migrations are ADDITIVE-ONLY (architecture §3) — never
+# edit a changeset that has shipped; add a new one. Each release's changes get their
+# own file under changes/ and are included here in order.
+databaseChangeLog:
+  - include:
+      file: db/changelog/changes/0001-baseline.yaml

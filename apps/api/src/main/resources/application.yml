@@ -6,6 +6,45 @@ spring:
     virtual:
       enabled: true
 
+  # Datasource — the app uses Neon's POOLED endpoint (DATABASE_URL). Locally this points
+  # at the docker-compose Postgres (infra/docker-compose.yml). Must be a JDBC URL
+  # (jdbc:postgresql://…); Neon requires sslmode=require. See docs/setup-runbook.md §5.
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/beecompete}
+    username: ${DATABASE_USERNAME:beecompete}
+    password: ${DATABASE_PASSWORD:beecompete}
+    # HikariCP tuned for a serverless/autosuspending Postgres (Neon). Keep the pool
+    # modest and lifetimes under Neon's idle window; tolerate cold-start wake latency.
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:10}
+      minimum-idle: ${DB_POOL_MIN:2}
+      max-lifetime: 240000 # 4 min — under Neon's ~5 min idle window
+      idle-timeout: 120000 # 2 min
+      connection-timeout: 20000 # generous enough to absorb a cold start
+      validation-timeout: 5000
+
+  jpa:
+    # Liquibase owns the schema — Hibernate never writes DDL (architecture §3).
+    hibernate:
+      ddl-auto: none
+    # No open-session-in-view: keep transactions explicit at the service boundary.
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          # Store timestamps in UTC regardless of server/JVM zone.
+          time_zone: UTC
+
+  # Liquibase runs migrations against the DIRECT endpoint (never the pooler — advisory
+  # locks aren't pooler-safe). When DIRECT_URL is unset (local dev, tests), Liquibase
+  # falls back to the app's main datasource — locally that's the same Postgres, in tests
+  # it's the Testcontainers instance. In prod, set DIRECT_* so migrations bypass the pooler.
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+    url: ${DIRECT_URL:}
+    user: ${DIRECT_USERNAME:}
+    password: ${DIRECT_PASSWORD:}
+
 server:
   # Undertow serves on 8080 by default; graceful shutdown drains in-flight requests.
   shutdown: graceful
