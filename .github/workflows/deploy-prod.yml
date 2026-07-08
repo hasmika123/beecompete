@@ -22,6 +22,8 @@ permissions:
 
 jobs:
   promote:
+    # Dormant until infra is ready: set repo variable DEPLOY_ENABLED=true to activate.
+    if: ${{ vars.DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     environment: production
     outputs:

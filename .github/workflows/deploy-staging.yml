@@ -18,6 +18,9 @@ permissions:
 
 jobs:
   build:
+    # Dormant until infra is ready: set repo variable DEPLOY_ENABLED=true to activate
+    # (until then this job — and the deploy — are skipped, keeping main green).
+    if: ${{ vars.DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     environment: staging
     outputs:
