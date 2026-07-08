@@ -69,7 +69,7 @@ the **canonical** term is bolded and the synonyms-to-avoid are listed so we stay
 | **Article** | An **admin-published** piece of content (rich text, images, links) that can **link Competitions**, rendered in-article as CompetitionCards. Canonical entity name (→ M19, Phase 2). | Public surface is labeled **Community**; code/schema/docs always say Article. Avoid "blog post", "forum post", "thread". **Never user-authored** — forums (B6) stay deferred and separate. |
 | **Community** | The public-facing **label** for the Article surface (nav item + `/community` article index and detail pages). A UI name, not an entity. | UI copy says Community; everything internal says Article. |
 | **Reaction** | A like or love on an Article by a **logged-in, non-minor** user; one per user per Article (changeable). | → M34. Counts are public; *who* reacted is never shown. Minors and logged-out users see counts only. Share is not a Reaction (plain link action, no login, no data). |
-| **Article Comment** | A text comment on an Article by a **logged-in, non-minor** user; moderated via DQ8, reportable via DQ7. | → M35 🔒. Adult-authored only — no child UGC. Builds after R2 accounts + DQ8 exist. |
+| **Article Comment** | A text comment on an Article by a **logged-in, non-minor** user; the comment section is **visible only to logged-in non-minor users** (hidden from minors and logged-out visitors — read *and* write). Moderated via DQ8, reportable via DQ7. | → M35 🔒. Adult-only both directions: no child UGC, and comment content sits outside the child-directed standard (post-moderation viable). Builds after R2 accounts + DQ8 exist. |
 
 ## Host-facing concepts
 

@@ -279,9 +279,10 @@ deadline-filtered view.
   reserved NavBar link.
 - **Community (article index + article detail) [Phase 2, → M19/M34/M35]** — public label
   "Community", entity **Article** (owner 2026-07-08). Admin-published articles with linked
-  Competitions (in-article CompetitionCard row), reactions/share, and moderated adult-only
-  comments. **Blueprint before build** (it's a public/SEO surface); schema sketches live in
-  `domain-model.md` §3e. Gets a nav link when it ships.
+  Competitions (in-article CompetitionCard row), reactions/share, and a comment section that is
+  **adult-visible-only, read and write** (hidden from minors and logged-out visitors; moderated
+  via DQ8). Articles themselves stay public (SEO). **Blueprint before build**; schema sketches
+  live in `domain-model.md` §3e. Gets a nav link when it ships.
 
 ---
 
@@ -332,7 +333,7 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
 **2026-07-08 (owner — Community + admin-managed landing content, registry Rev 9):**
 25. **Hero right half = image cards, not SVG illustrations** (supersedes the child-SVG + satellite-SVG plan): one **main HeroCard** (a link; hover/focus = translucent WCAG-AA scrim + short destination description) + two satellite HeroCards (top-right, bottom-left, image-only). **All three admin-managed** (→ M36) — image/alt on all, link + description on the main card.
 26. **Featured-carousel picks are admin-managed ordered slots** (`FeaturedSlot`, → M36; CRUD in R1-3). Same carousel rules (#8); paid Promotion slots remain a separate, labeled, later thing (M28).
-27. **Community pages approved as a Phase-2 surface** (public label "Community", entity Article — M19/M34/M35): admin-published articles with linked-competition cards, like/love + share, adult-only moderated comments. Blueprint before build; added to Deferred pages meanwhile.
+27. **Community pages approved as a Phase-2 surface** (public label "Community", entity Article — M19/M34/M35): admin-published articles with linked-competition cards, like/love + share, and comments that are **adult-visible-only, read and write** (hidden from minors and logged-out visitors; amended same day). Blueprint before build; added to Deferred pages meanwhile.
 
 ## Status
 | Page | Blueprint | Style prototype | Built |
