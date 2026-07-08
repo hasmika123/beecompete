@@ -1,0 +1,17 @@
+{
+  "name": "@beecompete/config",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared config + cross-cutting TypeScript types/constants used by web and ui.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "echo \"(F1 placeholder) no lint configured yet — ESLint base lands with F3/F7\""
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

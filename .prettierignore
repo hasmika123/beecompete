@@ -1,0 +1,16 @@
+# Build output / deps
+node_modules/
+.next/
+out/
+dist/
+build/
+.turbo/
+pnpm-lock.yaml
+
+# Hand-curated prose — do not reflow.
+docs/
+CLAUDE.md
+README.md
+
+# Java side is formatted by its own toolchain (F2), not Prettier.
+apps/api/

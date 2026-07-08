@@ -1,0 +1,22 @@
+{
+  "name": "@beecompete/ui",
+  "version": "0.0.0",
+  "private": true,
+  "description": "BeeCompete shared design system — tokens, primitives, icons, logo/font assets. Consumed as source via Next transpilePackages.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "echo \"(F7 placeholder) ui lint configured with the design system\""
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@beecompete/config": "workspace:*",
+    "typescript": "^5.7.2"
+  }
+}
