@@ -167,7 +167,10 @@ detailed progress is derived from the Event Log.)*
 ### 3d. Money & entitlements
 
 **`Product`** [reserve, minimal P1] — catalog. `id, code (participant_plus|host_starter|host_pro|
-host_championship|promotion|sponsorship), tier, pricing (JSONB)`
+host_championship|public_listing|promotion|sponsorship), tier, pricing (JSONB)`
+*(`public_listing` added 2026-07-08: publishing a self-created competition publicly is gated on
+this entitlement — included in every paid host tier; free-promo grants are just zero-price
+entitlement rows, so "free now, charged later" is config, not a migration. `monetization.md` §4.)*
 
 **`Entitlement`** [reserve] — the one abstraction behind every purchase (Hook #12).
 `id, product_id, scope_type (competition|edition|category|platform), scope_id, beneficiary_type
@@ -184,7 +187,7 @@ Entitlement with a broader `scope_type`. Nothing special-cased.)*
 - **`Registration`** [reserve] — participant **or** team ↔ Edition (polymorphic registrant).
 - **`Submission`** [reserve] — entry to an Edition, belongs to a Registration.
 - **`JudgingAssignment` / `Score` / `Rubric`** [deferred-design] — 🛑 **no shape committed**; designed at **Gate B** (judging deep-dive, `development-process.md` §6a), driven by what Gate-A fairs actually need. Basic judging builds in Phase 3, advanced modes Phase 4.
-- **`Listing` state** is not a separate table — it's the `Competition` + `Edition` + `verification_state`/provenance a Host manages.
+- **`Listing` state** is not a separate table — it's the `Competition` + `Edition` + `verification_state`/provenance a Host manages. *(Phase 3, → H48: self-created competitions gain a `visibility` field (public|unlisted|private); setting it to `public` requires host verification (DQ11–DQ14) **and** a `public_listing` entitlement (2026-07-08). Free tier enforces a participant cap 🔬 + volume limits on private competitions. Curated listings are public by definition and unaffected.)*
 - **`ComplianceForm` / `ReviewCommittee`** [deferred-design] — 🛑 **no shape committed**; designed at **Gate A** (science-fair wedge deep-dive, `development-process.md` §6a) from fair-director research. Consent is partly P1 via `GuardianLink`/`consent_state`.
 
 ### 3f. Provenance & trust (embedded)

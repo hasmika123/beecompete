@@ -1,6 +1,6 @@
 # BeeCompete — Monetization & Packaging
 
-**Status:** Living document · **Last updated:** 2026-07-06 · Depends on: `feature-registry.md`, `competitive-analysis.md`
+**Status:** Living document · **Last updated:** 2026-07-08 · Depends on: `feature-registry.md`, `competitive-analysis.md`
 
 How we make money without breaking the flywheel. Price points here are **benchmark-informed
 hypotheses to validate**, not commitments — flagged 🔬.
@@ -12,7 +12,10 @@ hypotheses to validate**, not commitments — flagged 🔬.
 Dashboards are **free for every actor** — they are the engagement flywheel, not the product.
 Gating them would starve the audience that makes everything else sellable.
 
-> **Free = discover, track, coordinate. Paid = prepare (participant) and operate (host).**
+> **Free = discover, track, coordinate — and host privately (capped). Paid = prepare (participant)
+> and operate at scale + reach the public audience (host).** *(Host side reworded 2026-07-08 —
+> see §2/§4: claiming a curated listing stays free; publishing a self-created competition publicly
+> is entitlement-gated.)*
 
 Everything monetizable collapses into **one `Entitlement` abstraction** (Foundation Hook #12):
 `{scope: Competition|Edition, beneficiary, payer, product/tier, validity}`. Participant+, host
@@ -36,14 +39,21 @@ tools, bulk/cohort purchases, promotion, and renewals are all rows in that model
 
 **Educator** — free coordination tools (roster, discovery, assign, cohort dashboard) as the growth wedge; pays only for **bulk Participant+** and, later, **institutional seats**.
 
-**Host** — free presence tier, paid operations:
+**Host** — free presence + capped private hosting; paid = public reach + full operations *(restructured 2026-07-08)*:
 
-| Free host tier (presence + audience) | Host tools (per Edition, paid) |
+| Free host tier | Host tools (per Edition, paid) |
 |---|---|
-| Claim/manage listing + edition, **audience analytics** (views, saves, # tracking, interest by grade/region) | Registration + custom forms, roster, team/hierarchical registration |
-| Respond to Q&A, basic announcements | Fee collection, submissions, judging suite, advanced analytics, multi-staff, approvals, exports |
+| **Claim/manage a curated listing** + edition, **audience analytics** (views, saves, # tracking, interest by grade/region) | **Public marketplace listing for self-created competitions** (included in every paid tier) |
+| Respond to Q&A, basic announcements | Custom forms, team/hierarchical registration, fee collection |
+| **Private competitions** (invite-only/unlisted): registration, roster, announcements, **submission collection** — with a hard **participant cap** 🔬 and volume limits | Judging suite, advanced analytics, multi-staff, approvals, exports; uncapped volumes |
 
-The free audience-visibility tier is the hook: hosts *see* the demand we send them, which is what makes the paid tools worth buying.
+Two distinct free hooks: (1) hosts of competitions *we* curated see the demand we send them
+(audience analytics) — which sells the tools; (2) any host can run a **private** competition free
+within caps — which sells capacity and public reach. **A self-created competition cannot be
+published publicly for free**: public listing requires a `public_listing` entitlement (part of
+every paid tier; see §4). Claiming stays free because the curated catalog is *our* editorial
+product — a host suggesting their own competition via DQ15 gets curation on our terms (no
+self-serve control, no instant publishing), never a free self-serve public listing.
 
 ## 3. Participant+ packaging
 
@@ -64,10 +74,17 @@ Anchored to the **Edition** (a specific running) — reuses the Competition↔Ed
 
 | Tier | Includes | 🔬 Price hypothesis (per Edition) |
 |---|---|---|
-| **Free** | Listing + audience visibility | $0 |
-| **Starter** | Registration, roster, announcements, basic submissions | ~$99–$149 |
+| **Free** | Claimed-listing management + audience analytics; **private competitions** (registration, roster, announcements, submissions) with a hard participant cap 🔬 | $0 |
+| **Starter** | **+ public marketplace listing** · higher caps, basic submissions at volume | ~$99–$149 |
 | **Pro** | + custom forms, fee collection, advanced analytics, multi-staff, approvals, exports, branded microsite | ~$299–$499 |
 | **Championship** | + full judging suite (all modes, normalization, blind/COI), results/gallery, certificates, live/virtual judging | ~$799–$1,499 (or annual) |
+
+**Public-listing gate (locked 2026-07-08):** publishing a *self-created* competition to the public
+marketplace always requires a **`public_listing` entitlement** — included in **every paid tier**
+(Starter+). Whether early Phase-3 hosts get that entitlement free (supply-seeding promo) or pay
+from day one is a **Phase-3 pricing decision**; the gate is architecture, the price is config.
+Claiming and managing a listing *we* curated remains free (presence ≠ self-serve publishing).
+Verification (DQ11–DQ14) is required for anything public regardless of payment.
 
 **Design decisions confirmed by the market (adopt these):**
 - **Include unlimited staff & judges** in every tier — don't charge per seat (Award Force/Evalato norm).
@@ -110,6 +127,7 @@ The market is split: **Award Force, Evalato, zFairs take 0%** (and market it lou
 
 ## 8. Decisions log
 
+- **Public listing is paid; private hosting is the free tier** (✅ 2026-07-08 — *supersedes* the free-public-listing framing of §2's original table and registry Rev 7's "never tier-gate visibility" guardrail): self-created competitions publish publicly only with a `public_listing` entitlement (included in all paid tiers, Starter+); the free tier = claimed-listing management + capped private competitions (registration, roster, announcements, submissions; participant cap 🔬 TBD). Claiming curated listings stays free; DQ15 self-suggestions get editorial curation only (accepted loophole — curation is our product, not self-serve publishing). Phase-3 launch pricing (charge day one vs. free promo grants) decided at Phase 3; the entitlement gate ships regardless.
 - **Entry-fee cut:** ✅ **0%** (confirmed 2026-07-06).
 - **Participant tiers:** ✅ free = **Participant**; launch package = **Participant+**; premium (deferred) = **Participant²**. Single package at launch.
 - **Science-fair compliance wedge:** ✅ **PRIORITIZED (2026-07-07 — supersedes the 2026-07-06 "hold for Phase 4" decision).** The wedge is now the **anchor of Phase 3**: Host Tools v1 ships science-fair-first (registration + compliance/consent/advancement HC1–HC8 + basic judging H12–H17), targeting the fairs displaced by Scienteer's collapse (TX, AL, LA, ME, MO, VT, VA). Rationale: our own research (`competitive-analysis.md` §5) shows a live, *closing* opening with warm B2B demand — waiting until Phase 4 forfeits it. To make room, the UGC creator marketplace moves to Phase 4. **Non-coding groundwork starts now:** outreach to displaced-state fair directors during Phases 1–2 — plan in `go-to-market.md` §3; the notes feed Gate A (`development-process.md` §6a).

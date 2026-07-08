@@ -40,6 +40,13 @@ though we build them later. Those feed directly into the Domain & Data Model doc
 > listings); **H4** gains waitlist; member-ID invites noted on H7/M18; host-affiliated chapter
 > networks noted on X8/H7; topics/syllabus noted on P8; anti-decision recorded: **no 1:1 DMs with
 > minors** (compliance §1, M17).
+>
+> **Rev 8 (2026-07-08):** host-listing monetization flipped (owner; *supersedes Rev 7's
+> "never tier-gate visibility" guardrail — see `monetization.md` §8): **public listing of
+> self-created competitions is entitlement-gated** (`public_listing`, included in every paid tier);
+> the **free host tier = claimed-listing management + capped private competitions** (registration,
+> roster, announcements, submissions; participant cap 🔬). Claiming curated listings stays free.
+> H1/H2/H48 notes updated.
 
 ---
 
@@ -194,8 +201,8 @@ judging deep-dive** (`development-process.md` §6a) — the model is shaped by w
 
 | ID | Feature | Phase | Cx | Notes |
 |---|---|---|---|---|
-| H1 | Claim existing (seeded) listing | 3 | M | |
-| H2 | Self-serve create / manage listing | 3 | L | Reuses X9 schema |
+| H1 | Claim existing (seeded) listing | 3 | M | **Always free** (Rev 8) — presence on curated listings is the audience hook; gate = Host Verification (DQ11) |
+| H2 | Self-serve create / manage listing | 3 | L | Reuses X9 schema. **Public publishing requires the `public_listing` entitlement** (every paid tier includes it; Rev 8, `monetization.md` §4). Private/unlisted creation is free within the free-tier caps |
 | H3 | Edition management (yearly instances) | 3 | M | |
 | H4 | Registration management (open/close/capacity + **waitlist** with auto-promote on withdrawal) | 3 | M | Waitlist added Rev 7. 🔒 **Consent-upgrade:** registering a child with a host discloses child data to a third party → requires stronger parental consent than R2 email-plus (see `rfc-p1-auth-consent.md` §5) |
 | H5 | Custom registration forms | 3 | L | |
@@ -241,7 +248,7 @@ judging deep-dive** (`development-process.md` §6a) — the model is shaped by w
 | H45 | AI / automation (auto-score, rules & triggers, AI summaries, fraud detection) | Backlog | L | Submittable; later differentiator |
 | H46 | **"Are you the organizer?" claim-interest CTA + host waitlist** on listing pages | 1 | S | Supply-side pipeline from day one; builds the warm R4 launch list (`go-to-market.md` §3–4). Actual claiming stays H1 (Phase 3) |
 | H47 | **Award structures** — per-Edition award list (place, monetary/non-monetary/travel-grant, value + currency, display order) managed by hosts; assignment to winners lands with judging (Gate B) | 3 | M | 🪝 `Award` entity reserved in P1 (domain-model, Rev 7); typed prize summary on Edition ships R1 for display |
-| H48 | **Listing visibility control** — public / unlisted-by-link / private-invite-only for self-managed competitions (school-internal contests etc.) | 3 | M | Rev 7. Guardrail: **public visibility is NEVER tier-gated** — free tier always includes full public listing (rejects the legacy model; `monetization.md` §1) |
+| H48 | **Listing visibility control** — public / unlisted-by-link / private-invite-only for self-managed competitions (school-internal contests etc.) | 3 | M | Rev 7; monetization flipped Rev 8: **public requires the `public_listing` entitlement** (included in all paid tiers; free tier = private/unlisted with participant cap 🔬). Public also always requires verification (DQ11–DQ14). Claimed curated listings are unaffected (free, already public) |
 
 ## HC · Host — Compliance, Consent & Advancement *(the K-12 science-fair moat)*
 

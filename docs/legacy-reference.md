@@ -28,6 +28,10 @@ See registry **Rev 7** and domain-model 2026-07-08 notes for the normative versi
 7. **Host-affiliated chapter networks** noted on H7/X8 + glossary Chapter.
 8. **Syllabus/topics** as attributes-bag keys feeding Participant+ practice content (P8 note).
 9. Anti-decision: **no 1:1 private messaging with minors** (compliance §1; M17 note).
+10. *(Later on 2026-07-08, registry Rev 8):* the legacy **paid-public / free-private** split was
+    adopted after all, in refined form — public listing of *self-created* competitions is
+    entitlement-gated (`public_listing`, in every paid tier); free tier = capped private hosting;
+    claiming *curated* listings stays free. See `monetization.md` §2/§4/§8.
 
 ## 2. Reference design detail for reserved entities *(mine when the phase opens)*
 
@@ -83,8 +87,10 @@ Feed these to the Gate A/B deep-dives alongside the fair-director interviews.
 
 ## 4. Deliberately rejected legacy patterns
 
-- **Tier-gated public visibility** (BASIC hosts couldn't list publicly) — contradicts the
-  free-listing audience flywheel (`monetization.md` §1/§2).
+- ~~**Tier-gated public visibility**~~ — **adopted in refined form after all** (owner, 2026-07-08,
+  registry Rev 8): public self-publishing is entitlement-gated like the legacy model, but claiming
+  a *curated* listing stays free and the curated catalog remains the public audience engine —
+  which the legacy model lacked. See §1 item 10 and `monetization.md` §8.
 - **Host-level Stripe subscriptions** (BASIC/PREMIUM/ENTERPRISE) — superseded by per-Edition
   tiers + optional annual (`monetization.md` §4).
 - **1:1 private messaging** between hosts/adults and minor participants — recorded as an
