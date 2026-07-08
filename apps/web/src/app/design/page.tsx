@@ -18,6 +18,7 @@ import {
   Heart,
   MapPin,
   Search,
+  Share,
   Ticket,
   Trophy,
   Users,
@@ -159,6 +160,24 @@ export default function DesignPage() {
                 crossfades to the grey view arrow on hover. The count sits in a
                 translucent pill so it stays readable over any cover art (scrim rule);
                 the arrow is right-aligned in the stack so it lands in the corner. */}
+            {/* Quick actions — favorite (→ M7 save/follow) + share (→ M21). Same
+                translucent-pill treatment as the count so they read over any cover. */}
+            <span className="absolute top-3 left-3 z-10 flex gap-1.5">
+              <button
+                type="button"
+                aria-label="Save competition"
+                className="grid size-7 place-items-center rounded-full bg-background/85 text-muted transition-colors hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+              >
+                <Heart aria-hidden="true" className="size-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Share competition"
+                className="grid size-7 place-items-center rounded-full bg-background/85 text-muted transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+              >
+                <Share aria-hidden="true" className="size-4" />
+              </button>
+            </span>
             <span className="absolute top-3 right-2.5 z-10 grid items-center justify-items-end">
               <span className="col-start-1 row-start-1 inline-flex items-center gap-1 rounded-full bg-background/85 px-2 py-0.5 text-xs font-medium text-foreground transition-opacity group-hover:opacity-0">
                 <Users aria-hidden="true" className="size-3.5 text-muted" />
