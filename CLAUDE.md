@@ -45,8 +45,9 @@ Start context: `docs/README.md` → `docs/vision-prd.md`, `docs/glossary.md`.
 - **All shared UI comes from `packages/ui`.** Search there before creating any component. **Never inline
   SVGs or hand-roll styles** for shared things.
 - **Mobile-first, fully responsive.** WCAG 2.1 AA on new UI. Light + dark via tokens.
-- **Palette:** gold `#F5C330` + ink `#030201`. **Typeface: Inter** (self-hosted, no font CDN).
-  Buttons: flat gold fill + near-black text, ~12px radius, **no glow/colored shadows**.
+- **Palette:** gold `#F5C330` + ink `#030201`. **Type: display serif for headlines (working pick
+  Instrument Serif) + Inter for body/UI** (both self-hosted, no font CDN — design-brief §3, rev
+  2026-07-08). Buttons: flat gold fill + near-black text, ~12px radius, **no glow/colored shadows**.
 - Hero pages (Landing, Competitions, Details, How It Works, Categories index, Suggest a Competition)
   follow the approved blueprints; changing their structure means updating `docs/page-blueprints.md` first.
 

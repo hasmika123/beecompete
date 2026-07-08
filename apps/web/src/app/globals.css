@@ -46,9 +46,11 @@
   --color-border: var(--border);
   --color-surface: var(--surface);
 
-  /* Placeholder font stack — Inter is self-hosted in packages/ui at F7 (no font CDN). */
+  /* Placeholder font stacks — real fonts self-host in packages/ui at F7 (no font CDN):
+     display serif for headlines + Inter for body/UI (design-brief §3, rev 2026-07-08). */
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-display: Georgia, 'Times New Roman', serif;
 }
 
 body {

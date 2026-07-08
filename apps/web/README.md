@@ -24,8 +24,9 @@ plumbing lands with auth in R2 — none exists yet.
 - **All shared UI comes from `@beecompete/ui`** — search there before creating anything.
   (The two `TODO(F7)` placeholders above are the only sanctioned pre-F7 exception.)
 - Mobile-first, fully responsive; WCAG 2.1 AA on new UI; light + dark via tokens.
-- **No font CDN** (privacy + CSP) — Inter is self-hosted in `packages/ui` at F7; the
-  skeleton uses a system font stack.
+- **No font CDN** (privacy + CSP) — fonts are self-hosted in `packages/ui` at F7
+  (display serif for headlines + Inter for body/UI, design-brief §3); the skeleton uses a
+  system font stack.
 - Client validation mirrors server rules for UX only — the server is the real gate.
 - SSG/ISR for public marketplace pages (SEO); client/SSR for authed dashboards.
 
