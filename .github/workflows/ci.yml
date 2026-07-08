@@ -94,6 +94,9 @@ jobs:
   # private Free repo), hence Semgrep + Trivy + gitleaks.
   security:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read # gitleaks reads the PR's commit list on pull_request events
     steps:
       - uses: actions/checkout@v4
         with:
