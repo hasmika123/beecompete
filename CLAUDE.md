@@ -45,8 +45,9 @@ Start context: `docs/README.md` → `docs/vision-prd.md`, `docs/glossary.md`.
 - **All shared UI comes from `packages/ui`.** Search there before creating any component. **Never inline
   SVGs or hand-roll styles** for shared things.
 - **Ask the owner for reference images before first-styling any UI element type** (buttons, auth
-  pages, dropdowns, modals, …) — unless `docs/design-brief.md` already holds a locked reference for
-  it. Record supplied references there (design-brief §1).
+  pages, dropdowns, modals, …) — **including elements with locked decisions** (re-confirm with
+  references; the lock is the fallback). Sole exception: typography (settled 2026-07-08). Record
+  supplied references in `docs/design-brief.md` (§1).
 - **Mobile-first, fully responsive.** WCAG 2.1 AA on new UI. Light + dark via tokens.
 - **Palette:** gold `#F5C330` + ink `#030201`. **Type: display serif for headlines + Inter for
   body/UI** (self-hosted, no font CDN; exact serif face/size/weight = builder judgment at F7 —

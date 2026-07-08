@@ -17,11 +17,13 @@ read this doc the way they read the glossary — decisions live here, not in cha
   → the real page is implemented with `packages/ui` primitives and must match the approved prototype.
 - **Before styling any new UI element type (owner rule, 2026-07-08):** when an element or surface
   gets its *first* styling — buttons, sign-in/auth pages, dropdowns, modals, cards, empty states,
-  etc. — **ask the owner for reference images** rather than inventing a look. Check this doc first:
-  if a locked reference/decision already covers the element (e.g., buttons in §3), build from that;
-  if not, request references, then **record them here** so each element type is asked once. Detail
-  execution (exact sizes/weights/spacing within a supplied direction) stays builder judgment, per
-  the typography precedent.
+  etc. — **ask the owner for reference images** rather than inventing a look. This applies **even
+  when a locked decision already covers the element** (owner, same day: re-confirm locked styles
+  like buttons/cards/badges with references at first styling — the lock is the fallback if the
+  owner has nothing new). **Sole exception: typography** — just settled from reference images
+  (§3, rev 2026-07-08), don't re-ask. Record supplied references here so each element type is
+  asked once. Detail execution (exact sizes/weights/spacing within a supplied direction) stays
+  builder judgment, per the typography precedent.
 - **Utility pages** (settings, admin, plain forms) need no entry here — they assemble from primitives
   *(whose styling followed the reference-image rule above)*.
 
