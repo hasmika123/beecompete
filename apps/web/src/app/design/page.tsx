@@ -14,14 +14,11 @@ import {
 import {
   ArrowUpRight,
   Calendar,
-  Clock,
   GraduationCap,
   Heart,
   MapPin,
   Search,
-  Ticket,
   Trophy,
-  Users,
   VerifiedSeal,
 } from '@beecompete/ui';
 import { SelectDemo } from './select-demo';
@@ -200,45 +197,30 @@ export default function DesignPage() {
                 The classic 25-question contest for students in grade 10 and below.
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-4 pt-3.5">
-              {/* "At a glance" — only the two decision drivers on the card (owner r7):
-                  Cost (reads positive when free) + Format. Region and entry pathway
-                  live on the details page / filters. */}
-              <dl className="grid grid-cols-2 gap-x-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface">
-                    <Users aria-hidden="true" className="size-3.5 text-muted" />
-                  </span>
-                  <span className="flex min-w-0 flex-col leading-tight">
-                    <dt className="text-[11px] text-muted">Format</dt>
-                    <dd className="truncate text-sm font-medium text-foreground">In person</dd>
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-success-soft">
-                    <Ticket aria-hidden="true" className="size-3.5 text-success" />
-                  </span>
-                  <span className="flex min-w-0 flex-col leading-tight">
-                    <dt className="text-[11px] text-muted">Cost</dt>
-                    <dd className="truncate text-sm font-semibold text-success">Free</dd>
-                  </span>
-                </div>
-              </dl>
+            <CardContent className="p-4 pt-2.5">
+              {/* All four facts (owner r8) in one quiet dot-separated meta line —
+                  values are self-explanatory, no labels/chips needed. Cost keeps its
+                  positive treatment (Free = success green). */}
+              <p className="truncate text-xs text-muted">
+                <span className="font-semibold text-success">Free</span>
+                {' · In person · Nationwide · Individual'}
+              </p>
             </CardContent>
-            {/* Footer: one row, pinned to the bottom (mt-auto) so every card in a grid
-                shares the same baseline. Deadline gets the space it needs (compact
-                relative wording, never wraps); prize takes the rest and trails off. */}
+            {/* Footer, Kaggle-style: PRIZE is the bold, prominent fact; the deadline is
+                quiet muted "N days to go" text (flips to a danger tint only in the final
+                days). Pinned via mt-auto so every card in a grid shares the baseline. */}
             <CardFooter className="mt-auto items-center justify-between gap-2.5 border-t border-border p-4 py-3">
-              <span className="inline-flex shrink-0 items-center gap-1.5 text-sm whitespace-nowrap">
-                <Clock aria-hidden="true" className="size-4 text-danger" />
-                <strong className="font-semibold text-danger">9 days left</strong>
-              </span>
-              <span className="inline-flex min-w-0 items-center gap-1.5 text-sm">
-                <Trophy aria-hidden="true" className="size-4 shrink-0 text-brand-gold" />
-                <strong className="truncate font-semibold text-foreground">
+              <span className="inline-flex min-w-0 items-center gap-1.5">
+                <Trophy
+                  aria-hidden="true"
+                  weight="fill"
+                  className="size-4 shrink-0 text-brand-gold"
+                />
+                <strong className="truncate text-sm font-semibold text-foreground">
                   Medals + AIME invite
                 </strong>
               </span>
+              <span className="shrink-0 text-xs whitespace-nowrap text-muted">9 days to go</span>
             </CardFooter>
           </Card>
 
