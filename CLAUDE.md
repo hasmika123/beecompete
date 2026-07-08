@@ -82,7 +82,7 @@ Root scripts run through Turbo: `pnpm dev|build|lint|typecheck|test|format`. Sha
 design system). Local infra (Postgres + Redis) runs via `infra/docker-compose.yml`.
 
 ## Current state
-Planning complete. **Foundation in progress.** **F1–F6 done** — F1 monorepo skeleton (pnpm/Turbo,
+Planning complete. **Foundation in progress.** **F1–F7 done** — F1 monorepo skeleton (pnpm/Turbo,
 shared TS/Prettier config, PR template); F2 Spring Boot skeleton (`apps/api`: Java 21, modular
 packages, Actuator, Bean Validation, `/api/v1/ping`); F3 Next.js skeleton (`apps/web`: App Router +
 TS, Tailwind v4, `@beecompete/ui`/`@beecompete/config` via `transpilePackages`, app shell +
@@ -94,6 +94,8 @@ secret scan blocking, Semgrep/Trivy advisory, cached, cancel-in-progress); F6 de
 (`apps/{web,api}/Dockerfile`, `infra/docker-compose.{staging,prod}.yml` + `infra/Caddyfile`,
 `deploy-staging.yml` on `main`-push + `deploy-prod.yml` on `R*`-tag, build-once-promote to a VPS via
 GHCR; images built + run-verified locally, but live deploy needs the VPS/DNS/secrets setup in
-setup-runbook §8). `packages/ui` primitives and real design tokens are still `TODO(F7)`. Foundation is
-effectively complete except **F7** (design system) and **F8** (observability) — next per
-`docs/phase-1-plan.md`.
+setup-runbook §8); F7 design system (`packages/ui`: `styles/tokens.css` = semantic light/dark
+tokens + Tailwind `@theme`, self-hosted Instrument Serif + Inter Variable, pill
+Button/Input/Textarea/Select/Card/Badge/Logo/ThemeToggle, curated Lucide icon re-exports, Vitest
+tests; live showcase at `/design` in apps/web). Foundation is complete except **F8**
+(observability) — next per `docs/phase-1-plan.md`.

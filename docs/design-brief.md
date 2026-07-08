@@ -80,10 +80,11 @@ read this doc the way they read the glossary — decisions live here, not in cha
   separator; **minimal shadows** — a soft lift on card hover only, no ambient/glow shadows.
   Overall feel: **organized and clean — never overwhelming or messy, but never empty**; build to
   current trending styles per the delegation (§1).
-- **Illustration/iconography:** 🔶 *proposed — confirm at F7:* one **consistent line-icon set**
-  (Lucide-style, crisp to match the Linear side), filled/gold variants for active states; small
-  spot illustrations for hero/audience/empty states. **Emoji in the prototypes are placeholders.**
-  No mascot at launch (bee lives in the logo/mark).
+- **Illustration/iconography:** ✅ *confirmed at F7 (2026-07-08):* **Lucide** line icons,
+  re-exported through `@beecompete/ui` (`src/icons.ts` — app code never imports the icon lib
+  directly); gold/filled treatments for active states applied per-use. Small spot illustrations
+  for hero/audience/empty states remain 🔶 (decided when those surfaces build). **Emoji in the
+  prototypes are placeholders.** No mascot at launch (bee lives in the logo/mark).
 - **Light + dark mode:** ✅ both required (architecture §8), delivered via design tokens. Prototypes
   are **light-first**; dark mode is a token swap in F7, not a separate design pass. The dark
   category-highlight band is a *section treatment*, not dark mode.

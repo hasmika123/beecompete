@@ -1,16 +1,40 @@
 # @beecompete/ui
 
-The **single home for shared UI** — design tokens, primitives, icons, and logo/font
-assets. Consumed **as source** by `apps/web` via Next's `transpilePackages`.
+The shared design system (F7) — **the ONE home for shared UI**: tokens, primitives,
+icons, fonts, logo. Consumed as source by `apps/web` via `transpilePackages`.
 
-> **Skeleton only.** The real design system is built in **F7** (see
-> [`docs/phase-1-plan.md`](../../docs/phase-1-plan.md) and
-> [`docs/design-brief.md`](../../docs/design-brief.md)).
+## Usage
 
-## Rules (also in root `CLAUDE.md`)
+```ts
+// Components + icons (never import lucide-react or inline SVGs in app code):
+import { Button, Card, Badge, Select, Input, Logo, ThemeToggle, Search } from '@beecompete/ui';
+```
 
-- **Search here before creating any shared component.** No duplicates.
-- **Never inline SVGs or hand-roll styles** for shared things — they live here.
-- Palette: gold `#F5C330` + ink `#030201`. Typeface: **Inter**, self-hosted (no font CDN).
-- Buttons: flat gold fill + near-black text, ~12px radius, **no glow/colored shadows**.
-- Light + dark via tokens; WCAG 2.1 AA; mobile-first.
+```css
+/* Tokens — once, in the app's Tailwind entry (apps/web globals.css): */
+@import '@beecompete/ui/styles/tokens.css';
+@source '../../../../packages/ui/src'; /* let Tailwind scan ui sources */
+```
+
+## What lives where
+
+- `src/styles/tokens.css` — **all styling decisions**: semantic color tokens (light + `.dark`),
+  the two-font system, radii (`--radius-field` 12px / `--radius-panel` 16px), shadows,
+  `@font-face` for the self-hosted fonts, and the Tailwind `@theme` mapping.
+- `src/fonts/` — **self-hosted** woff2 (no font CDN — privacy/CSP): Instrument Serif
+  (display headlines) + Inter Variable (body/UI), latin subsets, OFL licenses alongside.
+- `src/components/` — Button (pill; primary/brand/secondary/ghost), Input/Textarea,
+  Select (accessible custom listbox — styleable rounded panel), Card, Badge, Logo
+  (placeholder wordmark), ThemeToggle.
+- `src/icons.ts` — curated Lucide re-exports; add icons here as features need them.
+
+## Rules (design-brief §3/§4)
+
+- **Search here before creating any shared component.** No duplicates; never inline SVGs.
+- Gold `#F5C330` is **fill/accent only** — never text on white; text on gold is always ink.
+- Pill buttons; panels ≥12–16px radius; hairline borders; **no glow/colored shadows**
+  (the `interactive` Card lift is the one sanctioned shadow).
+- Both themes come from the tokens — components never hardcode colors.
+- WCAG 2.1 AA: ink focus rings (gold fails 3:1), `aria-invalid` states, labeled controls.
+
+Live showcase: `/design` in apps/web. Tests: `pnpm --filter @beecompete/ui test` (Vitest).
