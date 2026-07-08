@@ -1,0 +1,56 @@
+# STAGING stack — runs on the VPS alongside prod (separate project name, network, and DB).
+# Managed Postgres is OFF-BOX (Neon) and never in this file. Deployed by
+# .github/workflows/deploy-staging.yml on every push to main.
+#
+# On the VPS, a sibling `.env` provides secrets + config: IMAGE_TAG, SITE_ADDRESS,
+# DATABASE_URL, DIRECT_URL, etc. (see .env.example / setup-runbook §8). `docker compose
+# pull && up -d` refreshes to the newly built images.
+name: beecompete-staging
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web]
+    networks: [edge, internal]
+
+  web:
+    image: ghcr.io/${IMAGE_REPO:-hasmika123/beecompete}-web:${IMAGE_TAG:-staging}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # BFF → API over the internal network (never exposed publicly).
+      API_BASE_URL: http://api:8080
+    depends_on: [api]
+    networks: [edge, internal]
+
+  api:
+    image: ghcr.io/${IMAGE_REPO:-hasmika123/beecompete}-api:${IMAGE_TAG:-staging}
+    restart: unless-stopped
+    # Secrets (DATABASE_URL pooled, DIRECT_URL for Liquibase, etc.) come from the VPS .env.
+    env_file: [.env]
+    networks: [internal]
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:8080/actuator/health']
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+networks:
+  edge:
+  internal:
+
+volumes:
+  caddy_data:
+  caddy_config:

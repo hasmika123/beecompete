@@ -36,14 +36,16 @@ spring:
           time_zone: UTC
 
   # Liquibase runs migrations against the DIRECT endpoint (never the pooler — advisory
-  # locks aren't pooler-safe). When DIRECT_URL is unset (local dev, tests), Liquibase
-  # falls back to the app's main datasource — locally that's the same Postgres, in tests
-  # it's the Testcontainers instance. In prod, set DIRECT_* so migrations bypass the pooler.
+  # locks aren't pooler-safe). Falls back to DATABASE_URL when DIRECT_URL is unset (local
+  # dev, single-endpoint setups). In prod, set DIRECT_* so migrations bypass the pooler.
+  # NOTE: this must resolve to a real JDBC URL — an empty value makes Liquibase try to
+  # build its own driverless datasource and fail ("Driver has not been set"). In tests,
+  # Testcontainers @ServiceConnection overrides this with the container's connection.
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
-    url: ${DIRECT_URL:}
-    user: ${DIRECT_USERNAME:}
-    password: ${DIRECT_PASSWORD:}
+    url: ${DIRECT_URL:${DATABASE_URL:jdbc:postgresql://localhost:5432/beecompete}}
+    user: ${DIRECT_USERNAME:${DATABASE_USERNAME:beecompete}}
+    password: ${DIRECT_PASSWORD:${DATABASE_PASSWORD:beecompete}}
 
 server:
   # Undertow serves on 8080 by default; graceful shutdown drains in-flight requests.

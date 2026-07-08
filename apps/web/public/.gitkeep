@@ -1,0 +1,2 @@
+# Keeps apps/web/public/ present. Static assets (favicons, images) land here; the web
+# Dockerfile copies this directory into the standalone runtime. F7 fills it with real art.

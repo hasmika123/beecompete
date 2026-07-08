@@ -1,0 +1,53 @@
+# PRODUCTION stack — runs on the VPS (separate project name, network, and DB from staging).
+# Managed Postgres is OFF-BOX (Neon) and never in this file. Deployed by
+# .github/workflows/deploy-prod.yml on a release tag (R*) — it promotes the EXACT image
+# staging already validated (build once, promote), so IMAGE_TAG is pinned to that build.
+#
+# On the VPS, a sibling `.env` provides prod secrets + config (distinct from staging).
+name: beecompete-prod
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web]
+    networks: [edge, internal]
+
+  web:
+    image: ghcr.io/${IMAGE_REPO:-hasmika123/beecompete}-web:${IMAGE_TAG:?set IMAGE_TAG to the promoted build}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      API_BASE_URL: http://api:8080
+    depends_on: [api]
+    networks: [edge, internal]
+
+  api:
+    image: ghcr.io/${IMAGE_REPO:-hasmika123/beecompete}-api:${IMAGE_TAG:?set IMAGE_TAG to the promoted build}
+    restart: unless-stopped
+    env_file: [.env]
+    networks: [internal]
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:8080/actuator/health']
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+networks:
+  edge:
+  internal:
+
+volumes:
+  caddy_data:
+  caddy_config:
