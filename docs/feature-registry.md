@@ -346,10 +346,8 @@ reserve room for them now** to avoid a migration. Each feeds the Domain & Data M
 
 ---
 
-## Open questions to resolve before the Domain & Data Model deep-dive
-- **Category set** for launch seeding — which K-12 categories get the first spine + templates?
-- **Grade/age representation** — US grade bands vs. age vs. both, for eligibility + filtering.
-- **Region granularity** — national / state / district, for filtering and chapter scoping.
-- **Division/track representation** — by grade? skill tier? both? And how a participant maps to a division.
-- **Round/stage + advancement modeling** — fixed sequence vs. rule-based advancement; how qualification carries across Editions and regions.
-- **Team composition** — how a team is represented when registered via a coordinator vs. self-organized.
+## Open questions — ✅ all resolved (2026-07-07)
+These six modeling questions are **closed** — decisions live in `domain-model.md` §2 ("The six open
+questions — resolved") and are locked: Category set (Q1) · Grade/age representation (Q2) · Region
+granularity (Q3) · Division/track (Q4) · Round/stage + advancement (Q5) · Team composition (Q6).
+No pre-R1-1 modeling blockers remain.

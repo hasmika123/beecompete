@@ -146,7 +146,7 @@ profiles silently rotting every fall as students advance a grade — no rollover
 CTSO-style network chapter with join codes, founding applications, and lead/co-lead/mentor/student
 roles — not only an educator-created school group. Phase-3 registration (H7/E8) must support
 host-network chapters as the entry vehicle for `entry_pathway = school_or_chapter` competitions.
-Mechanics reference: `legacy-reference.md` §2.)*
+Mechanics reference: `legacy-reference.md` §1.)*
 **`GroupMembership`** [reserve] — `id, group_id, participant_user_id, added_by`
 
 **`Team`** [reserve] — `id, edition_id, name, division_id?`
