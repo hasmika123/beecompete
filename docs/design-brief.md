@@ -24,6 +24,13 @@ read this doc the way they read the glossary — decisions live here, not in cha
   (§3, rev 2026-07-08), don't re-ask. Record supplied references here so each element type is
   asked once. Detail execution (exact sizes/weights/spacing within a supplied direction) stays
   builder judgment, per the typography precedent.
+- **Delegation in effect (owner 2026-07-08, answers the F7 reference request):** for the current
+  styling pass — **F7 primitives and element/page styling generally** — the owner delegated the
+  decisions to the builder: build to **trending, clean, organized, rounded** direction (§3/§4)
+  without further pre-asking. The owner steers **reactively**: if a specific component misses,
+  they supply reference photos and it gets revised (record them here when that happens). The
+  pre-ask above still applies when a **genuinely new surface type** first appears in a later
+  phase (e.g., sign-in/auth pages at R2).
 - **Utility pages** (settings, admin, plain forms) need no entry here — they assemble from primitives
   *(whose styling followed the reference-image rule above)*.
 
@@ -41,10 +48,14 @@ read this doc the way they read the glossary — decisions live here, not in cha
 
 - **Color:** ✅ **logo colors corrected 2026-07-07: `#F5C330` (honey gold) + `#030201` (near-black
   ink)** — the bee palette after all *(supersedes the mistyped `#2596be`; the gold-vs-blue open
-  question is dead — gold IS the brand)*. Gold = primary accent; `#030201` = ink. Buttons
-  (round-2 locked): **flat gold fill + near-black text, ~12px radius — NO glow/colored shadow**
-  (contrast ~12:1; the banned looks: dark buttons with yellow text, and glowing buttons). Gold
-  volume confirmed "right" at round 2. Neutral foundation stays cool (Direction B).
+  question is dead — gold IS the brand)*. Gold = primary accent; `#030201` = ink. Neutral
+  foundation stays cool (Direction B).
+- **Buttons (owner delegated to builder 2026-07-08 — supersedes the round-2 "flat gold fill"
+  lock):** treatment is the builder's call, guided by the reference aesthetic: **pill-rounded**;
+  primary = **ink fill + white text** (Mindly-style); **gold moves to a "brand" variant** (gold
+  fill + ink text) for standout CTAs; secondary = soft surface fill + hairline border. Still
+  **NO glow/colored shadows**, and the banned looks stand (no yellow-on-black / accent-on-black
+  text). Owner reacts with reference photos if a result misses.
 - **Direction (locked from round-1 tiles, 2026-07-07):** base = **Direction B** (crisp/modern —
   cool paper ground, hairline borders, tight tracking; **B's cards**), blended with: **A's button
   treatment** (filled accent + soft shadow — **never accent-on-black / yellow-on-black**), buttons
@@ -63,9 +74,12 @@ read this doc the way they read the glossary — decisions live here, not in cha
     Georgia).
   - Unchanged: **self-host all font files in `packages/ui`** (no Google Fonts CDN — privacy +
     CSP); oversized friendly numerals for stats (now set in the display serif).
-- **Density & shape:** ✅ (from the locked prototype) airy-but-efficient spacing on an 8px scale;
-  **~12px radius** on buttons and cards; **hairline 1px borders** as the primary separator;
-  **minimal shadows** — a soft lift on card hover only, no ambient/glow shadows.
+- **Density & shape:** ✅ (rev 2026-07-08, owner) airy-but-efficient spacing on an 8px scale;
+  **rounded corners everywhere** — buttons **pill**, cards / dropdowns **and their expanded
+  panels** / inputs / modals **≥ 12–16px radius**; **hairline 1px borders** as the primary
+  separator; **minimal shadows** — a soft lift on card hover only, no ambient/glow shadows.
+  Overall feel: **organized and clean — never overwhelming or messy, but never empty**; build to
+  current trending styles per the delegation (§1).
 - **Illustration/iconography:** 🔶 *proposed — confirm at F7:* one **consistent line-icon set**
   (Lucide-style, crisp to match the Linear side), filled/gold variants for active states; small
   spot illustrations for hero/audience/empty states. **Emoji in the prototypes are placeholders.**
@@ -76,9 +90,10 @@ read this doc the way they read the glossary — decisions live here, not in cha
 
 ## 4. Do / Don't *(grows over time — add whenever you give feedback)*
 
-- **Do:** flat filled-accent buttons on a crisp B-style ground; **CompetitionCards taller and
-  narrower** (~220px wide, generous cover + body); **compact category tiles**; **Verified badge =
-  subtle green** (✓, muted green on soft green tint), Curated = quiet neutral.
+- **Do:** pill buttons (ink primary / gold brand variant, §3) on a crisp B-style ground;
+  **CompetitionCards taller and narrower** (~220px wide, generous cover + body); **compact
+  category tiles**; **Verified badge = subtle green** (✓, muted green on soft green tint),
+  Curated = quiet neutral.
 - **Do (owner 2026-07-08):** **per-category accent hues** — each of the ~10 categories gets an
   assigned hue used in its generated default cover **and** its tinted card meta tag (F7 asset
   system); **deadline + prize bold and in a fixed position** on every CompetitionCard; **any text
