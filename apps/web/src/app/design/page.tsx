@@ -12,13 +12,14 @@ import {
   Textarea,
 } from '@beecompete/ui';
 import {
-  ArrowUpRight,
+  ArrowRight,
   Calendar,
   GraduationCap,
   Heart,
   MapPin,
   Search,
   Trophy,
+  Users,
   VerifiedSeal,
 } from '@beecompete/ui';
 import { SelectDemo } from './select-demo';
@@ -153,12 +154,20 @@ export default function DesignPage() {
             interactive
             className="group relative flex w-[270px] shrink-0 flex-col overflow-hidden"
           >
-            {/* View affordance — top-right, appears on hover, no circle. */}
-            <ArrowUpRight
-              aria-hidden="true"
-              weight="bold"
-              className="absolute top-4 right-4 z-10 size-5 text-foreground opacity-0 transition-opacity group-hover:opacity-100"
-            />
+            {/* Top-right corner: social-proof count (→ M31, thresholded at R2) that
+                crossfades to the right-facing view arrow on hover. The count sits in a
+                translucent pill so it stays readable over any cover art (scrim rule). */}
+            <span className="absolute top-3 right-3 z-10 grid place-items-center">
+              <span className="col-start-1 row-start-1 inline-flex items-center gap-1 rounded-full bg-background/85 px-2 py-0.5 text-xs font-medium text-foreground transition-opacity group-hover:opacity-0">
+                <Users aria-hidden="true" className="size-3.5 text-muted" />
+                1.2k registered
+              </span>
+              <ArrowRight
+                aria-hidden="true"
+                weight="bold"
+                className="col-start-1 row-start-1 size-5 text-foreground opacity-0 transition-opacity group-hover:opacity-100"
+              />
+            </span>
             <div className="relative flex h-36 items-center justify-center bg-linear-to-br from-brand-gold-soft to-brand-gold/45">
               <Trophy
                 aria-hidden="true"
@@ -197,14 +206,29 @@ export default function DesignPage() {
                 The classic 25-question contest for students in grade 10 and below.
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-4 pt-2.5">
-              {/* All four facts (owner r8) in one quiet dot-separated meta line —
-                  values are self-explanatory, no labels/chips needed. Cost keeps its
-                  positive treatment (Free = success green). */}
-              <p className="truncate text-xs text-muted">
-                <span className="font-semibold text-success">Free</span>
-                {' · In person · Nationwide · Individual'}
-              </p>
+            <CardContent className="p-4 pt-3">
+              {/* All four facts in LABELED fixed slots (owner r9 — a bare dot line gets
+                  ambiguous and shifts around as values change): each fact always sits in
+                  the same cell, the label disambiguates any value, and each value
+                  truncates independently. Cost keeps its positive treatment. */}
+              <dl className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border pt-3">
+                <div className="flex min-w-0 flex-col leading-tight">
+                  <dt className="text-[11px] text-muted">Cost</dt>
+                  <dd className="truncate text-[13px] font-semibold text-success">Free</dd>
+                </div>
+                <div className="flex min-w-0 flex-col leading-tight">
+                  <dt className="text-[11px] text-muted">Format</dt>
+                  <dd className="truncate text-[13px] font-medium text-foreground">In person</dd>
+                </div>
+                <div className="flex min-w-0 flex-col leading-tight">
+                  <dt className="text-[11px] text-muted">Region</dt>
+                  <dd className="truncate text-[13px] font-medium text-foreground">Nationwide</dd>
+                </div>
+                <div className="flex min-w-0 flex-col leading-tight">
+                  <dt className="text-[11px] text-muted">Entry</dt>
+                  <dd className="truncate text-[13px] font-medium text-foreground">Individual</dd>
+                </div>
+              </dl>
             </CardContent>
             {/* Footer, Kaggle-style: PRIZE is the bold, prominent fact; the deadline is
                 quiet muted "N days to go" text (flips to a danger tint only in the final

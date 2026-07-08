@@ -97,14 +97,18 @@ read this doc the way they read the glossary — decisions live here, not in cha
 - **Primary buttons / dark fills (owner r5, 2026-07-08):** **neutral** dark gray (`#363636` —
   neither cool nor warm), **not black**. (Earlier warm `#3d3929` read brown, cool `#32343a` read
   blue — both rejected.) Light ground is near-white with only a hair of warmth (`#fdfdfc`).
-- **Data-aware facts (owner r5/r8, 2026-07-08):** competition-card facts are styled by *what the
-  data means to a family*, not uniformly. **All four logistics facts** (cost · format · region ·
-  entry pathway) render as **one quiet dot-separated meta line** under the description — values
-  are self-explanatory, no labels or chips; **Cost = "Free" reads positive** (success green
-  inside the line). **Footer follows the Kaggle competition-card pattern (owner r8): PRIZE is the
-  bold prominent fact** (gold trophy + semibold, truncates) **and the deadline is quiet muted
-  "N days to go" text** (nowrap; flips to a danger tint only in the final days, not at 14).
-  Deadline + prize share the footer row, pinned to the card bottom (page-blueprints Page 1/3).
+- **Data-aware facts (owner r5/r8/r9, 2026-07-08):** competition-card facts are styled by *what
+  the data means to a family*, not uniformly. **All four logistics facts** (cost · format ·
+  region · entry pathway) render as a **labeled 2×2 grid of fixed slots** (owner r9 — supersedes
+  the r8 dot-line, which got ambiguous and shifted as values changed): each fact always occupies
+  the same cell, the muted micro-label disambiguates any value, each value truncates
+  independently; **Cost = "Free" reads positive** (success green). **Footer follows the Kaggle
+  competition-card pattern (owner r8): PRIZE is the bold prominent fact** (gold trophy +
+  semibold, truncates) **and the deadline is quiet muted "N days to go" text** (nowrap; flips to
+  a danger tint only in the final days, not at 14). Deadline + prize share the footer row, pinned
+  to the card bottom. **Card corner (owner r9):** social-proof count ("N registered", → M31
+  thresholds) in a translucent pill over the cover (scrim rule), **crossfading to a right-facing
+  arrow on hover** (page-blueprints Page 1/3).
 
 ## 4. Do / Don't *(grows over time — add whenever you give feedback)*
 
