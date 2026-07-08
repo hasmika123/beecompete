@@ -66,6 +66,10 @@ the **canonical** term is bolded and the synonyms-to-avoid are listed so we stay
 | **Participant²** | The deferred **premium** prep tier ("participant squared" — mocks, analytics, AI tutoring). Working name. | Not built at launch. |
 | **Resource** | A curated prep/reference link on a listing (book, past paper, guide), often with an affiliate link. | Content model #1. |
 | **Weekly Digest** | The free weekly email listing *new competitions matching the subscriber's preferences* (grade, category/interests, region), collected at signup. The R1 email-capture product (→ R1-15, Brevo). | Canonical UI label. Avoid "newsletter", "subscription", "mailing list". Distinct from *Promotion* digest inclusion (paid placement inside this send, Phase 3+). |
+| **Article** | An **admin-published** piece of content (rich text, images, links) that can **link Competitions**, rendered in-article as CompetitionCards. Canonical entity name (→ M19, Phase 2). | Public surface is labeled **Community**; code/schema/docs always say Article. Avoid "blog post", "forum post", "thread". **Never user-authored** — forums (B6) stay deferred and separate. |
+| **Community** | The public-facing **label** for the Article surface (nav item + `/community` article index and detail pages). A UI name, not an entity. | UI copy says Community; everything internal says Article. |
+| **Reaction** | A like or love on an Article by a **logged-in, non-minor** user; one per user per Article (changeable). | → M34. Counts are public; *who* reacted is never shown. Minors and logged-out users see counts only. Share is not a Reaction (plain link action, no login, no data). |
+| **Article Comment** | A text comment on an Article by a **logged-in, non-minor** user; moderated via DQ8, reportable via DQ7. | → M35 🔒. Adult-authored only — no child UGC. Builds after R2 accounts + DQ8 exist. |
 
 ## Host-facing concepts
 
@@ -90,6 +94,8 @@ the **canonical** term is bolded and the synonyms-to-avoid are listed so we stay
 | **Product / Tier** | A purchasable thing and its level (Participant+, host Starter/Pro/Championship, Promotion). | |
 | **Provenance** | The origin + verification metadata on a data record (source, freshness, confidence). | Powers Trust Tiers. |
 | **Event Log** (a.k.a. **Activity Log**) | The append-only record of things that happened; the single source all *progress* is derived from. | Foundation Hook #9. Never store bespoke progress fields. |
+| **HeroCard** | One of the **three admin-managed image cards** in the Landing hero's right half (1 main + 2 satellites): image, position, and — main card — a link + short description shown on a hover scrim. | → M36, R1-1 schema, R1-3 admin CRUD, R1-6b render. Avoid "banner", "hero image". |
+| **FeaturedSlot** | An **admin-picked, ordered** entry in the Landing "Featured Competitions" carousel, pointing at a Competition. | → M36. Editorial picks; distinct from **Promotion** (paid, labeled — M28, Phase 3). |
 
 ## Compliance & K-12
 

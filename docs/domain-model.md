@@ -190,6 +190,31 @@ Entitlement with a broader `scope_type`. Nothing special-cased.)*
 - **`Listing` state** is not a separate table — it's the `Competition` + `Edition` + `verification_state`/provenance a Host manages. *(Phase 3, → H48: self-created competitions gain a `visibility` field (public|unlisted|private); setting it to `public` requires host verification (DQ11–DQ14) **and** a `public_listing` entitlement (2026-07-08). Free tier enforces a participant cap 🔬 + volume limits on private competitions. Curated listings are public by definition and unaffected.)*
 - **`ComplianceForm` / `ReviewCommittee`** [deferred-design] — 🛑 **no shape committed**; designed at **Gate A** (science-fair wedge deep-dive, `development-process.md` §6a) from fair-director research. Consent is partly P1 via `GuardianLink`/`consent_state`.
 
+**Community articles (Phase 2 — M19/M34/M35; Rev 9, 2026-07-08).** Additive-by-design (Hook #15);
+sketches, not contracts:
+
+- **`Article`** [reserve] — admin-published content. `id, slug, title, summary?, body (rich
+  text/structured JSONB — format decided at build), cover_image?, author_admin_id, status
+  (draft|published|archived), published_at?, archived_at?` — soft-delete + X14 status per house
+  rules. Public surface label is **"Community"** (glossary); entity is always Article.
+- **`ArticleCompetitionLink`** [reserve] — join: `article_id, competition_id, position` — "linked
+  competitions" rendered in-article as CompetitionCards.
+- **`ArticleReaction`** [reserve] — `article_id, user_id, kind (like|love), created_at`; unique
+  (article, user). **Logged-in non-minor users only** (age from `ParticipantProfile` DOB/grad-year);
+  counts public, reactors never listed.
+- **`ArticleComment`** [reserve] — `article_id, user_id, body, status (pending|approved|rejected|
+  removed), created_at` — **login-required, disabled for minors, moderated via DQ8**, reportable
+  via DQ7. Builds only after R2 accounts + the moderation queue exist.
+
+### 3e-bis. Site content (Landing) *(P1 — M36, Rev 9)*
+
+- **`HeroCard`** [P1] — the 3 admin-managed hero image cards. `id, position (main|top_right|
+  bottom_left), image_key (S3), alt_text, link_url? (main card), description? (hover-scrim text,
+  main card), updated_by, updated_at` — exactly one active row per position.
+- **`FeaturedSlot`** [P1] — admin-picked Landing carousel entries. `id, competition_id, position,
+  updated_by, updated_at` — ordered, 6–10 max (blueprint carousel rules). Editorial, not paid
+  (M28 Promotion arrives later, labeled, as its own thing).
+
 ### 3f. Provenance & trust (embedded)
 Provenance is a reusable embedded structure on Competition/Edition/Organization:
 `provenance{ source (curated|import|host_submitted|crowdsourced), last_verified_at, confidence }`
@@ -235,10 +260,11 @@ To avoid over-building, Phase 1 implements only:
 - `User`, `ParticipantProfile`, `GuardianLink`, `Organization`, `Membership`, `Role`/`Permission`
 - `ParticipantCompetition` (Tracker), `ActivityEvent`
 - `provenance`/`verification_state` fields; `CorrectionProposal` (DQ6 corrections queue); minimal `Product` stub
+- `HeroCard`, `FeaturedSlot` (M36 admin-managed Landing content — §3e-bis)
 
 Everything else (`Division`, `Round`, `Team`, `Entitlement`, `Registration`, `Submission`, prep,
-judging, compliance) is **reserved** — the columns/relations are designed here so later phases add
-tables and logic without reshaping the Phase-1 core.
+judging, compliance, **Article + its joins** — Hook #15) is **reserved** — the columns/relations
+are designed here so later phases add tables and logic without reshaping the Phase-1 core.
 
 ---
 
@@ -246,7 +272,7 @@ tables and logic without reshaping the Phase-1 core.
 *(Reusable design detail from the legacy prototype — state machines for Registration/Team/stages,
 form-builder taxonomy, practice engine, chapter mechanics — is preserved in `legacy-reference.md`;
 mine it when each phase opens.)*
-- **Phase 2:** PrepPackage content model, entitlement/checkout flows, Group/cohort mechanics, progress-derivation queries.
+- **Phase 2:** PrepPackage content model, entitlement/checkout flows, Group/cohort mechanics, progress-derivation queries, **Community articles** (Article body format + reactions/comments UX; comments land with DQ8 moderation — §3e sketches).
 - **Phase 3:** Registration/Submission, host verification workflow, Team formation, promotion placement, **science-fair wedge** — compliance (ComplianceForm/ReviewCommittee), basic judging (Rubric/Score), multi-level advancement enforcement. 🛑 All wedge/judging design happens at **Gates A/B** (`development-process.md` §6a) — never ahead of them.
 - **Phase 4:** Advanced judging (modes, normalization, blind/COI), UGC creator content model.
 

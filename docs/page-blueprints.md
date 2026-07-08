@@ -53,9 +53,13 @@ disclaimer (→ R1-13) · contact/support · social links (→ R1-12) · Suggest
   one-place promise. **Two CTAs** below: primary **"Browse competitions"** → a plain button that
   navigates to /competitions (→ M1) — **no dropdown, no panel** (owner 2026-07-09, supersedes the
   hover quick-match panel). Secondary **"How it works"** → the How It Works page (Page 4; the
-  section moved off Landing). **Right half:** placeholder SVG of a child (final asset later), with
-  **two satellite SVGs**: competition-card graphic **top-right**, tracker/timeline graphic
-  **bottom-left**.
+  section moved off Landing). **Right half (owner 2026-07-08, supersedes the SVG-illustration
+  plan):** a **main HeroCard image card** with **two satellite HeroCards** hovering **top-right**
+  and **bottom-left**. The **main card is a link**: on hover/focus a **translucent scrim** (WCAG-AA
+  darkening, per design-brief §4) covers it with **short text describing the destination**.
+  Satellites are image-only. **All three cards are admin-managed** (image, alt text; main card also
+  link + description) via R1-3 (→ M36, `HeroCard`); placeholder images until the owner supplies
+  finals.
 - **Hero base strip:** a **horizontally scrolling row of compact category tiles** (icon + name)
   with side arrow buttons, each → its category URL (→ M15). **Replaces the former full-bleed
   Category highlight section** (owner 2026-07-08). *(This strip is where per-category entry now
@@ -72,6 +76,8 @@ disclaimer (→ R1-13) · contact/support · social links (→ R1-12) · Suggest
   visibly **peeks** at the edge so scrollability is obvious · **6–10 cards max** — overflow lives
   behind "See More".
 - **Content @R1:** curated picks — deadline-closing-soon + editor selections (urgency lives here).
+  **Picks are admin-managed, ordered slots** (→ M36, `FeaturedSlot`; CRUD in R1-3) — not
+  algorithmic at R1.
 - **Motion:** subtle scroll-triggered entrance as the section enters the viewport.
 
 **3. Value-proposition split**
@@ -271,6 +277,11 @@ deadline-filtered view.
 - **For Parents · For Educators** audience pages — deferred (owner 2026-07-08). Until they exist,
   the Landing audience cards link to the digest band; when For Educators ships it also gets the
   reserved NavBar link.
+- **Community (article index + article detail) [Phase 2, → M19/M34/M35]** — public label
+  "Community", entity **Article** (owner 2026-07-08). Admin-published articles with linked
+  Competitions (in-article CompetitionCard row), reactions/share, and moderated adult-only
+  comments. **Blueprint before build** (it's a public/SEO surface); schema sketches live in
+  `domain-model.md` §3e. Gets a nav link when it ships.
 
 ---
 
@@ -318,15 +329,21 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
 **2026-07-09 (owner):**
 24. **Hero "Browse competitions" is a plain button** → /competitions. No hover dropdown / side panel / quick-match (supersedes decision #2). Category entry stays in the hero category strip (#3).
 
+**2026-07-08 (owner — Community + admin-managed landing content, registry Rev 9):**
+25. **Hero right half = image cards, not SVG illustrations** (supersedes the child-SVG + satellite-SVG plan): one **main HeroCard** (a link; hover/focus = translucent WCAG-AA scrim + short destination description) + two satellite HeroCards (top-right, bottom-left, image-only). **All three admin-managed** (→ M36) — image/alt on all, link + description on the main card.
+26. **Featured-carousel picks are admin-managed ordered slots** (`FeaturedSlot`, → M36; CRUD in R1-3). Same carousel rules (#8); paid Promotion slots remain a separate, labeled, later thing (M28).
+27. **Community pages approved as a Phase-2 surface** (public label "Community", entity Article — M19/M34/M35): admin-published articles with linked-competition cards, like/love + share, adult-only moderated comments. Blueprint before build; added to Deferred pages meanwhile.
+
 ## Status
 | Page | Blueprint | Style prototype | Built |
 |---|---|---|---|
-| Landing | ✅ approved (2026-07-07 · rev 2026-07-09) | 🔍 round 2 in review — re-prototype hero (plain Browse button + category strip) & new order | — |
+| Landing | ✅ approved (2026-07-07 · rev 2026-07-09 · hero image-cards rev 2026-07-08 #25–26) | 🔍 round 2 in review — re-prototype hero (plain Browse button + category strip **+ image-card right half #25**) & new order | — |
 | Competitions (listing) | ✅ approved (2026-07-07 · rev 2026-07-08) | — | — |
 | Competition details | ✅ approved (2026-07-07 · rev 2026-07-08) | — | — |
 | How It Works | ✅ approved (2026-07-08) | — | — |
 | Categories (index) | ✅ approved (2026-07-08, may be tuned) | — | — |
 | Suggest a Competition | ✅ approved (2026-07-08) | — | — |
 | For Parents / For Educators | ⛔ deferred (2026-07-08) | — | — |
+| Community (article index + detail) [Phase 2] | ⛔ deferred (2026-07-08, #27) — blueprint before build | — | — |
 | Tracker | ⛔ deferred — do not design yet | — | — |
 | Parent dashboard | ⛔ deferred — do not design yet | — | — |

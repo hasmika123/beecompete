@@ -85,13 +85,14 @@ The hero design pass is therefore two checkpoints: 🧑 approve the **blueprint*
 
 | Page | Release | Structure | Style prototype |
 |---|---|---|---|
-| Landing | R1 | ✅ approved (rev 2026-07-09) | round 2 — re-prototype hero (plain Browse button + category strip) & new section order |
+| Landing | R1 | ✅ approved (rev 2026-07-09; hero right half = admin-managed image cards, blueprints #25–26) | round 2 — re-prototype hero (plain Browse button + category strip + image-card right half) & new section order |
 | Competitions (listing) | R1 | ✅ approved (rev 2026-07-08) | not started |
 | Competition detail | R1 | ✅ approved (rev 2026-07-08) | not started |
 | How It Works | R1 | ✅ approved (2026-07-08) | not started |
 | Categories (index) | R1 | ✅ approved (2026-07-08, may be tuned) | not started |
 | Suggest a Competition (wizard form) | R1 | ✅ approved (2026-07-08) | light pass (step-form interaction only) |
 | For Parents / For Educators | — | ⛔ deferred (2026-07-08) | — |
+| Community (article index + detail) | Phase 2 | ⛔ deferred (2026-07-08, blueprints #27) — blueprint before build | — |
 | Tracker ("My Competitions") | R2 | ⛔ deferred | — |
 | Parent dashboard | R2 | ⛔ deferred | — |
 
@@ -102,8 +103,10 @@ The hero design pass is therefore two checkpoints: 🧑 approve the **blueprint*
 - Logo/icon/favicon (light + dark variants) — live in `packages/ui` (architecture §8).
 - **Category cover-art system** (owner-approved 2026-07-07): generated category-based default
   covers for CompetitionCards — built alongside F7; real per-competition art overrides when available.
-- **Landing hero SVGs**: child illustration + two satellites (competition-card graphic,
-  tracker-timeline graphic) — placeholders until owner supplies finals.
+- **Landing hero image cards** *(supersedes the hero SVG plan, 2026-07-08 — blueprints #25)*:
+  one main + two satellite **HeroCards**, admin-managed (image/alt; main card adds link +
+  hover-scrim description) — placeholder images until the owner supplies finals. Scrim must meet
+  the WCAG-AA text-over-imagery rule (§4).
 - **Demo video** (How It Works §4 — relocated from Landing 2026-07-08) — placeholder until produced.
 - **Value-prop & stats imagery** (Landing §3 · How It Works §5) — stock/placeholder until finals;
   stats copy is `TODO(owner)` until sourced numbers are supplied (required before the R1 gate),
