@@ -106,9 +106,10 @@ read this doc the way they read the glossary — decisions live here, not in cha
   competition-card pattern (owner r8): PRIZE is the bold prominent fact** (gold trophy +
   semibold, truncates) **and the deadline is quiet muted "N days to go" text** (nowrap; flips to
   a danger tint only in the final days, not at 14). Deadline + prize share the footer row, pinned
-  to the card bottom. **Card corner (owner r9):** social-proof count ("N registered", → M31
-  thresholds) in a translucent pill over the cover (scrim rule), **crossfading to a right-facing
-  arrow on hover** (page-blueprints Page 1/3).
+  to the card bottom. **Card corner (owner r9/r13):** the **top-right** corner shows the
+  social-proof count ("N registered", → M31 thresholds) at rest and **crossfades on card hover to
+  the quick actions — favorite (♥ → M7 save/follow) + share (→ M21)**; no view arrow. Everything
+  sits in translucent pills over the cover (scrim rule). (page-blueprints Page 1/3.)
 
 ## 4. Do / Don't *(grows over time — add whenever you give feedback)*
 
