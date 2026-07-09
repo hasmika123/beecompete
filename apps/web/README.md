@@ -18,6 +18,10 @@ plumbing lands with auth in R2 — none exists yet.
   system from `packages/ui`.
 - `src/components/` — local skeleton components. `theme-toggle.tsx` and `logo.tsx` are
   **`TODO(F7)` placeholders** — they migrate into `@beecompete/ui` once primitives exist.
+- **Observability (F8):** `@sentry/nextjs` wired via `src/instrumentation.ts` +
+  `instrumentation-client.ts` + `sentry.{server,edge}.config.ts` + `global-error.tsx`. Env-driven
+  (`SENTRY_DSN` server, `NEXT_PUBLIC_SENTRY_DSN` browser) and **inert without a DSN**. **No Session
+  Replay, `sendDefaultPii: false`** — a minor's screen/inputs must never be captured (COPPA).
 
 ## Conventions
 

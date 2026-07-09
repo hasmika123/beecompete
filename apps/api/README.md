@@ -4,12 +4,20 @@ The single deployable backend: a **modular monolith** on Spring Boot (Java 21 LT
 built with **Gradle**. Not a pnpm workspace member — it builds via Gradle, in the same
 monorepo.
 
-> **F2/F4 skeleton.** Spring Boot 3.5 · Java 21 · Gradle (Kotlin DSL) · Undertow · Actuator ·
-> Bean Validation · **Spring Data JPA + PostgreSQL + Liquibase** (F4). It boots, serves
-> versioned JSON, reports health (incl. DB), and applies the Liquibase baseline on startup —
-> **no entities yet** (first schema = R1-1; auth/sessions = R2). See
+> **F2/F4/F8 skeleton.** Spring Boot 3.5 · Java 21 · Gradle (Kotlin DSL) · Undertow · Actuator ·
+> Bean Validation · **Spring Data JPA + PostgreSQL + Liquibase** (F4) · **Sentry + structured JSON
+> logs** (F8). It boots, serves versioned JSON, reports health (incl. DB), and applies the Liquibase
+> baseline on startup — **no entities yet** (first schema = R1-1; auth/sessions = R2). See
 > [`docs/phase-1-plan.md`](../../docs/phase-1-plan.md) and
 > [`docs/architecture.md`](../../docs/architecture.md) §3–§4.
+
+## Observability (F8)
+
+- **Sentry** captures unhandled exceptions + ERROR logs — configured via `SENTRY_DSN` (blank =
+  disabled, so dev/CI stay quiet). **`send-default-pii: false` and no PII on events** (minors/COPPA).
+- **Logging:** human-readable console by default; **structured JSON** under the `json` profile
+  (`SPRING_PROFILES_ACTIVE=json`, set in the deploy stacks) — one JSON object per line to stdout,
+  `service:beecompete-api` + trace/span ids, for central aggregation. Config: `logback-spring.xml`.
 
 ## Run & build
 

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Logging config (F8). Two profiles:
+   - default (dev/test): human-readable console via Spring Boot's base pattern.
+   - "json" (prod/staging, set via SPRING_PROFILES_ACTIVE): structured JSON to stdout
+     (logstash encoder) for central aggregation. The container captures stdout.
+  Sentry's Logback appender is attached in both when SENTRY_DSN is set (it no-ops when
+  blank). Breadcrumbs at INFO, events at ERROR.
+-->
+<configuration>
+  <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+  <springProfile name="!json">
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+    <root level="INFO">
+      <appender-ref ref="CONSOLE"/>
+    </root>
+  </springProfile>
+
+  <springProfile name="json">
+    <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+        <includeMdcKeyName>traceId</includeMdcKeyName>
+        <includeMdcKeyName>spanId</includeMdcKeyName>
+        <customFields>{"service":"beecompete-api"}</customFields>
+      </encoder>
+    </appender>
+    <root level="INFO">
+      <appender-ref ref="JSON"/>
+    </root>
+  </springProfile>
+
+  <!-- Sentry appender: forwards ERRORs as events, INFO+ as breadcrumbs. Inert when
+       SENTRY_DSN is unset (the SDK stays disabled). -->
+  <appender name="SENTRY" class="io.sentry.logback.SentryAppender">
+    <minimumEventLevel>ERROR</minimumEventLevel>
+    <minimumBreadcrumbLevel>INFO</minimumBreadcrumbLevel>
+  </appender>
+  <root>
+    <appender-ref ref="SENTRY"/>
+  </root>
+</configuration>

@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'url';
+import { withSentryConfig } from '@sentry/nextjs';
 import type { NextConfig } from 'next';
 
 // Monorepo root (two levels up from apps/web). Pin it so Turbopack doesn't infer the
@@ -18,4 +19,14 @@ const nextConfig: NextConfig = {
   transpilePackages: ['@beecompete/ui', '@beecompete/config'],
 };
 
-export default nextConfig;
+// Observability (F8): Sentry wraps the config for error monitoring + tunnel/route
+// instrumentation. Runtime capture is env-driven (inert without a DSN). Source-map
+// upload only runs when SENTRY_AUTH_TOKEN is set (CI/deploy) — a no-op locally.
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+  telemetry: false,
+});

@@ -66,3 +66,19 @@ info:
   app:
     name: BeeCompete API
     description: K-12 academic-competition marketplace API (modular monolith)
+
+# Observability (F8). Sentry stays OFF unless SENTRY_DSN is set (blank in dev/CI).
+# PRIVACY (minors + COPPA): send-default-pii MUST stay false — never attach request
+# bodies, headers, cookies, or user identity to error events (compliance.md, data
+# minimization). Sample traces lightly.
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENVIRONMENT:local}
+  release: ${SENTRY_RELEASE:}
+  send-default-pii: false
+  traces-sample-rate: ${SENTRY_TRACES_SAMPLE_RATE:0.1}
+  # Only report our own code's exceptions as unhandled; expected 4xx stay out.
+  exception-resolver-order: -2147483647
+  logging:
+    minimum-event-level: error
+    minimum-breadcrumb-level: info
