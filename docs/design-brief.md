@@ -34,6 +34,15 @@ read this doc the way they read the glossary — decisions live here, not in cha
 - **Utility pages** (settings, admin, plain forms) need no entry here — they assemble from primitives
   *(whose styling followed the reference-image rule above)*.
 
+### Supplied reference photos *(record each here — element type asked once)*
+
+- **Tabs → "attached" variant (owner 2026-07-08):** reference photo of a trading site (101Investing)
+  showing **connected tabs** — the active tab is a filled rounded-top riser that merges seamlessly
+  into a filled content card below it (a "folder tab" look), inactive tabs are plain muted text.
+  Built as `Tabs variant="attached"` (the `underline` variant remains the default). Adapted to
+  tokens: the card uses `surface` (soft grey in light, near-black in dark — matches the reference's
+  dark card) rather than a hardcoded black, so it works in both modes.
+
 ## 2. Brand personality *(locked 2026-07-07)*
 
 - **Tone:** ✅ **Energetic but credible** — warm, encouraging, optimistic for students; grown-up
@@ -48,8 +57,12 @@ read this doc the way they read the glossary — decisions live here, not in cha
 
 - **Color:** ✅ **logo colors corrected 2026-07-07: `#F5C330` (honey gold) + `#030201` (near-black
   ink)** — the bee palette after all *(supersedes the mistyped `#2596be`; the gold-vs-blue open
-  question is dead — gold IS the brand)*. Gold = primary accent; `#030201` = ink. Neutral
-  foundation stays cool (Direction B).
+  question is dead — gold IS the brand)*. Gold = primary accent; `#030201` = ink (a **brand/logo
+  constant** — text-on-gold — not a UI fill). **Neutral foundation is WARM, not cool (owner
+  feedback 2026-07-08, supersedes "cool Direction B ground"): no harsh #000 blacks anywhere** —
+  warm paper ground (`#faf9f5`), warm charcoal text/fills (`#29281e`/`#3d3929`), and **dark mode
+  is a warm Claude-style dark gray (`#262624` ground), never black.** Token values live in
+  `packages/ui/src/styles/tokens.css`.
 - **Buttons (owner delegated to builder 2026-07-08 — supersedes the round-2 "flat gold fill"
   lock):** treatment is the builder's call, guided by the reference aesthetic: **pill-rounded**;
   primary = **ink fill + white text** (Mindly-style); **gold moves to a "brand" variant** (gold
@@ -64,11 +77,12 @@ read this doc the way they read the glossary — decisions live here, not in cha
   "Inter everywhere" 2026-07-07 and the heavy-weight "headline energy" rule):** a **two-font
   pairing** in the style of the reference (Mindly-like editorial landing):
   - **Display serif for headlines** (hero, section headings, card question-style titles) —
-    *similar* to the reference, not a clone. **Exact face, sizes, weights, and tracking are
-    delegated to builder judgment at F7** (owner 2026-07-08 — no blocking specimen approval;
-    the hero *prototype* approvals in §5 remain the owner checkpoint). Leading candidate:
-    Instrument Serif (OFL); Fraunces / Playfair Display acceptable — pick whatever reads best
-    at size in the real UI. Must be open-license (self-hostable).
+    *similar* to the reference, not a clone. **Decided at F7 (owner feedback 2026-07-08):
+    Fraunces** (OFL, variable weight + optical size) at **~560 weight — titles must never look
+    thin** (Instrument Serif's single thin cut was rejected for exactly that). **Italic serif
+    accents are welcome sparingly** — an italic word in a headline, a pull-quote — for the
+    Airbnb-warm touch (owner). Sizes/tracking remain builder judgment; hero *prototype*
+    approvals in §5 remain the owner checkpoint.
   - **Inter stays for body/UI** (paragraphs, buttons, forms, labels, nav — matches the sans in
     the reference images). Segoe UI remains the system proxy in prototypes (serif proxy:
     Georgia).
@@ -80,20 +94,46 @@ read this doc the way they read the glossary — decisions live here, not in cha
   separator; **minimal shadows** — a soft lift on card hover only, no ambient/glow shadows.
   Overall feel: **organized and clean — never overwhelming or messy, but never empty**; build to
   current trending styles per the delegation (§1).
-- **Illustration/iconography:** 🔶 *proposed — confirm at F7:* one **consistent line-icon set**
-  (Lucide-style, crisp to match the Linear side), filled/gold variants for active states; small
-  spot illustrations for hero/audience/empty states. **Emoji in the prototypes are placeholders.**
-  No mascot at launch (bee lives in the logo/mark).
+- **Illustration/iconography:** ✅ *confirmed at F7, revised same day (owner: "better icons"):*
+  **Phosphor** icons, re-exported through `@beecompete/ui` (`src/icons.ts` — app code never
+  imports the icon lib directly). Regular weight by default; **bold/fill/duotone weights** for
+  emphasis and active states (e.g., gold duotone trophy, filled verified seal). Small spot
+  illustrations for hero/audience/empty states remain 🔶 (decided when those surfaces build).
+  **Emoji in the prototypes are placeholders.** No mascot at launch (bee lives in the logo/mark).
 - **Light + dark mode:** ✅ both required (architecture §8), delivered via design tokens. Prototypes
   are **light-first**; dark mode is a token swap in F7, not a separate design pass. The dark
   category-highlight band is a *section treatment*, not dark mode.
+- **Primary buttons / dark fills (owner r5, 2026-07-08):** **neutral** dark gray (`#363636` —
+  neither cool nor warm), **not black**. (Earlier warm `#3d3929` read brown, cool `#32343a` read
+  blue — both rejected.) Light ground is near-white with only a hair of warmth (`#fdfdfc`).
+- **Data-aware facts (owner r5–r10, 2026-07-08):** competition-card facts are styled by *what
+  the data means to a family*, not uniformly. **Cards carry only two logistics facts — Cost +
+  Region** (owner r10; format and entry pathway live on the details page and in filters),
+  rendered as **icon + value pairs in fixed half-width slots on one row**: the ticket and map-pin
+  icons carry the labels, values stay large and scannable, each truncates independently.
+  **Cost = "Free" reads positive** (success green, icon included). **Footer follows the Kaggle
+  competition-card pattern (owner r8): PRIZE is the bold prominent fact** (gold trophy +
+  semibold, truncates) **and the deadline is quiet muted "N days to go" text** (nowrap; flips to
+  a danger tint only in the final days, not at 14). Deadline + prize share the footer row, pinned
+  to the card bottom. **Card corner (owner r9/r13):** the **top-right** corner shows the
+  social-proof count ("N registered", → M31 thresholds) at rest and **crossfades on card hover to
+  the quick actions — favorite (♥ → M7 save/follow) + share (→ M21)**; no view arrow. Everything
+  sits in translucent pills over the cover (scrim rule). (page-blueprints Page 1/3.)
+- **Shared component set (F7, owner-approved 2026-07-08):** beyond Button/Input/Select/Textarea/
+  Card/Badge, `packages/ui` now also ships **FormField · Checkbox · Radio/RadioGroup · Chip
+  (toggle + removable) · Avatar · Alert (info/success/warning/danger + `flush` banner) · Skeleton ·
+  Spinner · EmptyState · Tooltip · Tabs · Modal · Toast (ToastProvider/useToast)**. These carry the
+  cross-cutting a11y behavior (focus trap, roving tabindex, live regions) so features don't
+  reinvent it. Modal/Tabs styling is intentionally light — owner may steer with reference photos;
+  the behavior is the durable part. All on the live `/design` showcase. Feature-specific bits
+  (CompetitionCard, category tiles, hero cards, wizard stepper, date pickers, admin tables) are
+  built at their task on top of these.
 
-## 4. Do / Don't *(grows over time — add whenever you give feedback)*
-
-- **Do:** pill buttons (ink primary / gold brand variant, §3) on a crisp B-style ground;
-  **CompetitionCards taller and narrower** (~220px wide, generous cover + body); **compact
-  category tiles**; **Verified badge = subtle green** (✓, muted green on soft green tint),
-  Curated = quiet neutral.
+- **Do:** pill buttons (neutral-graphite primary / gold brand variant, §3) on a crisp near-white
+  ground; **CompetitionCards taller and narrower — 4 per row on desktop (~270px wide; owner r7
+  2026-07-08, supersedes ~220px)**, generous cover + body, **all cards in a row equal height**
+  (flex column, clamped text, footer pinned); **compact category tiles**; **Verified badge =
+  subtle green** (✓, muted green on soft green tint), Curated = quiet neutral.
 - **Do (owner 2026-07-08):** **per-category accent hues** — each of the ~10 categories gets an
   assigned hue used in its generated default cover **and** its tinted card meta tag (F7 asset
   system); **deadline + prize bold and in a fixed position** on every CompetitionCard; **any text
@@ -101,6 +141,9 @@ read this doc the way they read the glossary — decisions live here, not in cha
   overlays, hero strips, image cards).
 - **Don't:** yellow-on-black (or any accent-on-black) button styling; **no glow/colored shadows on
   buttons**; no oversized tile grids.
+- **Don't (owner 2026-07-08):** **no harsh `#000`/near-black fills or text** — use warm charcoals;
+  dark mode is warm dark gray (Claude-like), never black. No thin/spindly display type — serif
+  titles carry real weight (~560).
 - **Don't (owner 2026-07-08):** **gold `#F5C330` as text-on-white, thin icon strokes, or hairline
   borders** — gold is a fill/background/accent-shape color only (it fails WCAG contrast on white);
   text on gold is always ink. **No auto-advancing carousels** — user-driven only, with a peek

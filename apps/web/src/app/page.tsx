@@ -1,31 +1,33 @@
+import Link from 'next/link';
 import { APP_NAME } from '@beecompete/config';
+import { Badge, buttonClasses } from '@beecompete/ui';
 
 /**
- * Placeholder home route for the F3 skeleton — proves the app shell, theming, and
- * workspace wiring (@beecompete/config / @beecompete/ui via transpilePackages).
+ * Placeholder home route — proves the app shell, theming, and design-system wiring.
  *
- * This is NOT the real Landing page. The Landing hero (R1-6b) is built only after
- * its design-pass prototype is approved (design-brief §5, page-blueprints Page 1).
+ * NOT the real Landing page. The Landing hero (R1-6b) is built only after its
+ * design-pass prototype is approved (design-brief §5, page-blueprints Page 1).
  */
 export default function Home() {
   return (
     <div className="max-w-2xl">
-      <span className="inline-block rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-muted">
-        Foundation · F3 skeleton
-      </span>
-      {/* Headlines use the display serif at regular weight (design-brief §3, rev 2026-07-08) —
-          Georgia as the proxy until F7 self-hosts the real face. */}
-      <h1 className="font-display mt-4 text-4xl font-normal text-foreground sm:text-5xl">
-        {APP_NAME} web app is wired up.
+      <Badge variant="gold">Foundation · F7 design system</Badge>
+      <h1 className="font-display mt-4 text-4xl text-foreground sm:text-5xl">
+        {APP_NAME} has a design system.
       </h1>
       <p className="mt-4 text-lg text-muted">
-        Next.js App Router · Tailwind v4 · light/dark theming via design tokens ·
-        <code className="mx-1 rounded bg-surface px-1.5 py-0.5 text-sm">@beecompete/ui</code>
-        consumed as source. Real pages land in R1.
+        Tokens, self-hosted type (Instrument Serif + Inter), and the core primitives now live in{' '}
+        <code className="rounded bg-surface px-1.5 py-0.5 text-sm">@beecompete/ui</code>. Real pages
+        land in R1.
       </p>
-      <p className="mt-6 text-sm text-muted">
-        Try the theme toggle in the header — the preference persists across reloads.
-      </p>
+      <div className="mt-8 flex flex-wrap items-center gap-3">
+        <Link href="/design" className={buttonClasses({ variant: 'primary', size: 'lg' })}>
+          View the design system
+        </Link>
+        <Link href="/design" className={buttonClasses({ variant: 'secondary', size: 'lg' })}>
+          Browse primitives
+        </Link>
+      </div>
     </div>
   );
 }
