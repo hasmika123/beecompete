@@ -24,6 +24,7 @@ import {
   VerifiedSeal,
 } from '@beecompete/ui';
 import { SelectDemo } from './select-demo';
+import { NewComponentsShowcase } from './new-components-demo';
 
 export const metadata: Metadata = { title: 'Design system' };
 
@@ -270,6 +271,8 @@ export default function DesignPage() {
           </Card>
         </div>
       </Section>
+
+      <NewComponentsShowcase />
     </div>
   );
 }

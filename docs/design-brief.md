@@ -110,8 +110,15 @@ read this doc the way they read the glossary — decisions live here, not in cha
   social-proof count ("N registered", → M31 thresholds) at rest and **crossfades on card hover to
   the quick actions — favorite (♥ → M7 save/follow) + share (→ M21)**; no view arrow. Everything
   sits in translucent pills over the cover (scrim rule). (page-blueprints Page 1/3.)
-
-## 4. Do / Don't *(grows over time — add whenever you give feedback)*
+- **Shared component set (F7, owner-approved 2026-07-08):** beyond Button/Input/Select/Textarea/
+  Card/Badge, `packages/ui` now also ships **FormField · Checkbox · Radio/RadioGroup · Chip
+  (toggle + removable) · Avatar · Alert (info/success/warning/danger + `flush` banner) · Skeleton ·
+  Spinner · EmptyState · Tooltip · Tabs · Modal · Toast (ToastProvider/useToast)**. These carry the
+  cross-cutting a11y behavior (focus trap, roving tabindex, live regions) so features don't
+  reinvent it. Modal/Tabs styling is intentionally light — owner may steer with reference photos;
+  the behavior is the durable part. All on the live `/design` showcase. Feature-specific bits
+  (CompetitionCard, category tiles, hero cards, wizard stepper, date pickers, admin tables) are
+  built at their task on top of these.
 
 - **Do:** pill buttons (neutral-graphite primary / gold brand variant, §3) on a crisp near-white
   ground; **CompetitionCards taller and narrower — 4 per row on desktop (~270px wide; owner r7

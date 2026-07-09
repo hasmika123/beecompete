@@ -23,6 +23,7 @@ export {
   CaretUp as ChevronUp,
   ChatCircleText as MessageCircle,
   Check,
+  CheckCircle,
   CircleNotch as Spinner,
   Clock,
   CurrencyDollar as DollarSign,
@@ -47,6 +48,7 @@ export {
   Trophy,
   User,
   UsersThree as Users,
+  Warning,
   WarningCircle as CircleAlert,
   X,
 } from '@phosphor-icons/react/dist/ssr';
