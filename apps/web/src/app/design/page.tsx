@@ -12,7 +12,6 @@ import {
   Textarea,
 } from '@beecompete/ui';
 import {
-  ArrowRight,
   Calendar,
   GraduationCap,
   Heart,
@@ -156,38 +155,32 @@ export default function DesignPage() {
             interactive
             className="group relative flex w-[270px] shrink-0 flex-col overflow-hidden"
           >
-            {/* Top-right corner: social-proof count (→ M31, thresholded at R2) that
-                crossfades to the grey view arrow on hover. The count sits in a
-                translucent pill so it stays readable over any cover art (scrim rule);
-                the arrow is right-aligned in the stack so it lands in the corner. */}
-            {/* Quick actions — favorite (→ M7 save/follow) + share (→ M21). Same
-                translucent-pill treatment as the count so they read over any cover. */}
-            <span className="absolute top-3 left-3 z-10 flex gap-1.5">
-              <button
-                type="button"
-                aria-label="Save competition"
-                className="grid size-7 place-items-center rounded-full bg-background/85 text-muted transition-colors hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
-              >
-                <Heart aria-hidden="true" className="size-4" />
-              </button>
-              <button
-                type="button"
-                aria-label="Share competition"
-                className="grid size-7 place-items-center rounded-full bg-background/85 text-muted transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
-              >
-                <Share aria-hidden="true" className="size-4" />
-              </button>
-            </span>
-            <span className="absolute top-3 right-2.5 z-10 grid items-center justify-items-end">
+            {/* Top-right corner: at rest shows the social-proof count (→ M31,
+                thresholded at R2); on card hover it crossfades to the quick actions —
+                favorite (→ M7 save/follow) + share (→ M21). Both layers sit in the same
+                right-aligned stack so the corner alignment holds; the translucent pills
+                keep everything readable over cover art (scrim rule). */}
+            <span className="absolute top-3 right-3 z-10 grid items-center justify-items-end">
               <span className="col-start-1 row-start-1 inline-flex items-center gap-1 rounded-full bg-background/85 px-2 py-0.5 text-xs font-medium text-foreground transition-opacity group-hover:opacity-0">
                 <Users aria-hidden="true" className="size-3.5 text-muted" />
                 1.2k registered
               </span>
-              <ArrowRight
-                aria-hidden="true"
-                weight="bold"
-                className="col-start-1 row-start-1 size-5 text-muted opacity-0 transition-opacity group-hover:opacity-100"
-              />
+              <span className="col-start-1 row-start-1 flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+                <button
+                  type="button"
+                  aria-label="Save competition"
+                  className="grid size-7 place-items-center rounded-full bg-background/85 text-muted transition-colors hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+                >
+                  <Heart aria-hidden="true" className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Share competition"
+                  className="grid size-7 place-items-center rounded-full bg-background/85 text-muted transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+                >
+                  <Share aria-hidden="true" className="size-4" />
+                </button>
+              </span>
             </span>
             <div className="relative flex h-36 items-center justify-center bg-linear-to-br from-brand-gold-soft to-brand-gold/45">
               <Trophy
