@@ -34,6 +34,15 @@ read this doc the way they read the glossary — decisions live here, not in cha
 - **Utility pages** (settings, admin, plain forms) need no entry here — they assemble from primitives
   *(whose styling followed the reference-image rule above)*.
 
+### Supplied reference photos *(record each here — element type asked once)*
+
+- **Tabs → "attached" variant (owner 2026-07-08):** reference photo of a trading site (101Investing)
+  showing **connected tabs** — the active tab is a filled rounded-top riser that merges seamlessly
+  into a filled content card below it (a "folder tab" look), inactive tabs are plain muted text.
+  Built as `Tabs variant="attached"` (the `underline` variant remains the default). Adapted to
+  tokens: the card uses `surface` (soft grey in light, near-black in dark — matches the reference's
+  dark card) rather than a hardcoded black, so it works in both modes.
+
 ## 2. Brand personality *(locked 2026-07-07)*
 
 - **Tone:** ✅ **Energetic but credible** — warm, encouraging, optimistic for students; grown-up

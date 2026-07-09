@@ -8,12 +8,20 @@ import { cn } from '../lib/cn';
  * Tabs — Details page Overview/Resources/FAQ (R1-7), admin. Roving-tabindex keyboard
  * model (←/→/Home/End), one panel visible at a time. Controlled via `value` or
  * self-managed with `defaultValue`.
+ *
+ * Two looks (`variant`):
+ *  - `underline` (default): quiet tab strip with an active underline.
+ *  - `attached` (owner reference 2026-07-08): the active tab is a filled riser that
+ *    connects seamlessly into a filled content card below it (a "folder tab").
  */
+
+export type TabsVariant = 'underline' | 'attached';
 
 interface TabsContextValue {
   value: string;
   setValue: (v: string) => void;
   baseId: string;
+  variant: TabsVariant;
 }
 
 const TabsContext = createContext<TabsContextValue | null>(null);
@@ -28,12 +36,14 @@ export interface TabsProps extends Omit<HTMLAttributes<HTMLDivElement>, 'onChang
   value?: string;
   defaultValue: string;
   onValueChange?: (value: string) => void;
+  variant?: TabsVariant;
 }
 
 export function Tabs({
   value: controlled,
   defaultValue,
   onValueChange,
+  variant = 'underline',
   className,
   children,
   ...props
@@ -48,7 +58,7 @@ export function Tabs({
   };
 
   return (
-    <TabsContext.Provider value={{ value, setValue, baseId }}>
+    <TabsContext.Provider value={{ value, setValue, baseId, variant }}>
       <div className={className} {...props}>
         {children}
       </div>
@@ -57,6 +67,7 @@ export function Tabs({
 }
 
 export function TabList({ className, children, ...props }: HTMLAttributes<HTMLDivElement>) {
+  const { variant } = useTabs('TabList');
   const ref = useRef<HTMLDivElement>(null);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -82,7 +93,14 @@ export function TabList({ className, children, ...props }: HTMLAttributes<HTMLDi
       ref={ref}
       role="tablist"
       onKeyDown={onKeyDown}
-      className={cn('flex gap-1 border-b border-border', className)}
+      className={cn(
+        'flex',
+        variant === 'underline'
+          ? 'gap-1 border-b border-border'
+          : // sit above the card and overlap its top edge so the active riser merges in
+            'relative z-10 -mb-3 justify-center gap-1 px-3',
+        className,
+      )}
       {...props}
     >
       {children}
@@ -97,7 +115,7 @@ export interface TabProps extends Omit<HTMLAttributes<HTMLButtonElement>, 'value
 }
 
 export function Tab({ value, disabled, className, children, ...props }: TabProps) {
-  const { value: active, setValue, baseId } = useTabs('Tab');
+  const { value: active, setValue, baseId, variant } = useTabs('Tab');
   const selected = active === value;
   return (
     <button
@@ -110,11 +128,19 @@ export function Tab({ value, disabled, className, children, ...props }: TabProps
       disabled={disabled}
       onClick={() => setValue(value)}
       className={cn(
-        '-mb-px border-b-2 px-3.5 py-2 text-sm font-medium whitespace-nowrap transition-colors',
+        'text-sm font-medium whitespace-nowrap transition-colors',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-45',
-        selected
-          ? 'border-primary text-foreground'
-          : 'border-transparent text-muted hover:text-foreground',
+        variant === 'underline'
+          ? cn(
+              '-mb-px border-b-2 px-3.5 py-2',
+              selected
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted hover:text-foreground',
+            )
+          : cn(
+              'rounded-t-[16px] px-5 pt-2.5 pb-5',
+              selected ? 'bg-surface text-foreground' : 'text-muted hover:text-foreground',
+            ),
         className,
       )}
       {...props}
@@ -129,7 +155,7 @@ export interface TabPanelProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 export function TabPanel({ value, className, children, ...props }: TabPanelProps) {
-  const { value: active, baseId } = useTabs('TabPanel');
+  const { value: active, baseId, variant } = useTabs('TabPanel');
   if (active !== value) return null;
   return (
     <div
@@ -137,7 +163,11 @@ export function TabPanel({ value, className, children, ...props }: TabPanelProps
       id={`${baseId}-panel-${value}`}
       aria-labelledby={`${baseId}-tab-${value}`}
       tabIndex={0}
-      className={cn('pt-4 focus-visible:outline-none', className)}
+      className={cn(
+        'focus-visible:outline-none',
+        variant === 'underline' ? 'pt-4' : 'rounded-[var(--radius-panel)] bg-surface p-6',
+        className,
+      )}
       {...props}
     >
       {children}

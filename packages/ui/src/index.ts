@@ -56,7 +56,7 @@ export { FormField } from './components/form-field';
 export type { FormFieldProps } from './components/form-field';
 
 export { Tabs, TabList, Tab, TabPanel } from './components/tabs';
-export type { TabsProps, TabProps, TabPanelProps } from './components/tabs';
+export type { TabsProps, TabProps, TabPanelProps, TabsVariant } from './components/tabs';
 
 export { Tooltip } from './components/tooltip';
 export type { TooltipProps } from './components/tooltip';

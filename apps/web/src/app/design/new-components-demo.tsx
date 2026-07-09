@@ -130,6 +130,7 @@ export function NewComponentsShowcase() {
       </Section>
 
       <Section title="Tabs">
+        <p className="mb-2 text-sm text-muted">Underline (default):</p>
         <Tabs defaultValue="overview" className="max-w-xl">
           <TabList>
             <Tab value="overview">Overview</Tab>
@@ -144,6 +145,28 @@ export function NewComponentsShowcase() {
           </TabPanel>
           <TabPanel value="faq" className="text-sm text-muted">
             Curated Q&amp;A — rendered with FAQPage structured data at R1-7.
+          </TabPanel>
+        </Tabs>
+
+        <p className="mt-6 mb-2 text-sm text-muted">Attached (active tab merges into the card):</p>
+        <Tabs variant="attached" defaultValue="consistency">
+          <TabList>
+            <Tab value="dedication">Dedication</Tab>
+            <Tab value="reputability">Reputability</Tab>
+            <Tab value="consistency">Consistency</Tab>
+            <Tab value="analytics">Trading analytics</Tab>
+          </TabList>
+          <TabPanel value="dedication" className="text-sm text-muted">
+            The people are here to back you up.
+          </TabPanel>
+          <TabPanel value="reputability" className="text-sm text-muted">
+            A platform you can trust.
+          </TabPanel>
+          <TabPanel value="consistency" className="text-sm text-muted">
+            The consistency, dedication, and openness an online trader needs.
+          </TabPanel>
+          <TabPanel value="analytics" className="text-sm text-muted">
+            Understand every move.
           </TabPanel>
         </Tabs>
       </Section>
