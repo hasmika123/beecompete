@@ -96,6 +96,8 @@ secret scan blocking, Semgrep/Trivy advisory, cached, cancel-in-progress); F6 de
 GHCR; images built + run-verified locally, but live deploy needs the VPS/DNS/secrets setup in
 setup-runbook §8); F7 design system (`packages/ui`: `styles/tokens.css` = warm semantic light/dark
 tokens (no harsh blacks; Claude-style warm dark mode) + Tailwind `@theme`, self-hosted Fraunces +
-Inter Variable, pill Button/Input/Textarea/Select/Card/Badge/Logo/ThemeToggle, curated Phosphor
-icon re-exports, Vitest tests; live showcase at `/design` in apps/web). Foundation is complete
+Inter Variable, ~20 primitives — Button/Input/Textarea/Select/Card/Badge/Chip/Checkbox/Radio/
+FormField/Avatar/Alert/Skeleton/Spinner/EmptyState/Tooltip/Tabs (underline + attached folder-tab)/
+Modal/Toast/Logo/ThemeToggle, curated Phosphor icon re-exports, Vitest tests; approved
+CompetitionCard direction + live showcase at `/design` in apps/web). Foundation is complete
 except **F8** (observability) — next per `docs/phase-1-plan.md`.
