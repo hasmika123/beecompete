@@ -32,6 +32,15 @@ function useTabs(component: string): TabsContextValue {
   return ctx;
 }
 
+// Concave "folder-tab" fillets: two pseudo-elements just outside the active tab's
+// bottom corners, each a quarter-circle of the panel color that curves the tab's
+// vertical side smoothly into the card's top edge (radius must match the card fill).
+const ATTACHED_FILLET =
+  "before:absolute before:bottom-0 before:left-[-14px] before:size-[14px] before:content-[''] " +
+  'before:bg-[radial-gradient(circle_at_top_left,transparent_13.5px,var(--surface)_14px)] ' +
+  "after:absolute after:bottom-0 after:right-[-14px] after:size-[14px] after:content-[''] " +
+  'after:bg-[radial-gradient(circle_at_top_right,transparent_13.5px,var(--surface)_14px)]';
+
 export interface TabsProps extends Omit<HTMLAttributes<HTMLDivElement>, 'onChange'> {
   value?: string;
   defaultValue: string;
@@ -97,8 +106,8 @@ export function TabList({ className, children, ...props }: HTMLAttributes<HTMLDi
         'flex',
         variant === 'underline'
           ? 'gap-1 border-b border-border'
-          : // sit above the card and overlap its top edge so the active riser merges in
-            'relative z-10 -mb-3 justify-center gap-1 px-3',
+          : // sit just above the card; the active tab + its fillets bridge the seam
+            'relative z-10 -mb-px justify-center gap-1 px-3',
         className,
       )}
       {...props}
@@ -138,8 +147,10 @@ export function Tab({ value, disabled, className, children, ...props }: TabProps
                 : 'border-transparent text-muted hover:text-foreground',
             )
           : cn(
-              'rounded-t-[16px] px-5 pt-2.5 pb-5',
-              selected ? 'bg-surface text-foreground' : 'text-muted hover:text-foreground',
+              'rounded-t-[16px] px-5 py-2.5',
+              selected
+                ? cn('relative bg-surface text-foreground', ATTACHED_FILLET)
+                : 'text-muted hover:text-foreground',
             ),
         className,
       )}
