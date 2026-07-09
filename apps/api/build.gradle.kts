@@ -34,6 +34,14 @@ dependencies {
 	implementation("org.liquibase:liquibase-core")
 	runtimeOnly("org.postgresql:postgresql")
 
+	// Observability (F8): Sentry error capture + Logback breadcrumbs (disabled when
+	// SENTRY_DSN is blank), and JSON structured logs via the logstash encoder
+	// (activated by the prod logging profile — logback-spring.xml). Architecture §Observability.
+	implementation(platform("io.sentry:sentry-bom:7.18.1"))
+	implementation("io.sentry:sentry-spring-boot-starter-jakarta")
+	implementation("io.sentry:sentry-logback")
+	implementation("net.logstash.logback:logstash-logback-encoder:8.0")
+
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	// Integration tests run against a real Postgres via Testcontainers (needs Docker) —
 	// no H2, so JSONB/FTS behave as in prod. @ServiceConnection wires the datasource.

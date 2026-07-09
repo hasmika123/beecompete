@@ -99,5 +99,9 @@ tokens (no harsh blacks; Claude-style warm dark mode) + Tailwind `@theme`, self-
 Inter Variable, ~20 primitives — Button/Input/Textarea/Select/Card/Badge/Chip/Checkbox/Radio/
 FormField/Avatar/Alert/Skeleton/Spinner/EmptyState/Tooltip/Tabs (underline + attached folder-tab)/
 Modal/Toast/Logo/ThemeToggle, curated Phosphor icon re-exports, Vitest tests; approved
-CompetitionCard direction + live showcase at `/design` in apps/web). Foundation is complete
-except **F8** (observability) — next per `docs/phase-1-plan.md`.
+CompetitionCard direction + live showcase at `/design` in apps/web); F8 observability
+(Sentry error capture on web + api, env-driven/inert without a DSN, **no PII/no Session Replay** for
+COPPA; structured JSON logs via `logback-spring.xml` json profile — on in the deploy stacks). **All
+foundation tasks F1–F8 are done.** Next per `docs/phase-1-plan.md` is **R1** — starting with **R1-1**
+(core schema migration; first real domain entities). Remaining F8 operational steps (uptime monitor +
+confirming Sentry receives events) are done after staging is live — see setup-runbook §9.

@@ -128,9 +128,23 @@ Staging is a **second Docker Compose stack on the same VPS**, *not* a separate s
 - **Outputs:** `main` push → staging auto-deploy; **release tag → prod** (manual, deliberate).
 
 ## 9. Observability  *(R1)*
-1. **Sentry** project for web + API → get DSNs.
-2. **Uptime monitor** (UptimeRobot/BetterStack free) on the health endpoint.
-- **Outputs:** `SENTRY_DSN` (web + api); uptime alerts to email.
+
+**Code is wired (F8):** Sentry SDK on web + API and structured JSON logs ship in the images;
+they're **inert until a DSN is set**. This section is the **operational half** — do it once staging
+is live (§8).
+
+1. **Sentry** project(s) for web + API → copy the DSNs. Put them in each environment's VPS `.env`:
+   `SENTRY_DSN` (API + Next server), `NEXT_PUBLIC_SENTRY_DSN` (browser), `SENTRY_ENVIRONMENT` /
+   `NEXT_PUBLIC_SENTRY_ENVIRONMENT` (`staging`|`production`). Redeploy so the containers pick them up.
+   - *(Optional, better stack traces):* set `SENTRY_ORG`/`SENTRY_PROJECT`/`SENTRY_AUTH_TOKEN` as CI
+     secrets so `deploy-*.yml` uploads source maps at build. Never commit the token.
+   - **Privacy is enforced in code (COPPA): `sendDefaultPii: false`, no Session Replay** — keep it that way.
+2. **Confirm capture:** trigger a test error on staging and verify it lands in Sentry (both a browser
+   error and an API 500). Check JSON logs are flowing (`docker logs` on the api container shows one
+   JSON object per line, `service:beecompete-api`).
+3. **Uptime monitor** (UptimeRobot/BetterStack free) → poll `https://<domain>/actuator/health`
+   (expects `{"status":"UP"}`); alert to email.
+- **Outputs:** DSNs live in each env; Sentry receiving events; uptime alerts on; JSON logs aggregating.
 
 ## 10. Redis  *(R2; R1 if rate-limiting early)*
 1. Add a **Redis** container to Compose (or a managed Redis).

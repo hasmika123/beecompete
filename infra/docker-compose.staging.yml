@@ -37,7 +37,10 @@ services:
   api:
     image: ghcr.io/${IMAGE_REPO:-hasmika123/beecompete}-api:${IMAGE_TAG:-staging}
     restart: unless-stopped
-    # Secrets (DATABASE_URL pooled, DIRECT_URL for Liquibase, etc.) come from the VPS .env.
+    # Secrets (DATABASE_URL pooled, DIRECT_URL for Liquibase, SENTRY_DSN, etc.) come from
+    # the VPS .env; the profile switches logging to structured JSON (F8).
+    environment:
+      SPRING_PROFILES_ACTIVE: json
     env_file: [.env]
     networks: [internal]
     healthcheck:

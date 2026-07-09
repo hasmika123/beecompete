@@ -35,6 +35,9 @@ services:
   api:
     image: ghcr.io/${IMAGE_REPO:-hasmika123/beecompete}-api:${IMAGE_TAG:?set IMAGE_TAG to the promoted build}
     restart: unless-stopped
+    # Structured JSON logs in prod (F8); secrets incl. SENTRY_DSN come from the VPS .env.
+    environment:
+      SPRING_PROFILES_ACTIVE: json
     env_file: [.env]
     networks: [internal]
     healthcheck:
