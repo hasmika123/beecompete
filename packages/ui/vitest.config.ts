@@ -11,11 +11,9 @@ export default defineConfig({
     // Pre-bundle the Phosphor icon barrel — importing its dist/ssr entry unoptimized
     // pulls thousands of modules and can hang collection (cold ~5 min). Optimizing it
     // once keeps the suite fast + reliable in CI.
-    server: {
-      deps: {
-        optimizer: {
-          web: { include: ['@phosphor-icons/react'] },
-        },
+    deps: {
+      optimizer: {
+        web: { include: ['@phosphor-icons/react'] },
       },
     },
   },
