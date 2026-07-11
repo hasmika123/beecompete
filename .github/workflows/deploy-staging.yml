@@ -67,14 +67,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Keep the VPS copy of the Compose stack + Caddyfile in sync with the repo.
+      # Keep the VPS copy of the staging Compose stack in sync with the repo. The Caddyfile
+      # now belongs to the shared edge stack (docker-compose.edge.yml), not this per-env
+      # stack, so it is intentionally not copied here.
       - name: Copy infra files to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: infra/docker-compose.staging.yml,infra/Caddyfile
+          source: infra/docker-compose.staging.yml
           target: ~/beecompete-staging
           strip_components: 1
 

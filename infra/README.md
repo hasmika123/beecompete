@@ -20,13 +20,22 @@ tests use Testcontainers, so they need Docker running but **not** this compose s
 
 ## Deploy stacks (F6)
 
-- **`docker-compose.staging.yml`** / **`docker-compose.prod.yml`** — the VPS stacks: Caddy
-  + web + api, images pulled from **GHCR**. Managed Postgres stays **off-box** (never in
-  these files). Deployed by the `deploy-*.yml` workflows; a sibling `.env` on the VPS holds
-  each environment's secrets (`SITE_ADDRESS`, `DATABASE_URL`, `DIRECT_URL`, …).
-- **`Caddyfile`** — one config for both stacks; the site address is injected via
-  `SITE_ADDRESS`. Auto-HTTPS. Only the web container is public (BFF pattern — the API is
-  internal on the Docker network).
+- **`docker-compose.edge.yml`** — the **shared edge stack**: a single Caddy that owns
+  80/443 for the whole box and reverse-proxies **by hostname** to each app/env's web
+  container over the shared external `web_edge` Docker network. This is the only thing on
+  80/443 — per-env stacks no longer run their own Caddy (that would collide on the ports).
+  Static infra, brought up manually; `web_edge` must exist first (`docker network create
+  web_edge`).
+- **`docker-compose.staging.yml`** / **`docker-compose.prod.yml`** — the per-env app stacks:
+  **web + api only**, images pulled from **GHCR**. Their `web` joins `web_edge` under an
+  alias (`staging-web` / `prod-web`) so the edge Caddy can reach it; the API stays private on
+  each stack's `internal` network. Managed Postgres stays **off-box** (never in these files).
+  Deployed by the `deploy-*.yml` workflows; a sibling `.env` on the VPS holds each
+  environment's secrets (`DATABASE_URL`, `DIRECT_URL`, `SENTRY_DSN`, …).
+- **`Caddyfile`** — belongs to the edge stack; one site block per hostname
+  (`staging.beecompete.com`, `beecompete.com`, `www` → apex redirect). Auto-HTTPS. Only web
+  containers are public (BFF pattern — the API is internal on the Docker network). Adding an
+  app = a new site block + that app's web on `web_edge` + `caddy reload`.
 - **`apps/web/Dockerfile`** / **`apps/api/Dockerfile`** — build from the **repo root** as
   context (`docker build -f apps/web/Dockerfile .`).
 

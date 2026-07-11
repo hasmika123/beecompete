@@ -1,15 +1,18 @@
-# Caddy reverse proxy with automatic HTTPS (Let's Encrypt). One config for staging + prod;
-# the site address is injected per-stack via the SITE_ADDRESS env var (e.g.
-# staging.beecompete.com, beecompete.com, or an <ip>.sslip.io during bootstrap).
+# Shared edge reverse proxy with automatic HTTPS (Let's Encrypt) for the WHOLE box. One
+# Caddy, one site block per hostname → that app/env's web container, reached by its alias on
+# the shared `web_edge` Docker network. Only the Next.js web containers are public; each
+# Spring API stays private on its own stack's `internal` network (BFF pattern —
+# architecture §4/§5), so there is deliberately no route to any API here.
 #
-# Only the Next.js container is public. The Spring API is internal (BFF pattern —
-# architecture §4/§5): the browser talks to Next, and Next forwards to api:8080 over the
-# private Docker network. So there is deliberately no route to the API here.
-{$SITE_ADDRESS} {
+# Add an app: copy a block, point reverse_proxy at the new web container's web_edge alias,
+# then reload without downtime:
+#   docker compose -f docker-compose.edge.yml exec caddy caddy reload --config /etc/caddy/Caddyfile
+
+# Shared defense-in-depth headers (Cloudflare sets some too). Caddy terminates TLS, so HSTS
+# is safe. App-level noindex is handled in the Next metadata.
+(common) {
 	encode zstd gzip
 
-	# Defense-in-depth headers (Cloudflare sets some of these too). HTTPS/HSTS is safe
-	# because Caddy terminates TLS. App-level noindex is handled in the Next metadata.
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 		X-Content-Type-Options "nosniff"
@@ -17,6 +20,22 @@
 		Referrer-Policy "strict-origin-when-cross-origin"
 		-Server
 	}
+}
 
-	reverse_proxy web:3000
+# --- Staging ---
+staging.beecompete.com {
+	import common
+	reverse_proxy staging-web:3000
+}
+
+# --- Production ---
+beecompete.com {
+	import common
+	reverse_proxy prod-web:3000
+}
+
+# www → apex (301 redirect).
+www.beecompete.com {
+	import common
+	redir https://beecompete.com{uri} permanent
 }
