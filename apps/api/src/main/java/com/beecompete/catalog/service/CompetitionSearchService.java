@@ -59,7 +59,12 @@ public class CompetitionSearchService {
 		}
 	}
 
-	public record Item(Competition competition, Instant nextDeadline) {}
+	/**
+	 * One result row + the card facts derived from child rows (M5): next deadline, the prize
+	 * line of the most recent live edition, and the distinct region names across live editions.
+	 */
+	public record Item(Competition competition, Instant nextDeadline, String prizeSummary,
+			List<String> regions) {}
 
 	public record CategoryFacet(String slug, String name, long count) {}
 
@@ -68,6 +73,9 @@ public class CompetitionSearchService {
 	public record Facets(List<CategoryFacet> categories, List<GradeFacet> grades) {}
 
 	public record Result(List<Item> items, long total, int page, int size, Facets facets) {}
+
+	/** A region that has at least one live listing — the filter panel's option source. */
+	public record RegionOption(UUID id, String level, String name, String code, long count) {}
 
 	private static final String DEADLINE_LATERAL = """
 			 LEFT JOIN LATERAL (
@@ -215,14 +223,47 @@ public class CompetitionSearchService {
 		List<UUID> ids = rows.stream().map(row -> asUuid(row[0])).toList();
 		Map<UUID, Competition> byId = new HashMap<>();
 		competitions.findAllById(ids).forEach(comp -> byId.put(comp.getId(), comp));
+		Map<UUID, String> prizes = prizeSummaries(ids);
+		Map<UUID, List<String>> regionNames = regionNames(ids);
 		List<Item> items = new ArrayList<>();
 		for (Object[] row : rows) {
-			Competition competition = byId.get(asUuid(row[0]));
+			UUID id = asUuid(row[0]);
+			Competition competition = byId.get(id);
 			if (competition != null) { // row deleted between the two queries — skip, don't 500
-				items.add(new Item(competition, asInstant(row[1])));
+				items.add(new Item(competition, asInstant(row[1]), prizes.get(id),
+						regionNames.getOrDefault(id, List.of())));
 			}
 		}
 		return items;
+	}
+
+	/** Prize line of the most recently created live edition per competition (decision #23 — card fact). */
+	private Map<UUID, String> prizeSummaries(List<UUID> ids) {
+		if (ids.isEmpty()) {
+			return Map.of();
+		}
+		String sql = "SELECT DISTINCT ON (e.competition_id) e.competition_id, e.prize_summary"
+				+ " FROM edition e WHERE e.competition_id IN (:ids) AND e.archived_at IS NULL"
+				+ " AND e.prize_summary IS NOT NULL ORDER BY e.competition_id, e.created_at DESC";
+		Map<UUID, String> result = new HashMap<>();
+		mapRows(sql, Map.of("ids", ids), row -> result.put(asUuid(row[0]), (String) row[1]));
+		return result;
+	}
+
+	/** Distinct region names across live editions per competition (card fact; empty = unspecified). */
+	private Map<UUID, List<String>> regionNames(List<UUID> ids) {
+		if (ids.isEmpty()) {
+			return Map.of();
+		}
+		String sql = "SELECT DISTINCT e.competition_id, r.name"
+				+ " FROM edition e JOIN edition_region er ON er.edition_id = e.id"
+				+ " JOIN region r ON r.id = er.region_id"
+				+ " WHERE e.competition_id IN (:ids) AND e.archived_at IS NULL"
+				+ " ORDER BY e.competition_id, r.name";
+		Map<UUID, List<String>> result = new HashMap<>();
+		mapRows(sql, Map.of("ids", ids),
+				row -> result.computeIfAbsent(asUuid(row[0]), k -> new ArrayList<>()).add((String) row[1]));
+		return result;
 	}
 
 	private String orderBy(Criteria criteria) {
@@ -261,6 +302,20 @@ public class CompetitionSearchService {
 				+ " GROUP BY gs.grade ORDER BY gs.grade";
 		return mapRows(sql, where.params(),
 				row -> new GradeFacet(((Number) row[0]).shortValue(), ((Number) row[1]).longValue()));
+	}
+
+	/** Regions carrying at least one live competition, with counts (filter panel + Page-5 tiles). */
+	@Transactional(readOnly = true)
+	public List<RegionOption> regionOptions() {
+		String sql = "SELECT r.id, r.level, r.name, r.code, count(DISTINCT c.id)"
+				+ " FROM region r JOIN edition_region er ON er.region_id = r.id"
+				+ " JOIN edition e ON e.id = er.edition_id"
+				+ " JOIN competition c ON c.id = e.competition_id"
+				+ " WHERE e.archived_at IS NULL AND c.archived_at IS NULL"
+				+ " GROUP BY r.id, r.level, r.name, r.code ORDER BY r.name";
+		return mapRows(sql, Map.of(), row -> new RegionOption(asUuid(row[0]),
+				String.valueOf(row[1]).toLowerCase(java.util.Locale.ROOT), (String) row[2],
+				(String) row[3], ((Number) row[4]).longValue()));
 	}
 
 	// --- plumbing ---

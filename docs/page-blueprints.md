@@ -330,6 +330,16 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
 **2026-07-09 (owner):**
 24. **Hero "Browse competitions" is a plain button** → /competitions. No hover dropdown / side panel / quick-match (supersedes decision #2). Category entry stays in the hero category strip (#3).
 
+**2026-07-12 (owner — R1-6/R1-6b build kickoff):**
+29. **Styling delegated to builder judgment** for the R1-6/R1-6b pages and their element types —
+    the style-prototype checkpoint is waived; owner steers reactively with reference photos
+    (recorded in `design-brief.md` §1).
+30. **Competition-detail web route = `/c/<competition-slug>`** (builder, under #29): keeps the
+    approved category hub at `/competitions/<category-slug>` (#16) collision-free, and matches
+    the share-URL shape in the approved F7 card demo. The API detail path stays
+    `/api/v1/competitions/{slug}`. R1-6 ships a minimal noindex placeholder at `/c/<slug>` so
+    cards never dead-link; R1-7 builds the real Page 3 there.
+
 **2026-07-08 (owner — Community + admin-managed landing content, registry Rev 9):**
 25. **Hero right half = image cards, not SVG illustrations** (supersedes the child-SVG + satellite-SVG plan): one **main HeroCard** (a link; hover/focus = translucent WCAG-AA scrim + short destination description) + two satellite HeroCards (top-right, bottom-left, image-only). **All three admin-managed** (→ M36) — image/alt on all, link + description on the main card.
 26. **Featured-carousel picks are admin-managed ordered slots** (`FeaturedSlot`, → M36; CRUD in R1-3). Same carousel rules (#8); paid Promotion slots remain a separate, labeled, later thing (M28).
@@ -340,7 +350,7 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
 | Page | Blueprint | Style prototype | Built |
 |---|---|---|---|
 | Landing | ✅ approved (2026-07-07 · rev 2026-07-09 · hero image-cards rev 2026-07-08 #25–26) | 🔍 round 2 in review — re-prototype hero (plain Browse button + category strip **+ image-card right half #25**) & new order | — |
-| Competitions (listing) | ✅ approved (2026-07-07 · rev 2026-07-08) | — | — |
+| Competitions (listing) | ✅ approved (2026-07-07 · rev 2026-07-08) | delegated (#29) | ✅ R1-6 (2026-07-12, incl. category hubs #16 + interim /c/ detail stub #30) |
 | Competition details | ✅ approved (2026-07-07 · rev 2026-07-08) | — | — |
 | How It Works | ✅ approved (2026-07-08) | — | — |
 | Categories (index) | ✅ approved (2026-07-08, may be tuned) | — | — |

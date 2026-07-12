@@ -104,10 +104,20 @@ class CatalogSearchIntegrationTest {
 		// newest: last-created seed first.
 		org.junit.jupiter.api.Assertions.assertEquals("r15-essay-prize",
 				slugs("/api/v1/competitions?q=" + MARK + "&sort=newest&size=50").get(0));
-		// The deadline rides along on every item (cards render it).
+		// The card facts ride along on every item: deadline, prize line, region names.
 		mvc.perform(get("/api/v1/competitions?q=" + MARK + "&sort=deadline&size=50"))
 				.andExpect(jsonPath("$.content[0].nextDeadline").isNotEmpty())
-				.andExpect(jsonPath("$.content[2].nextDeadline").isEmpty());
+				.andExpect(jsonPath("$.content[0].prizeSummary", is("Champion trophy")))
+				.andExpect(jsonPath("$.content[2].nextDeadline").isEmpty())
+				.andExpect(jsonPath("$.content[2].prizeSummary").isEmpty())
+				.andExpect(jsonPath("$.content[2].regions", hasSize(0)));
+		mvc.perform(get("/api/v1/competitions?q=" + MARK + "&region=tx"))
+				.andExpect(jsonPath("$.content[0].regions[0]", is("Texas")));
+		// The public region options (filter panel source) carry live counts.
+		mvc.perform(get("/api/v1/regions"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[?(@.code=='TX')].count", is(java.util.List.of(1))))
+				.andExpect(jsonPath("$[?(@.code=='TX')].level", is(java.util.List.of("state"))));
 	}
 
 	@Test
@@ -251,7 +261,10 @@ class CatalogSearchIntegrationTest {
 	private String createEdition(String competitionId) throws Exception {
 		String json = mvc.perform(withToken(post("/api/v1/admin/competitions/" + competitionId + "/editions"))
 						.contentType("application/json")
-						.content("{\"cycleLabel\": \"2026\", \"status\": \"OPEN\", \"scopeLevel\": \"NATIONAL\"}"))
+						.content("""
+								{"cycleLabel": "2026", "status": "OPEN", "scopeLevel": "NATIONAL",
+								 "prizeSummary": "Champion trophy"}
+								"""))
 				.andExpect(status().isCreated())
 				.andReturn().getResponse().getContentAsString();
 		return mapper.readTree(json).get("id").asText();

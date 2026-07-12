@@ -121,6 +121,12 @@ public class CatalogPublicController {
 		return SearchResponse.from(result);
 	}
 
+	/** Regions with at least one live listing (filter options + Page-5 region tiles). */
+	@GetMapping("/regions")
+	public List<CompetitionSearchService.RegionOption> regions() {
+		return search.regionOptions();
+	}
+
 	private static <E extends Enum<E>> E parseToken(String param, String value, Class<E> type) {
 		if (value == null || value.isBlank()) {
 			return null;
@@ -197,16 +203,18 @@ public class CatalogPublicController {
 			Short teamSizeMin, Short teamSizeMax, String delivery, String entryPathway,
 			List<String> evaluationType, Short minGrade, Short maxGrade, Short minAge, Short maxAge,
 			String costType, String recurrence, String verificationState, ProvenanceView provenance,
-			Instant nextDeadline) {
+			Instant nextDeadline, String prizeSummary, List<String> regions) {
 
-		static CompetitionSummary from(Competition c, Instant nextDeadline) {
+		static CompetitionSummary from(CompetitionSearchService.Item item) {
+			Competition c = item.competition();
 			return new CompetitionSummary(c.getId(), c.getSlug(), c.getName(), c.getSummary(), c.getLogo(),
 					new CategoryView(c.getCategory().getSlug(), c.getCategory().getName()),
 					OrganizerView.from(c.getOrganizer()), c.getTags(), token(c.getParticipationMode()),
 					c.getTeamSizeMin(), c.getTeamSizeMax(), token(c.getDelivery()), token(c.getEntryPathway()),
 					c.getEvaluationType(), c.getMinGrade(), c.getMaxGrade(), c.getMinAge(), c.getMaxAge(),
 					token(c.getCostType()), token(c.getRecurrence()), token(c.getVerificationState()),
-					ProvenanceView.from(c.getProvenance()), nextDeadline);
+					ProvenanceView.from(c.getProvenance()), item.nextDeadline(), item.prizeSummary(),
+					item.regions());
 		}
 	}
 
@@ -222,7 +230,7 @@ public class CatalogPublicController {
 
 		static SearchResponse from(CompetitionSearchService.Result result) {
 			List<CompetitionSummary> content = result.items().stream()
-					.map(item -> CompetitionSummary.from(item.competition(), item.nextDeadline()))
+					.map(CompetitionSummary::from)
 					.toList();
 			FacetsView facets = result.facets() == null ? null
 					: new FacetsView(
