@@ -1,0 +1,30 @@
+{
+  "payload": {
+    "slug": "nova-math-challenge",
+    "name": "Nova Math Challenge",
+    "officialUrl": "https://novamath.example.org",
+    "logo": "https://novamath.example.org/logo.png",
+    "summary": null,
+    "categorySlug": "math",
+    "tags": ["algebra", "number-theory", "geometry", "combinatorics", "olympiad"],
+    "participationMode": "INDIVIDUAL",
+    "delivery": "VIRTUAL",
+    "entryPathway": "INDIVIDUAL",
+    "evaluationType": ["exam"],
+    "minGrade": 6,
+    "maxGrade": 8,
+    "minAge": null,
+    "maxAge": null,
+    "costType": "FREE",
+    "recurrence": "ANNUAL",
+    "attributes": {
+      "eligible_countries": ["US"],
+      "student_status_required": "enrolled in a U.S. school",
+      "topics": ["algebra", "number theory", "geometry", "combinatorics"],
+      "calculator_allowed": false,
+      "proof_based": false
+    }
+  },
+  "modelConfidence": 0.9,
+  "reviewerNotes": "Grades 6-8 => minGrade 6, maxGrade 8. Online proctored exam => VIRTUAL + evaluationType exam. No entry fee => FREE. description intentionally omitted for the curator to author (S4)."
+}
