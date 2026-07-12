@@ -175,6 +175,10 @@ public class EditionAdminController {
 	}
 
 	private void apply(Edition edition, EditionRequest request, Provenance stamp) {
+		// NOTE: the Edition attributes bag is intentionally NOT schema-validated at R1 — Category
+		// Templates validate the COMPETITION's attributes (domain-model §3a); no edition-level
+		// template exists. Edition attributes hold edition-specific display-only fields. If
+		// edition-scoped validation is ever needed it gets its own template concept (future).
 		edition.setRegistrationUrl(request.registrationUrl());
 		edition.setEntryFee(request.entryFee());
 		edition.setCurrency(request.currency());

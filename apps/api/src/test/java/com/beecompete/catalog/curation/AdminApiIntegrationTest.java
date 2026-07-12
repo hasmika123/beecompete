@@ -244,6 +244,37 @@ class AdminApiIntegrationTest {
 				.andExpect(jsonPath("$.status", is("REJECTED")));
 	}
 
+	@Test
+	@Order(5)
+	void enforcesConflictsAndTheArchivedFeaturedGuard() throws Exception {
+		String categories = mvc.perform(withToken(get("/api/v1/admin/categories")))
+				.andReturn().getResponse().getContentAsString();
+		String mathId = findBySlug(categories, "math");
+
+		String amcJson = mvc.perform(withToken(get("/api/v1/admin/competitions").param("query", "AMC 10")))
+				.andReturn().getResponse().getContentAsString();
+		String amcId = mapper.readTree(amcJson).get("content").get(0).get("id").asText();
+
+		// Feature it, then archive it → the archive must pull it from the carousel (no 500).
+		mvc.perform(withToken(put("/api/v1/admin/featured-slots")).contentType("application/json")
+						.content("{\"competitionIds\": [\"" + amcId + "\"]}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$", hasSize(1)));
+		mvc.perform(withToken(delete("/api/v1/admin/competitions/" + amcId)))
+				.andExpect(jsonPath("$.archivedAt", notNullValue()));
+		mvc.perform(withToken(get("/api/v1/admin/featured-slots")))
+				.andExpect(jsonPath("$", hasSize(0)));
+
+		// Featuring an archived competition is rejected (422), not silently allowed.
+		mvc.perform(withToken(put("/api/v1/admin/featured-slots")).contentType("application/json")
+						.content("{\"competitionIds\": [\"" + amcId + "\"]}"))
+				.andExpect(status().isUnprocessableEntity());
+
+		// Deleting an in-use category → 409 (FK), not a 500.
+		mvc.perform(withToken(delete("/api/v1/admin/categories/" + mathId)))
+				.andExpect(status().isConflict());
+	}
+
 	private String findBySlug(String categoriesJson, String slug) throws Exception {
 		for (JsonNode node : mapper.readTree(categoriesJson)) {
 			if (slug.equals(node.get("slug").asText())) {

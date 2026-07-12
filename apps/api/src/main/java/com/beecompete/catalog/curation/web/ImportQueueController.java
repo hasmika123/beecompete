@@ -64,7 +64,8 @@ public class ImportQueueController {
 	@Transactional(readOnly = true)
 	public Page<ImportRecordResponse> list(@RequestParam(defaultValue = "PENDING") ImportStatus status,
 			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size) {
-		return importRecords.findByStatusOrderByCreatedAt(status, PageRequest.of(page, Math.min(size, 100)))
+		return importRecords
+				.findByStatusOrderByCreatedAt(status, PageRequest.of(Math.max(0, page), Math.clamp(size, 1, 100)))
 				.map(ImportRecordResponse::from);
 	}
 

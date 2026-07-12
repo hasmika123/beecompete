@@ -87,6 +87,10 @@ public class LandingAdminController {
 		for (UUID id : ids) {
 			Competition competition = competitions.findById(id).orElseThrow(() -> new ResponseStatusException(
 					HttpStatus.UNPROCESSABLE_ENTITY, "unknown competition: " + id));
+			if (competition.getArchivedAt() != null) {
+				throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+						"cannot feature an archived competition: " + id);
+			}
 			featuredSlots.save(new FeaturedSlot(competition, position++));
 		}
 		return featuredSlots.findAllByOrderByPosition().stream().map(FeaturedSlotResponse::from).toList();

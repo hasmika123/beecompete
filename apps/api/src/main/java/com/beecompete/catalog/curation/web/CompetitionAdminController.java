@@ -11,6 +11,7 @@ import com.beecompete.catalog.domain.ResourceType;
 import com.beecompete.catalog.domain.VerificationState;
 import com.beecompete.catalog.repository.CompetitionFaqRepository;
 import com.beecompete.catalog.repository.CompetitionRepository;
+import com.beecompete.catalog.repository.FeaturedSlotRepository;
 import com.beecompete.catalog.repository.ResourceRepository;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -55,13 +56,16 @@ public class CompetitionAdminController {
 	private final CompetitionRepository competitions;
 	private final CompetitionFaqRepository faqs;
 	private final ResourceRepository resources;
+	private final FeaturedSlotRepository featuredSlots;
 	private final CompetitionCurationService curation;
 
 	public CompetitionAdminController(CompetitionRepository competitions, CompetitionFaqRepository faqs,
-			ResourceRepository resources, CompetitionCurationService curation) {
+			ResourceRepository resources, FeaturedSlotRepository featuredSlots,
+			CompetitionCurationService curation) {
 		this.competitions = competitions;
 		this.faqs = faqs;
 		this.resources = resources;
+		this.featuredSlots = featuredSlots;
 		this.curation = curation;
 	}
 
@@ -69,7 +73,7 @@ public class CompetitionAdminController {
 	@Transactional(readOnly = true)
 	public Page<CompetitionResponse> list(@RequestParam(defaultValue = "") String query,
 			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size) {
-		var pageable = PageRequest.of(page, Math.min(size, 100), Sort.by("name"));
+		var pageable = PageRequest.of(Math.max(0, page), Math.clamp(size, 1, 100), Sort.by("name"));
 		return competitions.findByNameContainingIgnoreCase(query, pageable).map(CompetitionResponse::from);
 	}
 
@@ -95,6 +99,8 @@ public class CompetitionAdminController {
 	public CompetitionResponse archive(@PathVariable UUID id) {
 		Competition competition = require(id);
 		competition.setArchivedAt(Instant.now());
+		// An archived listing must not linger in the landing carousel (no archived+featured).
+		featuredSlots.deleteByCompetitionId(id);
 		return CompetitionResponse.from(competition);
 	}
 

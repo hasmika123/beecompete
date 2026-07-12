@@ -46,7 +46,7 @@ public class OrganizationAdminController {
 	@Transactional(readOnly = true)
 	public Page<OrganizationResponse> list(@RequestParam(defaultValue = "") String query,
 			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size) {
-		var pageable = PageRequest.of(page, Math.min(size, 100), Sort.by("name"));
+		var pageable = PageRequest.of(Math.max(0, page), Math.clamp(size, 1, 100), Sort.by("name"));
 		return organizations.findByNameContainingIgnoreCase(query, pageable).map(OrganizationResponse::from);
 	}
 
