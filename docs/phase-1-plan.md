@@ -6,9 +6,13 @@
 > **R1-1 done** (catalog schema, migrations `0002`–`0004` + Organization). **R1-2 done** (11 launch
 > categories + templates seeded `0005` + `CategoryAttributeValidator`). **R1-3 done** (admin curation
 > API + `/admin` web UI, import queue `0006`; admin auth = shared token + Cloudflare Access →
-> RBAC R2-7; as-built in `architecture.md` §13a). **Next:** R1-3b corrections intake, or R1-4 catalog
-> read API; **S2/S3 seeding** can run in parallel (S3's extractor feeds the R1-3 import queue).
-> Deferred: PR C (S3 hero-image upload + inline FAQ/Resource edit).
+> RBAC R2-7; as-built in `architecture.md` §13a). **R1-3b done** (public suggest-a-correction form +
+> `/api/v1/corrections` intake with field whitelist, `/admin/corrections` review queue, approve
+> applies the diff through the curation write path; as-built §13b). **R1-4 done** (public catalog
+> read API: paged list + detail-by-slug, editions with **effectiveStatus** per the domain-model §8
+> rule, verification/provenance exposed, lowercase tokens; as-built §13b). **Next:** R1-5 search &
+> filter API, or R1-6/R1-6b frontend; **S2/S3 seeding** can run in parallel (S3's extractor feeds
+> the R1-3 import queue). Deferred: PR C (S3 hero-image upload + inline FAQ/Resource edit).
 
 The ordered, buildable task list for Phase 1. **Every task below becomes a GitHub Issue** (titled with its
 task ID + registry refs) before coding — that's the required per-phase step. Build in the listed order;

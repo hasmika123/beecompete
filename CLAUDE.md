@@ -123,10 +123,25 @@ the `ADMIN_API_TOKEN` lives server-side only, browser→Next→API with `X-Admin
 can't bypass) + Cloudflare Access on the browser route; migrates to real RBAC at **R2-7**. Also:
 `ApiExceptionHandler` maps 409/422 + echoes explicit reasons (Spring hides messages by default);
 public web pages moved into an `app/(public)` route group so `/admin` has its own shell. As-built
-detail in `docs/architecture.md` §13a. Next per `docs/phase-1-plan.md`: **R1-3b corrections intake**
-(public "suggest a correction" → `CorrectionProposal` queue, shares the review UX) or **R1-4**
-(public catalog read API); **S2/S3 seeding** can run in parallel — S3's extractor POSTs into the
-import queue R1-3 just built. **Deferred (PR C):** S3 pre-signed hero-image upload + inline FAQ/
+detail in `docs/architecture.md` §13a. **R1-3b done (2026-07-12) — corrections intake + review**
+(DQ6): public `POST /api/v1/corrections` (outside the admin filter; per-subject-type **field
+whitelist** in `CorrectionFields` enforced at intake AND approve — no slug/category/organizer ids,
+no `attributes` — plus subject-existence gate, size caps, web-form honeypot; real rate-limit =
+edge WAF at R1-17) → `CorrectionProposal` queue (R1-1 table, no migration) → `/admin/corrections`
+review UI (current-vs-proposed panel, edit-then-approve, reject) → **approve applies the diff
+through the curation write path** (merge → Bean-validate → provenance restamped `curated`;
+`EditionRequest`/`ResourceRequest` promoted to `catalog.curation`, `Edition/ResourceCurationService`
+extracted). R1 audit record = the reviewed proposal row (submitter note kept; curator activity
+appended as `[curator]` lines); ActivityEvent logging waits for R2-9. Public form at
+`/suggest-a-correction` (noindex) — detail pages link to it at R1-7. **R1-4 done (2026-07-12) —
+public catalog read API** (M5/M6/DQ1): `catalog.web` → `GET /api/v1/competitions` (paged,
+name-sorted browse feed) + `GET /api/v1/competitions/{slug}` (detail: editions + key dates +
+regions + resources + FAQs + organizer). Archived invisible (D7), verification/provenance exposed
+(DQ13), **lowercase public enum tokens**, and **`effectiveStatus`** computed by
+`catalog.service.EffectiveStatus` per the binding domain-model §8 rule. As-built for both:
+`docs/architecture.md` §13b. Next per `docs/phase-1-plan.md`: **R1-5 search & filter API** or
+**R1-6/R1-6b frontend**; **S2/S3 seeding** can run in parallel — S3's extractor POSTs into the
+import queue R1-3 built. **Deferred (PR C):** S3 pre-signed hero-image upload + inline FAQ/
 Resource row-edit. **Before prod users:** set `ADMIN_API_TOKEN` in both VPS `.env` + `/admin`
 behind Cloudflare Access (setup-runbook §5).
 Remaining F8 operational steps (uptime monitor + confirming Sentry receives events) are done after
