@@ -17,7 +17,7 @@ import { cn } from '../lib/cn';
  */
 
 const FOCUSABLE =
-  'a[href],button:not([disabled]),textarea,input,select,[tabindex]:not([tabindex="-1"])';
+  'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 export interface ModalProps {
   open: boolean;

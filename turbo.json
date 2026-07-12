@@ -4,6 +4,9 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      // NEXT_PUBLIC_* is baked into the client bundle — declaring it keys the Turbo cache
+      // so a build with a different DSN/release is never served from a stale cache entry.
+      "env": ["NEXT_PUBLIC_SENTRY_DSN", "NEXT_PUBLIC_SENTRY_RELEASE"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
     "dev": {

@@ -9,6 +9,14 @@ WORKDIR /app
 # --- deps + build ---
 FROM base AS builder
 ENV NEXT_TELEMETRY_DISABLED=1
+# Browser-side Sentry: NEXT_PUBLIC_* is baked into the client bundle at BUILD time (the
+# runtime .env can never reach the browser). Passed by deploy-staging.yml; blank = inert.
+# The environment tag is inferred from the hostname at runtime (one image serves both
+# staging and prod), so only DSN + release are baked.
+ARG NEXT_PUBLIC_SENTRY_DSN
+ARG NEXT_PUBLIC_SENTRY_RELEASE
+ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
+ENV NEXT_PUBLIC_SENTRY_RELEASE=$NEXT_PUBLIC_SENTRY_RELEASE
 COPY . .
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @beecompete/web build

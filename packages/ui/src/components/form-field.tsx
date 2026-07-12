@@ -39,10 +39,18 @@ export function FormField({
   const describedById = `${id}-desc`;
   const hasMessage = error != null || hint != null;
 
+  // The label must point at the control's REAL id — a consumer-supplied id would
+  // otherwise orphan the label. Consumer aria-describedby is appended to, not clobbered.
+  const controlId = children.props.id ?? id;
+  const describedBy =
+    [children.props['aria-describedby'], hasMessage ? describedById : null]
+      .filter(Boolean)
+      .join(' ') || undefined;
+
   const control = isValidElement(children)
     ? cloneElement(children, {
-        id: children.props.id ?? id,
-        'aria-describedby': hasMessage ? describedById : children.props['aria-describedby'],
+        id: controlId,
+        'aria-describedby': describedBy,
         'aria-invalid': error != null ? true : children.props['aria-invalid'],
       })
     : children;
@@ -52,7 +60,7 @@ export function FormField({
   return (
     <div className={cn('grid gap-1.5', className)}>
       <LabelTag
-        {...(labelAsText ? {} : { htmlFor: id })}
+        {...(labelAsText ? {} : { htmlFor: controlId })}
         className="text-sm font-medium text-foreground"
       >
         {label}

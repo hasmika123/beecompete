@@ -16,10 +16,8 @@ export function SiteHeader() {
           <Logo />
         </Link>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-muted" aria-hidden="true">
-            {/* TODO(R1): real nav */}
-            Nav
-          </span>
+          {/* TODO(R1-6b): real nav (Browse, Categories, How It Works) — no placeholder
+              text meanwhile; the literal "Nav" was visible on the live site. */}
           <ThemeToggle />
         </div>
       </div>

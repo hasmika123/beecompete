@@ -83,12 +83,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       {typeof document !== 'undefined' &&
         createPortal(
-          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex flex-col items-center gap-2 p-4 sm:items-end">
+          // The PERSISTENT live region is this always-mounted container — live regions
+          // inserted together with their content (per-toast) are unreliably announced.
+          // Errors additionally carry role="alert" for assertive announcement.
+          <div
+            aria-live="polite"
+            aria-relevant="additions"
+            className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex flex-col items-center gap-2 p-4 sm:items-end"
+          >
             {toasts.map((t) => (
               <div
                 key={t.id}
                 role={t.tone === 'error' ? 'alert' : 'status'}
-                aria-live={t.tone === 'error' ? 'assertive' : 'polite'}
                 className={cn(
                   'pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-[var(--radius-panel)] border border-border bg-surface-raised p-3.5 shadow-[var(--shadow-popover)]',
                 )}
