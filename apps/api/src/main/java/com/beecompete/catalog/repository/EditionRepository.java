@@ -8,4 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface EditionRepository extends JpaRepository<Edition, UUID> {
 
 	List<Edition> findByCompetitionId(UUID competitionId);
+
+	/** Public detail (R1-4): live editions, oldest cycle first. */
+	List<Edition> findByCompetitionIdAndArchivedAtIsNullOrderByCreatedAt(UUID competitionId);
 }

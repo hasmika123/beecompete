@@ -194,6 +194,35 @@ tooling + audit log) → Phase 2+ (dedup DQ4, conflict resolution DQ5) → Phase
   today). **`@Version` is not sent** on admin PUTs yet, so concurrent edits last-write-win rather
   than 409 — acceptable for a single curator at R1; revisit with RBAC (R2-7).
 
+### 13b. Corrections + public catalog read — as built (R1-3b/R1-4, 2026-07-12)
+
+- **Corrections intake (R1-3b, DQ6/D7):** public `POST /api/v1/corrections` (outside the admin
+  filter, no auth at R1) queues a `CorrectionProposal` (table shipped in R1-1 — no migration).
+  Guards: a **per-subject-type field whitelist** (`CorrectionFields`, enforced at intake AND at
+  approve so a stored payload can't smuggle writes; excludes slug/category/organizer ids, the
+  `attributes` bag, and curator-only resource fields), subject-existence check, 8 KB payload cap,
+  note ≤ 2000 chars, plus a honeypot in the web form. Real rate limiting = edge WAF at the R1-17
+  gate. `submittedByUserId` stays null until accounts (R2-1).
+- **Review queue:** `/api/v1/admin/corrections` list/get/approve/reject. **Approve applies the
+  diff**: current record → request shape → merge whitelisted keys → Bean-validate → the SAME
+  curation write path as an admin edit (`CorrectionApplyService`), so slug/category/attribute
+  invariants hold and provenance is restamped `curated`. `EditionRequest`/`ResourceRequest` were
+  promoted to `catalog.curation` with `Edition/ResourceCurationService` extracted (one write path
+  per record type, same rationale as `CompetitionCurationService`). The get-by-id response carries
+  the subject's **current whitelisted values** for the review UI's current-vs-proposed panel.
+  **R1 audit record = the reviewed proposal row** (submitter note preserved; curator activity
+  appended as `[curator]` lines); ActivityEvent diff-logging lands with R2-9.
+- **Public catalog read (R1-4, M5/M6/DQ1):** `catalog.web` exposes `GET /api/v1/competitions`
+  (paged, name-sorted browse feed) and `GET /api/v1/competitions/{slug}` (detail: editions +
+  key dates + regions + resources + FAQs + organizer). Archived records are invisible (list and
+  detail 404) per D7. `verification_state` + provenance are exposed (DQ13 badges); enums render
+  as **lowercase public tokens**; public DTOs omit version/audit columns and affiliate meta.
+  **Effective status (binding rule, domain-model §8)** is computed by
+  `catalog.service.EffectiveStatus` and returned as `effectiveStatus` beside the curated token —
+  v0 rules: curated CLOSED/ONGOING/ARCHIVED stand; UPCOMING/OPEN with a passed deadline (earliest
+  REG_CLOSE, fallback earliest SUBMISSION_DUE) → closed; UPCOMING inside the registration window →
+  open. Search/filters/sort land at R1-5.
+
 ## 14. Environments & deployment
 
 > **As built (LIVE 2026-07-12):** IONOS VPS, US East. A **single shared edge Caddy**

@@ -339,3 +339,7 @@ The R1-1 catalog schema shipped (12 tables: the §5 catalog set + `CompetitionFa
   the `key_date` timeline. Read paths must compute *effective status* = f(status, key_dates, now())
   — e.g. a listing whose `reg_close` has passed renders closed even if `status` still says open —
   and S5's stale-date report flags status↔dates mismatches for curator correction.
+  **Implemented (R1-4, 2026-07-12)** in `catalog.service.EffectiveStatus`, exposed as
+  `effectiveStatus` on public edition DTOs. v0 rules: curated CLOSED/ONGOING/ARCHIVED stand;
+  UPCOMING/OPEN whose deadline (earliest `REG_CLOSE`, fallback earliest `SUBMISSION_DUE`) has
+  passed → closed; UPCOMING whose `REG_OPEN` has passed (deadline ahead) → open.
