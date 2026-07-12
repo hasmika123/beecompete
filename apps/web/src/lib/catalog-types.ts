@@ -79,6 +79,26 @@ export interface RegionOption {
   count: number;
 }
 
+export interface CategoryOption {
+  slug: string;
+  name: string;
+  count: number;
+}
+
+export interface HeroCardView {
+  position: string; // main | top_right | bottom_left
+  imageKey: string;
+  altText: string;
+  linkUrl: string | null;
+  description: string | null;
+}
+
+export interface LandingView {
+  heroCards: HeroCardView[];
+  featured: CompetitionSummary[];
+  totalCompetitions: number;
+}
+
 export interface KeyDateView {
   type: string;
   label: string | null;

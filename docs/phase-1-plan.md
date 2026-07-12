@@ -13,9 +13,16 @@
 > rule, verification/provenance exposed, lowercase tokens; as-built §13b). **R1-5 done** (search &
 > filter on the same endpoint: Postgres FTS + pg_trgm typo tolerance — migration `0007` — all M3
 > facets incl. eligibility-semantic participation/pathway, deadline filter/sort, Grade+Category
-> facet counts; popularity sort deferred to R2-10; as-built §13c). **Next:** R1-6/R1-6b frontend;
-> **S2/S3 seeding** can run in parallel (S3's extractor feeds the R1-3 import queue). Deferred:
-> PR C (S3 hero-image upload + inline FAQ/Resource edit).
+> facet counts; popularity sort deferred to R2-10; as-built §13c). **R1-6 done** (marketplace per
+> Page-2 blueprint: CompetitionCard + category art system in `packages/ui`, filter panel/chips/
+> quick-chips/load-more/near-miss, category hubs `/competitions/<slug>` + SEO blocks, sticky nav
+> + Beta tag + real footer; interim noindex detail at `/c/<slug>` — decision #30; styling
+> delegated #29). **R1-6b done** (Landing per Page 1 with admin-managed hero cards + featured
+> carousel + digest band stub, How It Works, Categories index; public `GET /api/v1/categories`,
+> `/landing`, `/regions`). Landing gaps tracked: hero images (PR C), Brevo digest (R1-15),
+> sourced stats TODO(owner) before R1-17. **Next:** R1-7 competition detail page; **S2/S3
+> seeding** can run in parallel (S3's extractor feeds the R1-3 import queue). Deferred: PR C
+> (S3 hero-image upload + inline FAQ/Resource edit).
 
 The ordered, buildable task list for Phase 1. **Every task below becomes a GitHub Issue** (titled with its
 task ID + registry refs) before coding — that's the required per-phase step. Build in the listed order;

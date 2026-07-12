@@ -1,7 +1,13 @@
 import 'server-only';
 
 import { publicFetch } from '@/lib/public-api';
-import type { CompetitionDetail, RegionOption, SearchResponse } from '@/lib/catalog-types';
+import type {
+  CategoryOption,
+  CompetitionDetail,
+  LandingView,
+  RegionOption,
+  SearchResponse,
+} from '@/lib/catalog-types';
 
 /** The marketplace's filter state — mirrors the R1-5 search params (all optional). */
 export interface SearchParams {
@@ -38,4 +44,12 @@ export async function fetchCompetition(slug: string): Promise<CompetitionDetail>
 
 export async function fetchRegions(): Promise<RegionOption[]> {
   return publicFetch<RegionOption[]>('/regions');
+}
+
+export async function fetchCategories(): Promise<CategoryOption[]> {
+  return publicFetch<CategoryOption[]>('/categories');
+}
+
+export async function fetchLanding(): Promise<LandingView> {
+  return publicFetch<LandingView>('/landing');
 }
