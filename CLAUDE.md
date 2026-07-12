@@ -160,9 +160,21 @@ zero-results near-miss #14), category hubs `/competitions/<slug>` + code-owned S
 carousel via new public `GET /api/v1/landing`, category strip, TODO(owner) stats, digest band
 STUB — Brevo at R1-15), How It Works, Categories index (`GET /api/v1/categories` + `/regions`);
 sticky NavBar + Beta tag + real footer; interim noindex `/c/<slug>` + `/suggest-a-competition`
-stubs. Search items now carry prizeSummary/regions (card facts). Next per
-`docs/phase-1-plan.md`: **R1-7 competition detail page**; **S2/S3 seeding** can run in parallel —
-S3's extractor POSTs into the import queue R1-3 built. **Deferred (PR C):** S3 pre-signed
+stubs. Search items now carry prizeSummary/regions (card facts). **R1-7 done (2026-07-12) —
+competition detail page** (Page-3 blueprint) at the locked `/c/<slug>` route: breadcrumb +
+"At a glance" strip (Grades·Deadline·Cost·Location·Prize·Entry pathway) + Key Facts/About/FAQ
+tabs (spine + humanized `attributes` bag) + sticky sidebar (cover+Register w/ handoff microcopy,
+Follow stub, key-dates timeline with **ics + Google add-to-calendar**, trust/attribution panel w/
+locked "maintained by" wording, Claim stub, Suggest-a-correction) + related-competitions row +
+**schema.org Event/BreadcrumbList/FAQPage JSON-LD** + mobile sticky Follow+Register bar. Frontend
+only (no API/schema change); reuses the R1-4 detail payload. New web libs: `lib/detail-display`,
+`lib/structured-data`, `lib/site` (`metadataBase`/canonical). Interim page-level noindex dropped —
+the page now inherits the **site-wide** robots gate (flips on at R1-10/R1-17). Follow/Claim capture
+backends = R1-15b; **Resources row (3b) = R1-8**. **S2/S3 seeding done (2026-07-12, PRs open, not
+merged):** S2 = `docs/seeding/` master index (326 ranked real competitions, all 11 categories,
+majors ≥15); S3 = `tools/seeding/` extraction pipeline v0 (fetch→LLM-extract→JSON-Schema-validate→
+POST to the R1-3 import queue; standalone, outside CI path filters by design). Next per
+`docs/phase-1-plan.md`: **R1-8 resources + affiliate disclosure**. **Deferred (PR C):** S3 pre-signed
 hero-image upload + inline FAQ/
 Resource row-edit. **Before prod users:** set `ADMIN_API_TOKEN` in both VPS `.env` + `/admin`
 behind Cloudflare Access (setup-runbook §5).

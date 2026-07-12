@@ -20,9 +20,17 @@
 > delegated #29). **R1-6b done** (Landing per Page 1 with admin-managed hero cards + featured
 > carousel + digest band stub, How It Works, Categories index; public `GET /api/v1/categories`,
 > `/landing`, `/regions`). Landing gaps tracked: hero images (PR C), Brevo digest (R1-15),
-> sourced stats TODO(owner) before R1-17. **Next:** R1-7 competition detail page; **S2/S3
-> seeding** can run in parallel (S3's extractor feeds the R1-3 import queue). Deferred: PR C
-> (S3 hero-image upload + inline FAQ/Resource edit).
+> sourced stats TODO(owner) before R1-17. **R1-7 done (2026-07-12)** — competition detail page
+> at `/c/<slug>` per Page-3 blueprint: breadcrumb, at-a-glance strip, Key Facts/About/FAQ tabs,
+> sticky sidebar (Follow stub, key-dates timeline with ics+Google add-to-calendar, trust/
+> attribution panel, Claim stub, Suggest-a-correction), related row, schema.org Event/
+> BreadcrumbList/FAQPage JSON-LD, mobile sticky Follow+Register bar; interim noindex dropped
+> (page inherits the site-wide gate until R1-10/R1-17). Follow/Claim capture backends = R1-15b;
+> Resources row = R1-8. **S2/S3 seeding done (2026-07-12, PRs open):** S2 master index (326
+> ranked competitions, all 11 categories, majors ≥15) in `docs/seeding/`; S3 extraction-pipeline
+> v0 in `tools/seeding/` (fetch→LLM-extract→schema-validate→POST to the R1-3 import queue).
+> **Next:** R1-8 resources + affiliate disclosure. Deferred: PR C (S3 hero-image upload + inline
+> FAQ/Resource edit).
 
 The ordered, buildable task list for Phase 1. **Every task below becomes a GitHub Issue** (titled with its
 task ID + registry refs) before coding — that's the required per-phase step. Build in the listed order;
