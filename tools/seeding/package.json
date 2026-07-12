@@ -1,0 +1,26 @@
+{
+  "name": "@beecompete/seeding",
+  "private": true,
+  "version": "0.0.0",
+  "description": "S3 — AI-assisted extraction pipeline v0. Standalone seeding tool; intentionally NOT a pnpm-workspace member so it stays out of the apps/** + packages/** CI build graphs.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "seed": "tsx src/index.ts",
+    "dry-run": "tsx src/index.ts --dry-run --input fixtures/sample-competition.html",
+    "test": "node --import tsx --test test/validate.test.ts test/fetch.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}
