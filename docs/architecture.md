@@ -27,9 +27,9 @@ is core to us.**
    Browser  ───────────►  caches public pages · blocks bots/attacks · rate limits  │
                        └──────────────────────────┬───────────────────────────────┘
                                                   ▼
-                          VPS  ──  Caddy (auto-HTTPS reverse proxy)
-                                     ├── Next.js container  (web + BFF)
-                                     └── Spring Boot container (API)
+              IONOS VPS  ──  ONE shared edge Caddy (auto-HTTPS, owns 80/443)
+                                     ├── Next.js container(s)  (web + BFF; public)
+                                     └── Spring Boot container(s) (API; private/internal net)
                                                   │
         ┌──────────────────────┬──────────────────┼───────────────────┬─────────────────┐
         ▼                      ▼                   ▼                   ▼                 ▼
@@ -57,7 +57,7 @@ Replaceable (app containers) live on the VPS; **irreplaceable data (Postgres) is
 | **Build** | Gradle (API) · Turbo/pnpm (web monorepo) | |
 | **Observability** | **Sentry** (errors) + Spring **Actuator** metrics + uptime monitor + structured logs | |
 | **CDN/edge/DNS** | **Cloudflare** (DNS + CDN + WAF + DDoS) | Single provider; not GoDaddy. |
-| **Hosting** | Self-managed **VPS** + Docker Compose + **Caddy** (auto-HTTPS) | App only; DB is managed. |
+| **Hosting** | Self-managed **VPS (IONOS)** + Docker Compose + a **single shared edge Caddy** (auto-HTTPS, one per box, fronts staging + prod by hostname) | App only; DB is managed off-box (Neon). |
 
 ## 4. Application architecture (modular monolith)
 
@@ -102,7 +102,7 @@ Spring and forwards the httpOnly session cookie — the session ID never touches
   - **Endpoints:** app queries via Neon's **pooled `-pooler` endpoint** (PgBouncer, transaction mode); **Liquibase migrations + any advisory-lock / LISTEN-NOTIFY work via the *direct* endpoint.** The Postgres job queue must use `SELECT … FOR UPDATE SKIP LOCKED` (pooler-safe), **not** session advisory locks.
   - **HikariCP for autosuspend:** modest `maximum-pool-size`; `max-lifetime`/`idle-timeout` **shorter than Neon's idle window**; connection validation on; `connection-timeout` generous enough to absorb cold-start wake latency (or retry the first request).
   - **Kill cold starts on prod:** on the paid tier, **disable autosuspend** (always-on compute) — cold starts become a dev/staging-only concern.
-  - **Region proximity:** put the **VPS and Neon in the same region** (Hetzner EU ↔ a Neon EU region). Cross-region latency compounds badly for chatty ORM queries.
+  - **Region proximity:** put the **VPS and Neon in the same region** (as built: IONOS US East ↔ Neon `us-east-1`). Cross-region latency compounds badly for chatty ORM queries.
 - **Files (S3):** private bucket; downloads via **pre-signed URLs** with short TTL (scales better than proxying, keeps access control — important for minors' submissions).
 - **Backups:** managed Postgres automated backups + **PITR**, with a **tested restore** (a backup you haven't restored isn't a backup).
 
@@ -167,9 +167,15 @@ tooling + audit log) → Phase 2+ (dedup DQ4, conflict resolution DQ5) → Phase
 
 ## 14. Environments & deployment
 
+> **As built (LIVE 2026-07-12):** IONOS VPS, US East. A **single shared edge Caddy**
+> (`infra/docker-compose.edge.yml`, project `beecompete-edge`, on the external `web_edge` network)
+> owns 80/443 and fronts **both** staging and prod **by hostname** — the per-stack Compose files run
+> **web + api only** (no Caddy each). This is what lets both environments (and any future app) share one
+> box without a port clash. Full detail: the "Current deployment — AS BUILT" section in `setup-runbook.md`.
+
 - **Local dev:** Docker Desktop (developer machines only — *not* the deployment target).
-- **Staging:** a **second Docker Compose stack on the *same* VPS** (separate containers/network, `staging.` subdomain, **separate staging DB** + S3 prefix, kept private via Cloudflare Access + `noindex`). Caddy auto-issues its cert. ~$0 extra; graduate to its own host only if staging load risks prod. See `setup-runbook.md` §4b.
-- **Production:** the prod Compose stack on the VPS — Spring + Next behind Caddy, Cloudflare in front, **managed Postgres off-box** (never in Compose). Separate DB, S3 prefix, and secrets from staging.
+- **Staging:** a **second Docker Compose stack on the *same* VPS** (separate containers/network, `staging.` subdomain, **separate staging DB** + S3 prefix, kept private via Cloudflare Access + `noindex`). The shared edge Caddy auto-issues its cert. ~$0 extra; graduate to its own host only if staging load risks prod. See `setup-runbook.md` §4b.
+- **Production:** the prod Compose stack on the VPS — Spring + Next behind the shared edge Caddy, Cloudflare in front, **managed Postgres off-box** (never in Compose). Separate DB, S3 prefix, and secrets from staging.
 - **CI/CD triggers — how `main` ≠ prod (GitHub Actions):** `ci.yml` on every PR/push (tests + dependency/secret/SAST scans, **no deploy**). **`deploy-staging.yml` on push to `main`** → build `:sha` image → deploy to **staging** + migrate staging DB. **`deploy-prod.yml` on a pushed release tag (`R*`) or manual dispatch** → **promote the same tested image** to **prod** + migrate prod DB (optional manual-approval gate via the `production` Environment). A plain merge to `main` fires **only staging**; prod updates **only** on a deliberate release tag. Both gated by health checks + rollback; Liquibase migrations run as a gated step. See `setup-runbook.md` §8.
 - **Migration path (reliability):** because the app is containerized and data is managed off-box, moving to a managed container host (Fly.io/Render) or adding redundancy later is a low-drama step. Documented, not built yet.
 - **Bootstrap-without-a-domain:** sslip.io for real certs on a bare IP during early setup.
