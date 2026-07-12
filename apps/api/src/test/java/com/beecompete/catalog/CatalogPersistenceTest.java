@@ -21,6 +21,8 @@ import com.beecompete.catalog.domain.HeroCard;
 import com.beecompete.catalog.domain.HeroCardPosition;
 import com.beecompete.catalog.domain.KeyDate;
 import com.beecompete.catalog.domain.KeyDateType;
+import com.beecompete.catalog.domain.Organization;
+import com.beecompete.catalog.domain.OrganizationType;
 import com.beecompete.catalog.domain.ParticipationMode;
 import com.beecompete.catalog.domain.Provenance;
 import com.beecompete.catalog.domain.ProvenanceSource;
@@ -41,6 +43,7 @@ import com.beecompete.catalog.repository.EditionRepository;
 import com.beecompete.catalog.repository.FeaturedSlotRepository;
 import com.beecompete.catalog.repository.HeroCardRepository;
 import com.beecompete.catalog.repository.KeyDateRepository;
+import com.beecompete.catalog.repository.OrganizationRepository;
 import com.beecompete.catalog.repository.RegionRepository;
 import com.beecompete.catalog.repository.ResourceRepository;
 import jakarta.persistence.EntityManager;
@@ -76,6 +79,9 @@ class CatalogPersistenceTest {
 
 	@Autowired
 	private CategoryTemplateRepository categoryTemplates;
+
+	@Autowired
+	private OrganizationRepository organizations;
 
 	@Autowired
 	private CompetitionRepository competitions;
@@ -116,8 +122,15 @@ class CatalogPersistenceTest {
 		mathTemplate.setUiHints(Map.of("syllabus", Map.of("widget", "textarea")));
 		categoryTemplates.save(mathTemplate);
 
+		Organization maa = new Organization("Mathematical Association of America", OrganizationType.HOST);
+		maa.setDomain("maa.org");
+		maa.setVerificationState(VerificationState.VERIFIED);
+		maa = organizations.save(maa);
+
 		Competition amc = new Competition("amc-10", "AMC 10", math, ParticipationMode.INDIVIDUAL,
 				Delivery.IN_PERSON, EntryPathway.SCHOOL_OR_CHAPTER, CostType.PAID, Recurrence.ANNUAL);
+		amc.setOrganizer(maa);
+		amc.setSummary("The classic 25-question contest for students in grade 10 and below.");
 		amc.setMinGrade((short) 9);
 		amc.setMaxGrade((short) 10);
 		amc.setTags(List.of("math", "olympiad"));
@@ -181,7 +194,14 @@ class CatalogPersistenceTest {
 		assertThat(reloaded.getProvenance().getSource()).isEqualTo(ProvenanceSource.IMPORT); // embedded
 		assertThat(reloaded.getProvenance().getConfidence()).isEqualByComparingTo("0.90");
 		assertThat(reloaded.getCreatedAt()).isNotNull(); // DB default now()
+		assertThat(reloaded.getUpdatedAt()).isNotNull(); // @UpdateTimestamp (sitemap lastmod)
 		assertThat(reloaded.getArchivedAt()).isNull(); // not soft-deleted
+		assertThat(reloaded.getSummary()).startsWith("The classic 25-question contest"); // card blurb
+		// Organizer attribution — the card shows org name + DQ13 seal from the ORG record.
+		assertThat(reloaded.getOrganizer().getName()).isEqualTo("Mathematical Association of America");
+		assertThat(reloaded.getOrganizer().getType()).isEqualTo(OrganizationType.HOST);
+		assertThat(reloaded.getOrganizer().getVerificationState()).isEqualTo(VerificationState.VERIFIED);
+		assertThat(organizations.findByNameIgnoreCase("mathematical association of america")).isPresent();
 
 		List<Edition> ed = editions.findByCompetitionId(reloaded.getId());
 		assertThat(ed).hasSize(1);

@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.UUID;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -41,6 +42,10 @@ public class FeaturedSlot {
 	@UpdateTimestamp
 	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt;
+
+	@Version
+	@Column(nullable = false)
+	private int version;
 
 	protected FeaturedSlot() {}
 
@@ -79,5 +84,9 @@ public class FeaturedSlot {
 
 	public Instant getUpdatedAt() {
 		return updatedAt;
+	}
+
+	public int getVersion() {
+		return version;
 	}
 }

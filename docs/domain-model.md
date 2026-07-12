@@ -72,7 +72,7 @@ no separate versioning/history tables. User-submitted corrections (DQ6) are rows
 ### 3a. Competition domain
 
 **`Competition`** [P1] — the evergreen entity.
-`id, slug, name, organizer_org_id?, official_url, logo, description, category_id, tags[],
+`id, slug, name, organizer_org_id?, official_url, logo, description, summary?, category_id, tags[],
 participation_mode (individual|team|both), team_size_min?, team_size_max?, delivery
 (in_person|virtual|hybrid), entry_pathway (individual|school_or_chapter|either), evaluation_type[],
 min_grade?, max_grade?, min_age?, max_age?, cost_type (free|paid), recurrence
@@ -146,6 +146,9 @@ profiles silently rotting every fall as students advance a grade — no rollover
 
 **`Organization`** [P1] — generic institutional party.
 `id, name, type (host|school|sponsor|other), domain?, verification_state, provenance{...}`
+*(Built at **R1-1** (2026-07-12), not R2: the CompetitionCard/details attribute the organizer by
+name and the DQ13 seal sits on the ORG, so it's catalog data. `Membership`/`Role` wait for User
+at R2-1.)*
 
 **`Membership`** [P1] — `id, user_id, org_id, role_id, status`
 **`Role`** / **`Permission`** [P1] — org-scoped RBAC. `Role{id, org_id?, name}`, `Permission{role_id, action, resource}`
@@ -320,3 +323,19 @@ The R1-1 catalog schema shipped (12 tables: the §5 catalog set + `CompetitionFa
 - **Deliberate non-constraints:** no unique on `edition (competition_id, cycle_label)` (Q3 —
   operationally distinct regional runnings share a cycle label); archived records keep their
   slug (D7 SEO); `featured_slot.position` not unique (reorder ergonomics — R1-3 enforces).
+
+**Foundation-final additions (owner-approved 2026-07-12, migration `0004`):**
+- **`Organization` built in R1-1** (see §3b note) + real FK on `competition.organizer_org_id`.
+- **`competition.summary`** — curated 1–2 sentence card blurb (clamp-2); falls back to truncated
+  `description` when absent. S4 curation writes both.
+- **`updated_at`** on all curated content tables (competition, edition, resource, competition_faq,
+  category, category_template, organization): sitemap lastmod (R1-10), S5 freshness, audit-lite
+  until `ActivityEvent` lands (R2-9).
+- **Optimistic locking (`version` + `@Version`)** on curated tables — concurrent admin edits (R1-3)
+  conflict loudly instead of last-write-wins.
+- **Region natural key:** unique `(parent_id, level, name)` NULLS NOT DISTINCT — dedup guard for
+  seeded geo.
+- **Effective-status rule (binding for R1-4/R1-5):** `edition.status` is curated and CAN drift from
+  the `key_date` timeline. Read paths must compute *effective status* = f(status, key_dates, now())
+  — e.g. a listing whose `reg_close` has passed renders closed even if `status` still says open —
+  and S5's stale-date report flags status↔dates mismatches for curator correction.

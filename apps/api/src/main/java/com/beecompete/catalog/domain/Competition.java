@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -21,6 +22,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
 /**
@@ -30,9 +32,6 @@ import org.hibernate.type.SqlTypes;
  *
  * <p>Soft-deleted via {@code archivedAt} (D7) — curated slugs carry SEO, so records are archived,
  * never hard-deleted.
- *
- * <p>{@code organizerOrgId} references an Organization, which does not exist until R2-1 — so it is
- * a plain nullable UUID with no FK yet (the FK is added when the {@code organization} table lands).
  */
 @Entity
 @Table(name = "competition")
@@ -52,9 +51,10 @@ public class Competition {
 	@Column(nullable = false, length = 300)
 	private String name;
 
-	/** → Organization (R2-1). Nullable, no FK yet. */
-	@Column(name = "organizer_org_id")
-	private UUID organizerOrgId;
+	/** The organizer (glossary: Host) — card/details attribution + DQ13 seal. Nullable: imports often start unattributed. */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "organizer_org_id")
+	private Organization organizer;
 
 	@Column(name = "official_url", length = 1000)
 	private String officialUrl;
@@ -64,6 +64,11 @@ public class Competition {
 
 	@Column(columnDefinition = "text")
 	private String description;
+
+	/** Curated 1–2 sentence blurb for the CompetitionCard (clamp-2). Falls back to truncated description. */
+	@Size(max = 300)
+	@Column(length = 300)
+	private String summary;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "category_id", nullable = false)
@@ -142,6 +147,16 @@ public class Competition {
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 
+	/** Sitemap lastmod (R1-10), S5 freshness, audit-lite until ActivityEvent (R2-9). */
+	@UpdateTimestamp
+	@Column(name = "updated_at", nullable = false)
+	private Instant updatedAt;
+
+	/** Optimistic lock — concurrent admin edits (R1-3) conflict instead of last-write-wins. */
+	@Version
+	@Column(nullable = false)
+	private int version;
+
 	protected Competition() {}
 
 	public Competition(String slug, String name, Category category, ParticipationMode participationMode,
@@ -176,12 +191,20 @@ public class Competition {
 		this.name = name;
 	}
 
-	public UUID getOrganizerOrgId() {
-		return organizerOrgId;
+	public Organization getOrganizer() {
+		return organizer;
 	}
 
-	public void setOrganizerOrgId(UUID organizerOrgId) {
-		this.organizerOrgId = organizerOrgId;
+	public void setOrganizer(Organization organizer) {
+		this.organizer = organizer;
+	}
+
+	public String getSummary() {
+		return summary;
+	}
+
+	public void setSummary(String summary) {
+		this.summary = summary;
 	}
 
 	public String getOfficialUrl() {
@@ -354,5 +377,13 @@ public class Competition {
 
 	public Instant getCreatedAt() {
 		return createdAt;
+	}
+
+	public Instant getUpdatedAt() {
+		return updatedAt;
+	}
+
+	public int getVersion() {
+		return version;
 	}
 }

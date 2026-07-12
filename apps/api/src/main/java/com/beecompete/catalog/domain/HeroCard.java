@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
@@ -53,6 +54,10 @@ public class HeroCard {
 	@UpdateTimestamp
 	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt;
+
+	@Version
+	@Column(nullable = false)
+	private int version;
 
 	protected HeroCard() {}
 
@@ -116,5 +121,9 @@ public class HeroCard {
 
 	public Instant getUpdatedAt() {
 		return updatedAt;
+	}
+
+	public int getVersion() {
+		return version;
 	}
 }
