@@ -55,6 +55,12 @@ server:
   # spring.threads.virtual only applies to Tomcat/Jetty request processing anyway.)
   shutdown: graceful
 
+# R1-3 admin surface — shared-secret gate on /api/v1/admin/** (AdminTokenFilter). The web BFF
+# injects the header; the browser sits behind Cloudflare Access and never sees the token.
+# Blank/unset = ALL admin calls rejected (fail closed). Replaced by real RBAC at R2-7.
+admin:
+  api-token: ${ADMIN_API_TOKEN:}
+
 management:
   endpoints:
     web:

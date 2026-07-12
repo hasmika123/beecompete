@@ -12,3 +12,5 @@ databaseChangeLog:
       file: db/changelog/changes/0004-catalog-foundation-final.yaml
   - include:
       file: db/changelog/changes/0005-seed-categories.yaml
+  - include:
+      file: db/changelog/changes/0006-import-record.yaml

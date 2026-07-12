@@ -59,6 +59,10 @@ promote) → prod. The deploy workflows **no longer ship the Caddyfile** (it bel
 branch. Staging = `ep-spring-base-…`, prod = `ep-twilight-hat-…` (different branches — never cross them).
 Do **not** set `IMAGE_TAG` in the prod `.env` (the pipeline injects it). `deploy` user is created
 `--disabled-password`, so `passwd deploy` is required for `sudo`.
+- **R1-3 addition:** both VPS `.env` files also need **`ADMIN_API_TOKEN`** (`openssl rand -hex 32`,
+  different per env) — the shared secret the web BFF sends as `X-Admin-Token` on `/api/v1/admin/**`.
+  Blank = admin API rejects everything (fail closed). The `/admin` browser route additionally goes
+  behind **Cloudflare Access** (email allow-list) before real use — see R1-3 notes.
 
 **DNS (Cloudflare):** `beecompete.com`, `www`, `staging` each = a single `A` → box IP. Issue the first
 Let's Encrypt cert **grey-cloud (DNS-only)** — a proxied (orange) record blocks the ACME challenge — then

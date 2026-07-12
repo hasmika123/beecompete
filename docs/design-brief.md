@@ -33,6 +33,10 @@ read this doc the way they read the glossary — decisions live here, not in cha
   phase (e.g., sign-in/auth pages at R2).
 - **Utility pages** (settings, admin, plain forms) need no entry here — they assemble from primitives
   *(whose styling followed the reference-image rule above)*.
+- **Admin tooling (R1-3) delegated (owner 2026-07-12):** the internal admin surface — incl. its
+  *new* element types (data tables, admin shell/sidebar layout, upload dropzone) — is **builder
+  judgment**: clean/minimal on the existing tokens + primitives. Owner steers reactively with
+  references if something misses. Internal-only; the public-surface pre-ask rule is unchanged.
 
 ### Supplied reference photos *(record each here — element type asked once)*
 
