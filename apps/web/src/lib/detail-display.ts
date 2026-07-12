@@ -69,6 +69,18 @@ export function evaluationLabel(token: string): string {
   return EVALUATION_LABELS[token] ?? token;
 }
 
+const RESOURCE_TYPE_LABELS: Record<string, string> = {
+  book: 'Book',
+  past_paper: 'Past paper',
+  guide: 'Guide',
+  video: 'Video',
+  other: 'Resource',
+};
+
+export function resourceTypeLabel(token: string): string {
+  return RESOURCE_TYPE_LABELS[token] ?? 'Resource';
+}
+
 // --- Dates ---
 
 /** Absolute, human date — "Mar 3, 2026". Time is dropped (competitions are day-grained). */

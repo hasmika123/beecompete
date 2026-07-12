@@ -170,11 +170,17 @@ locked "maintained by" wording, Claim stub, Suggest-a-correction) + related-comp
 only (no API/schema change); reuses the R1-4 detail payload. New web libs: `lib/detail-display`,
 `lib/structured-data`, `lib/site` (`metadataBase`/canonical). Interim page-level noindex dropped —
 the page now inherits the **site-wide** robots gate (flips on at R1-10/R1-17). Follow/Claim capture
-backends = R1-15b; **Resources row (3b) = R1-8**. **S2/S3 seeding done (2026-07-12, PRs open, not
+backends = R1-15b. **R1-8 done (2026-07-12) 🔒 — resources row + affiliate disclosure** (M11,
+DQ10): detail-page "Prep resources" section reusing `ScrollRow` of type-tinted resource cards
+(book/past_paper/guide/video/other, new `packages/ui` icons); every outbound resource link is
+`rel="nofollow noopener noreferrer"` + `target=_blank`, and **affiliate links additionally carry
+`rel="sponsored nofollow"` + a per-card "Affiliate" chip + a clear, conspicuous inline disclosure
+shown with the row whenever any affiliate link is present** (FTC endorsement rule; the dedicated
+affiliate-disclosure legal page is still R1-12). **S2/S3 seeding done (2026-07-12, PRs open, not
 merged):** S2 = `docs/seeding/` master index (326 ranked real competitions, all 11 categories,
 majors ≥15); S3 = `tools/seeding/` extraction pipeline v0 (fetch→LLM-extract→JSON-Schema-validate→
 POST to the R1-3 import queue; standalone, outside CI path filters by design). Next per
-`docs/phase-1-plan.md`: **R1-8 resources + affiliate disclosure**. **Deferred (PR C):** S3 pre-signed
+`docs/phase-1-plan.md`: **R1-9 trust/verification badges**. **Deferred (PR C):** S3 pre-signed
 hero-image upload + inline FAQ/
 Resource row-edit. **Before prod users:** set `ADMIN_API_TOKEN` in both VPS `.env` + `/admin`
 behind Cloudflare Access (setup-runbook §5).
