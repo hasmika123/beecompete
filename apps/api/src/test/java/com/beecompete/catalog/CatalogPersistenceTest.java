@@ -115,7 +115,8 @@ class CatalogPersistenceTest {
 
 	@Test
 	void persistsAndReadsBackTheCoreCatalogGraph() {
-		Category math = categories.save(new Category("Math", "math"));
+		// Own fixture category — the R1-2 seed (0005) already owns real slugs like "math".
+		Category math = categories.save(new Category("Test Math", "test-math"));
 
 		CategoryTemplate mathTemplate = new CategoryTemplate(math,
 				Map.of("type", "object", "properties", Map.of("syllabus", Map.of("type", "string"))));
@@ -180,7 +181,7 @@ class CatalogPersistenceTest {
 
 		Competition reloaded = competitions.findBySlug("amc-10").orElseThrow();
 		assertThat(reloaded.getName()).isEqualTo("AMC 10");
-		assertThat(reloaded.getCategory().getSlug()).isEqualTo("math");
+		assertThat(reloaded.getCategory().getSlug()).isEqualTo("test-math");
 		assertThat(categoryTemplates.findByCategoryId(reloaded.getCategory().getId()))
 				.get()
 				.satisfies(t -> assertThat(t.getJsonSchema()).containsEntry("type", "object")); // jsonb

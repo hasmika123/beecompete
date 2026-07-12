@@ -28,10 +28,14 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-web")
 
 	// Persistence (F4): Spring Data JPA + Hibernate, PostgreSQL, Liquibase migrations
-	// (architecture §3 Persistence). No entities yet — R1-1 adds the first schema.
+	// (architecture §3 Persistence). R1-1 added the catalog schema.
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.liquibase:liquibase-core")
 	runtimeOnly("org.postgresql:postgresql")
+
+	// R1-2: validates a Competition's JSONB attributes bag against its Category Template's
+	// JSON Schema (draft 2020-12; meta-schemas bundled — no network at runtime).
+	implementation("com.networknt:json-schema-validator:1.5.6")
 
 	// Observability (F8): Sentry error capture + Logback breadcrumbs (disabled when
 	// SENTRY_DSN is blank), and JSON structured logs via the logstash encoder
