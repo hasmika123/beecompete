@@ -9,10 +9,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import jakarta.validation.constraints.NotBlank;
 import java.time.Instant;
 import java.util.UUID;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 /**
  * A curated per-competition FAQ entry (details-page FAQ tab, FAQPage structured data — R1-7,
@@ -46,6 +48,14 @@ public class CompetitionFaq {
 	@CreationTimestamp
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
+
+	@UpdateTimestamp
+	@Column(name = "updated_at", nullable = false)
+	private Instant updatedAt;
+
+	@Version
+	@Column(nullable = false)
+	private int version;
 
 	protected CompetitionFaq() {}
 
@@ -94,5 +104,13 @@ public class CompetitionFaq {
 
 	public Instant getCreatedAt() {
 		return createdAt;
+	}
+
+	public Instant getUpdatedAt() {
+		return updatedAt;
+	}
+
+	public int getVersion() {
+		return version;
 	}
 }

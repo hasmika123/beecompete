@@ -1,0 +1,116 @@
+# R1-1 foundation-final (owner-approved 2026-07-12, pre-R1-2 hardening):
+#  - organization: the minimal P1 spine (domain-model §3b). Was mis-scoped to R2 — the
+#    approved CompetitionCard shows organizer name + verified seal ("the ORG is what's
+#    verified", DQ13), so it's catalog data. Membership/Role still wait for User (R2-1).
+#  - competition.summary: curated 1–2 sentence card blurb (clamp-2) — truncating the long
+#    About mid-sentence across ~200 cards is not acceptable card copy.
+#  - updated_at on curated content tables: sitemap lastmod (R1-10), S5 freshness, and
+#    audit-lite until ActivityEvent lands (R2-9).
+#  - version on curated tables: optimistic locking before R1-3 gives concurrent admins
+#    write access (last-write-wins otherwise).
+#  - region natural key: dedup guard before R1-2 seeds region data.
+databaseChangeLog:
+  - changeSet:
+      id: 0004-organization
+      author: beecompete
+      comment: Minimal Organization spine (domain-model §3b) — generic institutional party.
+      changes:
+        - createTable:
+            tableName: organization
+            columns:
+              - column: { name: id, type: UUID, defaultValueComputed: gen_random_uuid(), constraints: { primaryKey: true, primaryKeyName: pk_organization } }
+              - column: { name: name, type: "VARCHAR(300)", constraints: { nullable: false } }
+              - column: { name: type, type: "VARCHAR(20)", constraints: { nullable: false } }
+              - column: { name: domain, type: "VARCHAR(255)" }
+              - column: { name: provenance_source, type: "VARCHAR(20)" }
+              - column: { name: provenance_last_verified_at, type: "TIMESTAMP WITH TIME ZONE" }
+              - column: { name: provenance_confidence, type: "NUMERIC(3,2)" }
+              - column: { name: verification_state, type: "VARCHAR(20)", defaultValue: UNVERIFIED, constraints: { nullable: false } }
+              - column: { name: archived_at, type: "TIMESTAMP WITH TIME ZONE" }
+              - column: { name: created_at, type: "TIMESTAMP WITH TIME ZONE", defaultValueComputed: now(), constraints: { nullable: false } }
+              - column: { name: updated_at, type: "TIMESTAMP WITH TIME ZONE", defaultValueComputed: now(), constraints: { nullable: false } }
+              - column: { name: version, type: INTEGER, defaultValueNumeric: 0, constraints: { nullable: false } }
+        - createIndex:
+            indexName: ix_organization_name
+            tableName: organization
+            columns: [ { column: { name: name } } ]
+
+  - changeSet:
+      id: 0004-competition-organizer-fk
+      author: beecompete
+      comment: organizer_org_id gains its real FK now that organization exists.
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: competition
+            baseColumnNames: organizer_org_id
+            referencedTableName: organization
+            referencedColumnNames: id
+            constraintName: fk_competition_organizer
+        - createIndex:
+            indexName: ix_competition_organizer
+            tableName: competition
+            columns: [ { column: { name: organizer_org_id } } ]
+
+  - changeSet:
+      id: 0004-competition-summary
+      author: beecompete
+      comment: Curated short blurb for the CompetitionCard (clamp-2); falls back to description.
+      changes:
+        - addColumn:
+            tableName: competition
+            columns:
+              - column: { name: summary, type: "VARCHAR(300)" }
+
+  - changeSet:
+      id: 0004-updated-at-and-version
+      author: beecompete
+      comment: updated_at (sitemap lastmod / freshness / audit-lite) + optimistic-lock version on curated tables.
+      changes:
+        - addColumn:
+            tableName: competition
+            columns:
+              - column: { name: updated_at, type: "TIMESTAMP WITH TIME ZONE", defaultValueComputed: now(), constraints: { nullable: false } }
+              - column: { name: version, type: INTEGER, defaultValueNumeric: 0, constraints: { nullable: false } }
+        - addColumn:
+            tableName: edition
+            columns:
+              - column: { name: updated_at, type: "TIMESTAMP WITH TIME ZONE", defaultValueComputed: now(), constraints: { nullable: false } }
+              - column: { name: version, type: INTEGER, defaultValueNumeric: 0, constraints: { nullable: false } }
+        - addColumn:
+            tableName: resource
+            columns:
+              - column: { name: updated_at, type: "TIMESTAMP WITH TIME ZONE", defaultValueComputed: now(), constraints: { nullable: false } }
+              - column: { name: version, type: INTEGER, defaultValueNumeric: 0, constraints: { nullable: false } }
+        - addColumn:
+            tableName: competition_faq
+            columns:
+              - column: { name: updated_at, type: "TIMESTAMP WITH TIME ZONE", defaultValueComputed: now(), constraints: { nullable: false } }
+              - column: { name: version, type: INTEGER, defaultValueNumeric: 0, constraints: { nullable: false } }
+        - addColumn:
+            tableName: category
+            columns:
+              - column: { name: updated_at, type: "TIMESTAMP WITH TIME ZONE", defaultValueComputed: now(), constraints: { nullable: false } }
+              - column: { name: version, type: INTEGER, defaultValueNumeric: 0, constraints: { nullable: false } }
+        - addColumn:
+            tableName: category_template
+            columns:
+              - column: { name: updated_at, type: "TIMESTAMP WITH TIME ZONE", defaultValueComputed: now(), constraints: { nullable: false } }
+              - column: { name: version, type: INTEGER, defaultValueNumeric: 0, constraints: { nullable: false } }
+        - addColumn:
+            tableName: hero_card
+            columns:
+              - column: { name: version, type: INTEGER, defaultValueNumeric: 0, constraints: { nullable: false } }
+        - addColumn:
+            tableName: featured_slot
+            columns:
+              - column: { name: version, type: INTEGER, defaultValueNumeric: 0, constraints: { nullable: false } }
+
+  - changeSet:
+      id: 0004-region-natural-key
+      author: beecompete
+      comment: >-
+        Dedup guard before R1-2 seeds regions — two "United States" rows must be impossible.
+        NULLS NOT DISTINCT (PG15+) so top-level rows (null parent) also dedupe.
+      changes:
+        - sql:
+            sql: ALTER TABLE region ADD CONSTRAINT uq_region_natural UNIQUE NULLS NOT DISTINCT (parent_id, level, name);

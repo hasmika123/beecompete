@@ -9,9 +9,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.time.Instant;
 import java.util.UUID;
+import org.hibernate.annotations.UpdateTimestamp;
 
 /**
  * Taxonomy node (glossary: Category). Two-level Category → Subcategory via a self-referencing
@@ -38,6 +41,14 @@ public class Category {
 	@Size(max = 140)
 	@Column(nullable = false, length = 140)
 	private String slug;
+
+	@UpdateTimestamp
+	@Column(name = "updated_at", nullable = false)
+	private Instant updatedAt;
+
+	@Version
+	@Column(nullable = false)
+	private int version;
 
 	protected Category() {}
 
@@ -72,5 +83,13 @@ public class Category {
 
 	public void setSlug(String slug) {
 		this.slug = slug;
+	}
+
+	public Instant getUpdatedAt() {
+		return updatedAt;
+	}
+
+	public int getVersion() {
+		return version;
 	}
 }
