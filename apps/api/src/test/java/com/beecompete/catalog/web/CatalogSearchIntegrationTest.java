@@ -140,6 +140,43 @@ class CatalogSearchIntegrationTest {
 
 	@Test
 	@Order(5)
+	void publicCategoriesAndLandingContentServeTheStaticPages() throws Exception {
+		// All 11 seeded categories, with live counts (R1-6b Categories index / hero strip).
+		mvc.perform(get("/api/v1/categories"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$", hasSize(11)))
+				.andExpect(jsonPath("$[?(@.slug=='math' && @.count >= 1)]", hasSize(1)));
+
+		// Landing content: admin sets a hero card + featured pick; the public read carries both.
+		String amc = slugs("/api/v1/competitions?q=" + MARK + "&category=math&size=1").get(0);
+		String compId = mvc.perform(get("/api/v1/competitions/" + amc))
+				.andReturn().getResponse().getContentAsString();
+		String id = mapper.readTree(compId).get("id").asText();
+		mvc.perform(withToken(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+						.put("/api/v1/admin/hero-cards/MAIN")).contentType("application/json")
+						.content("""
+								{"imageKey": "hero/main.jpg", "altText": "Students competing",
+								 "linkUrl": "/competitions", "description": "Browse the catalog"}
+								"""))
+				.andExpect(status().isOk());
+		mvc.perform(withToken(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+						.put("/api/v1/admin/featured-slots")).contentType("application/json")
+						.content("{\"competitionIds\": [\"" + id + "\"]}"))
+				.andExpect(status().isOk());
+
+		mvc.perform(get("/api/v1/landing"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.heroCards[0].position", is("main")))
+				.andExpect(jsonPath("$.heroCards[0].description", is("Browse the catalog")))
+				.andExpect(jsonPath("$.featured", hasSize(1)))
+				.andExpect(jsonPath("$.featured[0].slug", is("r15-algebra-open")))
+				.andExpect(jsonPath("$.featured[0].prizeSummary", is("Champion trophy")))
+				.andExpect(jsonPath("$.totalCompetitions",
+						org.hamcrest.Matchers.greaterThanOrEqualTo(3)));
+	}
+
+	@Test
+	@Order(6)
 	void badTokensAre400AndWriteValidationEnforcesEvaluationTypes() throws Exception {
 		mvc.perform(get("/api/v1/competitions?cost=cheap")).andExpect(status().isBadRequest());
 		mvc.perform(get("/api/v1/competitions?participation=both")).andExpect(status().isBadRequest());

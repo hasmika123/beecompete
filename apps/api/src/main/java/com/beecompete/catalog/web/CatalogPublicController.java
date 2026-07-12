@@ -127,6 +127,12 @@ public class CatalogPublicController {
 		return search.regionOptions();
 	}
 
+	/** All categories with live counts (Page-5 tiles, hero category strip). */
+	@GetMapping("/categories")
+	public List<CompetitionSearchService.CategoryOption> categories() {
+		return search.categoryOptions();
+	}
+
 	private static <E extends Enum<E>> E parseToken(String param, String value, Class<E> type) {
 		if (value == null || value.isBlank()) {
 			return null;

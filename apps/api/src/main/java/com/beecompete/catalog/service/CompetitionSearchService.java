@@ -304,6 +304,60 @@ public class CompetitionSearchService {
 				row -> new GradeFacet(((Number) row[0]).shortValue(), ((Number) row[1]).longValue()));
 	}
 
+	/** A category with its live-listing count (Page-5 tiles + hero category strip). */
+	public record CategoryOption(String slug, String name, long count) {}
+
+	/** All categories with live-listing counts (zero included — the taxonomy is the fixed Q1 list). */
+	@Transactional(readOnly = true)
+	public List<CategoryOption> categoryOptions() {
+		String sql = "SELECT cat.slug, cat.name, count(c.id) FROM category cat"
+				+ " LEFT JOIN competition c ON c.category_id = cat.id AND c.archived_at IS NULL"
+				+ " GROUP BY cat.slug, cat.name ORDER BY cat.name";
+		return mapRows(sql, Map.of(), row -> new CategoryOption((String) row[0], (String) row[1],
+				((Number) row[2]).longValue()));
+	}
+
+	/**
+	 * Card items for an explicit id list (the landing Featured carousel, M36) — same card facts
+	 * as a search page, id order preserved, archived rows silently dropped.
+	 */
+	@Transactional(readOnly = true)
+	public List<Item> itemsByIds(List<UUID> ids) {
+		if (ids.isEmpty()) {
+			return List.of();
+		}
+		Map<UUID, Competition> byId = new HashMap<>();
+		competitions.findAllById(ids).forEach(comp -> {
+			if (comp.getArchivedAt() == null) {
+				byId.put(comp.getId(), comp);
+			}
+		});
+		Map<UUID, Instant> deadlines = nextDeadlines(ids);
+		Map<UUID, String> prizes = prizeSummaries(ids);
+		Map<UUID, List<String>> regionsById = regionNames(ids);
+		List<Item> items = new ArrayList<>();
+		for (UUID id : ids) {
+			Competition competition = byId.get(id);
+			if (competition != null) {
+				items.add(new Item(competition, deadlines.get(id), prizes.get(id),
+						regionsById.getOrDefault(id, List.of())));
+			}
+		}
+		return items;
+	}
+
+	/** Earliest FUTURE REG_CLOSE per competition (same deadline notion as the search lateral). */
+	private Map<UUID, Instant> nextDeadlines(List<UUID> ids) {
+		String sql = "SELECT e.competition_id, min(kd.starts_at)"
+				+ " FROM edition e JOIN key_date kd ON kd.edition_id = e.id"
+				+ " WHERE e.competition_id IN (:ids) AND e.archived_at IS NULL"
+				+ " AND kd.type = 'REG_CLOSE' AND kd.starts_at > :now GROUP BY e.competition_id";
+		Map<UUID, Instant> result = new HashMap<>();
+		mapRows(sql, Map.of("ids", ids, "now", Instant.now()),
+				row -> result.put(asUuid(row[0]), asInstant(row[1])));
+		return result;
+	}
+
 	/** Regions carrying at least one live competition, with counts (filter panel + Page-5 tiles). */
 	@Transactional(readOnly = true)
 	public List<RegionOption> regionOptions() {

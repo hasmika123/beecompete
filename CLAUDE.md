@@ -149,7 +149,19 @@ id-or-code; `evaluation` = canonical lowercase tokens in `EvaluationTypes`, also
 curation write boundary now; `deadlineWithinDays` on next FUTURE REG_CLOSE), sorts
 relevance/name/newest/deadline (popularity waits for R2-10 save counts), Grade+Category facet
 counts (exclude own dimension); unknown token → 400, unknown value → empty page. As-built §13c.
-Next per `docs/phase-1-plan.md`: **R1-6/R1-6b frontend**; **S2/S3 seeding** can run in parallel —
+**R1-6 + R1-6b done (2026-07-12) — public frontend v1** (styling delegated to builder judgment,
+blueprints #29; detail route locked `/c/<slug>`, #30): `packages/ui` gains **CompetitionCard**
+(approved F7 direction; R1 variant, no social-proof corner) + the **category art system**
+(per-category accent hues, generated covers, `CategoryTag`, category icons); marketplace
+`/competitions` per Page 2 (GET-form filter panel with facet order #10 + Grade/Category counts,
+chips, grade quick-chips, container-query 4↔3 grid, cumulative crawlable Load more #13,
+zero-results near-miss #14), category hubs `/competitions/<slug>` + code-owned SEO copy in
+`apps/web/src/lib/category-content.ts`; Landing per Page 1 (admin-managed hero cards + featured
+carousel via new public `GET /api/v1/landing`, category strip, TODO(owner) stats, digest band
+STUB — Brevo at R1-15), How It Works, Categories index (`GET /api/v1/categories` + `/regions`);
+sticky NavBar + Beta tag + real footer; interim noindex `/c/<slug>` + `/suggest-a-competition`
+stubs. Search items now carry prizeSummary/regions (card facts). Next per
+`docs/phase-1-plan.md`: **R1-7 competition detail page**; **S2/S3 seeding** can run in parallel —
 S3's extractor POSTs into the import queue R1-3 built. **Deferred (PR C):** S3 pre-signed
 hero-image upload + inline FAQ/
 Resource row-edit. **Before prod users:** set `ADMIN_API_TOKEN` in both VPS `.env` + `/admin`

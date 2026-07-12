@@ -15,4 +15,7 @@ public interface CompetitionRepository extends JpaRepository<Competition, UUID> 
 
 	/** Admin list search (R1-3) — a plain contains match; the public FTS search is CompetitionSearchService. */
 	Page<Competition> findByNameContainingIgnoreCase(String name, Pageable pageable);
+
+	/** Live catalog size (landing "N more competitions" label, How-It-Works stats). */
+	long countByArchivedAtIsNull();
 }

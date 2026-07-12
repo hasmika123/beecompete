@@ -349,12 +349,12 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
 ## Status
 | Page | Blueprint | Style prototype | Built |
 |---|---|---|---|
-| Landing | ✅ approved (2026-07-07 · rev 2026-07-09 · hero image-cards rev 2026-07-08 #25–26) | 🔍 round 2 in review — re-prototype hero (plain Browse button + category strip **+ image-card right half #25**) & new order | — |
+| Landing | ✅ approved (2026-07-07 · rev 2026-07-09 · hero image-cards rev 2026-07-08 #25–26) | delegated (#29 — supersedes the round-2 prototype review) | ✅ R1-6b (2026-07-12; hero-card images + digest wiring pending — PR C / R1-15; stats TODO(owner)) |
 | Competitions (listing) | ✅ approved (2026-07-07 · rev 2026-07-08) | delegated (#29) | ✅ R1-6 (2026-07-12, incl. category hubs #16 + interim /c/ detail stub #30) |
 | Competition details | ✅ approved (2026-07-07 · rev 2026-07-08) | — | — |
-| How It Works | ✅ approved (2026-07-08) | — | — |
-| Categories (index) | ✅ approved (2026-07-08, may be tuned) | — | — |
-| Suggest a Competition | ✅ approved (2026-07-08) | — | — |
+| How It Works | ✅ approved (2026-07-08) | delegated (#29) | ✅ R1-6b (2026-07-12; demo video placeholder) |
+| Categories (index) | ✅ approved (2026-07-08, may be tuned) | delegated (#29) | ✅ R1-6b (2026-07-12) |
+| Suggest a Competition | ✅ approved (2026-07-08) | — | interim stub only (R1-6; wizard = R1-15b) |
 | For Parents / For Educators | ⛔ deferred (2026-07-08) | — | — |
 | Community (article index + detail) [Phase 2] | ⛔ deferred (2026-07-08, #27) — blueprint before build | — | — |
 | Tracker | ⛔ deferred — do not design yet | — | — |
