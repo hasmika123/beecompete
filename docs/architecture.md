@@ -165,6 +165,35 @@ least-privilege access to minors' PII, every admin action audited, no bulk PII e
 is staged: R1-3/R1-3b (curation CRUD + import/corrections queues) → R2-17/R2-17b (moderation + support
 tooling + audit log) → Phase 2+ (dedup DQ4, conflict resolution DQ5) → Phase 3 (host verification DQ11–14).
 
+### 13a. Admin — as built (R1-3, 2026-07-12)
+
+- **API:** a `catalog.curation` package exposes `/api/v1/admin/**` (REST/JSON) — CRUD for
+  Competition/Edition/KeyDate/Resource/Category(+CategoryTemplate)/Organization, an **import-review
+  queue** on a new `import_record` table (Liquibase `0006`: `payload` JSONB + source/confidence/
+  status; approve → creates the real Competition with `provenance.source=import`), landing content
+  (HeroCard upsert-by-position + FeaturedSlot carousel, ≤10, archived-competition guard), and
+  verification/provenance controls. Every attributes write validates through
+  `CategoryAttributeValidator`; every write stamps provenance.
+- **Admin auth (R1 stopgap, → RBAC at R2-7):** `AdminTokenFilter` requires a shared-secret
+  `X-Admin-Token` header on every `/api/v1/admin/**` call. Fail-closed (blank `ADMIN_API_TOKEN`
+  rejects all); constant-time compare; **scoped by a servlet URL-pattern** (matched on the decoded/
+  normalized path) via `AdminSecurityConfig` — a raw-URI prefix test was bypassable with
+  percent-encoding (`/api/v1/%61dmin/…`). The browser route is additionally behind **Cloudflare
+  Access**. The API is unreachable off-box regardless (BFF pattern).
+- **Web:** the `/admin` UI is **Next App Router server components + server actions**. The token
+  lives server-side only — `apps/web/src/lib/admin-api.ts` is `import 'server-only'`; the browser
+  calls Next, Next calls the API with the header. Public pages sit in an `app/(public)` route group
+  so `/admin` has its own shell (`app/admin/layout.tsx`, noindex). Admin forms use a native
+  `<select>` wrapper (the design-system `Select` doesn't post with FormData).
+- **Error contract:** `ApiExceptionHandler` (`@RestControllerAdvice`) maps
+  `ResponseStatusException` (echoing its explicit, safe reason), Bean-Validation field errors (400),
+  and `DataIntegrityViolationException`/`OptimisticLockingFailureException` (409) to a JSON body with
+  a `message`. Needed because Spring Boot's default `server.error.include-message=never` hid reasons,
+  leaving the admin UI showing a bare "admin API 422".
+- **Deferred (PR C):** S3 pre-signed hero-image upload; inline row-edit for FAQ/Resource (add+delete
+  today). **`@Version` is not sent** on admin PUTs yet, so concurrent edits last-write-win rather
+  than 409 — acceptable for a single curator at R1; revisit with RBAC (R2-7).
+
 ## 14. Environments & deployment
 
 > **As built (LIVE 2026-07-12):** IONOS VPS, US East. A **single shared edge Caddy**

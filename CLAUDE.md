@@ -112,8 +112,23 @@ every boot; API on default Tomcat (Undertow dropped — deprecated in Boot 3.5).
 (2026-07-12):** the 11 launch categories (Q1 list) + one permissive Category Template JSON Schema
 each, seeded via Liquibase `0005` (fixed `beec0000-…` UUIDs), plus `CategoryAttributeValidator`
 (networknt, draft 2020-12) — every attributes-bag write (R1-3 admin, S3 pipeline) must validate
-through it. Next per `docs/phase-1-plan.md`: **R1-3** (admin curation tooling v0) — and S2
-(seeding master index) can start in parallel.
+through it. **R1-3 done (2026-07-12) — admin curation tooling v0** (2 PRs): **R1-3a** the admin
+API (`catalog.curation` module → `/api/v1/admin/**`: CRUD for Competition/Edition/KeyDate/Resource/
+Category(+template)/Organization, import-review queue on a new `import_record` table — Liquibase
+`0006` — approve→creates the record with `provenance.source=import`, landing content HeroCard/
+FeaturedSlot with the ≤10 cap, verification/provenance controls; every write stamps provenance);
+**R1-3b** the `/admin` web UI (Next App Router, **server components + server actions**, BFF —
+the `ADMIN_API_TOKEN` lives server-side only, browser→Next→API with `X-Admin-Token`). **Admin auth
+(R1 stopgap):** shared-secret `AdminTokenFilter` (fail-closed, URL-pattern-scoped so `%61dmin`
+can't bypass) + Cloudflare Access on the browser route; migrates to real RBAC at **R2-7**. Also:
+`ApiExceptionHandler` maps 409/422 + echoes explicit reasons (Spring hides messages by default);
+public web pages moved into an `app/(public)` route group so `/admin` has its own shell. As-built
+detail in `docs/architecture.md` §13a. Next per `docs/phase-1-plan.md`: **R1-3b corrections intake**
+(public "suggest a correction" → `CorrectionProposal` queue, shares the review UX) or **R1-4**
+(public catalog read API); **S2/S3 seeding** can run in parallel — S3's extractor POSTs into the
+import queue R1-3 just built. **Deferred (PR C):** S3 pre-signed hero-image upload + inline FAQ/
+Resource row-edit. **Before prod users:** set `ADMIN_API_TOKEN` in both VPS `.env` + `/admin`
+behind Cloudflare Access (setup-runbook §5).
 Remaining F8 operational steps (uptime monitor + confirming Sentry receives events) are done after
 staging is live — see setup-runbook §9.
 

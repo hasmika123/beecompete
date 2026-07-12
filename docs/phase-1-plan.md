@@ -1,6 +1,14 @@
 # BeeCompete — Phase 1 Build Plan
 
-**Status:** Draft for approval · **Last updated:** 2026-07-08 · Depends on: `domain-model.md`, `architecture.md`, `rfc-p1-auth-consent.md`, `development-process.md`
+**Status:** In build · **Last updated:** 2026-07-12 · Depends on: `domain-model.md`, `architecture.md`, `rfc-p1-auth-consent.md`, `development-process.md`
+
+> **Build status (2026-07-12):** Foundation **F1–F8 done** (staging + prod LIVE on IONOS).
+> **R1-1 done** (catalog schema, migrations `0002`–`0004` + Organization). **R1-2 done** (11 launch
+> categories + templates seeded `0005` + `CategoryAttributeValidator`). **R1-3 done** (admin curation
+> API + `/admin` web UI, import queue `0006`; admin auth = shared token + Cloudflare Access →
+> RBAC R2-7; as-built in `architecture.md` §13a). **Next:** R1-3b corrections intake, or R1-4 catalog
+> read API; **S2/S3 seeding** can run in parallel (S3's extractor feeds the R1-3 import queue).
+> Deferred: PR C (S3 hero-image upload + inline FAQ/Resource edit).
 
 The ordered, buildable task list for Phase 1. **Every task below becomes a GitHub Issue** (titled with its
 task ID + registry refs) before coding — that's the required per-phase step. Build in the listed order;
