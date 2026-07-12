@@ -12,7 +12,7 @@ import org.testcontainers.utility.DockerImageName;
  * same database engine as prod (JSONB, FTS) — no H2. Requires Docker to be running.
  */
 @TestConfiguration(proxyBeanMethods = false)
-class TestcontainersConfiguration {
+public class TestcontainersConfiguration {
 
 	@Bean
 	@ServiceConnection

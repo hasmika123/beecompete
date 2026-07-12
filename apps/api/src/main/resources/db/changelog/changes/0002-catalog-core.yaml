@@ -1,0 +1,338 @@
+# R1-1 — core catalog schema (domain-model §5/§7). The first real domain tables.
+# ADDITIVE-ONLY (architecture §3): never edit a shipped changeset; add a new file.
+#
+# Notes on locked build decisions (see the R1-1 plan / domain-model D1):
+#  - UUID PKs default gen_random_uuid() (Postgres 13+ core) so seed SQL (R1-2) needn't supply ids.
+#  - Enums are VARCHAR enforced by Java enums + Bean Validation — NO db CHECK constraints, so
+#    adding an allowed value later stays a plain additive change.
+#  - provenance is three typed columns (source/last_verified_at/confidence) + verification_state,
+#    not a JSONB blob — we filter/badge on these (D1: filter → typed).
+#  - JSONB for category-specific / display-only bags (attributes, json_schema, ui_hints,
+#    affiliate_meta, correction payload).
+#  - FK targets that live in R2 (User, Organization) are NULLABLE UUID columns with NO FK yet —
+#    the FKs are added in R2-1 when those tables exist. Building them now is a hard stop.
+#  - FTS / pg_trgm indexes are R1-5 (search), not here — only btree indexes list/detail needs.
+databaseChangeLog:
+  - changeSet:
+      id: 0002-category
+      author: beecompete
+      comment: Taxonomy node (self-referencing parent for Category → Subcategory).
+      changes:
+        - createTable:
+            tableName: category
+            columns:
+              - column: { name: id, type: UUID, defaultValueComputed: gen_random_uuid(), constraints: { primaryKey: true, primaryKeyName: pk_category } }
+              - column:
+                  name: parent_id
+                  type: UUID
+                  constraints: { foreignKeyName: fk_category_parent, references: category(id) }
+              - column: { name: name, type: "VARCHAR(120)", constraints: { nullable: false } }
+              - column: { name: slug, type: "VARCHAR(140)", constraints: { nullable: false } }
+        - addUniqueConstraint: { tableName: category, columnNames: slug, constraintName: uq_category_slug }
+        - createIndex:
+            indexName: ix_category_parent
+            tableName: category
+            columns: [ { column: { name: parent_id } } ]
+
+  - changeSet:
+      id: 0002-category-template
+      author: beecompete
+      comment: JSON Schema that validates a Competition's attributes bag (per Category).
+      changes:
+        - createTable:
+            tableName: category_template
+            columns:
+              - column: { name: id, type: UUID, defaultValueComputed: gen_random_uuid(), constraints: { primaryKey: true, primaryKeyName: pk_category_template } }
+              - column:
+                  name: category_id
+                  type: UUID
+                  constraints: { nullable: false, foreignKeyName: fk_category_template_category, references: category(id) }
+              - column: { name: json_schema, type: JSONB, constraints: { nullable: false } }
+              - column: { name: ui_hints, type: JSONB }
+        - createIndex:
+            indexName: ix_category_template_category
+            tableName: category_template
+            columns: [ { column: { name: category_id } } ]
+
+  - changeSet:
+      id: 0002-region
+      author: beecompete
+      comment: Structured geo (Country → State → County → City), self-referencing.
+      changes:
+        - createTable:
+            tableName: region
+            columns:
+              - column: { name: id, type: UUID, defaultValueComputed: gen_random_uuid(), constraints: { primaryKey: true, primaryKeyName: pk_region } }
+              - column:
+                  name: parent_id
+                  type: UUID
+                  constraints: { foreignKeyName: fk_region_parent, references: region(id) }
+              - column: { name: level, type: "VARCHAR(20)", constraints: { nullable: false } }
+              - column: { name: name, type: "VARCHAR(160)", constraints: { nullable: false } }
+              - column: { name: code, type: "VARCHAR(20)" }
+        - createIndex:
+            indexName: ix_region_parent
+            tableName: region
+            columns: [ { column: { name: parent_id } } ]
+
+  - changeSet:
+      id: 0002-competition
+      author: beecompete
+      comment: The evergreen Competition (Spine columns + validated JSONB attributes + provenance).
+      changes:
+        - createTable:
+            tableName: competition
+            columns:
+              - column: { name: id, type: UUID, defaultValueComputed: gen_random_uuid(), constraints: { primaryKey: true, primaryKeyName: pk_competition } }
+              - column: { name: slug, type: "VARCHAR(160)", constraints: { nullable: false } }
+              - column: { name: name, type: "VARCHAR(300)", constraints: { nullable: false } }
+              # organizer_org_id → Organization (R2-1). NULLABLE, no FK yet.
+              - column: { name: organizer_org_id, type: UUID }
+              - column: { name: official_url, type: "VARCHAR(1000)" }
+              - column: { name: logo, type: "VARCHAR(1000)" }
+              - column: { name: description, type: TEXT }
+              - column:
+                  name: category_id
+                  type: UUID
+                  constraints: { nullable: false, foreignKeyName: fk_competition_category, references: category(id) }
+              - column: { name: tags, type: "TEXT[]" }
+              - column: { name: participation_mode, type: "VARCHAR(20)", constraints: { nullable: false } }
+              - column: { name: team_size_min, type: SMALLINT }
+              - column: { name: team_size_max, type: SMALLINT }
+              - column: { name: delivery, type: "VARCHAR(20)", constraints: { nullable: false } }
+              - column: { name: entry_pathway, type: "VARCHAR(20)", constraints: { nullable: false } }
+              - column: { name: evaluation_type, type: "TEXT[]" }
+              - column: { name: min_grade, type: SMALLINT }
+              - column: { name: max_grade, type: SMALLINT }
+              - column: { name: min_age, type: SMALLINT }
+              - column: { name: max_age, type: SMALLINT }
+              - column: { name: cost_type, type: "VARCHAR(10)", constraints: { nullable: false } }
+              - column: { name: recurrence, type: "VARCHAR(20)", constraints: { nullable: false } }
+              - column: { name: attributes, type: JSONB }
+              - column: { name: provenance_source, type: "VARCHAR(20)" }
+              - column: { name: provenance_last_verified_at, type: "TIMESTAMP WITH TIME ZONE" }
+              - column: { name: provenance_confidence, type: "NUMERIC(3,2)" }
+              # Enum columns store the Java enum name (@Enumerated STRING) — UPPERCASE. The public
+              # lowercase token form (in_person, school_or_chapter…) is applied at the DTO layer (R1-4).
+              - column: { name: verification_state, type: "VARCHAR(20)", defaultValue: UNVERIFIED, constraints: { nullable: false } }
+              - column: { name: archived_at, type: "TIMESTAMP WITH TIME ZONE" }
+              - column: { name: created_at, type: "TIMESTAMP WITH TIME ZONE", defaultValueComputed: now(), constraints: { nullable: false } }
+        - addUniqueConstraint: { tableName: competition, columnNames: slug, constraintName: uq_competition_slug }
+        - createIndex:
+            indexName: ix_competition_category
+            tableName: competition
+            columns: [ { column: { name: category_id } } ]
+        - createIndex:
+            indexName: ix_competition_verification_state
+            tableName: competition
+            columns: [ { column: { name: verification_state } } ]
+        - createIndex:
+            indexName: ix_competition_archived_at
+            tableName: competition
+            columns: [ { column: { name: archived_at } } ]
+
+  - changeSet:
+      id: 0002-edition
+      author: beecompete
+      comment: One running of a Competition (dates/registration/prize); advances_to self-ref chain.
+      changes:
+        - createTable:
+            tableName: edition
+            columns:
+              - column: { name: id, type: UUID, defaultValueComputed: gen_random_uuid(), constraints: { primaryKey: true, primaryKeyName: pk_edition } }
+              - column:
+                  name: competition_id
+                  type: UUID
+                  constraints: { nullable: false, foreignKeyName: fk_edition_competition, references: competition(id) }
+              - column: { name: cycle_label, type: "VARCHAR(60)", constraints: { nullable: false } }
+              - column: { name: status, type: "VARCHAR(20)", constraints: { nullable: false } }
+              - column: { name: registration_url, type: "VARCHAR(1000)" }
+              - column: { name: entry_fee, type: "NUMERIC(10,2)" }
+              - column: { name: currency, type: "VARCHAR(3)" }
+              - column: { name: age_cutoff_date, type: DATE }
+              - column: { name: prize_summary, type: "VARCHAR(500)" }
+              - column: { name: prize_value, type: "NUMERIC(12,2)" }
+              - column: { name: prize_currency, type: "VARCHAR(3)" }
+              - column: { name: scope_level, type: "VARCHAR(20)", constraints: { nullable: false } }
+              - column:
+                  name: advances_to_edition_id
+                  type: UUID
+                  constraints: { foreignKeyName: fk_edition_advances_to, references: edition(id) }
+              - column: { name: attributes, type: JSONB }
+              - column: { name: provenance_source, type: "VARCHAR(20)" }
+              - column: { name: provenance_last_verified_at, type: "TIMESTAMP WITH TIME ZONE" }
+              - column: { name: provenance_confidence, type: "NUMERIC(3,2)" }
+              - column: { name: verification_state, type: "VARCHAR(20)", defaultValue: UNVERIFIED, constraints: { nullable: false } }
+              - column: { name: archived_at, type: "TIMESTAMP WITH TIME ZONE" }
+              - column: { name: created_at, type: "TIMESTAMP WITH TIME ZONE", defaultValueComputed: now(), constraints: { nullable: false } }
+        - createIndex:
+            indexName: ix_edition_competition
+            tableName: edition
+            columns: [ { column: { name: competition_id } } ]
+        - createIndex:
+            indexName: ix_edition_status
+            tableName: edition
+            columns: [ { column: { name: status } } ]
+        - createIndex:
+            indexName: ix_edition_advances_to
+            tableName: edition
+            columns: [ { column: { name: advances_to_edition_id } } ]
+
+  - changeSet:
+      id: 0002-edition-region
+      author: beecompete
+      comment: Which regions an Edition covers (Edition-level join, Q3 locked). One reg = one Edition.
+      changes:
+        - createTable:
+            tableName: edition_region
+            columns:
+              - column:
+                  name: edition_id
+                  type: UUID
+                  constraints: { nullable: false, primaryKey: true, primaryKeyName: pk_edition_region, foreignKeyName: fk_edition_region_edition, references: edition(id) }
+              - column:
+                  name: region_id
+                  type: UUID
+                  constraints: { nullable: false, primaryKey: true, primaryKeyName: pk_edition_region, foreignKeyName: fk_edition_region_region, references: region(id) }
+        - createIndex:
+            indexName: ix_edition_region_region
+            tableName: edition_region
+            columns: [ { column: { name: region_id } } ]
+
+  - changeSet:
+      id: 0002-key-date
+      author: beecompete
+      comment: Typed timeline events on an Edition (D3 — timeline as data, not columns).
+      changes:
+        - createTable:
+            tableName: key_date
+            columns:
+              - column: { name: id, type: UUID, defaultValueComputed: gen_random_uuid(), constraints: { primaryKey: true, primaryKeyName: pk_key_date } }
+              - column:
+                  name: edition_id
+                  type: UUID
+                  constraints: { nullable: false, foreignKeyName: fk_key_date_edition, references: edition(id) }
+              - column: { name: type, type: "VARCHAR(20)", constraints: { nullable: false } }
+              - column: { name: label, type: "VARCHAR(200)" }
+              - column: { name: starts_at, type: "TIMESTAMP WITH TIME ZONE", constraints: { nullable: false } }
+              - column: { name: ends_at, type: "TIMESTAMP WITH TIME ZONE" }
+              - column: { name: timezone, type: "VARCHAR(60)" }
+        - createIndex:
+            indexName: ix_key_date_edition
+            tableName: key_date
+            columns: [ { column: { name: edition_id } } ]
+
+  - changeSet:
+      id: 0002-resource
+      author: beecompete
+      comment: Curated prep/reference link on a Competition (affiliate-aware — R1-8).
+      changes:
+        - createTable:
+            tableName: resource
+            columns:
+              - column: { name: id, type: UUID, defaultValueComputed: gen_random_uuid(), constraints: { primaryKey: true, primaryKeyName: pk_resource } }
+              - column:
+                  name: competition_id
+                  type: UUID
+                  constraints: { nullable: false, foreignKeyName: fk_resource_competition, references: competition(id) }
+              - column: { name: title, type: "VARCHAR(300)", constraints: { nullable: false } }
+              - column: { name: url, type: "VARCHAR(1000)", constraints: { nullable: false } }
+              - column: { name: type, type: "VARCHAR(20)", constraints: { nullable: false } }
+              - column: { name: is_affiliate, type: BOOLEAN, defaultValueBoolean: false, constraints: { nullable: false } }
+              - column: { name: affiliate_meta, type: JSONB }
+              - column: { name: display_order, type: SMALLINT, defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: created_at, type: "TIMESTAMP WITH TIME ZONE", defaultValueComputed: now(), constraints: { nullable: false } }
+        - createIndex:
+            indexName: ix_resource_competition
+            tableName: resource
+            columns: [ { column: { name: competition_id } } ]
+
+  - changeSet:
+      id: 0002-competition-faq
+      author: beecompete
+      comment: Curated per-competition FAQ entries (details FAQ tab, FAQPage schema — R1-7).
+      changes:
+        - createTable:
+            tableName: competition_faq
+            columns:
+              - column: { name: id, type: UUID, defaultValueComputed: gen_random_uuid(), constraints: { primaryKey: true, primaryKeyName: pk_competition_faq } }
+              - column:
+                  name: competition_id
+                  type: UUID
+                  constraints: { nullable: false, foreignKeyName: fk_competition_faq_competition, references: competition(id) }
+              - column: { name: question, type: "VARCHAR(500)", constraints: { nullable: false } }
+              - column: { name: answer, type: TEXT, constraints: { nullable: false } }
+              - column: { name: display_order, type: SMALLINT, defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: created_at, type: "TIMESTAMP WITH TIME ZONE", defaultValueComputed: now(), constraints: { nullable: false } }
+        - createIndex:
+            indexName: ix_competition_faq_competition
+            tableName: competition_faq
+            columns: [ { column: { name: competition_id } } ]
+
+  - changeSet:
+      id: 0002-correction-proposal
+      author: beecompete
+      comment: User-submitted corrections queue (DQ6, D7). submitted_by/reviewed_by → User (R2-1), no FK yet.
+      changes:
+        - createTable:
+            tableName: correction_proposal
+            columns:
+              - column: { name: id, type: UUID, defaultValueComputed: gen_random_uuid(), constraints: { primaryKey: true, primaryKeyName: pk_correction_proposal } }
+              - column: { name: subject_type, type: "VARCHAR(20)", constraints: { nullable: false } }
+              - column: { name: subject_id, type: UUID, constraints: { nullable: false } }
+              - column: { name: submitted_by_user_id, type: UUID }
+              - column: { name: payload, type: JSONB, constraints: { nullable: false } }
+              - column: { name: note, type: TEXT }
+              - column: { name: status, type: "VARCHAR(20)", defaultValue: PENDING, constraints: { nullable: false } }
+              - column: { name: reviewed_by, type: UUID }
+              - column: { name: reviewed_at, type: "TIMESTAMP WITH TIME ZONE" }
+              - column: { name: created_at, type: "TIMESTAMP WITH TIME ZONE", defaultValueComputed: now(), constraints: { nullable: false } }
+        - createIndex:
+            indexName: ix_correction_proposal_status
+            tableName: correction_proposal
+            columns: [ { column: { name: status } } ]
+        - createIndex:
+            indexName: ix_correction_proposal_subject
+            tableName: correction_proposal
+            columns: [ { column: { name: subject_type } }, { column: { name: subject_id } } ]
+
+  - changeSet:
+      id: 0002-hero-card
+      author: beecompete
+      comment: The 3 admin-managed Landing hero image cards (M36). One active row per position.
+      changes:
+        - createTable:
+            tableName: hero_card
+            columns:
+              - column: { name: id, type: UUID, defaultValueComputed: gen_random_uuid(), constraints: { primaryKey: true, primaryKeyName: pk_hero_card } }
+              - column: { name: position, type: "VARCHAR(20)", constraints: { nullable: false } }
+              - column: { name: image_key, type: "VARCHAR(500)", constraints: { nullable: false } }
+              - column: { name: alt_text, type: "VARCHAR(300)", constraints: { nullable: false } }
+              - column: { name: link_url, type: "VARCHAR(1000)" }
+              - column: { name: description, type: "VARCHAR(500)" }
+              # updated_by → User (R2-1). NULLABLE, no FK yet.
+              - column: { name: updated_by, type: UUID }
+              - column: { name: updated_at, type: "TIMESTAMP WITH TIME ZONE", defaultValueComputed: now(), constraints: { nullable: false } }
+        - addUniqueConstraint: { tableName: hero_card, columnNames: position, constraintName: uq_hero_card_position }
+
+  - changeSet:
+      id: 0002-featured-slot
+      author: beecompete
+      comment: Admin-picked Landing carousel entries (M36, ordered, 6–10). updated_by → User (R2-1), no FK yet.
+      changes:
+        - createTable:
+            tableName: featured_slot
+            columns:
+              - column: { name: id, type: UUID, defaultValueComputed: gen_random_uuid(), constraints: { primaryKey: true, primaryKeyName: pk_featured_slot } }
+              - column:
+                  name: competition_id
+                  type: UUID
+                  constraints: { nullable: false, foreignKeyName: fk_featured_slot_competition, references: competition(id) }
+              - column: { name: position, type: SMALLINT, constraints: { nullable: false } }
+              - column: { name: updated_by, type: UUID }
+              - column: { name: updated_at, type: "TIMESTAMP WITH TIME ZONE", defaultValueComputed: now(), constraints: { nullable: false } }
+        - addUniqueConstraint: { tableName: featured_slot, columnNames: competition_id, constraintName: uq_featured_slot_competition }
+        - createIndex:
+            indexName: ix_featured_slot_position
+            tableName: featured_slot
+            columns: [ { column: { name: position } } ]
