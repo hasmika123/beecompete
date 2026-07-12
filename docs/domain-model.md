@@ -1,6 +1,6 @@
 # BeeCompete — Domain & Data Model
 
-**Status:** Living document · **Last updated:** 2026-07-08 · Depends on: `glossary.md`, `feature-registry.md`
+**Status:** Living document · **Last updated:** 2026-07-12 (R1-1 as-built) · Depends on: `glossary.md`, `feature-registry.md`
 
 The foundation. This turns the strategy, feature registry, and foundation hooks into an actual
 data model that supports **all three facets from day one** — even though we build them in phases.
@@ -111,11 +111,20 @@ display_order` *(added 2026-07-08 → H47; shape informed by the legacy prototyp
 `legacy-reference.md`. Assignment of Awards to winners is judging territory — designed at Gate B,
 never before.)*
 
-**`Region`** [P1] — `id, parent_id?, level (country|state|county|city), name, code`
+**`Region`** [P1] — `id, parent_id?, level (country|state|county|city|virtual), name, code`
+*(`virtual` level added at R1-1 build, 2026-07-12 — the Q3 special "Virtual/Online" region needs a
+level so virtual Editions can carry a region row.)*
 **`EditionRegion`** [P1] — join: which regions an **Edition** covers *(locked 2026-07-07; renamed from `CompetitionRegion` — the join is Edition-level, never Competition-level)*. One registration = one Edition (Q3); the Competition's region filter is derived from its Editions.
 
 **`Resource`** [P1] — curated prep/reference link on a Competition.
-`id, competition_id, title, url, type (book|past_paper|guide|video|other), is_affiliate, affiliate_meta (JSONB)`
+`id, competition_id, title, url, type (book|past_paper|guide|video|other), is_affiliate, affiliate_meta (JSONB), display_order, created_at`
+*(`display_order` added at R1-1 build — the details Resources row is a curated, ordered strip.)*
+
+**`CompetitionFaq`** [P1] — curated per-competition FAQ entry (glossary: **FAQ Entry**; details
+FAQ tab + FAQPage structured data → R1-7; shape decided at R1-1 build, 2026-07-12).
+`id, competition_id, question, answer, display_order, created_at`
+— ordered child rows (not a JSONB array on Competition) so the admin tool (R1-3) CRUDs entries
+individually and FAQPage markup iterates them in order.
 
 ### 3b. Parties, accounts & groups
 
@@ -258,7 +267,7 @@ ActivityEvent → (any subject)   // progress derived here
 ## 5. What we actually build in Phase 1
 
 To avoid over-building, Phase 1 implements only:
-- `Competition`, `Edition`, `KeyDate`, `Category`, `CategoryTemplate`, `Region`, `EditionRegion`, `Resource`
+- `Competition`, `Edition`, `KeyDate`, `Category`, `CategoryTemplate`, `Region`, `EditionRegion`, `Resource`, `CompetitionFaq`
 - `User`, `ParticipantProfile`, `GuardianLink`, `Organization`, `Membership`, `Role`/`Permission`
 - `ParticipantCompetition` (Tracker), `ActivityEvent`
 - `provenance`/`verification_state` fields; `CorrectionProposal` (DQ6 corrections queue); minimal `Product` stub
@@ -288,3 +297,26 @@ mine it when each phase opens.)*
 - ✅ **Multi-region Editions** → Q3: region join is **Edition-level** (`EditionRegion`); rule = *one registration = one Edition* — same dates/registration/results ⇒ one Edition, many regions; operationally distinct runnings ⇒ separate Editions linked via `advances_to_edition_id`.
 
 **All pre-R1-1 modeling blockers are resolved (2026-07-07) — the R1-1 schema migration is unblocked.**
+
+## 8. R1-1 as-built notes (2026-07-12 — migrations `0002`/`0003`, `apps/api` catalog module)
+
+The R1-1 catalog schema shipped (12 tables: the §5 catalog set + `CompetitionFaq`,
+`CorrectionProposal`, `HeroCard`, `FeaturedSlot`). Build-time decisions, now house rules:
+- **UUID PKs** with DB default `gen_random_uuid()` (PG13+ core) — seed SQL needn't supply ids.
+- **Enums = `varchar` + Java enum (`@Enumerated(STRING)`, UPPERCASE in the DB); no DB CHECK
+  constraints** — adding an allowed value later stays purely additive. Public lowercase token
+  form is a DTO-layer concern (R1-4).
+- **Provenance = three typed columns** (`provenance_source`, `provenance_last_verified_at`,
+  `provenance_confidence`) + separate `verification_state` — not a JSONB blob (D1: we filter on
+  these).
+- **Multi-valued facets** (`tags`, `evaluation_type`) = Postgres `text[]` (GIN-indexable at R1-5),
+  not child tables. JSONB (`@JdbcTypeCode(SqlTypes.JSON)`) for `attributes`/`json_schema`/
+  `ui_hints`/`affiliate_meta`/correction `payload`.
+- **R2 references stay FK-less**: `organizer_org_id`, `submitted_by_user_id`, `reviewed_by`,
+  `updated_by` are nullable UUIDs; the FKs are added in R2-1 with their target tables.
+- **Hibernate runs `ddl-auto: validate`** against the Liquibase-migrated schema on every boot;
+  `@CreationTimestamp`/`@UpdateTimestamp` populate audit columns in memory at write (DB `now()`
+  defaults remain as a net for raw seed SQL).
+- **Deliberate non-constraints:** no unique on `edition (competition_id, cycle_label)` (Q3 —
+  operationally distinct regional runnings share a cycle label); archived records keep their
+  slug (D7 SEO); `featured_slot.position` not unique (reorder ergonomics — R1-3 enforces).

@@ -4,11 +4,13 @@ The single deployable backend: a **modular monolith** on Spring Boot (Java 21 LT
 built with **Gradle**. Not a pnpm workspace member — it builds via Gradle, in the same
 monorepo.
 
-> **F2/F4/F8 skeleton.** Spring Boot 3.5 · Java 21 · Gradle (Kotlin DSL) · Undertow · Actuator ·
+> **F2/F4/F8 + R1-1.** Spring Boot 3.5 · Java 21 · Gradle (Kotlin DSL) · Tomcat · Actuator ·
 > Bean Validation · **Spring Data JPA + PostgreSQL + Liquibase** (F4) · **Sentry + structured JSON
-> logs** (F8). It boots, serves versioned JSON, reports health (incl. DB), and applies the Liquibase
-> baseline on startup — **no entities yet** (first schema = R1-1; auth/sessions = R2). See
-> [`docs/phase-1-plan.md`](../../docs/phase-1-plan.md) and
+> logs** (F8). **R1-1 (2026-07-12) added the first domain schema**: the 12 catalog tables
+> (Competition/Edition/Category/Region/…) + JPA entities and repositories in the `catalog`
+> module; Hibernate runs `ddl-auto: validate` against the Liquibase-migrated schema on every
+> boot. Auth/sessions = R2. See [`docs/phase-1-plan.md`](../../docs/phase-1-plan.md),
+> [`docs/domain-model.md`](../../docs/domain-model.md), and
 > [`docs/architecture.md`](../../docs/architecture.md) §3–§4.
 
 ## Observability (F8)

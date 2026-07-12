@@ -1,6 +1,6 @@
 # BeeCompete — Glossary (Ubiquitous Language)
 
-**Status:** Living document · **Last updated:** 2026-07-08
+**Status:** Living document · **Last updated:** 2026-07-12
 
 The single source of truth for **what we call things**. Every other doc, conversation, UI label,
 and eventually every table/field name uses these exact terms. When a term has tempting synonyms,
@@ -65,6 +65,7 @@ the **canonical** term is bolded and the synonyms-to-avoid are listed so we stay
 | **Participant+** | The **paid, per-Competition** prep package (launch tier). | Scoped to one Competition. |
 | **Participant²** | The deferred **premium** prep tier ("participant squared" — mocks, analytics, AI tutoring). Working name. | Not built at launch. |
 | **Resource** | A curated prep/reference link on a listing (book, past paper, guide), often with an affiliate link. | Content model #1. |
+| **FAQ Entry** | A curated per-competition Q&A shown on the details page's FAQ tab (3–5 per Competition, e.g. "can homeschoolers enter?"), rendered with FAQPage structured data. | Entity: `CompetitionFaq` (shape decided at R1-1 build, 2026-07-12). Ordered rows; admin-curated via R1-3. |
 | **Weekly Digest** | The free weekly email listing *new competitions matching the subscriber's preferences* (grade, category/interests, region), collected at signup. The R1 email-capture product (→ R1-15, Brevo). | Canonical UI label. Avoid "newsletter", "subscription", "mailing list". Distinct from *Promotion* digest inclusion (paid placement inside this send, Phase 3+). |
 | **Article** | An **admin-published** piece of content (rich text, images, links) that can **link Competitions**, rendered in-article as CompetitionCards. Canonical entity name (→ M19, Phase 2). | Public surface is labeled **Community**; code/schema/docs always say Article. Avoid "blog post", "forum post", "thread". **Never user-authored** — forums (B6) stay deferred and separate. |
 | **Community** | The public-facing **label** for the Article surface (nav item + `/community` article index and detail pages). A UI name, not an entity. | UI copy says Community; everything internal says Article. |

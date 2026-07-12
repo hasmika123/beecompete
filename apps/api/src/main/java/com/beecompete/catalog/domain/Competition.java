@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -136,7 +137,9 @@ public class Competition {
 	@Column(name = "archived_at")
 	private Instant archivedAt;
 
-	@Column(name = "created_at", insertable = false, updatable = false)
+	/** Set by Hibernate at insert (so it's non-null right after save, without a reload); the DB now() default remains as a net for raw seed SQL. */
+	@CreationTimestamp
+	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 
 	protected Competition() {}

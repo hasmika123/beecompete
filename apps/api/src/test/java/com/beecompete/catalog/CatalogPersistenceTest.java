@@ -41,6 +41,7 @@ import com.beecompete.catalog.repository.EditionRepository;
 import com.beecompete.catalog.repository.FeaturedSlotRepository;
 import com.beecompete.catalog.repository.HeroCardRepository;
 import com.beecompete.catalog.repository.KeyDateRepository;
+import com.beecompete.catalog.repository.RegionRepository;
 import com.beecompete.catalog.repository.ResourceRepository;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
@@ -84,6 +85,9 @@ class CatalogPersistenceTest {
 
 	@Autowired
 	private KeyDateRepository keyDates;
+
+	@Autowired
+	private RegionRepository regions;
 
 	@Autowired
 	private EditionRegionRepository editionRegions;
@@ -137,7 +141,7 @@ class CatalogPersistenceTest {
 
 		Region usa = new Region(RegionLevel.COUNTRY, "United States");
 		usa.setCode("US");
-		usa = em.merge(usa);
+		usa = regions.save(usa);
 		editionRegions.save(new EditionRegion(amc2026, usa));
 
 		Resource guide = new Resource(amc, "Art of Problem Solving", "https://aops.com", ResourceType.GUIDE);
@@ -156,6 +160,9 @@ class CatalogPersistenceTest {
 
 		// Force a real DB round-trip: nothing below reads from the first-level cache.
 		em.flush();
+		// @CreationTimestamp must populate created_at in memory at insert — R1-4's
+		// create-then-return endpoints depend on it without a reload.
+		assertThat(amc.getCreatedAt()).isNotNull();
 		em.clear();
 
 		Competition reloaded = competitions.findBySlug("amc-10").orElseThrow();

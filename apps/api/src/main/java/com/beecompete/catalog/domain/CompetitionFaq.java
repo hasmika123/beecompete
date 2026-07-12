@@ -12,6 +12,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import java.time.Instant;
 import java.util.UUID;
+import org.hibernate.annotations.CreationTimestamp;
 
 /**
  * A curated per-competition FAQ entry (details-page FAQ tab, FAQPage structured data — R1-7,
@@ -41,7 +42,9 @@ public class CompetitionFaq {
 	@Column(name = "display_order", nullable = false)
 	private short displayOrder = 0;
 
-	@Column(name = "created_at", insertable = false, updatable = false)
+	/** Set by Hibernate at insert; DB now() default remains for raw seed SQL. */
+	@CreationTimestamp
+	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 
 	protected CompetitionFaq() {}
