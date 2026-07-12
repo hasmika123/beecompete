@@ -1,8 +1,12 @@
 name: Deploy — production
 
-# Production updates ONLY on a deliberate release tag (git tag R1 && git push origin R1)
+# Production updates ONLY on a deliberate release tag (git tag R2 && git push origin R2)
 # or manual dispatch. It promotes the EXACT image already validated on staging (build
 # once, promote) — no rebuild — then refreshes the prod Compose stack + health-checks it.
+#
+# ⚠ Tag only commits that actually deployed to staging: a docs-only merge builds no image
+# (deploy-staging paths-ignore), so tagging one makes the promote fail with "manifest
+# unknown" — tag the latest code commit instead.
 on:
   push:
     tags: ['R*']
@@ -18,6 +22,7 @@ concurrency:
 
 permissions:
   contents: read
+  checks: read # verify CI passed for the promoted commit
   packages: write # add release/prod tags to the existing images
 
 jobs:
@@ -29,20 +34,46 @@ jobs:
     outputs:
       tag: ${{ steps.meta.outputs.tag }}
     steps:
+      # Needed to resolve the tag: for ANNOTATED tags (git tag -a / GitHub Releases UI),
+      # GITHUB_SHA is the tag OBJECT sha, not the commit — images are tagged by commit.
+      - uses: actions/checkout@v4
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: meta
+        env:
+          # Via env, not inline interpolation — the input reaches the shell as data, never
+          # as script text (injection-proof), and is validated before any use.
+          INPUT_TAG: ${{ inputs.image_tag }}
         run: |
+          set -euo pipefail
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "tag=${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+            if ! [[ "$INPUT_TAG" =~ ^[0-9a-f]{12}$ ]]; then
+              echo "image_tag must be the 12-char lowercase commit SHA (got: '$INPUT_TAG')"; exit 1
+            fi
+            echo "tag=$INPUT_TAG" >> "$GITHUB_OUTPUT"
             echo "release=manual-${{ github.run_id }}" >> "$GITHUB_OUTPUT"
           else
-            echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+            commit=$(git rev-parse "${GITHUB_REF_NAME}^{commit}")
+            echo "tag=${commit::12}" >> "$GITHUB_OUTPUT"
             echo "release=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
           fi
+
+      # Build-once-promote only means anything if the promoted commit actually passed CI.
+      - name: Verify CI passed for this commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          sha="${{ steps.meta.outputs.tag }}" # 12-char prefix is a valid commit ref for the API
+          conclusion=$(gh api "repos/${{ github.repository }}/commits/$sha/check-runs?check_name=ci-status" \
+            --jq '[.check_runs[]] | sort_by(.started_at) | last | .conclusion // "missing"')
+          if [ "$conclusion" != "success" ]; then
+            echo "ci-status for $sha is '$conclusion' — refusing to promote."; exit 1
+          fi
+          echo "CI passed for $sha."
 
       # Re-tag the tested :sha image as the release + a moving :prod alias. No rebuild.
       - name: Promote images (no rebuild)
@@ -64,8 +95,9 @@ jobs:
 
       # The Caddyfile now belongs to the shared edge stack (docker-compose.edge.yml), not
       # this per-env stack, so only the prod Compose file is copied here.
+      # Third-party actions holding VPS credentials are pinned to commit SHAs (supply chain).
       - name: Copy infra files to VPS
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634 # v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -75,7 +107,7 @@ jobs:
           strip_components: 1
 
       - name: Deploy + health check over SSH
-        uses: appleboy/ssh-action@v1.2.2
+        uses: appleboy/ssh-action@2ead5e36573f08b82fbfce1504f1a4b05a647c6f # v1.2.2
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -84,16 +116,17 @@ jobs:
             set -euo pipefail
             cd ~/beecompete-prod
             export IMAGE_REPO="${{ github.repository }}"
+            # Validated upstream: 12-hex dispatch input or git rev-parse output only.
             export IMAGE_TAG="${{ needs.promote.outputs.tag }}"
+            # Always drop the GHCR credentials from the box, even on failure.
+            trap 'docker logout ghcr.io || true' EXIT
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
             docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d
-            for i in $(seq 1 20); do
-              if docker compose -f docker-compose.prod.yml exec -T api wget -qO- http://localhost:8080/actuator/health | grep -q '"status":"UP"'; then
-                echo "API healthy"; docker logout ghcr.io; exit 0
-              fi
-              echo "waiting for API health ($i/20)…"; sleep 6
-            done
-            echo "API did not become healthy — rolling back is manual (see infra/README). Log:"
-            docker compose -f docker-compose.prod.yml logs --tail=80 api
-            exit 1
+            # --wait gates on EVERY service healthcheck (api + web), not just the API.
+            if ! docker compose -f docker-compose.prod.yml up -d --wait --wait-timeout 240; then
+              echo "stack did not become healthy — rolling back is manual (see infra/README). Logs:"
+              docker compose -f docker-compose.prod.yml logs --tail=100
+              exit 1
+            fi
+            echo "production healthy at ${IMAGE_TAG}"
+            docker image prune -af --filter "until=168h" >/dev/null 2>&1 || true
