@@ -139,9 +139,19 @@ name-sorted browse feed) + `GET /api/v1/competitions/{slug}` (detail: editions +
 regions + resources + FAQs + organizer). Archived invisible (D7), verification/provenance exposed
 (DQ13), **lowercase public enum tokens**, and **`effectiveStatus`** computed by
 `catalog.service.EffectiveStatus` per the binding domain-model §8 rule. As-built for both:
-`docs/architecture.md` §13b. Next per `docs/phase-1-plan.md`: **R1-5 search & filter API** or
-**R1-6/R1-6b frontend**; **S2/S3 seeding** can run in parallel — S3's extractor POSTs into the
-import queue R1-3 built. **Deferred (PR C):** S3 pre-signed hero-image upload + inline FAQ/
+`docs/architecture.md` §13b. **R1-5 done (2026-07-12) — search & filter API** (M2/M3/M4, X10),
+on the SAME `GET /api/v1/competitions` endpoint: Liquibase `0007` (pg_trgm + stored generated
+weighted tsvector via immutable wrapper fn + GIN on vector/`lower(name)` trgm/`evaluation_type`);
+`catalog.service.CompetitionSearchService` (native SQL) — `q` (FTS `websearch_to_tsquery` OR
+`word_similarity ≥ 0.3` typo tolerance), all M3 facets (**grade = range overlap**;
+**participation/pathway = eligibility semantics**, individual includes BOTH/EITHER; region by
+id-or-code; `evaluation` = canonical lowercase tokens in `EvaluationTypes`, also validated at the
+curation write boundary now; `deadlineWithinDays` on next FUTURE REG_CLOSE), sorts
+relevance/name/newest/deadline (popularity waits for R2-10 save counts), Grade+Category facet
+counts (exclude own dimension); unknown token → 400, unknown value → empty page. As-built §13c.
+Next per `docs/phase-1-plan.md`: **R1-6/R1-6b frontend**; **S2/S3 seeding** can run in parallel —
+S3's extractor POSTs into the import queue R1-3 built. **Deferred (PR C):** S3 pre-signed
+hero-image upload + inline FAQ/
 Resource row-edit. **Before prod users:** set `ADMIN_API_TOKEN` in both VPS `.env` + `/admin`
 behind Cloudflare Access (setup-runbook §5).
 Remaining F8 operational steps (uptime monitor + confirming Sentry receives events) are done after

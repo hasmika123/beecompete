@@ -10,9 +10,12 @@
 > `/api/v1/corrections` intake with field whitelist, `/admin/corrections` review queue, approve
 > applies the diff through the curation write path; as-built §13b). **R1-4 done** (public catalog
 > read API: paged list + detail-by-slug, editions with **effectiveStatus** per the domain-model §8
-> rule, verification/provenance exposed, lowercase tokens; as-built §13b). **Next:** R1-5 search &
-> filter API, or R1-6/R1-6b frontend; **S2/S3 seeding** can run in parallel (S3's extractor feeds
-> the R1-3 import queue). Deferred: PR C (S3 hero-image upload + inline FAQ/Resource edit).
+> rule, verification/provenance exposed, lowercase tokens; as-built §13b). **R1-5 done** (search &
+> filter on the same endpoint: Postgres FTS + pg_trgm typo tolerance — migration `0007` — all M3
+> facets incl. eligibility-semantic participation/pathway, deadline filter/sort, Grade+Category
+> facet counts; popularity sort deferred to R2-10; as-built §13c). **Next:** R1-6/R1-6b frontend;
+> **S2/S3 seeding** can run in parallel (S3's extractor feeds the R1-3 import queue). Deferred:
+> PR C (S3 hero-image upload + inline FAQ/Resource edit).
 
 The ordered, buildable task list for Phase 1. **Every task below becomes a GitHub Issue** (titled with its
 task ID + registry refs) before coding — that's the required per-phase step. Build in the listed order;

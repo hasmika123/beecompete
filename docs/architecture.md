@@ -223,6 +223,38 @@ tooling + audit log) → Phase 2+ (dedup DQ4, conflict resolution DQ5) → Phase
   REG_CLOSE, fallback earliest SUBMISSION_DUE) → closed; UPCOMING inside the registration window →
   open. Search/filters/sort land at R1-5.
 
+### 13c. Search & filter — as built (R1-5, 2026-07-12)
+
+- **Infra (migration `0007`):** `CREATE EXTENSION pg_trgm` (fine on Neon as DB owner and on the
+  postgres:16 test image); a **stored generated `tsvector` column** on `competition` (weighted:
+  name A, tags/summary B, description C — expression wrapped in an IMMUTABLE SQL function because
+  `array_to_string(text[])` is only marked STABLE); GIN indexes on the vector, on
+  `lower(name) gin_trgm_ops` (typo tolerance), and on `evaluation_type` (the multi-valued facet
+  the domain model reserved for R1-5).
+- **One endpoint:** `GET /api/v1/competitions` (the R1-4 browse feed) grew the R1-5 params —
+  `q`, `category` (slug), `minGrade`/`maxGrade`, `region` (id or code), `cost`, `delivery`,
+  `participation`, `pathway`, `evaluation` (repeatable), `deadlineWithinDays`, `sort`
+  (`relevance|name|newest|deadline`), `facets`. Implemented in
+  `catalog.service.CompetitionSearchService` — native SQL (FTS/trigram/lateral have no JPQL
+  form) returning ids + computed next deadline, entities hydrated via the repository.
+- **Semantics (as-built decisions):** keyword match = FTS (`websearch_to_tsquery`) OR
+  `word_similarity ≥ 0.3` on the name (word-span, not whole-string — short queries aren't
+  diluted by long names); **grade = range overlap** (null bound = open side);
+  **participation/pathway are eligibility filters** (filtering `individual` includes
+  BOTH/EITHER records — the parent's question is "can we enter this way?"); **next deadline** =
+  earliest FUTURE `REG_CLOSE` over live editions (consistent with `EffectiveStatus`), deadline
+  sort puts no-deadline records last; **facet counts** (Grade + Category only, per the Page-2
+  blueprint) exclude the facet's own filter; **unknown token → 400** naming the allowed set,
+  **unknown value (slug/region nobody has) → empty page**, not an error.
+- **Evaluation types are now canonical tokens** (`EvaluationTypes`: `submission, exam,
+  live_performance, interview, portfolio` — stored lowercase, i.e. the public token form) and
+  validated at the curation write boundary (422) — closing the R1-1 note on
+  `competition.evaluation_type`. The "format" facet (M3) filters on this array.
+- **Deferred:** popularity sort (M4) waits for its signal (M31 save counts, R2-10);
+  region/category **hierarchy descent** in filters (a US filter doesn't yet match state-tagged
+  editions; categories are flat at R1); per-facet counts beyond Grade/Category (blueprint says
+  those two only).
+
 ## 14. Environments & deployment
 
 > **As built (LIVE 2026-07-12):** IONOS VPS, US East. A **single shared edge Caddy**

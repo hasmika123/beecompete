@@ -1,0 +1,38 @@
+# R1-5 — search & filter infrastructure (X10/M2/M3): pg_trgm for typo-tolerant name matching,
+# a stored generated tsvector over the searchable text (weighted: name A, summary/tags B,
+# description C), and the GIN indexes the domain model reserved for R1-5 (multi-valued facets).
+# The tsvector expression lives in an IMMUTABLE SQL function because generated columns require
+# immutability and array_to_string(text[]) is only marked STABLE (safe for text[] in practice —
+# the standard wrapper pattern). Additive-only, as always.
+databaseChangeLog:
+  - changeSet:
+      id: 0007-search-infra
+      author: beecompete
+      comment: R1-5 search infrastructure — pg_trgm, competition search vector, GIN facet indexes (X10, M2, M3).
+      changes:
+        - sql:
+            comment: Trigram matching for typo-tolerant name search. Available on Neon and the postgres:16 image.
+            sql: CREATE EXTENSION IF NOT EXISTS pg_trgm
+        - sql:
+            comment: Immutable wrapper so the generated column may include tags[].
+            splitStatements: false
+            sql: >-
+              CREATE FUNCTION competition_search_vector(name text, summary text, description text, tags text[])
+              RETURNS tsvector
+              LANGUAGE sql IMMUTABLE PARALLEL SAFE
+              RETURN setweight(to_tsvector('english', coalesce(name, '')), 'A')
+                  || setweight(to_tsvector('english', coalesce(array_to_string(tags, ' '), '')), 'B')
+                  || setweight(to_tsvector('english', coalesce(summary, '')), 'B')
+                  || setweight(to_tsvector('english', coalesce(description, '')), 'C')
+        - sql:
+            comment: Stored generated column — stays in sync on every write, no triggers, no app code.
+            sql: >-
+              ALTER TABLE competition ADD COLUMN search_vector tsvector
+              GENERATED ALWAYS AS (competition_search_vector(name, summary, description, tags)) STORED
+        - sql:
+            sql: CREATE INDEX ix_competition_search_vector ON competition USING gin (search_vector)
+        - sql:
+            sql: CREATE INDEX ix_competition_name_trgm ON competition USING gin (lower(name) gin_trgm_ops)
+        - sql:
+            comment: The "format" facet (M3) filters on the evaluation_type token array (domain-model §8).
+            sql: CREATE INDEX ix_competition_evaluation_type ON competition USING gin (evaluation_type)
