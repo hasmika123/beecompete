@@ -19,6 +19,7 @@ import { FaqList } from '@/components/detail/faq-list';
 import { KeyDatesTimeline } from '@/components/detail/key-dates-timeline';
 import { KeyFacts } from '@/components/detail/key-facts';
 import { RelatedCompetitions } from '@/components/detail/related-competitions';
+import { ResourcesRow } from '@/components/detail/resources-row';
 import { ShareButton } from '@/components/detail/share-button';
 import { StickyBottomBar } from '@/components/detail/sticky-bottom-bar';
 import { StubAction } from '@/components/detail/stub-action';
@@ -173,7 +174,11 @@ export default async function CompetitionDetailPage({
             />
           </div>
 
-          {/* Resources row (3b) lands at R1-8. */}
+          {competition.resources.length > 0 && (
+            <div className="mt-12">
+              <ResourcesRow resources={competition.resources} />
+            </div>
+          )}
 
           <div className="mt-12">
             <RelatedCompetitions

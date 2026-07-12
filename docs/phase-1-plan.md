@@ -29,7 +29,12 @@
 > Resources row = R1-8. **S2/S3 seeding done (2026-07-12, PRs open):** S2 master index (326
 > ranked competitions, all 11 categories, majors ≥15) in `docs/seeding/`; S3 extraction-pipeline
 > v0 in `tools/seeding/` (fetch→LLM-extract→schema-validate→POST to the R1-3 import queue).
-> **Next:** R1-8 resources + affiliate disclosure. Deferred: PR C (S3 hero-image upload + inline
+> **R1-8 done (2026-07-12) 🔒** — detail-page resources row (M11): reused `ScrollRow` of
+> type-tinted resource cards (book/past_paper/guide/video/other), each an outbound link with
+> `rel="nofollow noopener noreferrer"`, and **affiliate links carry `rel="sponsored nofollow"`
+> + a per-card "Affiliate" chip + a clear, conspicuous inline disclosure rendered with the row
+> whenever any affiliate link is present** (FTC/DQ10; dedicated disclosure page still R1-12).
+> **Next:** R1-9 trust/verification badges. Deferred: PR C (S3 hero-image upload + inline
 > FAQ/Resource edit).
 
 The ordered, buildable task list for Phase 1. **Every task below becomes a GitHub Issue** (titled with its
