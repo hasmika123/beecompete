@@ -312,9 +312,12 @@ The R1-1 catalog schema shipped (12 tables: the §5 catalog set + `CompetitionFa
 - **Provenance = three typed columns** (`provenance_source`, `provenance_last_verified_at`,
   `provenance_confidence`) + separate `verification_state` — not a JSONB blob (D1: we filter on
   these).
-- **Multi-valued facets** (`tags`, `evaluation_type`) = Postgres `text[]` (GIN-indexable at R1-5),
-  not child tables. JSONB (`@JdbcTypeCode(SqlTypes.JSON)`) for `attributes`/`json_schema`/
-  `ui_hints`/`affiliate_meta`/correction `payload`.
+- **Multi-valued facets** (`tags`, `evaluation_type`) = Postgres `text[]` (GIN-indexed since
+  R1-5 migration `0007`), not child tables. JSONB (`@JdbcTypeCode(SqlTypes.JSON)`) for
+  `attributes`/`json_schema`/`ui_hints`/`affiliate_meta`/correction `payload`.
+  **`evaluation_type` tokens are canonical since R1-5** (`EvaluationTypes`: `submission, exam,
+  live_performance, interview, portfolio`) — stored in lowercase public-token form and validated
+  at the curation write boundary; adding a token is additive.
 - **R2 references stay FK-less**: `organizer_org_id`, `submitted_by_user_id`, `reviewed_by`,
   `updated_by` are nullable UUIDs; the FKs are added in R2-1 with their target tables.
 - **Hibernate runs `ddl-auto: validate`** against the Liquibase-migrated schema on every boot;

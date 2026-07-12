@@ -13,9 +13,6 @@ public interface CompetitionRepository extends JpaRepository<Competition, UUID> 
 
 	boolean existsBySlug(String slug);
 
-	/** Admin list search (R1-3). Real FTS search is R1-5 — this is a plain contains match. */
+	/** Admin list search (R1-3) — a plain contains match; the public FTS search is CompetitionSearchService. */
 	Page<Competition> findByNameContainingIgnoreCase(String name, Pageable pageable);
-
-	/** Public catalog list (R1-4): live listings only — archived records keep their slug but vanish (D7). */
-	Page<Competition> findByArchivedAtIsNull(Pageable pageable);
 }

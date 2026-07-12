@@ -139,7 +139,10 @@ export function CompetitionForm({
         <FormField label="Tags" hint="comma-separated">
           <Input name="tags" defaultValue={c?.tags?.join(', ') ?? ''} />
         </FormField>
-        <FormField label="Evaluation types" hint="comma-separated: exam, submission, …">
+        <FormField
+          label="Evaluation types"
+          hint="comma-separated, allowed: exam, submission, live_performance, interview, portfolio"
+        >
           <Input name="evaluationType" defaultValue={c?.evaluationType?.join(', ') ?? ''} />
         </FormField>
         <FormField label="Official URL">

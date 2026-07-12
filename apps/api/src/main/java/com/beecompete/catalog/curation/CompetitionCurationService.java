@@ -2,6 +2,7 @@ package com.beecompete.catalog.curation;
 
 import com.beecompete.catalog.domain.Category;
 import com.beecompete.catalog.domain.Competition;
+import com.beecompete.catalog.domain.EvaluationTypes;
 import com.beecompete.catalog.domain.Organization;
 import com.beecompete.catalog.domain.Provenance;
 import com.beecompete.catalog.repository.CategoryRepository;
@@ -44,6 +45,7 @@ public class CompetitionCurationService {
 		}
 		Category category = requireCategory(request.categoryId());
 		validateAttributes(request);
+		validateEvaluationTypes(request);
 		Competition competition = new Competition(request.slug(), request.name(), category,
 				request.participationMode(), request.delivery(), request.entryPathway(), request.costType(),
 				request.recurrence());
@@ -60,6 +62,7 @@ public class CompetitionCurationService {
 		}
 		Category category = requireCategory(request.categoryId());
 		validateAttributes(request);
+		validateEvaluationTypes(request);
 		competition.setSlug(request.slug());
 		competition.setName(request.name());
 		competition.setParticipationMode(request.participationMode());
@@ -108,6 +111,21 @@ public class CompetitionCurationService {
 		if (!problems.isEmpty()) {
 			throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
 					"attributes do not match the category template: " + String.join("; ", problems));
+		}
+	}
+
+	/** Evaluation-type tokens are a canonical lowercase set (R1-5 "format" facet, glossary: Format). */
+	private void validateEvaluationTypes(CompetitionRequest request) {
+		if (request.evaluationType() == null) {
+			return;
+		}
+		List<String> unknown = request.evaluationType().stream()
+				.filter(token -> !EvaluationTypes.TOKENS.contains(token))
+				.toList();
+		if (!unknown.isEmpty()) {
+			throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+					"unknown evaluation type(s): " + String.join(", ", unknown) + " — allowed: "
+							+ String.join(", ", EvaluationTypes.TOKENS.stream().sorted().toList()));
 		}
 	}
 }

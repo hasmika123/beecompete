@@ -2,9 +2,14 @@ package com.beecompete.catalog.web;
 
 import com.beecompete.catalog.domain.Competition;
 import com.beecompete.catalog.domain.CompetitionFaq;
+import com.beecompete.catalog.domain.CostType;
+import com.beecompete.catalog.domain.Delivery;
 import com.beecompete.catalog.domain.Edition;
+import com.beecompete.catalog.domain.EntryPathway;
+import com.beecompete.catalog.domain.EvaluationTypes;
 import com.beecompete.catalog.domain.KeyDate;
 import com.beecompete.catalog.domain.Organization;
+import com.beecompete.catalog.domain.ParticipationMode;
 import com.beecompete.catalog.domain.Provenance;
 import com.beecompete.catalog.domain.Region;
 import com.beecompete.catalog.domain.Resource;
@@ -14,6 +19,7 @@ import com.beecompete.catalog.repository.EditionRegionRepository;
 import com.beecompete.catalog.repository.EditionRepository;
 import com.beecompete.catalog.repository.KeyDateRepository;
 import com.beecompete.catalog.repository.ResourceRepository;
+import com.beecompete.catalog.service.CompetitionSearchService;
 import com.beecompete.catalog.service.EffectiveStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -22,9 +28,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,8 +43,9 @@ import org.springframework.web.server.ResponseStatusException;
  * records are invisible here (D7). Edition status is rendered through {@link EffectiveStatus}
  * — the binding read-path rule — as {@code effectiveStatus} next to the curated token.
  *
- * <p>Enum values are exposed as lowercase public tokens (R1-1 as-built rule). Search, filters,
- * and sort options land at R1-5; this list is the plain browse feed.
+ * <p>Enum values are exposed as lowercase public tokens (R1-1 as-built rule). The list endpoint
+ * is also the R1-5 search & filter surface (M2/M3/M4) — see {@link CompetitionSearchService}
+ * for the search/filter/facet semantics.
  */
 @RestController
 @RequestMapping("/api/v1")
@@ -54,23 +58,95 @@ public class CatalogPublicController {
 	private final EditionRegionRepository editionRegions;
 	private final ResourceRepository resources;
 	private final CompetitionFaqRepository faqs;
+	private final CompetitionSearchService search;
 
 	public CatalogPublicController(CompetitionRepository competitions, EditionRepository editions,
 			KeyDateRepository keyDates, EditionRegionRepository editionRegions, ResourceRepository resources,
-			CompetitionFaqRepository faqs) {
+			CompetitionFaqRepository faqs, CompetitionSearchService search) {
 		this.competitions = competitions;
 		this.editions = editions;
 		this.keyDates = keyDates;
 		this.editionRegions = editionRegions;
 		this.resources = resources;
 		this.faqs = faqs;
+		this.search = search;
 	}
 
+	/**
+	 * Browse + search + filter (R1-5). All params optional — no params is the plain R1-4 browse
+	 * feed. Filter tokens are the lowercase public form; unknown tokens 400 (naming the allowed
+	 * set), unknown filter VALUES (a category slug or region nobody has) return an empty page.
+	 * {@code participation}/{@code pathway} are eligibility filters: "individual" includes
+	 * records marked BOTH/EITHER. {@code sort=relevance} needs {@code q} (falls back to name).
+	 */
 	@GetMapping("/competitions")
-	public Page<CompetitionSummary> list(@RequestParam(defaultValue = "0") int page,
+	public SearchResponse list(@RequestParam(required = false) String q,
+			@RequestParam(required = false) String category,
+			@RequestParam(required = false) Short minGrade,
+			@RequestParam(required = false) Short maxGrade,
+			@RequestParam(required = false) String region,
+			@RequestParam(required = false) String cost,
+			@RequestParam(required = false) String delivery,
+			@RequestParam(required = false) String participation,
+			@RequestParam(required = false) String pathway,
+			@RequestParam(required = false) List<String> evaluation,
+			@RequestParam(required = false) Integer deadlineWithinDays,
+			@RequestParam(required = false) String sort,
+			@RequestParam(defaultValue = "false") boolean facets,
+			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "25") int size) {
-		var pageable = PageRequest.of(Math.max(0, page), Math.clamp(size, 1, 100), Sort.by("name"));
-		return competitions.findByArchivedAtIsNull(pageable).map(CompetitionSummary::from);
+		if (evaluation != null) {
+			for (String token : evaluation) {
+				if (!EvaluationTypes.TOKENS.contains(token)) {
+					throw badToken("evaluation", token, EvaluationTypes.TOKENS.stream().sorted().toList());
+				}
+			}
+		}
+		if (deadlineWithinDays != null && deadlineWithinDays < 0) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "deadlineWithinDays must be >= 0");
+		}
+		var criteria = new CompetitionSearchService.Criteria(q, category, minGrade, maxGrade, region,
+				parseToken("cost", cost, CostType.class),
+				parseToken("delivery", delivery, Delivery.class),
+				parseEligibility("participation", participation, ParticipationMode.class,
+						ParticipationMode.BOTH),
+				parseEligibility("pathway", pathway, EntryPathway.class, EntryPathway.EITHER),
+				evaluation,
+				deadlineWithinDays,
+				sort != null ? parseToken("sort", sort, CompetitionSearchService.SortOption.class)
+						: (q != null && !q.isBlank() ? CompetitionSearchService.SortOption.RELEVANCE
+								: CompetitionSearchService.SortOption.NAME),
+				facets, Math.max(0, page), Math.clamp(size, 1, 100));
+		CompetitionSearchService.Result result = search.search(criteria);
+		return SearchResponse.from(result);
+	}
+
+	private static <E extends Enum<E>> E parseToken(String param, String value, Class<E> type) {
+		if (value == null || value.isBlank()) {
+			return null;
+		}
+		try {
+			return Enum.valueOf(type, value.trim().toUpperCase(Locale.ROOT));
+		} catch (IllegalArgumentException e) {
+			throw badToken(param, value,
+					java.util.Arrays.stream(type.getEnumConstants()).map(CatalogPublicController::token).toList());
+		}
+	}
+
+	/** participation/pathway: the catch-all value (BOTH/EITHER) is not a filter choice — reject it. */
+	private static <E extends Enum<E>> E parseEligibility(String param, String value, Class<E> type,
+			E catchAll) {
+		E parsed = parseToken(param, value, type);
+		if (parsed == catchAll) {
+			throw badToken(param, value, java.util.Arrays.stream(type.getEnumConstants())
+					.filter(e -> e != catchAll).map(CatalogPublicController::token).toList());
+		}
+		return parsed;
+	}
+
+	private static ResponseStatusException badToken(String param, String value, List<String> allowed) {
+		return new ResponseStatusException(HttpStatus.BAD_REQUEST,
+				"unknown " + param + " '" + value + "' — allowed: " + String.join(", ", allowed));
 	}
 
 	@GetMapping("/competitions/{slug}")
@@ -120,16 +196,45 @@ public class CatalogPublicController {
 			CategoryView category, OrganizerView organizer, List<String> tags, String participationMode,
 			Short teamSizeMin, Short teamSizeMax, String delivery, String entryPathway,
 			List<String> evaluationType, Short minGrade, Short maxGrade, Short minAge, Short maxAge,
-			String costType, String recurrence, String verificationState, ProvenanceView provenance) {
+			String costType, String recurrence, String verificationState, ProvenanceView provenance,
+			Instant nextDeadline) {
 
-		static CompetitionSummary from(Competition c) {
+		static CompetitionSummary from(Competition c, Instant nextDeadline) {
 			return new CompetitionSummary(c.getId(), c.getSlug(), c.getName(), c.getSummary(), c.getLogo(),
 					new CategoryView(c.getCategory().getSlug(), c.getCategory().getName()),
 					OrganizerView.from(c.getOrganizer()), c.getTags(), token(c.getParticipationMode()),
 					c.getTeamSizeMin(), c.getTeamSizeMax(), token(c.getDelivery()), token(c.getEntryPathway()),
 					c.getEvaluationType(), c.getMinGrade(), c.getMaxGrade(), c.getMinAge(), c.getMaxAge(),
 					token(c.getCostType()), token(c.getRecurrence()), token(c.getVerificationState()),
-					ProvenanceView.from(c.getProvenance()));
+					ProvenanceView.from(c.getProvenance()), nextDeadline);
+		}
+	}
+
+	public record CategoryFacetView(String slug, String name, long count) {}
+
+	public record GradeFacetView(short grade, long count) {}
+
+	public record FacetsView(List<CategoryFacetView> categories, List<GradeFacetView> grades) {}
+
+	/** Page-shaped response (content/totalElements/totalPages/number/size) + optional facet counts. */
+	public record SearchResponse(List<CompetitionSummary> content, long totalElements, int totalPages,
+			int number, int size, FacetsView facets) {
+
+		static SearchResponse from(CompetitionSearchService.Result result) {
+			List<CompetitionSummary> content = result.items().stream()
+					.map(item -> CompetitionSummary.from(item.competition(), item.nextDeadline()))
+					.toList();
+			FacetsView facets = result.facets() == null ? null
+					: new FacetsView(
+							result.facets().categories().stream()
+									.map(f -> new CategoryFacetView(f.slug(), f.name(), f.count()))
+									.toList(),
+							result.facets().grades().stream()
+									.map(f -> new GradeFacetView(f.grade(), f.count()))
+									.toList());
+			return new SearchResponse(content, result.total(),
+					(int) Math.ceil((double) result.total() / result.size()), result.page(), result.size(),
+					facets);
 		}
 	}
 
