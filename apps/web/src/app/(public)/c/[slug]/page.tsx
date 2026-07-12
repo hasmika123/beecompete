@@ -1,29 +1,43 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Badge, CategoryTag, ExternalLink, VerifiedSeal, buttonClasses } from '@beecompete/ui';
+import {
+  Badge,
+  Bell,
+  CategoryCover,
+  CategoryTag,
+  ExternalLink,
+  Flag,
+  Pencil,
+  VerifiedSeal,
+  buttonClasses,
+  cn,
+} from '@beecompete/ui';
+import { AtAGlance } from '@/components/detail/at-a-glance';
+import { DetailTabs } from '@/components/detail/detail-tabs';
+import { FaqList } from '@/components/detail/faq-list';
+import { KeyDatesTimeline } from '@/components/detail/key-dates-timeline';
+import { KeyFacts } from '@/components/detail/key-facts';
+import { RelatedCompetitions } from '@/components/detail/related-competitions';
+import { ShareButton } from '@/components/detail/share-button';
+import { StickyBottomBar } from '@/components/detail/sticky-bottom-bar';
+import { StubAction } from '@/components/detail/stub-action';
+import { TrustPanel } from '@/components/detail/trust-panel';
 import { fetchCompetition } from '@/lib/catalog-api';
-import { gradeLabel } from '@/lib/catalog-display';
 import type { CompetitionDetail } from '@/lib/catalog-types';
+import { currentEdition } from '@/lib/detail-display';
 import { PublicApiError } from '@/lib/public-api';
+import { absoluteUrl } from '@/lib/site';
+import { breadcrumbJsonLd, eventJsonLd, faqJsonLd, jsonLdScript } from '@/lib/structured-data';
 
-// INTERIM detail page (decision #30): a minimal, noindex placeholder at /c/<slug> so
-// CompetitionCards never dead-link. The real Page-3 build (at-a-glance strip, tabs, FAQ,
-// sticky sidebar, structured data) is R1-7 — replace this file there.
+// Competition detail — page-blueprints Page 3, the primary SEO landing surface (schema.org
+// Event + BreadcrumbList + FAQPage). Route locked to /c/<slug> (decision #30). Public
+// indexing stays off site-wide until the R1 gate (root layout robots), so this ships SEO-ready
+// and inert — it no longer sets its own noindex the interim stub carried; it inherits the
+// site default and starts indexing when R1-10/R1-17 flips it. The Resources row (3b) lands at
+// R1-8; the Follow/Claim capture backends at R1-15b.
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
-  const competition = await load((await params).slug);
-  if (!competition) return {};
-  return {
-    title: `${competition.name} — BeeCompete`,
-    description: competition.summary ?? undefined,
-    robots: { index: false }, // interim page — indexing starts with the real Page 3 (R1-7/R1-10)
-  };
-}
+const SENTINEL_ID = 'detail-header-sentinel';
 
 async function load(slug: string): Promise<CompetitionDetail | null> {
   try {
@@ -34,7 +48,32 @@ async function load(slug: string): Promise<CompetitionDetail | null> {
   }
 }
 
-export default async function CompetitionStubPage({
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const competition = await load((await params).slug);
+  if (!competition) return {};
+  const path = `/c/${competition.slug}`;
+  const description =
+    competition.summary ??
+    competition.description?.slice(0, 200) ??
+    `${competition.name} — grades, deadlines, cost, and how to enter.`;
+  return {
+    title: competition.name,
+    description,
+    alternates: { canonical: path },
+    openGraph: {
+      title: `${competition.name} · BeeCompete`,
+      description,
+      url: absoluteUrl(path),
+      type: 'website',
+    },
+  };
+}
+
+export default async function CompetitionDetailPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
@@ -43,11 +82,35 @@ export default async function CompetitionStubPage({
   const competition = await load(slug);
   if (!competition) notFound();
 
-  const grades = gradeLabel(competition.minGrade, competition.maxGrade);
-  const currentEdition = competition.editions.at(-1);
+  const edition = currentEdition(competition.editions);
+  const registerUrl = edition?.registrationUrl ?? competition.officialUrl ?? null;
+  const path = `/c/${competition.slug}`;
+
+  const event = eventJsonLd(competition);
+  const breadcrumb = breadcrumbJsonLd(competition);
+  const faqLd = faqJsonLd(competition.faqs);
 
   return (
-    <article className="mx-auto max-w-3xl">
+    <article className="pb-20 lg:pb-0">
+      {/* Structured data (inert until indexing flips on at the R1 gate). */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumb) }}
+      />
+      {event && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(event) }}
+        />
+      )}
+      {faqLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(faqLd) }}
+        />
+      )}
+
+      {/* Breadcrumb — replaces the back button; matches the BreadcrumbList data. */}
       <nav aria-label="Breadcrumb" className="text-sm text-muted">
         <Link href="/competitions" className="hover:text-foreground">
           Competitions
@@ -59,58 +122,198 @@ export default async function CompetitionStubPage({
         › <span className="text-foreground">{competition.name}</span>
       </nav>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <CategoryTag slug={competition.category.slug} name={competition.category.name} />
-        {grades && <Badge variant="outline">{grades}</Badge>}
-        <Badge variant="outline">{competition.costType === 'free' ? 'Free' : 'Paid'}</Badge>
-        {currentEdition && <Badge variant="neutral">{currentEdition.effectiveStatus}</Badge>}
-      </div>
+      <div className="mt-6 grid gap-8 lg:grid-cols-3">
+        {/* Main column */}
+        <div className="lg:col-span-2">
+          <header>
+            <div className="flex flex-wrap items-center gap-2">
+              <CategoryTag slug={competition.category.slug} name={competition.category.name} />
+              {edition && <Badge variant="outline">{statusLabel(edition.effectiveStatus)}</Badge>}
+            </div>
+            <h1 className="mt-3 font-display text-3xl text-foreground sm:text-4xl">
+              {competition.name}
+            </h1>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+              {competition.organizer ? (
+                <p className="flex items-center gap-1.5 text-sm text-muted">
+                  By {competition.organizer.name}
+                  {competition.organizer.verificationState === 'verified' && (
+                    <VerifiedSeal
+                      weight="fill"
+                      role="img"
+                      aria-label="Verified organizer"
+                      className="size-4 text-success"
+                    />
+                  )}
+                </p>
+              ) : (
+                <span />
+              )}
+              <ShareButton title={competition.name} path={path} />
+            </div>
 
-      <h1 className="mt-3 font-display text-3xl text-foreground sm:text-4xl">{competition.name}</h1>
+            <div className="mt-6 rounded-[var(--radius-panel)] border border-border bg-surface-raised p-5">
+              <AtAGlance competition={competition} />
+            </div>
+          </header>
 
-      {competition.organizer && (
-        <p className="mt-2 flex items-center gap-1.5 text-sm text-muted">
-          By {competition.organizer.name}
-          {competition.organizer.verificationState === 'verified' && (
-            <VerifiedSeal
-              weight="fill"
-              role="img"
-              aria-label="Verified organizer"
-              className="size-4 text-success"
+          <span id={SENTINEL_ID} aria-hidden="true" />
+
+          <div className="mt-8">
+            <DetailTabs
+              keyFacts={<KeyFacts competition={competition} />}
+              about={
+                competition.description ? (
+                  <div className="max-w-prose text-sm leading-relaxed whitespace-pre-line text-foreground">
+                    {competition.description}
+                  </div>
+                ) : undefined
+              }
+              faq={competition.faqs.length > 0 ? <FaqList faqs={competition.faqs} /> : undefined}
             />
-          )}
-        </p>
-      )}
+          </div>
 
-      {(competition.summary || competition.description) && (
-        <p className="mt-5 leading-relaxed text-foreground">
-          {competition.description ?? competition.summary}
-        </p>
-      )}
+          {/* Resources row (3b) lands at R1-8. */}
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        {competition.officialUrl && (
-          <a
-            href={competition.officialUrl}
-            target="_blank"
-            rel="noreferrer"
-            className={buttonClasses({ variant: 'brand' })}
-          >
-            Official site <ExternalLink aria-hidden="true" className="size-4" />
-          </a>
-        )}
-        <Link
-          href={`/suggest-a-correction?subject=competition&id=${competition.id}&name=${encodeURIComponent(competition.name)}`}
-          className={buttonClasses({ variant: 'ghost', size: 'sm' })}
-        >
-          Suggest a correction
-        </Link>
+          <div className="mt-12">
+            <RelatedCompetitions
+              categorySlug={competition.category.slug}
+              categoryName={competition.category.name}
+              excludeId={competition.id}
+            />
+          </div>
+        </div>
+
+        {/* Sidebar — sticky on desktop once scrolled (owner 2026-07-08). */}
+        <aside className="lg:sticky lg:top-24 lg:self-start">
+          <div className="grid gap-5">
+            {/* Cover + Register */}
+            <div className="overflow-hidden rounded-[var(--radius-panel)] border border-border bg-surface-raised">
+              <CategoryCover slug={competition.category.slug} className="h-40" />
+              <div className="grid gap-2 p-4">
+                {registerUrl ? (
+                  <>
+                    <a
+                      href={registerUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={cn(buttonClasses({ variant: 'brand' }), 'w-full justify-center')}
+                    >
+                      Register
+                      <ExternalLink aria-hidden="true" className="size-4" />
+                    </a>
+                    <p className="text-center text-xs text-muted">
+                      Registration happens on the organizer&apos;s official site ↗
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-center text-xs text-muted">
+                    No registration link yet — check back, or{' '}
+                    <Link
+                      href={correctionHref(competition)}
+                      className="underline hover:text-foreground"
+                    >
+                      suggest one
+                    </Link>
+                    .
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Follow — the page's conversion event (R1 stub; capture at R1-15b). */}
+            <div id="follow-cta">
+              <StubAction
+                label="Follow this competition"
+                icon={<Bell aria-hidden="true" className="size-4" />}
+                variant="primary"
+                note={
+                  <>
+                    Email reminders for this competition are almost ready. Meanwhile, the{' '}
+                    <Link href="/#digest" className="underline hover:text-foreground">
+                      weekly digest
+                    </Link>{' '}
+                    covers new and closing-soon competitions.
+                  </>
+                }
+              />
+            </div>
+
+            {/* Key dates */}
+            {edition && edition.keyDates.length > 0 && (
+              <section
+                aria-labelledby="dates-heading"
+                className="rounded-[var(--radius-panel)] border border-border bg-surface-raised p-5"
+              >
+                <h2 id="dates-heading" className="mb-4 text-sm font-semibold text-foreground">
+                  Key dates{edition.cycleLabel ? ` · ${edition.cycleLabel}` : ''}
+                </h2>
+                <KeyDatesTimeline edition={edition} competitionName={competition.name} />
+              </section>
+            )}
+
+            {/* Trust & attribution */}
+            <div className="rounded-[var(--radius-panel)] border border-border bg-surface-raised p-5">
+              <TrustPanel competition={competition} />
+              <div className="mt-4 grid gap-2 border-t border-border pt-4">
+                <StubAction
+                  label="Claim this competition"
+                  icon={<Flag aria-hidden="true" className="size-4" />}
+                  variant="secondary"
+                  note={
+                    <>
+                      Are you the organizer? Host tools are on the way — tell us you&apos;re
+                      interested via the{' '}
+                      <Link href="/#digest" className="underline hover:text-foreground">
+                        early-access list
+                      </Link>
+                      .
+                    </>
+                  }
+                />
+                <Link
+                  href={correctionHref(competition)}
+                  className={cn(
+                    buttonClasses({ variant: 'ghost', size: 'sm' }),
+                    'w-full justify-center',
+                  )}
+                >
+                  <Pencil aria-hidden="true" className="size-4" />
+                  Suggest a correction
+                </Link>
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
 
-      <p className="mt-10 rounded-[var(--radius-panel)] border border-border bg-surface p-4 text-sm text-muted">
-        The full competition page — dates timeline, key facts, FAQ, and resources — is on its way.
-        Until then, everything official lives on the organizer&apos;s site.
-      </p>
+      <StickyBottomBar sentinelId={SENTINEL_ID} registerUrl={registerUrl} />
     </article>
   );
+}
+
+function correctionHref(competition: CompetitionDetail): string {
+  const q = new URLSearchParams({
+    subject: 'competition',
+    id: competition.id,
+    name: competition.name,
+  });
+  return `/suggest-a-correction?${q.toString()}`;
+}
+
+function statusLabel(effectiveStatus: string): string {
+  switch (effectiveStatus) {
+    case 'open':
+      return 'Registration open';
+    case 'upcoming':
+      return 'Upcoming';
+    case 'ongoing':
+      return 'In progress';
+    case 'closed':
+      return 'Registration closed';
+    case 'archived':
+      return 'Archived';
+    default:
+      return effectiveStatus;
+  }
 }
