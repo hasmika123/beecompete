@@ -24,9 +24,11 @@ spring:
       validation-timeout: 5000
 
   jpa:
-    # Liquibase owns the schema — Hibernate never writes DDL (architecture §3).
+    # Liquibase owns the schema — Hibernate never writes DDL (architecture §3), but it
+    # VALIDATES the entity mappings against the migrated schema at startup, so any
+    # entity↔migration drift fails the boot loudly instead of surfacing as a runtime error.
     hibernate:
-      ddl-auto: none
+      ddl-auto: validate
     # No open-session-in-view: keep transactions explicit at the service boundary.
     open-in-view: false
     properties:
@@ -48,7 +50,9 @@ spring:
     password: ${DIRECT_PASSWORD:${DATABASE_PASSWORD:beecompete}}
 
 server:
-  # Undertow serves on 8080 by default; graceful shutdown drains in-flight requests.
+  # Tomcat serves on 8080 by default; graceful shutdown drains in-flight requests.
+  # (Undertow dropped 2026-07-12: deprecated in Boot 3.5 / removed in Boot 4, and
+  # spring.threads.virtual only applies to Tomcat/Jetty request processing anyway.)
   shutdown: graceful
 
 management:

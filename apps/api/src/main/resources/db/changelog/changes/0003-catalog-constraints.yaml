@@ -1,0 +1,31 @@
+# R1-1 follow-up (post-merge review, 2026-07-12). 0002 already ran on staging, so these
+# land as a new additive changeset — never edit a shipped changeset (architecture §3).
+databaseChangeLog:
+  - changeSet:
+      id: 0003-category-template-unique
+      author: beecompete
+      comment: >-
+        One Category Template per Category (domain-model §3a implies it;
+        CategoryTemplateRepository.findByCategoryId returns Optional and would throw on
+        duplicates). Enforce it in the DB before admin tooling (R1-3) starts writing templates.
+      changes:
+        - addUniqueConstraint:
+            tableName: category_template
+            columnNames: category_id
+            constraintName: uq_category_template_category
+  - changeSet:
+      id: 0003-key-date-edition-starts-at
+      author: beecompete
+      comment: >-
+        key_date is always read per-edition ordered by starts_at — a composite index serves
+        that fully; the single-column ix_key_date_edition is a redundant prefix, so drop it.
+      changes:
+        - createIndex:
+            indexName: ix_key_date_edition_starts_at
+            tableName: key_date
+            columns:
+              - column: { name: edition_id }
+              - column: { name: starts_at }
+        - dropIndex:
+            indexName: ix_key_date_edition
+            tableName: key_date

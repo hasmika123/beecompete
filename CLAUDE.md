@@ -101,9 +101,15 @@ Modal/Toast/Logo/ThemeToggle, curated Phosphor icon re-exports, Vitest tests; ap
 CompetitionCard direction + live showcase at `/design` in apps/web); F8 observability
 (Sentry error capture on web + api, env-driven/inert without a DSN, **no PII/no Session Replay** for
 COPPA; structured JSON logs via `logback-spring.xml` json profile — on in the deploy stacks). **All
-foundation tasks F1–F8 are done.** Next per `docs/phase-1-plan.md` is **R1** — starting with **R1-1**
-(core schema migration; first real domain entities). Remaining F8 operational steps (uptime monitor +
-confirming Sentry receives events) are done after staging is live — see setup-runbook §9.
+foundation tasks F1–F8 are done.** **R1-1 done (2026-07-12):** core catalog schema — Liquibase
+`0002`/`0003` + JPA entities/repositories in the `catalog` module (12 tables: Competition, Edition,
+EditionRegion, KeyDate, Category, CategoryTemplate, Region, Resource, CompetitionFaq,
+CorrectionProposal, HeroCard, FeaturedSlot); as-built decisions recorded in `docs/domain-model.md`
+§8; Hibernate `ddl-auto: validate` on every boot; API now on default Tomcat (Undertow dropped —
+deprecated in Boot 3.5). Next per `docs/phase-1-plan.md`: **R1-2** (category taxonomy + templates
+seeded) — and S2 (seeding master index) can start in parallel now that the schema is settled.
+Remaining F8 operational steps (uptime monitor + confirming Sentry receives events) are done after
+staging is live — see setup-runbook §9.
 
 **DEPLOYED (2026-07-12):** staging + production are **LIVE** on an **IONOS VPS** (US East, Ubuntu 24.04)
 behind a **single shared edge Caddy** — `https://beecompete.com` (+ `www`→apex) and

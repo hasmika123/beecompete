@@ -45,7 +45,7 @@ Replaceable (app containers) live on the VPS; **irreplaceable data (Postgres) is
 | Layer | Choice | Notes |
 |---|---|---|
 | **Web** | Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4 | SSR/SSG for SEO; long-running container (`next start`), not serverless. Also the **BFF** — forwards the httpOnly session cookie to the API. |
-| **API** | **Spring Boot on Java 21 (LTS)**, plain (no JHipster) · Undertow | Modular monolith. Java 21 virtual threads for I/O scalability. |
+| **API** | **Spring Boot on Java 21 (LTS)**, plain (no JHipster) · Tomcat (default) | Modular monolith. Java 21 virtual threads for I/O scalability. *(Undertow → Tomcat 2026-07-12: Undertow deprecated in Boot 3.5/removed in Boot 4, and `spring.threads.virtual` only applies to Tomcat/Jetty.)* |
 | **Security** | Spring Security, **session-based** (Spring Session JDBC → Postgres) | Hand-built flows (own the consent/guardian/RBAC logic); **no JWT machinery** — sessions are instantly revocable (ADR 9). |
 | **Persistence** | Spring Data JPA + Hibernate · **Liquibase** (additive migrations) · MapStruct (DTOs) · Bean Validation | |
 | **Database** | **PostgreSQL (managed)** | JSONB flexible attributes, FTS, pgvector for AI. Neon (free) → paid tier (~$20/mo) before real users. |

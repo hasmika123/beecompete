@@ -22,11 +22,10 @@ repositories {
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
-	// Web on Undertow, not the default Tomcat (architecture §3).
-	implementation("org.springframework.boot:spring-boot-starter-web") {
-		exclude(group = "org.springframework.boot", module = "spring-boot-starter-tomcat")
-	}
-	implementation("org.springframework.boot:spring-boot-starter-undertow")
+	// Web on default Tomcat. (Undertow dropped 2026-07-12: deprecated in Boot 3.5,
+	// removed in Boot 4, and virtual threads — spring.threads.virtual — only apply to
+	// Tomcat/Jetty request processing, so the original rationale was inoperative.)
+	implementation("org.springframework.boot:spring-boot-starter-web")
 
 	// Persistence (F4): Spring Data JPA + Hibernate, PostgreSQL, Liquibase migrations
 	// (architecture §3 Persistence). No entities yet — R1-1 adds the first schema.
