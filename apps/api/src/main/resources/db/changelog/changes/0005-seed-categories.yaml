@@ -1,0 +1,63 @@
+# R1-2 — seed the launch taxonomy (domain-model Q1: the ~10 top K-12 categories + "Other")
+# and one Category Template per category. Taxonomy is SEED CONFIG, not schema — later
+# additions/edits go through the admin tool (R1-3); this changeset only establishes launch state.
+#
+# Fixed UUIDs (beec0000-…) so templates/seeds/tests can reference categories deterministically.
+# Template JSON Schemas start PERMISSIVE (additionalProperties: true) with the standard
+# attributes-bag keys (domain-model §3a note) + a few category-specific fields; they tighten
+# over time as the S3 extraction pipeline learns real-world shapes — updating a template is an
+# admin edit, not a migration.
+databaseChangeLog:
+  - changeSet:
+      id: 0005-seed-categories
+      author: beecompete
+      comment: R1-2 — the 11 launch categories (Q1 list, locked) with fixed UUIDs.
+      changes:
+        - sql:
+            sql: >-
+              INSERT INTO category (id, name, slug) VALUES
+              ('beec0000-0000-4000-8000-000000000001', 'Math', 'math'),
+              ('beec0000-0000-4000-8000-000000000002', 'Science & Engineering', 'science-engineering'),
+              ('beec0000-0000-4000-8000-000000000003', 'Computer Science & Coding', 'computer-science'),
+              ('beec0000-0000-4000-8000-000000000004', 'Robotics', 'robotics'),
+              ('beec0000-0000-4000-8000-000000000005', 'Debate & Speech', 'debate-speech'),
+              ('beec0000-0000-4000-8000-000000000006', 'Business & Entrepreneurship', 'business-entrepreneurship'),
+              ('beec0000-0000-4000-8000-000000000007', 'Writing & Essay', 'writing-essay'),
+              ('beec0000-0000-4000-8000-000000000008', 'Arts & Music', 'arts-music'),
+              ('beec0000-0000-4000-8000-000000000009', 'Academic Bowl & Quiz', 'academic-bowl'),
+              ('beec0000-0000-4000-8000-00000000000a', 'History, Geography & Civics', 'history-geography-civics'),
+              ('beec0000-0000-4000-8000-00000000000b', 'Other', 'other');
+
+  - changeSet:
+      id: 0005-seed-category-templates
+      author: beecompete
+      comment: >-
+        One permissive JSON Schema per category — the standard attributes-bag keys everywhere,
+        plus light category-specific fields. Tightened via admin edits as S4 curation learns.
+      changes:
+        - sql:
+            splitStatements: false
+            sql: >-
+              INSERT INTO category_template (id, category_id, json_schema) VALUES
+              ('beec0000-0000-4000-8000-000000000101', 'beec0000-0000-4000-8000-000000000001',
+               '{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true,"properties":{"eligible_countries":{"type":"array","items":{"type":"string"}},"citizenship_countries":{"type":"array","items":{"type":"string"}},"student_status_required":{"type":"string"},"syllabus":{"type":"string"},"topics":{"type":"array","items":{"type":"string"}},"calculator_allowed":{"type":"boolean"},"proof_based":{"type":"boolean"}}}'::jsonb),
+              ('beec0000-0000-4000-8000-000000000102', 'beec0000-0000-4000-8000-000000000002',
+               '{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true,"properties":{"eligible_countries":{"type":"array","items":{"type":"string"}},"citizenship_countries":{"type":"array","items":{"type":"string"}},"student_status_required":{"type":"string"},"syllabus":{"type":"string"},"topics":{"type":"array","items":{"type":"string"}},"isef_affiliated":{"type":"boolean"},"fair_levels":{"type":"array","items":{"type":"string"}},"project_categories":{"type":"array","items":{"type":"string"}}}}'::jsonb),
+              ('beec0000-0000-4000-8000-000000000103', 'beec0000-0000-4000-8000-000000000003',
+               '{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true,"properties":{"eligible_countries":{"type":"array","items":{"type":"string"}},"citizenship_countries":{"type":"array","items":{"type":"string"}},"student_status_required":{"type":"string"},"syllabus":{"type":"string"},"topics":{"type":"array","items":{"type":"string"}},"languages":{"type":"array","items":{"type":"string"}},"submission_platform":{"type":"string"}}}'::jsonb),
+              ('beec0000-0000-4000-8000-000000000104', 'beec0000-0000-4000-8000-000000000004',
+               '{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true,"properties":{"eligible_countries":{"type":"array","items":{"type":"string"}},"citizenship_countries":{"type":"array","items":{"type":"string"}},"student_status_required":{"type":"string"},"syllabus":{"type":"string"},"topics":{"type":"array","items":{"type":"string"}},"league":{"type":"string"},"kit_platform":{"type":"string"},"game_title":{"type":"string"}}}'::jsonb),
+              ('beec0000-0000-4000-8000-000000000105', 'beec0000-0000-4000-8000-000000000005',
+               '{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true,"properties":{"eligible_countries":{"type":"array","items":{"type":"string"}},"citizenship_countries":{"type":"array","items":{"type":"string"}},"student_status_required":{"type":"string"},"syllabus":{"type":"string"},"topics":{"type":"array","items":{"type":"string"}},"debate_formats":{"type":"array","items":{"type":"string"}},"speech_events":{"type":"array","items":{"type":"string"}}}}'::jsonb),
+              ('beec0000-0000-4000-8000-000000000106', 'beec0000-0000-4000-8000-000000000006',
+               '{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true,"properties":{"eligible_countries":{"type":"array","items":{"type":"string"}},"citizenship_countries":{"type":"array","items":{"type":"string"}},"student_status_required":{"type":"string"},"syllabus":{"type":"string"},"topics":{"type":"array","items":{"type":"string"}},"ctso":{"type":"string"},"event_categories":{"type":"array","items":{"type":"string"}}}}'::jsonb),
+              ('beec0000-0000-4000-8000-000000000107', 'beec0000-0000-4000-8000-000000000007',
+               '{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true,"properties":{"eligible_countries":{"type":"array","items":{"type":"string"}},"citizenship_countries":{"type":"array","items":{"type":"string"}},"student_status_required":{"type":"string"},"syllabus":{"type":"string"},"topics":{"type":"array","items":{"type":"string"}},"genres":{"type":"array","items":{"type":"string"}},"word_limit":{"type":"integer"}}}'::jsonb),
+              ('beec0000-0000-4000-8000-000000000108', 'beec0000-0000-4000-8000-000000000008',
+               '{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true,"properties":{"eligible_countries":{"type":"array","items":{"type":"string"}},"citizenship_countries":{"type":"array","items":{"type":"string"}},"student_status_required":{"type":"string"},"syllabus":{"type":"string"},"topics":{"type":"array","items":{"type":"string"}},"disciplines":{"type":"array","items":{"type":"string"}},"media_types":{"type":"array","items":{"type":"string"}}}}'::jsonb),
+              ('beec0000-0000-4000-8000-000000000109', 'beec0000-0000-4000-8000-000000000009',
+               '{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true,"properties":{"eligible_countries":{"type":"array","items":{"type":"string"}},"citizenship_countries":{"type":"array","items":{"type":"string"}},"student_status_required":{"type":"string"},"syllabus":{"type":"string"},"topics":{"type":"array","items":{"type":"string"}},"quiz_format":{"type":"string"},"subjects_covered":{"type":"array","items":{"type":"string"}}}}'::jsonb),
+              ('beec0000-0000-4000-8000-00000000010a', 'beec0000-0000-4000-8000-00000000000a',
+               '{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true,"properties":{"eligible_countries":{"type":"array","items":{"type":"string"}},"citizenship_countries":{"type":"array","items":{"type":"string"}},"student_status_required":{"type":"string"},"syllabus":{"type":"string"},"topics":{"type":"array","items":{"type":"string"}},"focus_areas":{"type":"array","items":{"type":"string"}}}}'::jsonb),
+              ('beec0000-0000-4000-8000-00000000010b', 'beec0000-0000-4000-8000-00000000000b',
+               '{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":true,"properties":{"eligible_countries":{"type":"array","items":{"type":"string"}},"citizenship_countries":{"type":"array","items":{"type":"string"}},"student_status_required":{"type":"string"},"syllabus":{"type":"string"},"topics":{"type":"array","items":{"type":"string"}}}}'::jsonb);

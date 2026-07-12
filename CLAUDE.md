@@ -108,8 +108,12 @@ CorrectionProposal, HeroCard, FeaturedSlot, **Organization** — pulled into R1 
 organizer attribution + DQ13); `competition.summary` card blurb; `updated_at` + `@Version`
 optimistic locking on curated tables; region natural key; as-built decisions + the binding
 **effective-status rule** recorded in `docs/domain-model.md` §8; Hibernate `ddl-auto: validate` on
-every boot; API on default Tomcat (Undertow dropped — deprecated in Boot 3.5). Next per `docs/phase-1-plan.md`: **R1-2** (category taxonomy + templates
-seeded) — and S2 (seeding master index) can start in parallel now that the schema is settled.
+every boot; API on default Tomcat (Undertow dropped — deprecated in Boot 3.5). **R1-2 done
+(2026-07-12):** the 11 launch categories (Q1 list) + one permissive Category Template JSON Schema
+each, seeded via Liquibase `0005` (fixed `beec0000-…` UUIDs), plus `CategoryAttributeValidator`
+(networknt, draft 2020-12) — every attributes-bag write (R1-3 admin, S3 pipeline) must validate
+through it. Next per `docs/phase-1-plan.md`: **R1-3** (admin curation tooling v0) — and S2
+(seeding master index) can start in parallel.
 Remaining F8 operational steps (uptime monitor + confirming Sentry receives events) are done after
 staging is live — see setup-runbook §9.
 
