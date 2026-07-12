@@ -6,6 +6,11 @@ name: Deploy — staging
 on:
   push:
     branches: [main]
+    # Docs/config-only changes don't need a redeploy. (workflow_dispatch still deploys on demand.)
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.claude/**'
   workflow_dispatch:
 
 concurrency:
