@@ -68,9 +68,12 @@ TXT / `brevo…_domainkey` CNAME) were kept.** After cutover, **purge Cloudflare
 site still shows. The old GoDaddy box (runs a separate app, `dossier`) is left untouched (D5).
 
 **Known gaps / deferred:**
-- **Web-side Sentry not wired:** `NEXT_PUBLIC_SENTRY_DSN` must be passed as a **Docker build arg** in
-  `apps/web/Dockerfile` (baked at build time; the runtime `.env` can't reach the browser), so browser
-  errors aren't captured yet. API-side Sentry works.
+- ~~Web-side Sentry not wired.~~ **Code wired 2026-07-12** (Dockerfile build-arg + deploy-staging
+  build-args for the browser side; `WEB_SENTRY_DSN` env on the web services for the Node/SSR side;
+  environment inferred from hostname since one image serves both envs). **Two manual steps remain
+  before it captures anything:** (1) add the web project's DSN as GitHub secret **`WEB_SENTRY_DSN`**
+  (repo-level or in both environments), (2) add `WEB_SENTRY_DSN=<same DSN>` to both VPS `.env` files
+  (`~/beecompete-staging/.env`, `~/beecompete-prod/.env`). Blank = builds fine, Sentry stays inert.
 - ~~On 4 GB, cap the API JVM heap in the stack env so it can't balloon.~~ **Done 2026-07-12:**
   every service in the deploy stacks now has a `mem_limit` (staging api 768m/web 384m; prod api
   1g/web 512m; edge caddy 192m), the API JVM gets `-XX:MaxRAMPercentage=75.0` so the heap sizes

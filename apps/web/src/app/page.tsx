@@ -16,7 +16,7 @@ export default function Home() {
         {APP_NAME} has a design system.
       </h1>
       <p className="mt-4 text-lg text-muted">
-        Tokens, self-hosted type (Instrument Serif + Inter), and the core primitives now live in{' '}
+        Tokens, self-hosted type (Fraunces + Inter), and the core primitives now live in{' '}
         <code className="rounded bg-surface px-1.5 py-0.5 text-sm">@beecompete/ui</code>. Real pages
         land in R1.
       </p>

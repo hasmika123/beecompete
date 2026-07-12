@@ -1,6 +1,14 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import { CheckCircle, CircleAlert, Info, X } from '../icons';
@@ -47,6 +55,11 @@ const toneIcon: Record<ToastTone, ReactNode> = {
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastRecord[]>([]);
+  // Portal only after mount: a `typeof document` branch differs between the server render
+  // and client hydration and throws a hydration mismatch in dev. useEffect runs after
+  // hydration, so the first client render matches the server exactly.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const counter = useRef(0);
   const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
 
@@ -81,14 +94,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {typeof document !== 'undefined' &&
+      {mounted &&
         createPortal(
-          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex flex-col items-center gap-2 p-4 sm:items-end">
+          // The PERSISTENT live region is this always-mounted container — live regions
+          // inserted together with their content (per-toast) are unreliably announced.
+          // Errors additionally carry role="alert" for assertive announcement.
+          <div
+            aria-live="polite"
+            aria-relevant="additions"
+            className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex flex-col items-center gap-2 p-4 sm:items-end"
+          >
             {toasts.map((t) => (
               <div
                 key={t.id}
                 role={t.tone === 'error' ? 'alert' : 'status'}
-                aria-live={t.tone === 'error' ? 'assertive' : 'polite'}
                 className={cn(
                   'pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-[var(--radius-panel)] border border-border bg-surface-raised p-3.5 shadow-[var(--shadow-popover)]',
                 )}

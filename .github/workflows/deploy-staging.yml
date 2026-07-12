@@ -75,6 +75,13 @@ jobs:
           context: .
           file: apps/web/Dockerfile
           push: true
+          # Browser-side Sentry is baked at build (NEXT_PUBLIC_*); the DSN comes from the
+          # WEB_SENTRY_DSN repo/environment secret (unset = builds fine, Sentry inert).
+          # One image serves staging AND prod (build-once-promote): environment is
+          # inferred from the hostname at runtime, release = the commit tag.
+          build-args: |
+            NEXT_PUBLIC_SENTRY_DSN=${{ secrets.WEB_SENTRY_DSN }}
+            NEXT_PUBLIC_SENTRY_RELEASE=${{ steps.meta.outputs.tag }}
           tags: |
             ghcr.io/${{ github.repository }}-web:${{ steps.meta.outputs.tag }}
             ghcr.io/${{ github.repository }}-web:staging

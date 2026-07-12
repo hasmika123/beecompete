@@ -29,6 +29,11 @@ services:
       NODE_ENV: production
       # BFF → API over the internal network (never exposed publicly).
       API_BASE_URL: http://api:8080
+      # Node-side (SSR/BFF) Sentry for the WEB project — a separate Sentry project from
+      # the API's, so its DSN lives in the VPS .env as WEB_SENTRY_DSN (blank = inert).
+      # (Browser-side uses NEXT_PUBLIC_SENTRY_DSN, baked at image build — see Dockerfile.)
+      SENTRY_DSN: ${WEB_SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: staging
     depends_on:
       api:
         condition: service_healthy
@@ -37,7 +42,9 @@ services:
       web_edge:
         aliases: [staging-web] # how the shared edge Caddy addresses this container
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:3000/']
+      # 127.0.0.1, NOT localhost: alpine resolves localhost to ::1 first and Node binds
+      # IPv4-only, so busybox wget gets connection-refused and the check always fails.
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000/']
       interval: 15s
       timeout: 5s
       retries: 10
