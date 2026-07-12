@@ -1,12 +1,15 @@
 name: Deploy — staging
 
-# A plain merge to main deploys STAGING only (never prod). Builds both images, pushes to
-# GHCR, then SSHes to the VPS to refresh the staging Compose stack + health-checks it.
-# Prod is a separate, deliberate act (deploy-prod.yml on a release tag).
+# A plain merge to main deploys STAGING only (never prod). Waits for CI to pass on the
+# commit, builds both images, pushes to GHCR, then SSHes to the VPS to refresh the staging
+# Compose stack + health-checks it. Prod is a separate, deliberate act (deploy-prod.yml on
+# a release tag).
 on:
   push:
     branches: [main]
-    # Docs/config-only changes don't need a redeploy. (workflow_dispatch still deploys on demand.)
+    # Docs/config-only changes don't need a redeploy. (workflow_dispatch still deploys on
+    # demand.) ⚠ Consequence: a docs-only merge builds NO image, so a release tag must
+    # point at a commit that actually deployed to staging (see deploy-prod.yml).
     paths-ignore:
       - '**.md'
       - 'docs/**'
@@ -19,12 +22,37 @@ concurrency:
 
 permissions:
   contents: read
+  checks: read # poll the CI check-run for this commit
   packages: write # push images to GHCR
 
 jobs:
+  # Deploys must never race ahead of CI: ci.yml runs on the same push in parallel, so
+  # without this gate a red commit would still reach staging.
+  wait-for-ci:
+    if: ${{ vars.DEPLOY_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for the ci-status check on this commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            conclusion=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/check-runs?check_name=ci-status" \
+              --jq '[.check_runs[]] | sort_by(.started_at) | last | .conclusion // "pending"')
+            case "$conclusion" in
+              success) echo "CI passed."; exit 0 ;;
+              failure|cancelled|timed_out|action_required)
+                echo "CI concluded '$conclusion' — refusing to deploy."; exit 1 ;;
+              *) echo "CI still running ($i/60)…"; sleep 15 ;;
+            esac
+          done
+          echo "Timed out waiting for CI."; exit 1
+
   build:
     # Dormant until infra is ready: set repo variable DEPLOY_ENABLED=true to activate
     # (until then this job — and the deploy — are skipped, keeping main green).
+    needs: wait-for-ci
     if: ${{ vars.DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     environment: staging
@@ -75,8 +103,9 @@ jobs:
       # Keep the VPS copy of the staging Compose stack in sync with the repo. The Caddyfile
       # now belongs to the shared edge stack (docker-compose.edge.yml), not this per-env
       # stack, so it is intentionally not copied here.
+      # Third-party actions holding VPS credentials are pinned to commit SHAs (supply chain).
       - name: Copy infra files to VPS
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634 # v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -86,7 +115,7 @@ jobs:
           strip_components: 1
 
       - name: Deploy + health check over SSH
-        uses: appleboy/ssh-action@v1.2.2
+        uses: appleboy/ssh-action@2ead5e36573f08b82fbfce1504f1a4b05a647c6f # v1.2.2
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -96,15 +125,18 @@ jobs:
             cd ~/beecompete-staging
             export IMAGE_REPO="${{ github.repository }}"
             export IMAGE_TAG="${{ needs.build.outputs.tag }}"
+            # Always drop the GHCR credentials from the box, even on failure.
+            trap 'docker logout ghcr.io || true' EXIT
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
             docker compose -f docker-compose.staging.yml pull
-            docker compose -f docker-compose.staging.yml up -d
-            # Liquibase migrates on API startup (DIRECT_URL). Wait for health before calling it done.
-            for i in $(seq 1 20); do
-              if docker compose -f docker-compose.staging.yml exec -T api wget -qO- http://localhost:8080/actuator/health | grep -q '"status":"UP"'; then
-                echo "API healthy"; docker logout ghcr.io; exit 0
-              fi
-              echo "waiting for API health ($i/20)…"; sleep 6
-            done
-            echo "API did not become healthy — rolling log:"; docker compose -f docker-compose.staging.yml logs --tail=80 api
-            exit 1
+            # --wait gates on EVERY service healthcheck (api via Liquibase-migrated boot,
+            # web via its own probe) — not just the API like the old manual poll.
+            if ! docker compose -f docker-compose.staging.yml up -d --wait --wait-timeout 240; then
+              echo "stack did not become healthy — rolling logs:"
+              docker compose -f docker-compose.staging.yml logs --tail=100
+              exit 1
+            fi
+            echo "staging healthy at ${IMAGE_TAG}"
+            # Old per-SHA images accumulate until the disk fills — prune unused ones after
+            # a week (images backing RUNNING containers are never pruned).
+            docker image prune -af --filter "until=168h" >/dev/null 2>&1 || true
