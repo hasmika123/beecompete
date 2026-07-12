@@ -41,8 +41,15 @@ export function KeyDateManager({
               disabled={pending}
               onClick={() =>
                 startTransition(async () => {
-                  await deleteKeyDate(competitionId, editionId, k.id);
-                  toast({ title: 'Key date deleted', tone: 'success' });
+                  try {
+                    await deleteKeyDate(competitionId, editionId, k.id);
+                    toast({ title: 'Key date deleted', tone: 'success' });
+                  } catch (e) {
+                    toast({
+                      title: e instanceof Error ? e.message : 'Delete failed',
+                      tone: 'error',
+                    });
+                  }
                 })
               }
             >

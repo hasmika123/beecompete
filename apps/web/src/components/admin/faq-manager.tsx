@@ -30,8 +30,15 @@ export function FaqManager({ competitionId, faqs }: { competitionId: string; faq
               disabled={pending}
               onClick={() =>
                 startTransition(async () => {
-                  await deleteFaq(competitionId, f.id);
-                  toast({ title: 'FAQ deleted', tone: 'success' });
+                  try {
+                    await deleteFaq(competitionId, f.id);
+                    toast({ title: 'FAQ deleted', tone: 'success' });
+                  } catch (e) {
+                    toast({
+                      title: e instanceof Error ? e.message : 'Delete failed',
+                      tone: 'error',
+                    });
+                  }
                 })
               }
             >

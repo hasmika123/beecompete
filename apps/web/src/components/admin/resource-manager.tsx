@@ -56,8 +56,15 @@ export function ResourceManager({
               disabled={pending}
               onClick={() =>
                 startTransition(async () => {
-                  await deleteResource(competitionId, r.id);
-                  toast({ title: 'Resource deleted', tone: 'success' });
+                  try {
+                    await deleteResource(competitionId, r.id);
+                    toast({ title: 'Resource deleted', tone: 'success' });
+                  } catch (e) {
+                    toast({
+                      title: e instanceof Error ? e.message : 'Delete failed',
+                      tone: 'error',
+                    });
+                  }
                 })
               }
             >
