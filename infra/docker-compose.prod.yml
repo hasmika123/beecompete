@@ -1,28 +1,14 @@
-# PRODUCTION stack — runs on the VPS (separate project name, network, and DB from staging).
-# Managed Postgres is OFF-BOX (Neon) and never in this file. Deployed by
+# PRODUCTION stack — web + api only. The shared edge Caddy (docker-compose.edge.yml) fronts
+# it and routes beecompete.com → this stack's web via its `prod-web` alias on the shared
+# `web_edge` network. Managed Postgres is OFF-BOX (Neon) and never in this file. Deployed by
 # .github/workflows/deploy-prod.yml on a release tag (R*) — it promotes the EXACT image
 # staging already validated (build once, promote), so IMAGE_TAG is pinned to that build.
 #
 # On the VPS, a sibling `.env` provides prod secrets + config (distinct from staging).
+# `web_edge` must already exist on the box (docker network create web_edge).
 name: beecompete-prod
 
 services:
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - '80:80'
-      - '443:443'
-      - '443:443/udp'
-    environment:
-      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS in .env}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on: [web]
-    networks: [edge, internal]
-
   web:
     image: ghcr.io/${IMAGE_REPO:-hasmika123/beecompete}-web:${IMAGE_TAG:?set IMAGE_TAG to the promoted build}
     restart: unless-stopped
@@ -30,7 +16,10 @@ services:
       NODE_ENV: production
       API_BASE_URL: http://api:8080
     depends_on: [api]
-    networks: [edge, internal]
+    networks:
+      internal:
+      web_edge:
+        aliases: [prod-web] # how the shared edge Caddy addresses this container
 
   api:
     image: ghcr.io/${IMAGE_REPO:-hasmika123/beecompete}-api:${IMAGE_TAG:?set IMAGE_TAG to the promoted build}
@@ -48,9 +37,6 @@ services:
       start_period: 60s
 
 networks:
-  edge:
+  web_edge:
+    external: true
   internal:
-
-volumes:
-  caddy_data:
-  caddy_config:

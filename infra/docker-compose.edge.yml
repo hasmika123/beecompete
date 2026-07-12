@@ -1,0 +1,31 @@
+# EDGE reverse-proxy stack — the ONE Caddy for the whole box. It fronts every app/env on
+# ports 80/443 and routes by hostname to each app's web container over the shared `web_edge`
+# network. Per-env stacks (staging, prod) no longer run their own Caddy — they just attach
+# their web container to `web_edge`. Adding another app later = a new site block in the
+# Caddyfile + that app's web on `web_edge` + a `caddy reload` (see setup walkthrough Step 8).
+#
+# NOT deployed by CI — this is static infra brought up manually once (the Caddyfile changes
+# rarely). The `web_edge` network must exist first:  docker network create web_edge
+name: beecompete-edge
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data # holds the Let's Encrypt certs/account — do not wipe
+      - caddy_config:/config
+    networks: [web_edge]
+
+networks:
+  web_edge:
+    external: true
+
+volumes:
+  caddy_data:
+  caddy_config:

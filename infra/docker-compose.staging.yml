@@ -1,29 +1,14 @@
-# STAGING stack — runs on the VPS alongside prod (separate project name, network, and DB).
-# Managed Postgres is OFF-BOX (Neon) and never in this file. Deployed by
-# .github/workflows/deploy-staging.yml on every push to main.
+# STAGING stack — web + api only. The shared edge Caddy (docker-compose.edge.yml) fronts it
+# and routes staging.beecompete.com → this stack's web via its `staging-web` alias on the
+# shared `web_edge` network. Managed Postgres is OFF-BOX (Neon) and never in this file.
+# Deployed by .github/workflows/deploy-staging.yml on every push to main.
 #
-# On the VPS, a sibling `.env` provides secrets + config: IMAGE_TAG, SITE_ADDRESS,
-# DATABASE_URL, DIRECT_URL, etc. (see .env.example / setup-runbook §8). `docker compose
-# pull && up -d` refreshes to the newly built images.
+# On the VPS, a sibling `.env` provides secrets + config: IMAGE_TAG, DATABASE_URL, DIRECT_URL,
+# SENTRY_DSN, etc. (see beecompete-staging.env). `web_edge` must already exist on the box
+# (docker network create web_edge) — the edge stack owns it.
 name: beecompete-staging
 
 services:
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - '80:80'
-      - '443:443'
-      - '443:443/udp'
-    environment:
-      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS in .env}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on: [web]
-    networks: [edge, internal]
-
   web:
     image: ghcr.io/${IMAGE_REPO:-hasmika123/beecompete}-web:${IMAGE_TAG:-staging}
     restart: unless-stopped
@@ -32,7 +17,10 @@ services:
       # BFF → API over the internal network (never exposed publicly).
       API_BASE_URL: http://api:8080
     depends_on: [api]
-    networks: [edge, internal]
+    networks:
+      internal:
+      web_edge:
+        aliases: [staging-web] # how the shared edge Caddy addresses this container
 
   api:
     image: ghcr.io/${IMAGE_REPO:-hasmika123/beecompete}-api:${IMAGE_TAG:-staging}
@@ -51,9 +39,6 @@ services:
       start_period: 60s
 
 networks:
-  edge:
+  web_edge:
+    external: true
   internal:
-
-volumes:
-  caddy_data:
-  caddy_config:
