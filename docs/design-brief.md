@@ -37,6 +37,12 @@ read this doc the way they read the glossary — decisions live here, not in cha
   *new* element types (data tables, admin shell/sidebar layout, upload dropzone) — is **builder
   judgment**: clean/minimal on the existing tokens + primitives. Owner steers reactively with
   references if something misses. Internal-only; the public-surface pre-ask rule is unchanged.
+- **R1-6/R1-6b public pages delegated (owner 2026-07-12):** for the marketplace + public page
+  set build (Landing, Competitions listing, How It Works, Categories index, and their new
+  element types — CompetitionCard, category tiles/strip, filter panel, hero image cards, nav/
+  footer, digest band), **styling is builder judgment** on the locked direction (§2–§4) and the
+  approved blueprints — the §5 style-prototype checkpoint is waived for these pages. Owner
+  steers **reactively** with reference photos; record any supplied references here.
 
 ### Supplied reference photos *(record each here — element type asked once)*
 

@@ -70,4 +70,10 @@ export type { ToastOptions, ToastTone } from './components/toast';
 export { Logo } from './components/logo';
 export { ThemeToggle } from './components/theme-toggle';
 
+export { categoryArt, CategoryCover, CategoryTag } from './components/category-art';
+export type { CategoryArt } from './components/category-art';
+
+export { CompetitionCard } from './components/competition-card';
+export type { CompetitionCardData, CompetitionCardProps } from './components/competition-card';
+
 export * from './icons';
