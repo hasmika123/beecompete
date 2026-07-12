@@ -6,27 +6,52 @@
 #
 # On the VPS, a sibling `.env` provides prod secrets + config (distinct from staging).
 # `web_edge` must already exist on the box (docker network create web_edge).
+#
+# RESOURCE RULES (4 GB box shared by staging + prod + edge — ops hardening 2026-07-12):
+# every service gets a mem_limit so a staging deploy can never OOM-kill prod, the API JVM
+# sizes its heap off the CONTAINER limit (MaxRAMPercentage), and every service gets log
+# rotation (default json-file driver is unbounded and would fill the disk).
 name: beecompete-prod
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '3'
 
 services:
   web:
     image: ghcr.io/${IMAGE_REPO:-hasmika123/beecompete}-web:${IMAGE_TAG:?set IMAGE_TAG to the promoted build}
     restart: unless-stopped
+    mem_limit: 512m
+    logging: *logging
     environment:
       NODE_ENV: production
       API_BASE_URL: http://api:8080
-    depends_on: [api]
+    depends_on:
+      api:
+        condition: service_healthy
     networks:
       internal:
       web_edge:
         aliases: [prod-web] # how the shared edge Caddy addresses this container
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3000/']
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   api:
     image: ghcr.io/${IMAGE_REPO:-hasmika123/beecompete}-api:${IMAGE_TAG:?set IMAGE_TAG to the promoted build}
     restart: unless-stopped
+    mem_limit: 1g
+    logging: *logging
     # Structured JSON logs in prod (F8); secrets incl. SENTRY_DSN come from the VPS .env.
     environment:
       SPRING_PROFILES_ACTIVE: json
+      # Heap respects the container mem_limit (75% of 1g ≈ 768m), not host RAM.
+      JAVA_TOOL_OPTIONS: '-XX:MaxRAMPercentage=75.0'
     env_file: [.env]
     networks: [internal]
     healthcheck:

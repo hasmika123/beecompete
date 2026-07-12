@@ -71,7 +71,12 @@ site still shows. The old GoDaddy box (runs a separate app, `dossier`) is left u
 - **Web-side Sentry not wired:** `NEXT_PUBLIC_SENTRY_DSN` must be passed as a **Docker build arg** in
   `apps/web/Dockerfile` (baked at build time; the runtime `.env` can't reach the browser), so browser
   errors aren't captured yet. API-side Sentry works.
-- On 4 GB, cap the API JVM heap in the stack env so it can't balloon.
+- ~~On 4 GB, cap the API JVM heap in the stack env so it can't balloon.~~ **Done 2026-07-12:**
+  every service in the deploy stacks now has a `mem_limit` (staging api 768m/web 384m; prod api
+  1g/web 512m; edge caddy 192m), the API JVM gets `-XX:MaxRAMPercentage=75.0` so the heap sizes
+  off the container limit, and all services have json-file log rotation (10m × 3). Takes effect
+  per-stack on its next deploy; the edge stack needs a manual
+  `docker compose -f docker-compose.edge.yml up -d` on the box.
 - **Security:** rotate the Neon **prod** DB password (it briefly sat in a plaintext local file); keep the
   secrets sheet in a password manager, never in Downloads/repo.
 - Remaining before-launch items are in §s above + the checklist below (Neon paid tier/test restore/
