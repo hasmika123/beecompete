@@ -3,6 +3,8 @@ package com.beecompete.catalog.curation.web;
 import com.beecompete.catalog.curation.CompetitionCurationService;
 import com.beecompete.catalog.curation.CompetitionRequest;
 import com.beecompete.catalog.curation.CurationStamps;
+import com.beecompete.catalog.curation.ResourceCurationService;
+import com.beecompete.catalog.curation.ResourceRequest;
 import com.beecompete.catalog.domain.Competition;
 import com.beecompete.catalog.domain.CompetitionFaq;
 import com.beecompete.catalog.domain.Provenance;
@@ -58,15 +60,17 @@ public class CompetitionAdminController {
 	private final ResourceRepository resources;
 	private final FeaturedSlotRepository featuredSlots;
 	private final CompetitionCurationService curation;
+	private final ResourceCurationService resourceCuration;
 
 	public CompetitionAdminController(CompetitionRepository competitions, CompetitionFaqRepository faqs,
 			ResourceRepository resources, FeaturedSlotRepository featuredSlots,
-			CompetitionCurationService curation) {
+			CompetitionCurationService curation, ResourceCurationService resourceCuration) {
 		this.competitions = competitions;
 		this.faqs = faqs;
 		this.resources = resources;
 		this.featuredSlots = featuredSlots;
 		this.curation = curation;
+		this.resourceCuration = resourceCuration;
 	}
 
 	@GetMapping("/competitions")
@@ -164,33 +168,18 @@ public class CompetitionAdminController {
 	@PostMapping("/competitions/{id}/resources")
 	@ResponseStatus(HttpStatus.CREATED)
 	public ResourceResponse createResource(@PathVariable UUID id, @Valid @RequestBody ResourceRequest request) {
-		Competition competition = require(id);
-		Resource resource = new Resource(competition, request.title(), request.url(), request.type());
-		applyResource(resource, request);
-		return ResourceResponse.from(resources.save(resource));
+		return ResourceResponse.from(resourceCuration.create(id, request));
 	}
 
 	@PutMapping("/resources/{resourceId}")
 	public ResourceResponse updateResource(@PathVariable UUID resourceId, @Valid @RequestBody ResourceRequest request) {
-		Resource resource = resources.findById(resourceId).orElseThrow(
-				() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "resource not found"));
-		resource.setTitle(request.title());
-		resource.setUrl(request.url());
-		resource.setType(request.type());
-		applyResource(resource, request);
-		return ResourceResponse.from(resource);
+		return ResourceResponse.from(resourceCuration.update(resourceId, request));
 	}
 
 	@DeleteMapping("/resources/{resourceId}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void deleteResource(@PathVariable UUID resourceId) {
 		resources.deleteById(resourceId);
-	}
-
-	private void applyResource(Resource resource, ResourceRequest request) {
-		resource.setAffiliate(request.isAffiliate());
-		resource.setAffiliateMeta(request.affiliateMeta());
-		resource.setDisplayOrder(request.displayOrder());
 	}
 
 	private Competition require(UUID id) {
@@ -211,10 +200,7 @@ public class CompetitionAdminController {
 		}
 	}
 
-	public record ResourceRequest(@NotBlank @Size(max = 300) String title, @NotBlank @Size(max = 1000) String url,
-			@NotNull ResourceType type, boolean isAffiliate, Map<String, Object> affiliateMeta,
-			short displayOrder) {}
-
+	/** ResourceRequest lives in catalog.curation — shared with the correction queue (R1-3b). */
 	public record ResourceResponse(UUID id, String title, String url, ResourceType type, boolean isAffiliate,
 			Map<String, Object> affiliateMeta, short displayOrder) {
 		static ResourceResponse from(Resource r) {

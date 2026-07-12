@@ -158,6 +158,21 @@ export interface ImportRecord {
   createdAt: string;
 }
 
+export const CORRECTION_SUBJECT_TYPES = ['COMPETITION', 'EDITION', 'RESOURCE'] as const;
+
+export interface CorrectionProposal {
+  id: string;
+  subjectType: string;
+  subjectId: string;
+  payload: Record<string, unknown>;
+  /** Detail endpoint only: the subject's current whitelisted values (null if the subject is gone). */
+  currentValues: Record<string, unknown> | null;
+  note: string | null;
+  status: string;
+  reviewedAt: string | null;
+  createdAt: string;
+}
+
 export interface HeroCard {
   id: string;
   position: string;

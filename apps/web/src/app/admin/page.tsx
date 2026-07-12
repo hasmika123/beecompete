@@ -2,21 +2,24 @@ import Link from 'next/link';
 import { Alert, ArrowRight, Card, CardContent } from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
 import { adminFetch } from '@/lib/admin-api';
-import type { Category, ImportRecord, Page } from '@/lib/admin-types';
+import type { Category, CorrectionProposal, ImportRecord, Page } from '@/lib/admin-types';
 import type { Competition, Organization } from '@/lib/admin-types';
 
 async function counts() {
-  const [competitions, organizations, categories, pendingImports] = await Promise.all([
-    adminFetch<Page<Competition>>('/competitions?size=1'),
-    adminFetch<Page<Organization>>('/organizations?size=1'),
-    adminFetch<Category[]>('/categories'),
-    adminFetch<Page<ImportRecord>>('/import-records?status=PENDING&size=1'),
-  ]);
+  const [competitions, organizations, categories, pendingImports, pendingCorrections] =
+    await Promise.all([
+      adminFetch<Page<Competition>>('/competitions?size=1'),
+      adminFetch<Page<Organization>>('/organizations?size=1'),
+      adminFetch<Category[]>('/categories'),
+      adminFetch<Page<ImportRecord>>('/import-records?status=PENDING&size=1'),
+      adminFetch<Page<CorrectionProposal>>('/corrections?status=PENDING&size=1'),
+    ]);
   return {
     competitions: competitions.totalElements,
     organizations: organizations.totalElements,
     categories: categories.length,
     pendingImports: pendingImports.totalElements,
+    pendingCorrections: pendingCorrections.totalElements,
   };
 }
 
@@ -34,6 +37,7 @@ export default async function AdminDashboard() {
     { href: '/admin/organizations', label: 'Organizations', value: data?.organizations },
     { href: '/admin/categories', label: 'Categories', value: data?.categories },
     { href: '/admin/import-records', label: 'Pending imports', value: data?.pendingImports },
+    { href: '/admin/corrections', label: 'Pending corrections', value: data?.pendingCorrections },
   ];
 
   return (
