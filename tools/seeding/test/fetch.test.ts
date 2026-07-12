@@ -26,7 +26,8 @@ test('robots pathAllowed: Allow overrides a broader Disallow (longest match wins
 });
 
 test('parseCsvUrls reads a URL column regardless of position', () => {
-  const csv = 'name,official_url,category\nNova,https://a.example.org,math\nOrbit,https://b.example.org,robotics';
+  const csv =
+    'name,official_url,category\nNova,https://a.example.org,math\nOrbit,https://b.example.org,robotics';
   const items = parseCsvUrls(csv);
   assert.deepEqual(
     items.map((i) => i.source),

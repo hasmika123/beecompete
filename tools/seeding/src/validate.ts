@@ -49,7 +49,9 @@ function validateSpine(p: CompetitionPayload): string[] {
   if (p.summary && p.summary.length > 300) errors.push('summary exceeds 300 chars');
 
   if (!p.categoryId || !idToSlug.has(p.categoryId)) {
-    errors.push(`categoryId must be one of the 11 seeded categories (got ${p.categoryId ?? 'null'})`);
+    errors.push(
+      `categoryId must be one of the 11 seeded categories (got ${p.categoryId ?? 'null'})`,
+    );
   }
 
   requireEnum(errors, 'participationMode', p.participationMode, PARTICIPATION_MODES);
@@ -99,7 +101,12 @@ function validateAttributes(p: CompetitionPayload): string[] {
   );
 }
 
-function requireEnum(errors: string[], field: string, value: unknown, allowed: readonly string[]): void {
+function requireEnum(
+  errors: string[],
+  field: string,
+  value: unknown,
+  allowed: readonly string[],
+): void {
   if (value == null) {
     errors.push(`${field} is required`);
   } else if (!allowed.includes(value as string)) {

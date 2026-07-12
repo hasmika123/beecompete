@@ -32,7 +32,11 @@ export interface ItemReport {
 const isUrl = (s: string) => /^https?:\/\//i.test(s);
 
 /** Full single-item pipeline: fetch/read -> extract -> validate -> score -> (dry-run | submit). */
-export async function runItem(item: SeedItem, config: Config, opts: RunOptions): Promise<ItemReport> {
+export async function runItem(
+  item: SeedItem,
+  config: Config,
+  opts: RunOptions,
+): Promise<ItemReport> {
   try {
     const { sourceUrl, pageText, inputPath } = await acquireText(item, config);
     const { extraction, backend } = await extract({ sourceUrl, pageText, inputPath }, config, {
@@ -48,10 +52,26 @@ export async function runItem(item: SeedItem, config: Config, opts: RunOptions):
     };
 
     if (!ok) {
-      return { source: item.source, backend, confidence, valid: false, errors, submission, outcome: 'invalid' };
+      return {
+        source: item.source,
+        backend,
+        confidence,
+        valid: false,
+        errors,
+        submission,
+        outcome: 'invalid',
+      };
     }
     if (opts.dryRun) {
-      return { source: item.source, backend, confidence, valid: true, errors: [], submission, outcome: 'dry-run' };
+      return {
+        source: item.source,
+        backend,
+        confidence,
+        valid: true,
+        errors: [],
+        submission,
+        outcome: 'dry-run',
+      };
     }
     const result = await submitToImportQueue(submission, config);
     return {

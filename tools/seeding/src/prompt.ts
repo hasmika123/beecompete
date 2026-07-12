@@ -65,6 +65,7 @@ Return ONLY a JSON object with this exact top-level shape (no markdown, no comme
 }
 
 export function buildUserPrompt(sourceUrl: string, pageText: string): string {
-  const clipped = pageText.length > 24000 ? `${pageText.slice(0, 24000)}\n...[truncated]` : pageText;
+  const clipped =
+    pageText.length > 24000 ? `${pageText.slice(0, 24000)}\n...[truncated]` : pageText;
   return `Source URL: ${sourceUrl}\n\nOFFICIAL PAGE TEXT:\n"""\n${clipped}\n"""`;
 }
