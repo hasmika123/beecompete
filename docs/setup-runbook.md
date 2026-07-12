@@ -1,6 +1,6 @@
 # BeeCompete — External Setup Runbook
 
-**Status:** Living document · **Last updated:** 2026-07-06 · **Type:** Runbook
+**Status:** Living document · **Last updated:** 2026-07-12 · **Type:** Runbook
 
 The **manual, external setup steps** (accounts, servers, DNS, keys) that aren't code. Follow these
 **when it's time** — I'll walk you through each *live* when we reach it (many steps need your logins).
@@ -9,6 +9,82 @@ never committed).
 
 > **Order of need:** Foundation → (R1) domain, Cloudflare, VPS, Postgres, deploy, S3, analytics, Sentry
 > → (R2) email fully + Redis → (Phase 2) Stripe.
+
+> **§0–§12 below are the original prospective plan (kept for the reasoning).** For **what is actually
+> running now**, the "Current deployment — AS BUILT" section immediately below is authoritative;
+> where they differ, it wins.
+
+---
+
+## Current deployment — AS BUILT (LIVE, 2026-07-12)
+
+**Live:** production `https://beecompete.com` (+ `www` 301→apex) · staging `https://staging.beecompete.com`.
+
+**Host:** IONOS **VPS M+** (4 vCore / 4 GB / 120 GB), US East, Ubuntu 24.04, IP `74.208.212.158`,
+login user `deploy` (SSH key-only, password auth off), 4 GB swapfile, UFW (22/80/443) + fail2ban +
+unattended-upgrades. Managed Postgres is **off-box** (Neon); Redis not used yet.
+- **IONOS specifics:** buy the upgradeable **VPS+** contract line, **not** "Cloud VPS" (PAYG, can't
+  upgrade). In-place upgrade **M+ (4 GB) → L+ (8 GB)** is required before a **second app** co-hosts here
+  (D12). IONOS may provision with an emailed root password (add SSH key on first login, then disable
+  password auth). Its Cloud-Panel **Firewall Policy** must allow 22/80/443 in addition to UFW.
+
+**Topology — ONE shared reverse proxy for the whole box (D13, supersedes §4/§8's per-host Caddy):**
+- `infra/docker-compose.edge.yml` (project `beecompete-edge`) runs a **single Caddy** owning **80/443**
+  on an external Docker network **`web_edge`**, routing **by hostname** via `infra/Caddyfile` (site
+  blocks: `staging.beecompete.com`→`staging-web`, `beecompete.com`→`prod-web`, `www`→301 apex).
+- `infra/docker-compose.{staging,prod}.yml` run **web + api only** (no Caddy). Each `web` joins
+  `web_edge` under an alias (`staging-web`/`prod-web`); each Spring **api stays private** on the stack's
+  `internal` network (BFF — only web is public). Neon is never in Compose.
+- **Add a second app:** new stack's `web` on `web_edge` with its own alias + a site block in
+  `infra/Caddyfile`, copy it to `~/beecompete-edge/` and `caddy reload`. **Never a 2nd proxy on
+  80/443** (D10) — two proxies clashing on those ports is the exact failure that blocked the first deploy.
+
+**On-box layout (as `deploy`):** `~/beecompete-staging/.env`, `~/beecompete-prod/.env` (both `chmod 600`),
+`~/beecompete-edge/{docker-compose.edge.yml,Caddyfile}`. `web_edge` was created once
+(`docker network create web_edge`). The **edge stack is managed manually** (not CI) — reload/restart it
+by hand when the Caddyfile changes.
+
+**Deploy flow (the §8 model, now live):** push to `main` → **deploy-staging** builds `:sha`+`:staging`
+and refreshes staging (gated by repo **variable** `DEPLOY_ENABLED=true`). Release tag `R*`
+(`git tag R1 && git push origin R1`) → **deploy-prod** promotes the **exact `:sha` image** (build once,
+promote) → prod. The deploy workflows **no longer ship the Caddyfile** (it belongs to the edge stack).
+- ⚠️ The `production` GitHub Environment needs a **Deployment branches-and-tags rule for Tag `R*`**,
+  else the tag deploy is rejected ("not allowed to deploy to production").
+
+**VPS `.env` format (Neon → Spring):** convert Neon's `postgresql://user:pass@host/neondb?...` →
+`jdbc:postgresql://<host>/neondb?sslmode=require` (add `jdbc:`, drop `user:pass@`, **drop
+`channel_binding=require`** — the JDBC driver rejects it); split `DATABASE_USERNAME/PASSWORD` and
+`DIRECT_USERNAME/PASSWORD` out. Neon hosts include a **`.c-9.`** segment. Pooled (`-pooler`) = app
+`DATABASE_URL`; direct (no `-pooler`) = Liquibase `DIRECT_URL`; pooled & direct share one password per
+branch. Staging = `ep-spring-base-…`, prod = `ep-twilight-hat-…` (different branches — never cross them).
+Do **not** set `IMAGE_TAG` in the prod `.env` (the pipeline injects it). `deploy` user is created
+`--disabled-password`, so `passwd deploy` is required for `sudo`.
+
+**DNS (Cloudflare):** `beecompete.com`, `www`, `staging` each = a single `A` → box IP. Issue the first
+Let's Encrypt cert **grey-cloud (DNS-only)** — a proxied (orange) record blocks the ACME challenge — then
+flip to **orange (proxied)** with **SSL/TLS = Full (strict)** (zone-wide). The old S3/GoDaddy `A`/`AAAA`
+records were deleted (`132.148.79.209` + `3.169.173.x` + `2600:9000:…`); **email records (MX / SPF-DMARC
+TXT / `brevo…_domainkey` CNAME) were kept.** After cutover, **purge Cloudflare cache** if a stale cached
+site still shows. The old GoDaddy box (runs a separate app, `dossier`) is left untouched (D5).
+
+**Known gaps / deferred:**
+- **Web-side Sentry not wired:** `NEXT_PUBLIC_SENTRY_DSN` must be passed as a **Docker build arg** in
+  `apps/web/Dockerfile` (baked at build time; the runtime `.env` can't reach the browser), so browser
+  errors aren't captured yet. API-side Sentry works.
+- On 4 GB, cap the API JVM heap in the stack env so it can't balloon.
+- **Security:** rotate the Neon **prod** DB password (it briefly sat in a plaintext local file); keep the
+  secrets sheet in a password manager, never in Downloads/repo.
+- Remaining before-launch items are in §s above + the checklist below (Neon paid tier/test restore/
+  autosuspend-off; repo→private + Pro + required reviewer + `protect-main`; UptimeRobot on
+  `/actuator/health`; confirm Sentry `sendDefaultPii:false` + Session Replay off + test errors; Brevo
+  end-to-end consent-email test; AWS root MFA + no root keys; Cloudflare Access lock + robots/noindex on
+  staging).
+
+**Decisions D1–D13** (full log in git history): D1 repo public-for-now (revert before launch) · D2 CF
+rate-limit 5/10s · D3 dedicated `deploy` user · D4 harden on the real box · D5 own dedicated server ·
+D6 no Neon Auth · D7 separate S3 buckets · D8 no Brevo SPF (DKIM + CF Email Routing SPF) · D9 ~~Hetzner~~
+(→D11) · D10 shared Caddy for any 2nd app · D11 provider = **IONOS** (Hetzner raised prices) · D12 start
+**M+ 4 GB → in-place upgrade to L+ 8 GB** before a 2nd app · D13 **shared edge Caddy implemented**.
 
 ---
 
