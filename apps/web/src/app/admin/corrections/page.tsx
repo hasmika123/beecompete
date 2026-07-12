@@ -4,11 +4,11 @@ import { PageHeader } from '@/components/admin/page-header';
 import { AdminTable } from '@/components/admin/admin-table';
 import { ReviewStatusBadge } from '@/components/admin/status-badges';
 import { adminFetch } from '@/lib/admin-api';
-import type { ImportRecord, Page } from '@/lib/admin-types';
+import type { CorrectionProposal, Page } from '@/lib/admin-types';
 
 const STATUSES = ['PENDING', 'APPROVED', 'REJECTED'] as const;
 
-export default async function ImportRecordsPage({
+export default async function CorrectionsPage({
   searchParams,
 }: {
   searchParams: Promise<{ status?: string }>;
@@ -17,25 +17,22 @@ export default async function ImportRecordsPage({
   const status = STATUSES.includes(rawStatus as (typeof STATUSES)[number])
     ? (rawStatus as string)
     : 'PENDING';
-  const result = await adminFetch<Page<ImportRecord>>(`/import-records?status=${status}&size=50`);
-
-  const title = (payload: Record<string, unknown>) =>
-    (typeof payload.name === 'string' && payload.name) ||
-    (typeof payload.slug === 'string' && payload.slug) ||
-    '(untitled)';
+  const result = await adminFetch<Page<CorrectionProposal>>(
+    `/corrections?status=${status}&size=50`,
+  );
 
   return (
     <>
       <PageHeader
-        title="Import queue"
-        description="Review records extracted by the pipeline (S3)."
+        title="Corrections"
+        description="User-submitted fixes (public suggest-a-correction form). Approve applies the diff."
       />
 
       <div className="mb-4 flex gap-2">
         {STATUSES.map((s) => (
           <Link
             key={s}
-            href={`/admin/import-records?status=${s}`}
+            href={`/admin/corrections?status=${s}`}
             className={buttonClasses({
               variant: s === status ? 'primary' : 'secondary',
               size: 'sm',
@@ -49,25 +46,24 @@ export default async function ImportRecordsPage({
       <AdminTable
         rows={result.content}
         rowKey={(r) => r.id}
-        empty={`No ${status.toLowerCase()} records.`}
+        empty={`No ${status.toLowerCase()} corrections.`}
         columns={[
           {
-            header: 'Record',
+            header: 'Subject',
             cell: (r) =>
               status === 'PENDING' ? (
-                <Link
-                  href={`/admin/import-records/${r.id}`}
-                  className="font-medium hover:underline"
-                >
-                  {title(r.payload)}
+                <Link href={`/admin/corrections/${r.id}`} className="font-medium hover:underline">
+                  {r.subjectType.toLowerCase()} · {r.subjectId.slice(0, 8)}…
                 </Link>
               ) : (
-                <span className="font-medium">{title(r.payload)}</span>
+                <span className="font-medium">
+                  {r.subjectType.toLowerCase()} · {r.subjectId.slice(0, 8)}…
+                </span>
               ),
           },
           {
-            header: 'Confidence',
-            cell: (r) => <span className="text-muted">{r.confidence ?? '—'}</span>,
+            header: 'Fields',
+            cell: (r) => <span className="text-muted">{Object.keys(r.payload).join(', ')}</span>,
           },
           { header: 'Status', cell: (r) => <ReviewStatusBadge status={r.status} /> },
           {

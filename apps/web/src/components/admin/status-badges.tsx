@@ -12,14 +12,15 @@ export function VerificationBadge({ state }: { state: string }) {
   return <Badge variant={VERIFICATION_VARIANT[state] ?? 'outline'}>{state.toLowerCase()}</Badge>;
 }
 
-const IMPORT_VARIANT: Record<string, BadgeVariant> = {
+const REVIEW_VARIANT: Record<string, BadgeVariant> = {
   PENDING: 'gold',
   APPROVED: 'verified',
   REJECTED: 'danger',
 };
 
-export function ImportStatusBadge({ status }: { status: string }) {
-  return <Badge variant={IMPORT_VARIANT[status] ?? 'outline'}>{status.toLowerCase()}</Badge>;
+/** Shared by the review queues (import records + corrections) — same status lifecycle. */
+export function ReviewStatusBadge({ status }: { status: string }) {
+  return <Badge variant={REVIEW_VARIANT[status] ?? 'outline'}>{status.toLowerCase()}</Badge>;
 }
 
 /** Archived vs live — quick scan column in tables. */

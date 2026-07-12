@@ -1,23 +1,18 @@
 package com.beecompete.catalog.curation.web;
 
 import com.beecompete.catalog.curation.CurationStamps;
-import com.beecompete.catalog.domain.Competition;
+import com.beecompete.catalog.curation.EditionCurationService;
+import com.beecompete.catalog.curation.EditionRequest;
 import com.beecompete.catalog.domain.Edition;
 import com.beecompete.catalog.domain.EditionRegion;
-import com.beecompete.catalog.domain.EditionStatus;
 import com.beecompete.catalog.domain.KeyDate;
 import com.beecompete.catalog.domain.KeyDateType;
-import com.beecompete.catalog.domain.Provenance;
 import com.beecompete.catalog.domain.Region;
-import com.beecompete.catalog.domain.ScopeLevel;
-import com.beecompete.catalog.domain.VerificationState;
-import com.beecompete.catalog.repository.CompetitionRepository;
 import com.beecompete.catalog.repository.EditionRegionRepository;
 import com.beecompete.catalog.repository.EditionRepository;
 import com.beecompete.catalog.repository.KeyDateRepository;
 import com.beecompete.catalog.repository.RegionRepository;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
@@ -50,15 +45,15 @@ import org.springframework.web.server.ResponseStatusException;
 public class EditionAdminController {
 
 	private final EditionRepository editions;
-	private final CompetitionRepository competitions;
+	private final EditionCurationService curation;
 	private final KeyDateRepository keyDates;
 	private final EditionRegionRepository editionRegions;
 	private final RegionRepository regions;
 
-	public EditionAdminController(EditionRepository editions, CompetitionRepository competitions,
+	public EditionAdminController(EditionRepository editions, EditionCurationService curation,
 			KeyDateRepository keyDates, EditionRegionRepository editionRegions, RegionRepository regions) {
 		this.editions = editions;
-		this.competitions = competitions;
+		this.curation = curation;
 		this.keyDates = keyDates;
 		this.editionRegions = editionRegions;
 		this.regions = regions;
@@ -73,11 +68,7 @@ public class EditionAdminController {
 	@PostMapping("/competitions/{competitionId}/editions")
 	@ResponseStatus(HttpStatus.CREATED)
 	public EditionResponse create(@PathVariable UUID competitionId, @Valid @RequestBody EditionRequest request) {
-		Competition competition = competitions.findById(competitionId).orElseThrow(
-				() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "competition not found"));
-		Edition edition = new Edition(competition, request.cycleLabel(), request.status(), request.scopeLevel());
-		apply(edition, request, CurationStamps.curated());
-		return EditionResponse.from(editions.save(edition));
+		return EditionResponse.from(curation.create(competitionId, request, CurationStamps.curated()));
 	}
 
 	@GetMapping("/editions/{id}")
@@ -88,12 +79,7 @@ public class EditionAdminController {
 
 	@PutMapping("/editions/{id}")
 	public EditionResponse update(@PathVariable UUID id, @Valid @RequestBody EditionRequest request) {
-		Edition edition = require(id);
-		edition.setCycleLabel(request.cycleLabel());
-		edition.setStatus(request.status());
-		edition.setScopeLevel(request.scopeLevel());
-		apply(edition, request, CurationStamps.curated());
-		return EditionResponse.from(edition);
+		return EditionResponse.from(curation.update(id, request, CurationStamps.curated()));
 	}
 
 	@DeleteMapping("/editions/{id}")
@@ -174,28 +160,6 @@ public class EditionAdminController {
 		return editionRegions.findByEditionId(id).stream().map(er -> er.getRegion().getId()).toList();
 	}
 
-	private void apply(Edition edition, EditionRequest request, Provenance stamp) {
-		// NOTE: the Edition attributes bag is intentionally NOT schema-validated at R1 — Category
-		// Templates validate the COMPETITION's attributes (domain-model §3a); no edition-level
-		// template exists. Edition attributes hold edition-specific display-only fields. If
-		// edition-scoped validation is ever needed it gets its own template concept (future).
-		edition.setRegistrationUrl(request.registrationUrl());
-		edition.setEntryFee(request.entryFee());
-		edition.setCurrency(request.currency());
-		edition.setAgeCutoffDate(request.ageCutoffDate());
-		edition.setPrizeSummary(request.prizeSummary());
-		edition.setPrizeValue(request.prizeValue());
-		edition.setPrizeCurrency(request.prizeCurrency());
-		edition.setAttributes(request.attributes());
-		edition.setProvenance(stamp);
-		if (request.advancesToEditionId() != null) {
-			edition.setAdvancesTo(editions.findById(request.advancesToEditionId()).orElseThrow(
-					() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "unknown advances-to edition")));
-		} else {
-			edition.setAdvancesTo(null);
-		}
-	}
-
 	private void applyKeyDate(KeyDate keyDate, KeyDateRequest request) {
 		keyDate.setLabel(request.label());
 		keyDate.setEndsAt(request.endsAt());
@@ -207,13 +171,7 @@ public class EditionAdminController {
 				() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "edition not found"));
 	}
 
-	// --- DTOs ---
-
-	public record EditionRequest(@NotBlank @Size(max = 60) String cycleLabel, @NotNull EditionStatus status,
-			@Size(max = 1000) String registrationUrl, BigDecimal entryFee, @Size(max = 3) String currency,
-			LocalDate ageCutoffDate, @Size(max = 500) String prizeSummary, BigDecimal prizeValue,
-			@Size(max = 3) String prizeCurrency, @NotNull ScopeLevel scopeLevel, UUID advancesToEditionId,
-			Map<String, Object> attributes) {}
+	// --- DTOs (EditionRequest lives in catalog.curation — shared with the correction queue) ---
 
 	public record KeyDateRequest(@NotNull KeyDateType type, @Size(max = 200) String label,
 			@NotNull Instant startsAt, Instant endsAt, @Size(max = 60) String timezone) {}
