@@ -93,8 +93,7 @@ first schema is R1-1; F5 CI (`.github/workflows/ci.yml`: path-filtered web + API
 secret scan blocking, Semgrep/Trivy advisory, cached, cancel-in-progress); F6 deploy pipeline
 (`apps/{web,api}/Dockerfile`, `infra/docker-compose.{staging,prod}.yml` + `infra/Caddyfile`,
 `deploy-staging.yml` on `main`-push + `deploy-prod.yml` on `R*`-tag, build-once-promote to a VPS via
-GHCR; images built + run-verified locally, but live deploy needs the VPS/DNS/secrets setup in
-setup-runbook §8); F7 design system (`packages/ui`: `styles/tokens.css` = warm semantic light/dark
+GHCR; **now LIVE on IONOS** — see the DEPLOYED note at the end of this section); F7 design system (`packages/ui`: `styles/tokens.css` = warm semantic light/dark
 tokens (no harsh blacks; Claude-style warm dark mode) + Tailwind `@theme`, self-hosted Fraunces +
 Inter Variable, ~20 primitives — Button/Input/Textarea/Select/Card/Badge/Chip/Checkbox/Radio/
 FormField/Avatar/Alert/Skeleton/Spinner/EmptyState/Tooltip/Tabs (underline + attached folder-tab)/
@@ -105,3 +104,13 @@ COPPA; structured JSON logs via `logback-spring.xml` json profile — on in the 
 foundation tasks F1–F8 are done.** Next per `docs/phase-1-plan.md` is **R1** — starting with **R1-1**
 (core schema migration; first real domain entities). Remaining F8 operational steps (uptime monitor +
 confirming Sentry receives events) are done after staging is live — see setup-runbook §9.
+
+**DEPLOYED (2026-07-12):** staging + production are **LIVE** on an **IONOS VPS** (US East, Ubuntu 24.04)
+behind a **single shared edge Caddy** — `https://beecompete.com` (+ `www`→apex) and
+`https://staging.beecompete.com`. Infra is `infra/docker-compose.{edge,staging,prod}.yml` +
+`infra/Caddyfile` (edge stack owns 80/443 on the `web_edge` network; per-stack files run web+api only).
+The F6 pipeline is active — staging on `main` push, prod on an `R*` tag (build-once-promote). Provider
+switched Hetzner→IONOS (D11); shared edge Caddy is D13. **Authoritative as-built record + all
+gotchas/deferred items:** the "Current deployment — AS BUILT" section in `docs/setup-runbook.md`. Still
+open before real users: web-side Sentry build-arg, UptimeRobot, Neon paid tier, repo→private+Pro, Brevo
+consent-email test, AWS root MFA (see the runbook's deferred list).
