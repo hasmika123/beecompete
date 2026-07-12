@@ -101,7 +101,7 @@ class CatalogPublicApiIntegrationTest {
 				.andExpect(jsonPath("$.editions[1].status", is("upcoming")))
 				.andExpect(jsonPath("$.editions[1].effectiveStatus", is("open")))
 				.andExpect(jsonPath("$.editions[1].regions", hasSize(1)))
-				.andExpect(jsonPath("$.editions[1].regions[0].code", is("US")))
+				.andExpect(jsonPath("$.editions[1].regions[0].code", is("CA")))
 				.andExpect(jsonPath("$.resources", hasSize(1)))
 				.andExpect(jsonPath("$.resources[0].isAffiliate", is(true)))
 				.andExpect(jsonPath("$.faqs", hasSize(1)));
@@ -145,9 +145,11 @@ class CatalogPublicApiIntegrationTest {
 		addKeyDate(e2, "REG_OPEN", now.minus(1, ChronoUnit.DAYS));
 		addKeyDate(e2, "REG_CLOSE", now.plus(30, ChronoUnit.DAYS));
 
+		// A region no other test class seeds — the Region natural key (parent, level, name) is
+		// unique and the integration classes share one Spring context + database.
 		String regionJson = mvc.perform(withToken(post("/api/v1/admin/regions"))
 						.contentType("application/json")
-						.content("{\"level\": \"COUNTRY\", \"name\": \"United States\", \"code\": \"US\"}"))
+						.content("{\"level\": \"COUNTRY\", \"name\": \"Canada\", \"code\": \"CA\"}"))
 				.andExpect(status().isCreated())
 				.andReturn().getResponse().getContentAsString();
 		String regionId = mapper.readTree(regionJson).get("id").asText();
