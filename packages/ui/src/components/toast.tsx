@@ -1,6 +1,14 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import { CheckCircle, CircleAlert, Info, X } from '../icons';
@@ -47,6 +55,11 @@ const toneIcon: Record<ToastTone, ReactNode> = {
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastRecord[]>([]);
+  // Portal only after mount: a `typeof document` branch differs between the server render
+  // and client hydration and throws a hydration mismatch in dev. useEffect runs after
+  // hydration, so the first client render matches the server exactly.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const counter = useRef(0);
   const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
 
@@ -81,7 +94,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {typeof document !== 'undefined' &&
+      {mounted &&
         createPortal(
           // The PERSISTENT live region is this always-mounted container — live regions
           // inserted together with their content (per-toast) are unreliably announced.
