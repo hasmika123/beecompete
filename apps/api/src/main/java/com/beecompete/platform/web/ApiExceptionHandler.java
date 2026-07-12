@@ -2,38 +2,55 @@ package com.beecompete.platform.web;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Maps expected-but-conflicting persistence outcomes to 409 so normal admin actions don't
- * surface as 500s (R1-3 review): deleting a category still referenced by competitions (FK
- * RESTRICT), a slug/natural-key race losing to the unique constraint, and a concurrent-edit
- * optimistic-lock miss (@Version). Bean-Validation (400) and ResponseStatusException (its own
- * status) are already handled by Spring Boot's defaults.
+ * Renders API errors as JSON with a useful {@code message}. Spring Boot's default hides exception
+ * messages ({@code server.error.include-message=never}), which left the admin UI showing a bare
+ * "admin API 422" instead of the actual reason. Here we deliberately echo the reasons WE set
+ * (validation, conflicts) — not arbitrary exception internals — so the curation tool can show them.
  */
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
+	/** Our controllers throw ResponseStatusException with an explicit, safe-to-show reason. */
+	@ExceptionHandler(ResponseStatusException.class)
+	public ResponseEntity<Map<String, Object>> onResponseStatus(ResponseStatusException ex) {
+		return body(ex.getStatusCode(), ex.getReason() != null ? ex.getReason() : "request failed");
+	}
+
+	/** Bean Validation on @RequestBody — surface which fields failed. */
+	@ExceptionHandler(MethodArgumentNotValidException.class)
+	public ResponseEntity<Map<String, Object>> onInvalidBody(MethodArgumentNotValidException ex) {
+		String fields = ex.getBindingResult().getFieldErrors().stream()
+				.map(fe -> fe.getField() + " " + fe.getDefaultMessage())
+				.collect(Collectors.joining("; "));
+		return body(HttpStatus.BAD_REQUEST, fields.isBlank() ? "invalid request body" : fields);
+	}
+
 	@ExceptionHandler(OptimisticLockingFailureException.class)
 	public ResponseEntity<Map<String, Object>> onOptimisticLock(OptimisticLockingFailureException ex) {
-		return conflict("this record was modified by someone else — reload and retry");
+		return body(HttpStatus.CONFLICT, "this record was modified by someone else — reload and retry");
 	}
 
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	public ResponseEntity<Map<String, Object>> onConstraint(DataIntegrityViolationException ex) {
-		return conflict("the change conflicts with existing data (a unique or reference constraint)");
+		return body(HttpStatus.CONFLICT, "the change conflicts with existing data (a unique or reference constraint)");
 	}
 
-	private ResponseEntity<Map<String, Object>> conflict(String message) {
-		return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+	private ResponseEntity<Map<String, Object>> body(HttpStatusCode status, String message) {
+		return ResponseEntity.status(status).body(Map.of(
 				"timestamp", Instant.now().toString(),
-				"status", HttpStatus.CONFLICT.value(),
-				"error", HttpStatus.CONFLICT.getReasonPhrase(),
+				"status", status.value(),
 				"message", message));
 	}
 }
