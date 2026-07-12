@@ -42,7 +42,9 @@ services:
       web_edge:
         aliases: [staging-web] # how the shared edge Caddy addresses this container
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:3000/']
+      # 127.0.0.1, NOT localhost: alpine resolves localhost to ::1 first and Node binds
+      # IPv4-only, so busybox wget gets connection-refused and the check always fails.
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000/']
       interval: 15s
       timeout: 5s
       retries: 10
