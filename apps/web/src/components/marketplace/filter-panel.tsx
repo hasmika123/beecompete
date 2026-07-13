@@ -22,11 +22,13 @@ interface FilterPanelProps {
 }
 
 function Facet({ legend, children }: { legend: string; children: React.ReactNode }) {
+  // `min-w-0` overrides a fieldset's default `min-inline-size: min-content`, which otherwise
+  // refuses to shrink below its widest option and pushes a horizontal scrollbar into the
+  // (overflow-y-auto) panel. The legend is a plain block heading — no float, which was
+  // breaking the vertical rhythm between the label and its controls.
   return (
-    <fieldset className="border-t border-border pt-4">
-      <legend className="float-left mb-2 w-full text-sm font-semibold text-foreground">
-        {legend}
-      </legend>
+    <fieldset className="min-w-0 border-t border-border pt-4">
+      <legend className="mb-2 text-sm font-semibold text-foreground">{legend}</legend>
       {children}
     </fieldset>
   );

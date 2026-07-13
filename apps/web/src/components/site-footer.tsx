@@ -11,7 +11,7 @@ const EXPLORE = [
 
 // Title Case both, consistent with each other and the Explore links ("How It Works").
 const CONTRIBUTE = [
-  { href: '/suggest-a-competition', label: 'Suggest a Competition' },
+  { href: '/suggest-a-competition', label: 'Request a Competition' },
   { href: '/suggest-a-correction', label: 'Suggest a Correction' },
 ];
 

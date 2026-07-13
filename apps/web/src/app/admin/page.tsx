@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Alert, ArrowRight, Card, CardContent } from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
-import { adminFetch } from '@/lib/admin-api';
+import { AdminApiError, adminFetch } from '@/lib/admin-api';
 import type { Category, CorrectionProposal, ImportRecord, Page } from '@/lib/admin-types';
 import type { Competition, Organization } from '@/lib/admin-types';
 
@@ -23,13 +23,32 @@ async function counts() {
   };
 }
 
+// Map a counts() failure to admin-facing guidance. A 401/403 is an auth problem (token
+// blank or mismatched between the API and apps/web/.env.local); anything else is usually
+// the API being unreachable at API_BASE_URL.
+function diagnose(e: unknown): { title: string; hint: string } {
+  if (e instanceof AdminApiError && (e.status === 401 || e.status === 403)) {
+    return {
+      title: `The admin API rejected the request (${e.status}).`,
+      hint: 'Make sure the API is running with the same ADMIN_API_TOKEN as apps/web/.env.local. For local dev, `./gradlew bootRun` defaults it to `dev-admin-token`, matching the checked-in .env.local.',
+    };
+  }
+  if (e instanceof AdminApiError) {
+    return { title: `The admin API returned an error (${e.status}).`, hint: e.message };
+  }
+  return {
+    title: "Couldn't reach the admin API.",
+    hint: 'Check that the Spring API is running and API_BASE_URL points at it (default http://localhost:8080).',
+  };
+}
+
 export default async function AdminDashboard() {
   let data: Awaited<ReturnType<typeof counts>> | null = null;
-  let error: string | null = null;
+  let error: { title: string; hint: string } | null = null;
   try {
     data = await counts();
   } catch (e) {
-    error = e instanceof Error ? e.message : 'could not reach the admin API';
+    error = diagnose(e);
   }
 
   const cards = [
@@ -46,8 +65,7 @@ export default async function AdminDashboard() {
 
       {error && (
         <Alert tone="danger" className="mb-6">
-          Couldn&apos;t load counts: {error}. Check that the API is running and{' '}
-          <code>ADMIN_API_TOKEN</code> is set.
+          <span className="font-medium">{error.title}</span> {error.hint}
         </Alert>
       )}
 
