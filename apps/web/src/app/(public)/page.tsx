@@ -213,11 +213,6 @@ export default async function LandingPage() {
                   label:
                     'of students who compete report stronger study habits, per national survey data',
                 },
-                {
-                  value: '—%',
-                  label:
-                    'of school counselors recommend academic competitions for college-bound students',
-                },
               ].map((stat) => (
                 <Card key={stat.label} className="p-5">
                   <p className="font-display text-4xl leading-none text-foreground sm:text-5xl">

@@ -7,3 +7,22 @@
 /* packages/ui is consumed as source (transpilePackages) — point Tailwind's scanner at it
  * so utility classes used inside ui components are generated. */
 @source '../../../../packages/ui/src';
+
+/* Subtle, unobtrusive scrollbar for inner scroll regions (e.g. the filter panel) — a slim
+ * track-less thumb in the hairline-border color, so a scrollable panel doesn't get the chunky
+ * default OS scrollbar. Firefox uses scrollbar-width/color; WebKit uses the pseudo-elements. */
+@utility scrollbar-slim {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 9999px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}

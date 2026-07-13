@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Button, Radio, RadioGroup, buttonClasses } from '@beecompete/ui';
+import { Button, ChevronDown, Radio, RadioGroup, buttonClasses } from '@beecompete/ui';
 import { NativeSelect } from '@/components/admin/native-select';
 import { gradeName } from '@/lib/catalog-display';
 import type { SearchFacets, RegionOption } from '@/lib/catalog-types';
@@ -21,16 +21,21 @@ interface FilterPanelProps {
   categoryFilter?: { active?: string };
 }
 
+// Each facet is a collapsible <details> section (open by default) so the panel reads as a set of
+// tidy, dropdown-style groups the user can fold away. `min-w-0` overrides a section's default
+// min-content width so long options wrap instead of pushing a horizontal scrollbar into the panel.
 function Facet({ legend, children }: { legend: string; children: React.ReactNode }) {
-  // `min-w-0` overrides a fieldset's default `min-inline-size: min-content`, which otherwise
-  // refuses to shrink below its widest option and pushes a horizontal scrollbar into the
-  // (overflow-y-auto) panel. The legend is a plain block heading — no float, which was
-  // breaking the vertical rhythm between the label and its controls.
   return (
-    <fieldset className="min-w-0 border-t border-border pt-4">
-      <legend className="mb-2 text-sm font-semibold text-foreground">{legend}</legend>
-      {children}
-    </fieldset>
+    <details open className="group min-w-0 border-t border-border pt-3">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
+        <span className="text-sm font-semibold text-foreground">{legend}</span>
+        <ChevronDown
+          aria-hidden="true"
+          className="size-4 shrink-0 text-muted transition-transform group-open:rotate-180"
+        />
+      </summary>
+      <div className="mt-3 min-w-0">{children}</div>
+    </details>
   );
 }
 
@@ -45,7 +50,18 @@ export function FilterPanel({ path, params, facets, regions, categoryFilter }: F
   });
 
   return (
-    <form method="get" action={path} className="grid gap-4" aria-label="Filters">
+    <form method="get" action={path} className="grid gap-3" aria-label="Filters">
+      {/* Apply/Reset pinned to the top of the (scrolling) panel so they're always visible —
+          no scrolling to the bottom to find them. bg-background masks facets scrolling under. */}
+      <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-background pb-3">
+        <Button type="submit" size="sm" className="flex-1">
+          Apply filters
+        </Button>
+        <Link href={path} className={buttonClasses({ variant: 'ghost', size: 'sm' })}>
+          Reset
+        </Link>
+      </div>
+
       {/* Preserve non-facet state across an Apply. */}
       {params.q && <input type="hidden" name="q" value={params.q} />}
       {params.sort && <input type="hidden" name="sort" value={params.sort} />}
@@ -174,15 +190,6 @@ export function FilterPanel({ path, params, facets, regions, categoryFilter }: F
           <Radio value="hybrid" label="Hybrid" defaultChecked={params.delivery === 'hybrid'} />
         </RadioGroup>
       </Facet>
-
-      <div className="flex items-center gap-2 border-t border-border pt-4">
-        <Button type="submit" size="sm">
-          Apply filters
-        </Button>
-        <Link href={path} className={buttonClasses({ variant: 'ghost', size: 'sm' })}>
-          Reset
-        </Link>
-      </div>
     </form>
   );
 }
