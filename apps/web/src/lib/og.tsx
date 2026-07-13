@@ -1,7 +1,21 @@
+import { frauncesDisplay } from '@/lib/fonts/fraunces-display';
+import { interText } from '@/lib/fonts/inter-text';
+
 // Shared bits for the next/og share-card routes (R1-10). The brand mark is an inline SVG
 // honeycomb hexagon — NOT an emoji: next/og resolves emoji by fetching twemoji SVGs from a CDN
 // at render time (the bundled Geist font has no emoji glyphs), which would make the OG route
 // depend on outbound network at runtime. Inline SVG keeps the cards genuinely self-contained.
+//
+// Fonts (review L12): the cards render in the BRAND faces, not next/og's bundled Geist — Fraunces
+// for display headlines + the wordmark, Inter for UI text (design-brief typography lock). satori
+// can't consume our variable woff2s, so these are static TTF instances (Fraunces 700 @ opsz 144,
+// Inter 500 @ opsz 16) derived from the same OFL fonts, embedded as base64 (see the .ts files) so
+// they need no fs/tracing in the standalone image.
+
+export const OG_FONTS = [
+  { name: 'Fraunces', data: frauncesDisplay, weight: 700 as const, style: 'normal' as const },
+  { name: 'Inter', data: interText, weight: 500 as const, style: 'normal' as const },
+];
 
 export const OG_SIZE = { width: 1200, height: 630 };
 
@@ -32,12 +46,14 @@ export function BeeHex({ badge = 44 }: { badge?: number }) {
   );
 }
 
-/** Brand row: hex badge + "BeeCompete" wordmark, sized to the card. */
+/** Brand row: hex badge + "BeeCompete" wordmark (Fraunces, matching the site logo). */
 export function BrandRow({ badge = 44, font = 30 }: { badge?: number; font?: number }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: Math.round(badge * 0.32) }}>
       <BeeHex badge={badge} />
-      <div style={{ fontSize: font, fontWeight: 700, color: INK }}>BeeCompete</div>
+      <div style={{ fontFamily: 'Fraunces', fontSize: font, fontWeight: 700, color: INK }}>
+        BeeCompete
+      </div>
     </div>
   );
 }

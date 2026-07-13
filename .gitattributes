@@ -19,3 +19,6 @@ gradlew text eol=lf
 *.woff2 binary
 *.pdf binary
 *.jar binary
+
+# Generated base64 font data for the next/og share cards (R1-10)
+apps/web/src/lib/fonts/*.ts linguist-generated=true

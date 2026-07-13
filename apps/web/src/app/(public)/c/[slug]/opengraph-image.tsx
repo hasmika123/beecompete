@@ -3,7 +3,7 @@ import { categoryHue } from '@beecompete/ui';
 import { fetchCompetition } from '@/lib/catalog-api';
 import { gradeLabel } from '@/lib/catalog-display';
 import { PublicApiError } from '@/lib/public-api';
-import { BrandRow, GOLD, GROUND, INK, MUTED, OG_SIZE } from '@/lib/og';
+import { BrandRow, GOLD, GROUND, INK, MUTED, OG_FONTS, OG_SIZE } from '@/lib/og';
 
 // Per-competition OpenGraph/share card (R1-10). Fully self-contained — next/og's bundled font
 // plus an inline SVG brand mark (no emoji → no runtime twemoji CDN fetch): category-accent bar
@@ -48,7 +48,15 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   }
 
   return new ImageResponse(
-    <div style={{ height: '100%', width: '100%', display: 'flex', background: GROUND }}>
+    <div
+      style={{
+        height: '100%',
+        width: '100%',
+        display: 'flex',
+        background: GROUND,
+        fontFamily: 'Inter',
+      }}
+    >
       <div style={{ width: '18px', height: '100%', background: accent }} />
       <div
         style={{
@@ -65,7 +73,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
             <div
               style={{
                 fontSize: '30px',
-                fontWeight: 700,
+                fontWeight: 500,
                 color: accent,
                 textTransform: 'uppercase',
                 letterSpacing: '2px',
@@ -78,9 +86,10 @@ export default async function Image({ params }: { params: Promise<{ slug: string
                 off the 630px canvas (names allow up to 300 chars). */}
           <div
             style={{
+              fontFamily: 'Fraunces',
               marginTop: '18px',
               fontSize: name.length > 40 ? '64px' : '80px',
-              fontWeight: 800,
+              fontWeight: 700,
               color: INK,
               lineHeight: 1.05,
               lineClamp: 3,
@@ -95,6 +104,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
               key={f}
               style={{
                 fontSize: '28px',
+                fontWeight: 500,
                 color: MUTED,
                 border: `2px solid ${MUTED}33`,
                 borderRadius: '999px',
@@ -108,6 +118,6 @@ export default async function Image({ params }: { params: Promise<{ slug: string
         </div>
       </div>
     </div>,
-    { ...size },
+    { ...size, fonts: OG_FONTS },
   );
 }
