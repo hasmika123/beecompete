@@ -13,6 +13,7 @@ import com.beecompete.catalog.repository.EditionRepository;
 import com.beecompete.catalog.repository.KeyDateRepository;
 import com.beecompete.catalog.repository.RegionRepository;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
@@ -181,7 +182,13 @@ public class EditionAdminController {
 	// --- DTOs (EditionRequest lives in catalog.curation — shared with the correction queue) ---
 
 	public record KeyDateRequest(@NotNull KeyDateType type, @Size(max = 200) String label,
-			@NotNull Instant startsAt, Instant endsAt, @Size(max = 60) String timezone) {}
+			@NotNull Instant startsAt, Instant endsAt, @Size(max = 60) String timezone) {
+
+		@AssertTrue(message = "endsAt must be after startsAt")
+		public boolean isEndAfterStart() {
+			return endsAt == null || (startsAt != null && endsAt.isAfter(startsAt));
+		}
+	}
 
 	public record KeyDateResponse(UUID id, KeyDateType type, String label, Instant startsAt, Instant endsAt,
 			String timezone) {

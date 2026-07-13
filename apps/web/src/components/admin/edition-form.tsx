@@ -52,16 +52,32 @@ export function EditionForm({
           />
         </FormField>
         <FormField label="Registration URL">
-          <Input name="registrationUrl" type="url" defaultValue={e?.registrationUrl ?? ''} />
+          <Input
+            name="registrationUrl"
+            type="url"
+            defaultValue={e?.registrationUrl ?? ''}
+            maxLength={1000}
+          />
         </FormField>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-3">
         <FormField label="Entry fee">
-          <Input name="entryFee" type="number" step="0.01" defaultValue={e?.entryFee ?? ''} />
+          <Input
+            name="entryFee"
+            type="number"
+            step="0.01"
+            min={0}
+            defaultValue={e?.entryFee ?? ''}
+          />
         </FormField>
-        <FormField label="Currency" hint="ISO, e.g. USD">
-          <Input name="currency" defaultValue={e?.currency ?? ''} maxLength={3} />
+        <FormField label="Currency" hint="3-letter ISO, e.g. USD">
+          <Input
+            name="currency"
+            defaultValue={e?.currency ?? ''}
+            maxLength={3}
+            pattern="[A-Za-z]{3}"
+          />
         </FormField>
         <FormField label="Age cutoff date">
           <Input name="ageCutoffDate" type="date" defaultValue={e?.ageCutoffDate ?? ''} />
@@ -73,10 +89,21 @@ export function EditionForm({
           <Input name="prizeSummary" defaultValue={e?.prizeSummary ?? ''} maxLength={500} />
         </FormField>
         <FormField label="Prize value">
-          <Input name="prizeValue" type="number" step="0.01" defaultValue={e?.prizeValue ?? ''} />
+          <Input
+            name="prizeValue"
+            type="number"
+            step="0.01"
+            min={0}
+            defaultValue={e?.prizeValue ?? ''}
+          />
         </FormField>
         <FormField label="Prize currency">
-          <Input name="prizeCurrency" defaultValue={e?.prizeCurrency ?? ''} maxLength={3} />
+          <Input
+            name="prizeCurrency"
+            defaultValue={e?.prizeCurrency ?? ''}
+            maxLength={3}
+            pattern="[A-Za-z]{3}"
+          />
         </FormField>
       </section>
 

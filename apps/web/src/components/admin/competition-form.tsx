@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, type ReactNode } from 'react';
+import { useActionState, useEffect, useState, type ReactNode } from 'react';
 import { Alert, Button, FormField, Input, Textarea, cn, useToast } from '@beecompete/ui';
 import { NativeSelect, enumOptions } from '@/components/admin/native-select';
 import { createCompetition, updateCompetition } from '@/app/admin/competitions/actions';
@@ -65,6 +65,11 @@ export function CompetitionForm({
   const orgOptions = organizations.map((o) => ({ value: o.id, label: o.name }));
   const attributesText = c?.attributes ? JSON.stringify(c.attributes, null, 2) : '';
 
+  // Team size only applies to team/both participation — gate the inputs (disabled fields aren't
+  // submitted, so INDIVIDUAL never posts a stray team size).
+  const [participation, setParticipation] = useState(c?.participationMode ?? 'INDIVIDUAL');
+  const teamDisabled = participation === 'INDIVIDUAL';
+
   return (
     <form action={formAction} className="grid gap-8">
       {state.error && <Alert tone="danger">{state.error}</Alert>}
@@ -74,7 +79,13 @@ export function CompetitionForm({
           <Input name="name" defaultValue={c?.name} required maxLength={300} />
         </FormField>
         <FormField label="Slug" required hint="lowercase-kebab-case; permanent (SEO).">
-          <Input name="slug" defaultValue={c?.slug} required pattern="[a-z0-9]+(-[a-z0-9]+)*" />
+          <Input
+            name="slug"
+            defaultValue={c?.slug}
+            required
+            maxLength={160}
+            pattern="[a-z0-9]+(-[a-z0-9]+)*"
+          />
         </FormField>
         <FormField label="Category" required>
           <NativeSelect
@@ -112,7 +123,8 @@ export function CompetitionForm({
           <NativeSelect
             name="participationMode"
             options={enumOptions(PARTICIPATION_MODES)}
-            defaultValue={c?.participationMode ?? 'INDIVIDUAL'}
+            value={participation}
+            onChange={(e) => setParticipation(e.target.value)}
           />
         </FormField>
         <FormField label="Delivery">
@@ -144,25 +156,37 @@ export function CompetitionForm({
           />
         </FormField>
         <FormField label="Team size (min)" hint="team competitions only">
-          <Input name="teamSizeMin" type="number" defaultValue={c?.teamSizeMin ?? ''} min={1} />
+          <Input
+            name="teamSizeMin"
+            type="number"
+            defaultValue={c?.teamSizeMin ?? ''}
+            min={1}
+            disabled={teamDisabled}
+          />
         </FormField>
         <FormField label="Team size (max)" hint="team competitions only">
-          <Input name="teamSizeMax" type="number" defaultValue={c?.teamSizeMax ?? ''} min={1} />
+          <Input
+            name="teamSizeMax"
+            type="number"
+            defaultValue={c?.teamSizeMax ?? ''}
+            min={1}
+            disabled={teamDisabled}
+          />
         </FormField>
       </FormSection>
 
       <FormSection title="Eligibility" cols="sm:grid-cols-4">
         <FormField label="Min grade" hint="Pre-K −1, K 0">
-          <Input name="minGrade" type="number" defaultValue={c?.minGrade ?? ''} min={-1} max={13} />
+          <Input name="minGrade" type="number" defaultValue={c?.minGrade ?? ''} min={-1} max={12} />
         </FormField>
         <FormField label="Max grade">
-          <Input name="maxGrade" type="number" defaultValue={c?.maxGrade ?? ''} min={-1} max={13} />
+          <Input name="maxGrade" type="number" defaultValue={c?.maxGrade ?? ''} min={-1} max={12} />
         </FormField>
         <FormField label="Min age">
-          <Input name="minAge" type="number" defaultValue={c?.minAge ?? ''} min={0} />
+          <Input name="minAge" type="number" defaultValue={c?.minAge ?? ''} min={0} max={25} />
         </FormField>
         <FormField label="Max age">
-          <Input name="maxAge" type="number" defaultValue={c?.maxAge ?? ''} min={0} />
+          <Input name="maxAge" type="number" defaultValue={c?.maxAge ?? ''} min={0} max={25} />
         </FormField>
       </FormSection>
 
@@ -177,10 +201,15 @@ export function CompetitionForm({
           <Input name="evaluationType" defaultValue={c?.evaluationType?.join(', ') ?? ''} />
         </FormField>
         <FormField label="Official URL">
-          <Input name="officialUrl" type="url" defaultValue={c?.officialUrl ?? ''} />
+          <Input
+            name="officialUrl"
+            type="url"
+            defaultValue={c?.officialUrl ?? ''}
+            maxLength={1000}
+          />
         </FormField>
         <FormField label="Logo (S3 key or URL)">
-          <Input name="logo" defaultValue={c?.logo ?? ''} />
+          <Input name="logo" defaultValue={c?.logo ?? ''} maxLength={1000} />
         </FormField>
       </FormSection>
 
