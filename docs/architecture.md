@@ -242,7 +242,10 @@ tooling + audit log) → Phase 2+ (dedup DQ4, conflict resolution DQ5) → Phase
   diluted by long names); **grade = range overlap** (null bound = open side);
   **participation/pathway are eligibility filters** (filtering `individual` includes
   BOTH/EITHER records — the parent's question is "can we enter this way?"); **next deadline** =
-  earliest FUTURE `REG_CLOSE` over live editions (consistent with `EffectiveStatus`), deadline
+  earliest FUTURE `REG_CLOSE` over live editions, **falling back to `SUBMISSION_DUE`**
+  (consistent with `EffectiveStatus`; fallback added post-review 2026-07-12 — submission-driven
+  competitions often have no registration step and otherwise vanished from the deadline
+  filter/sort; the web detail page mirrors this rule exactly in `lib/detail-display`), deadline
   sort puts no-deadline records last; **facet counts** (Grade + Category only, per the Page-2
   blueprint) exclude the facet's own filter; **unknown token → 400** naming the allowed set,
   **unknown value (slug/region nobody has) → empty page**, not an error.
