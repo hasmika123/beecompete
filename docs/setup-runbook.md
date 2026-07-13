@@ -80,6 +80,13 @@ site still shows. The old GoDaddy box (runs a separate app, `dossier`) is left u
   page's robots meta, submit `sitemap.xml` to Google Search Console + Bing Webmaster Tools, and
   confirm staging still serves `Disallow:/` (staging's compose deliberately has no way to
   receive the flag). Full checklist lives in the R1-17 bullet of `docs/phase-1-plan.md`.
+- **Verify the per-competition OG image renders in the real container (R1-10).** The dynamic
+  `/c/<slug>/opengraph-image` route runs `next/og` (satori + wasm + embedded brand fonts) only at
+  request time, so `next build` proves the static default card but not the per-slug runner path.
+  Once the first S4-curated listing exists on staging: open its `/c/<slug>` page, copy the
+  `og:image` URL from the HTML (it carries a build hash), and `curl` it — expect `200
+  image/png`. A 500 means the satori/wasm assets didn't trace into the standalone image. 30-second
+  check; do it after the first listing lands, before the R1-17 flip.
 - ~~Web-side Sentry not wired.~~ **Code wired 2026-07-12** (Dockerfile build-arg + deploy-staging
   build-args for the browser side; `WEB_SENTRY_DSN` env on the web services for the Node/SSR side;
   environment inferred from hostname since one image serves both envs). **Two manual steps remain
