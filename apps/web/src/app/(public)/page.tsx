@@ -17,12 +17,23 @@ import { ScrollRow } from '@/components/scroll-row';
 import { fetchCategories, fetchLanding } from '@/lib/catalog-api';
 import { toCardData } from '@/lib/catalog-display';
 import { CATEGORY_CONTENT } from '@/lib/category-content';
+import { pageMetadata } from '@/lib/seo';
+import { jsonLdScript, siteJsonLd } from '@/lib/structured-data';
 
-export const metadata: Metadata = {
-  title: 'BeeCompete — Find K-12 Academic Competitions',
-  description:
-    'One place to find K-12 academic competitions: math, science, coding, debate, writing, and more — curated listings with real dates, grade ranges, and costs.',
-};
+// Rendered at request time (R1-10): the web image is built with no API reachable (build-once-
+// promote), so no-param pages can't be prerendered at build. The catalog reads are still data-
+// cached (revalidate), so this isn't a fresh API round-trip per visitor. The high-volume SEO
+// surfaces — the per-competition detail pages — use true ISR (dynamic [slug], on-demand).
+export const dynamic = 'force-dynamic';
+
+export function generateMetadata(): Metadata {
+  return pageMetadata({
+    title: 'BeeCompete — Find K-12 Academic Competitions',
+    description:
+      'One place to find K-12 academic competitions: math, science, coding, debate, writing, and more — curated listings with real dates, grade ranges, and costs.',
+    path: '/',
+  });
+}
 
 // Page 1: Landing (approved blueprint, rev 2026-07-09; section order per decision #5:
 // Hero → Featured carousel → Value-prop split → Audience cards → Digest band → Footer).
@@ -34,6 +45,10 @@ export default async function LandingPage() {
 
   return (
     <div className="grid gap-16 sm:gap-20">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(siteJsonLd()) }}
+      />
       {/* 1. Hero — 50/50 split; plain Browse button (decision #24); image cards right (#25). */}
       <section className="grid items-center gap-10 lg:grid-cols-2">
         <div className="animate-rise-in">

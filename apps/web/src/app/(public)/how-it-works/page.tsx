@@ -14,12 +14,18 @@ import {
 } from '@beecompete/ui';
 import { DigestBand } from '@/components/digest-band/digest-band';
 import { fetchCategories, fetchLanding, fetchRegions } from '@/lib/catalog-api';
+import { pageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'How It Works — BeeCompete',
-  description:
-    'How BeeCompete works: we curate K-12 academic competitions into one honest catalog — you find the right one and register on the organizer’s official site.',
-};
+export const dynamic = 'force-dynamic'; // no-param page — render at request, cached data reads (R1-10)
+
+export function generateMetadata(): Metadata {
+  return pageMetadata({
+    title: 'How It Works — BeeCompete',
+    description:
+      'How BeeCompete works: we curate K-12 academic competitions into one honest catalog — you find the right one and register on the organizer’s official site.',
+    path: '/how-it-works',
+  });
+}
 
 // Page 4: How It Works (approved 2026-07-08) — mission intro, 3-step timeline + ghosted R2
 // tracker teaser, demo-video placeholder, stats & imagery grid on live catalog counts.

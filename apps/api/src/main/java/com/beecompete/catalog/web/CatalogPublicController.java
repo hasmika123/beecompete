@@ -133,6 +133,18 @@ public class CatalogPublicController {
 		return search.categoryOptions();
 	}
 
+	/**
+	 * Sitemap feed (R1-10): every live competition's slug + category slug + last-modified stamp,
+	 * so the web app's {@code sitemap.xml} can emit per-competition and per-category URLs with
+	 * accurate {@code <lastmod>}. Lean projection (no entity hydration); the web route caches it.
+	 */
+	@GetMapping("/sitemap")
+	public List<SitemapEntry> sitemap() {
+		return competitions.findSitemapViews().stream()
+				.map(v -> new SitemapEntry(v.getSlug(), v.getCategorySlug(), v.getUpdatedAt()))
+				.toList();
+	}
+
 	private static <E extends Enum<E>> E parseToken(String param, String value, Class<E> type) {
 		if (value == null || value.isBlank()) {
 			return null;
@@ -203,6 +215,9 @@ public class CatalogPublicController {
 	}
 
 	public record CategoryView(String slug, String name) {}
+
+	/** One row of the sitemap feed (R1-10) — enough to build a URL + its {@code <lastmod>}. */
+	public record SitemapEntry(String slug, String categorySlug, Instant updatedAt) {}
 
 	public record CompetitionSummary(UUID id, String slug, String name, String summary, String logo,
 			CategoryView category, OrganizerView organizer, List<String> tags, String participationMode,

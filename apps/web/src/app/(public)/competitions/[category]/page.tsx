@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { MarketplacePage } from '@/components/marketplace/marketplace-page';
 import { CATEGORY_CONTENT, categoryContent } from '@/lib/category-content';
+import { pageMetadata } from '@/lib/seo';
 
 // Category hub (hybrid decision #16): canonical /competitions/<category-slug> renders the
 // marketplace pre-filtered + a category header + the indexable "About …" block. Slugs are the
@@ -19,10 +20,11 @@ export async function generateMetadata({
   const { category } = await params;
   const content = categoryContent(category);
   if (!content) return {};
-  return {
+  return pageMetadata({
     title: `${content.name} Competitions for K-12 Students — BeeCompete`,
     description: `${content.oneLiner} Browse curated ${content.name.toLowerCase()} competitions by grade, cost, and deadline.`,
-  };
+    path: `/competitions/${content.slug}`,
+  });
 }
 
 export default async function CategoryHubPage({

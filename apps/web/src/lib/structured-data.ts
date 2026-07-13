@@ -1,7 +1,13 @@
-import type { CompetitionDetail, EditionView, FaqView, KeyDateView } from '@/lib/catalog-types';
+import type {
+  CompetitionDetail,
+  CompetitionSummary,
+  EditionView,
+  FaqView,
+  KeyDateView,
+} from '@/lib/catalog-types';
 import { currentEdition } from '@/lib/detail-display';
 import { isoDateInZone } from '@/lib/dates';
-import { absoluteUrl } from '@/lib/site';
+import { SITE_NAME, SITE_URL, absoluteUrl } from '@/lib/site';
 
 // schema.org JSON-LD for the detail page (page-blueprints Page 3 — the SEO landing surface).
 // Emitted as <script type="application/ld+json">; indexing itself flips on site-wide at the
@@ -112,6 +118,55 @@ export function faqJsonLd(faqs: FaqView[]): JsonLd | undefined {
       '@type': 'Question',
       name: f.question,
       acceptedAnswer: { '@type': 'Answer', text: f.answer },
+    })),
+  };
+}
+
+/** WebSite + Organization for the landing page (R1-10) — brand entity + name in search. */
+export function siteJsonLd(): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': `${SITE_URL}/#organization`,
+        name: SITE_NAME,
+        url: SITE_URL,
+      },
+      {
+        '@type': 'WebSite',
+        '@id': `${SITE_URL}/#website`,
+        name: SITE_NAME,
+        url: SITE_URL,
+        publisher: { '@id': `${SITE_URL}/#organization` },
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: {
+            '@type': 'EntryPoint',
+            urlTemplate: `${SITE_URL}/competitions?q={search_term_string}`,
+          },
+          'query-input': 'required name=search_term_string',
+        },
+      },
+    ],
+  };
+}
+
+/**
+ * ItemList of the competitions shown on a listing page (R1-10) — gives crawlers the ordered
+ * set of detail-page URLs (the "Event markup on listings" the plan calls for; each item's own
+ * Event data lives on its detail page). Undefined when the list is empty.
+ */
+export function itemListJsonLd(items: CompetitionSummary[]): JsonLd | undefined {
+  if (items.length === 0) return undefined;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    itemListElement: items.map((item, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      url: absoluteUrl(`/c/${item.slug}`),
+      name: item.name,
     })),
   };
 }

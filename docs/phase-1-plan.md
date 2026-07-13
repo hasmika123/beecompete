@@ -39,6 +39,14 @@
 > `rel="nofollow noopener noreferrer"`, and **affiliate links carry `rel="sponsored nofollow"`
 > + a per-card "Affiliate" chip + a clear, conspicuous inline disclosure rendered with the row
 > whenever any affiliate link is present** (FTC/DQ10; dedicated disclosure page still R1-12).
+> **R1-10 done (2026-07-12) — SEO** (built before R1-9 at owner request): API
+> `GET /api/v1/sitemap`; web `robots.ts` + `sitemap.ts`, shared `lib/seo.pageMetadata`
+> (canonical + OG + Twitter + env-gated robots) on all public pages, dynamic `next/og` OG images
+> (per-competition + default, self-contained), `ItemList` on listings + `WebSite`/`Organization`
+> on Landing, ISR on detail pages (`[slug]` on-demand). **Indexing gated by `SEARCH_INDEXING`
+> (default OFF)** — robots `Disallow:/` + page `noindex` until R1-17 flips it in prod (legal +
+> COPPA gate first; the machinery is all in place). Build-once-promote (no API at build time)
+> precludes build-time SSG for no-param pages — those render at request with data-cached reads.
 > **Next:** R1-9 trust/verification badges. Deferred: PR C (S3 hero-image upload + inline
 > FAQ/Resource edit).
 

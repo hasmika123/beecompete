@@ -85,6 +85,12 @@ export interface CategoryOption {
   count: number;
 }
 
+export interface SitemapEntry {
+  slug: string;
+  categorySlug: string;
+  updatedAt: string;
+}
+
 export interface HeroCardView {
   position: string; // main | top_right | bottom_left
   imageKey: string;

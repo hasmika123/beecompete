@@ -13,6 +13,7 @@ import { fetchRegions, searchCompetitions, type SearchParams } from '@/lib/catal
 import { toCardData } from '@/lib/catalog-display';
 import { GRADE_BANDS, type CategoryContent } from '@/lib/category-content';
 import type { CompetitionSummary, SearchFacets } from '@/lib/catalog-types';
+import { itemListJsonLd, jsonLdScript } from '@/lib/structured-data';
 import {
   MAX_PAGE,
   PAGE_SIZE,
@@ -125,9 +126,16 @@ export async function MarketplacePage({ rawSearchParams, hub }: MarketplacePageP
   const chips = activeChips(path, params, regionName, categoryName);
   const band = activeBand(params);
   const miss = total === 0 ? await nearMiss(params, categorySlug) : null;
+  const itemList = itemListJsonLd(items);
 
   return (
     <div className="grid gap-6">
+      {itemList && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(itemList) }}
+        />
+      )}
       {hub ? (
         <header className="grid gap-2">
           <nav aria-label="Breadcrumb" className="text-sm text-muted">

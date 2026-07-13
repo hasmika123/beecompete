@@ -30,6 +30,9 @@ services:
       API_BASE_URL: http://api:8080
       # Canonical origin for metadata/JSON-LD absolute URLs (runtime, NOT NEXT_PUBLIC_*).
       SITE_URL: https://beecompete.com
+      # Search-indexing gate (R1-10): unset = noindex + robots Disallow:/. Flip to "on" at the
+      # R1-17 launch gate (legal pages live + COPPA sign-off) to let Google index prod.
+      SEARCH_INDEXING: ${SEARCH_INDEXING:-}
       # Node-side (SSR/BFF) Sentry for the WEB project (VPS .env: WEB_SENTRY_DSN; blank =
       # inert). Browser-side uses NEXT_PUBLIC_SENTRY_DSN, baked at image build.
       SENTRY_DSN: ${WEB_SENTRY_DSN:-}

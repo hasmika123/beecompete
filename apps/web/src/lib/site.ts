@@ -11,3 +11,16 @@ export const SITE_URL = (process.env.SITE_URL ?? 'https://beecompete.com').repla
 export function absoluteUrl(path: string): string {
   return `${SITE_URL}${path.startsWith('/') ? path : `/${path}`}`;
 }
+
+// Search-indexing gate (R1-10). OFF by default: this is a minors-facing site and the R1-17
+// launch gate (legal pages live, COPPA sign-off, content gate) must be met before search
+// engines index anything. R1-10 ships the full SEO machinery — sitemap, canonical, OG,
+// structured data — but robots.txt serves Disallow:/ and every page emits noindex until this
+// flag is flipped to "on" in the prod runtime env at R1-17. Runtime env (read per request),
+// never NEXT_PUBLIC_ (build-once-promote — see SITE_URL note above).
+export function indexingEnabled(): boolean {
+  return process.env.SEARCH_INDEXING === 'on';
+}
+
+/** The site name used in OpenGraph / titles. */
+export const SITE_NAME = 'BeeCompete';
