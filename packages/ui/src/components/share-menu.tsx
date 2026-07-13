@@ -33,7 +33,14 @@ interface Channel {
 
 const enc = encodeURIComponent;
 
+// Order (after Copy link): Email, X, Facebook, WhatsApp, LinkedIn — matches the R1-11 spec.
 const CHANNELS: Channel[] = [
+  {
+    key: 'email',
+    label: 'Email',
+    icon: Mail,
+    build: (u, t) => `mailto:?subject=${enc(t)}&body=${enc(`${t}\n\n${u}`)}`,
+  },
   {
     key: 'x',
     label: 'X',
@@ -57,12 +64,6 @@ const CHANNELS: Channel[] = [
     label: 'LinkedIn',
     icon: Linkedin,
     build: (u) => `https://www.linkedin.com/sharing/share-offsite/?url=${enc(u)}`,
-  },
-  {
-    key: 'email',
-    label: 'Email',
-    icon: Mail,
-    build: (u, t) => `mailto:?subject=${enc(t)}&body=${enc(`${t}\n\n${u}`)}`,
   },
 ];
 

@@ -24,7 +24,11 @@ export async function RelatedCompetitions({
     <section aria-labelledby="related-heading" className="grid gap-4">
       <div className="flex items-baseline justify-between gap-3">
         <h2 id="related-heading" className="font-display text-xl text-foreground">
-          More {categoryName.toLowerCase()} competitions
+          {/* "Other" is a catch-all bucket, not an adjective — "More other competitions" reads
+              as a grammar error, so give it a neutral heading. */}
+          {categorySlug === 'other'
+            ? 'More competitions to explore'
+            : `More ${categoryName.toLowerCase()} competitions`}
         </h2>
         <Link
           href={`/competitions/${categorySlug}`}

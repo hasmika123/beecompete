@@ -47,6 +47,10 @@ export default async function LandingPage() {
   const countBySlug = new Map(categories.map((c) => [c.slug, c.count]));
   const orderedCategories = CATEGORY_CONTENT.filter((c) => c.slug !== 'other');
   const moreCount = Math.max(0, landing.totalCompetitions - landing.featured.length);
+  // The value-prop stat cards are placeholders ("—%", "TODO(owner)") until sourced numbers
+  // land (R1-17, §3 rule). Off by default so nothing unfinished is publicly visible; the owner
+  // flips SHOW_LANDING_STATS=true once the real, attributed figures exist.
+  const showStats = process.env.SHOW_LANDING_STATS === 'true';
 
   return (
     // grid-cols-1 (minmax(0,1fr)) — a bare `grid` auto track grows to the ScrollRows'
@@ -88,24 +92,26 @@ export default async function LandingPage() {
             const art = categoryArt(category.slug);
             const Icon = art.icon;
             return (
-              <Link
-                key={category.slug}
-                role="listitem"
-                href={`/competitions/${category.slug}`}
-                className={cn(
-                  'flex shrink-0 snap-start items-center gap-2 rounded-full border border-border',
-                  'bg-surface-raised px-4 py-2.5 text-sm font-medium text-foreground',
-                  'transition-colors hover:border-foreground/30',
-                )}
-              >
-                <Icon
-                  aria-hidden="true"
-                  weight="duotone"
-                  className={cn('size-4.5', art.coverIcon)}
-                />
-                {category.name}
-                <span className="text-xs text-muted">{countBySlug.get(category.slug) ?? 0}</span>
-              </Link>
+              // role="listitem" belongs on a wrapper, not the <a> — putting it on the link
+              // replaces the implicit link role, so AT announces a nameless list item (a11y).
+              <div key={category.slug} role="listitem" className="shrink-0 snap-start">
+                <Link
+                  href={`/competitions/${category.slug}`}
+                  className={cn(
+                    'flex items-center gap-2 rounded-full border border-border',
+                    'bg-surface-raised px-4 py-2.5 text-sm font-medium text-foreground',
+                    'transition-colors hover:border-foreground/30',
+                  )}
+                >
+                  <Icon
+                    aria-hidden="true"
+                    weight="duotone"
+                    className={cn('size-4.5', art.coverIcon)}
+                  />
+                  {category.name}
+                  <span className="text-xs text-muted">{countBySlug.get(category.slug) ?? 0}</span>
+                </Link>
+              </div>
             );
           })}
         </ScrollRow>
@@ -142,7 +148,7 @@ export default async function LandingPage() {
         <h2 id="value-heading" className="font-display text-2xl text-foreground sm:text-3xl">
           Competing changes what&apos;s possible
         </h2>
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className={cn('grid gap-6', showStats && 'lg:grid-cols-2')}>
           <div className="grid grid-cols-2 gap-4">
             {[
               {
@@ -185,28 +191,30 @@ export default async function LandingPage() {
               </Link>
             ))}
           </div>
-          <div className="grid content-center gap-6 sm:grid-cols-2">
-            {/* TODO(owner): replace with sourced stats before the R1 gate (R1-17) — survey
-                framing only, each with a real source-attribution line (decision #6). */}
-            {[
-              {
-                value: '—%',
-                label: 'of admissions officers say sustained extracurricular depth matters',
-              },
-              {
-                value: '—×',
-                label: 'more likely to report strong study habits, per national survey data',
-              },
-            ].map((stat) => (
-              <Card key={stat.label} className="p-6">
-                <p className="font-display text-5xl text-foreground">{stat.value}</p>
-                <p className="mt-2 text-sm text-muted">{stat.label}</p>
-                <p className="mt-3 text-xs text-muted italic">
-                  — Source: TODO(owner), before launch
-                </p>
-              </Card>
-            ))}
-          </div>
+          {/* Hidden until sourced (showStats). TODO(owner): replace with real, attributed,
+              survey-framed numbers before the R1 gate (R1-17) — then set SHOW_LANDING_STATS. */}
+          {showStats && (
+            <div className="grid content-center gap-6 sm:grid-cols-2">
+              {[
+                {
+                  value: '—%',
+                  label: 'of admissions officers say sustained extracurricular depth matters',
+                },
+                {
+                  value: '—×',
+                  label: 'more likely to report strong study habits, per national survey data',
+                },
+              ].map((stat) => (
+                <Card key={stat.label} className="p-6">
+                  <p className="font-display text-5xl text-foreground">{stat.value}</p>
+                  <p className="mt-2 text-sm text-muted">{stat.label}</p>
+                  <p className="mt-3 text-xs text-muted italic">
+                    — Source: TODO(owner), before launch
+                  </p>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

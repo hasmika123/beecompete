@@ -54,6 +54,9 @@ export function FilterPanel({ path, params, facets, regions, categoryFilter }: F
             From
             <NativeSelect
               name="minGrade"
+              // Explicit label — both selects otherwise expose only "Any" to AT (the wrapping
+              // label text isn't reliably taken as the accessible name in Chromium).
+              aria-label="Minimum grade"
               defaultValue={params.minGrade !== undefined ? String(params.minGrade) : ''}
               placeholder="Any"
               options={gradeOptions}
@@ -63,6 +66,7 @@ export function FilterPanel({ path, params, facets, regions, categoryFilter }: F
             To
             <NativeSelect
               name="maxGrade"
+              aria-label="Maximum grade"
               defaultValue={params.maxGrade !== undefined ? String(params.maxGrade) : ''}
               placeholder="Any"
               options={gradeOptions}

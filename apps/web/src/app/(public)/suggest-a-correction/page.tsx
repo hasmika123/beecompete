@@ -35,10 +35,12 @@ export default async function SuggestCorrectionPage({
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="font-display text-3xl text-foreground">Suggest a correction</h1>
+      <h1 className="font-display text-3xl text-foreground sm:text-4xl">Suggest a correction</h1>
       <p className="mt-3 text-muted">
-        Spotted a wrong date, fee, grade range, or link{name ? ` on ${name}` : ''}? Tell us what it
-        should say — a curator reviews every suggestion before anything changes.
+        {/* Only echo the name on the validated path — otherwise a crafted ?name=… URL puts
+            arbitrary text in the page copy (issue: untrusted query param reflected). */}
+        Spotted a wrong date, fee, grade range, or link{valid && name ? ` on ${name}` : ''}? Tell us
+        what it should say — a curator reviews every suggestion before anything changes.
       </p>
 
       <div className="mt-8">

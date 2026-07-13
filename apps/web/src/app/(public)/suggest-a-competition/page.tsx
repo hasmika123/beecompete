@@ -18,7 +18,7 @@ export function generateMetadata(): Metadata {
 export default function SuggestCompetitionPage() {
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="font-display text-3xl text-foreground">Suggest a competition</h1>
+      <h1 className="font-display text-3xl text-foreground sm:text-4xl">Suggest a competition</h1>
       <p className="mt-3 text-muted">
         Know a great K-12 competition we haven&apos;t listed? Our suggestion form is almost ready —
         check back soon. Every suggestion is reviewed by our curation team before it goes live.

@@ -87,7 +87,8 @@
   --primary-foreground: #fdfdfc;
 
   /* Status */
-  --success: #1a7f4b; /* verified green — text/icon */
+  --success: #157a45; /* verified green — text/icon. Darkened from #1a7f4b so the "Verified"
+                       * badge (success-on-success-soft) clears AA 4.5:1 (was 4.44:1). */
   --success-soft: #e7f4ec; /* verified tint ground */
   --danger: #b4483b;
   --danger-soft: #faeae7;
