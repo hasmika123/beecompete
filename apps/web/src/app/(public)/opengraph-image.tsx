@@ -1,18 +1,14 @@
 import { ImageResponse } from 'next/og';
+import { BrandRow, GOLD, GROUND, INK, MUTED, OG_SIZE } from '@/lib/og';
 
-// Default OpenGraph/share card for public pages that don't have their own (R1-10). Rendered
-// with next/og's bundled font (self-contained — no font CDN). Warm ground + gold brand accent,
-// matching the design tokens. The competition detail route overrides this with a per-listing
-// card.
+// Default OpenGraph/share card for public pages that don't have their own (R1-10). Fully
+// self-contained — next/og's bundled font + an inline SVG brand mark (no emoji → no runtime
+// twemoji CDN fetch). Warm ground + gold brand accent, matching the design tokens. The
+// competition detail route overrides this with a per-listing card.
 export const runtime = 'nodejs';
 export const alt = 'BeeCompete — find K-12 academic competitions';
-export const size = { width: 1200, height: 630 };
+export const size = OG_SIZE;
 export const contentType = 'image/png';
-
-const GOLD = '#f5c330';
-const INK = '#26251f';
-const GROUND = '#faf9f5';
-const MUTED = '#6c6a61';
 
 export default function Image() {
   return new ImageResponse(
@@ -25,26 +21,9 @@ export default function Image() {
         justifyContent: 'space-between',
         background: GROUND,
         padding: '72px',
-        fontFamily: 'sans-serif',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-        <div
-          style={{
-            width: '56px',
-            height: '56px',
-            borderRadius: '16px',
-            background: GOLD,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '34px',
-          }}
-        >
-          🐝
-        </div>
-        <div style={{ fontSize: '34px', fontWeight: 700, color: INK }}>BeeCompete</div>
-      </div>
+      <BrandRow badge={56} font={34} />
 
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <div style={{ fontSize: '82px', fontWeight: 800, color: INK, lineHeight: 1.05 }}>

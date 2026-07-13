@@ -39,6 +39,9 @@ import { breadcrumbJsonLd, eventJsonLd, faqJsonLd, jsonLdScript } from '@/lib/st
 // R1-8; Follow/Claim capture backends = R1-15b.
 
 // ISR (R1-10): statically rendered per slug + revalidated hourly (curated data changes slowly).
+// Trade-off (L2): relative-deadline strings in the At-a-glance strip ("Closes today"/urgent
+// tint) are cached up to 1h, so they can lag the wall clock by up to an hour around midnight —
+// acceptable for a curated catalog; the absolute dates in the timeline are unaffected.
 export const revalidate = 3600;
 
 const SENTINEL_ID = 'detail-header-sentinel';

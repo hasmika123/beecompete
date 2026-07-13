@@ -111,6 +111,32 @@ export function categoryArt(slug: string): CategoryArt {
   return ART[slug] ?? OTHER;
 }
 
+/**
+ * Raw accent hex per category (the Tailwind ~600 tone used in ART above), for contexts that
+ * can't consume Tailwind classes — currently the next/og share-card generator (R1-10). Keep in
+ * step with the color families in ART; `other`/unknown falls back to the neutral stone tone.
+ * (Single source of truth so the OG route no longer hand-duplicates these hex values.)
+ */
+const OTHER_HUE = '#78716c';
+
+const HUE: Record<string, string> = {
+  math: '#2563eb',
+  'science-engineering': '#059669',
+  'computer-science': '#7c3aed',
+  robotics: '#ea580c',
+  'debate-speech': '#e11d48',
+  'business-entrepreneurship': '#0d9488',
+  'writing-essay': '#4f46e5',
+  'arts-music': '#c026d3',
+  'academic-bowl': '#d97706',
+  'history-geography-civics': '#0284c7',
+  other: OTHER_HUE,
+};
+
+export function categoryHue(slug: string): string {
+  return HUE[slug] ?? OTHER_HUE;
+}
+
 /** The generated default cover (decision #6/#15): tint gradient + centered duotone icon. */
 export function CategoryCover({
   slug,
