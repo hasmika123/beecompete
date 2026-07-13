@@ -137,7 +137,9 @@ public class Competition {
 	@NotNull
 	@Enumerated(EnumType.STRING)
 	@Column(name = "verification_state", nullable = false, length = 20)
-	private VerificationState verificationState = VerificationState.UNVERIFIED;
+	// R1-19: vestigial on Competition — maintainer is derived from the organizer org, so this is
+	// held at the constant CURATED and never read. Kept (not dropped) under additive-only.
+	private VerificationState verificationState = VerificationState.CURATED;
 
 	@Column(name = "archived_at")
 	private Instant archivedAt;

@@ -1,0 +1,23 @@
+# R1-19 — trust lives on the Organization only, as a ladder (CURATED unclaimed → CLAIMED →
+# VERIFIED); UNVERIFIED is retired. Competitions/Editions carry NO trust of their own — their
+# maintainer is derived from the organizer org — so their verification_state is flattened to the
+# vestigial constant CURATED. Data-only + additive (no columns dropped).
+databaseChangeLog:
+  - changeSet:
+      id: 0009-verification-realign
+      author: beecompete
+      comment: Org trust ladder (retire UNVERIFIED) + flatten competition/edition to CURATED (R1-19).
+      changes:
+        - update:
+            tableName: organization
+            columns:
+              - column: { name: verification_state, value: CURATED }
+            where: verification_state = 'UNVERIFIED'
+        - update:
+            tableName: competition
+            columns:
+              - column: { name: verification_state, value: CURATED }
+        - update:
+            tableName: edition
+            columns:
+              - column: { name: verification_state, value: CURATED }

@@ -235,16 +235,17 @@ Provenance is a reusable embedded structure on Competition/Edition/Organization:
 plus `verification_state (curated|claimed|verified|unverified)`. Host verification records and the
 moderation queue (DQ11–DQ14) reference these.
 
-> ⚠ **Pending realignment (owner, 2026-07-13; design: `docs/sweep-remediation-plan.md` §A2):**
-> trust lives on the **Organization only**, as a ladder —
-> `CURATED` (unclaimed; verification does not apply) → `CLAIMED` (host claimed, not verified) →
-> `VERIFIED` (claimed + identity verified; verified implies claimed). **Competitions/Editions carry
-> no trust state of their own** — never verified/unverified, and not individually claimed/curated:
-> their maintainer is **derived from the organizer org** (org claimed/verified ⇒ all its
-> competitions are host-maintained; org curated or no organizer ⇒ curated by BeeCompete). Claiming
-> an org claims all its competitions by derivation — no cascade writes. Until §A2 lands, treat
-> Competition/Edition `verification_state` as vestigial — the org seal is the only trustworthy
-> signal (the CompetitionCard already complies).
+> **Trust model (owner 2026-07-13; built in R1-19 / sweep-remediation §A2).** Trust lives on the
+> **Organization only**, as a ladder — `CURATED` (unclaimed; verification does not apply) →
+> `CLAIMED` (host claimed, not verified) → `VERIFIED` (claimed + identity verified; verified
+> implies claimed). `UNVERIFIED` is **retired** (org writes reject it, migration `0009` folded
+> existing rows to `CURATED`). **Competitions/Editions carry no trust state of their own** — never
+> verified/unverified, and not individually claimed/curated: their maintainer is **derived from
+> the organizer org** (org claimed/verified ⇒ all its competitions are host-maintained; org
+> curated or no organizer ⇒ curated by BeeCompete; see `lib/catalog-display.isHostMaintained`).
+> Claiming an org claims all its competitions by derivation — no cascade writes. The
+> Competition/Edition `verification_state` column is kept but **vestigial** (held at `CURATED`,
+> never read). The verified seal (DQ13) is org-level; the detail trust panel + card show only that.
 
 **`CorrectionProposal`** [P1] — user-submitted corrections queue (DQ6, per D7):
 `id, subject_type (competition|edition|resource), subject_id, submitted_by_user_id?, payload (JSONB

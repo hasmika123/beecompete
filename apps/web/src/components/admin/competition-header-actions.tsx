@@ -1,26 +1,14 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useTransition } from 'react';
 import { Button, Restore, Trash, useToast } from '@beecompete/ui';
-import { NativeSelect, enumOptions } from '@/components/admin/native-select';
-import { VERIFICATION_STATES } from '@/lib/admin-types';
-import {
-  archiveCompetition,
-  restoreCompetition,
-  setCompetitionVerification,
-} from '@/app/admin/competitions/actions';
+import { archiveCompetition, restoreCompetition } from '@/app/admin/competitions/actions';
 
-export function CompetitionHeaderActions({
-  id,
-  verificationState,
-  archived,
-}: {
-  id: string;
-  verificationState: string;
-  archived: boolean;
-}) {
+// R1-19: a competition has no verification/maintainer control of its own — that's derived from
+// the organizer org (claim the org → all its competitions become host-maintained). Only
+// archive/restore lives here now.
+export function CompetitionHeaderActions({ id, archived }: { id: string; archived: boolean }) {
   const [pending, startTransition] = useTransition();
-  const [state, setState] = useState(verificationState);
   const { toast } = useToast();
 
   const run = (fn: () => Promise<void>, ok: string) =>
@@ -35,18 +23,6 @@ export function CompetitionHeaderActions({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <NativeSelect
-        aria-label="Verification state"
-        options={enumOptions(VERIFICATION_STATES)}
-        value={state}
-        disabled={pending}
-        className="w-40"
-        onChange={(e) => {
-          const next = e.target.value;
-          setState(next);
-          run(() => setCompetitionVerification(id, next), 'Verification updated');
-        }}
-      />
       {archived ? (
         <Button
           variant="secondary"

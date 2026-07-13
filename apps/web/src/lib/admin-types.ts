@@ -21,7 +21,10 @@ export const DELIVERIES = ['IN_PERSON', 'VIRTUAL', 'HYBRID'] as const;
 export const ENTRY_PATHWAYS = ['INDIVIDUAL', 'SCHOOL_OR_CHAPTER', 'EITHER'] as const;
 export const COST_TYPES = ['FREE', 'PAID'] as const;
 export const RECURRENCES = ['ANNUAL', 'ONE_OFF', 'ROLLING'] as const;
-export const VERIFICATION_STATES = ['CURATED', 'CLAIMED', 'VERIFIED', 'UNVERIFIED'] as const;
+// Org trust ladder (R1-19): CURATED (unclaimed) → CLAIMED → VERIFIED. Competitions have no
+// trust state of their own (derived from the org). The admin org control defines its own
+// labeled options; this token list is kept for reference / future use.
+export const ORG_TRUST_STATES = ['CURATED', 'CLAIMED', 'VERIFIED'] as const;
 export const EDITION_STATUSES = ['UPCOMING', 'OPEN', 'CLOSED', 'ONGOING', 'ARCHIVED'] as const;
 export const SCOPE_LEVELS = ['NATIONAL', 'STATE', 'REGIONAL', 'LOCAL', 'VIRTUAL'] as const;
 export const KEY_DATE_TYPES = [

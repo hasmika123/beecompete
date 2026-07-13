@@ -3,6 +3,7 @@ package com.beecompete.catalog.curation.web;
 import com.beecompete.catalog.curation.CurationStamps;
 import com.beecompete.catalog.domain.Organization;
 import com.beecompete.catalog.domain.OrganizationType;
+import com.beecompete.catalog.domain.VerificationState;
 import com.beecompete.catalog.repository.OrganizationRepository;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -85,6 +86,11 @@ public class OrganizationAdminController {
 	@PutMapping("/{id}/verification")
 	public OrganizationResponse setVerification(@PathVariable UUID id,
 			@Valid @RequestBody CompetitionAdminController.VerificationRequest request) {
+		// R1-19 org trust ladder: CURATED (unclaimed) → CLAIMED → VERIFIED. UNVERIFIED is retired.
+		if (request.state() == VerificationState.UNVERIFIED) {
+			throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+					"organizations use CURATED (unclaimed), CLAIMED, or VERIFIED — not UNVERIFIED");
+		}
 		Organization organization = require(id);
 		organization.setVerificationState(request.state());
 		return OrganizationResponse.from(organization);

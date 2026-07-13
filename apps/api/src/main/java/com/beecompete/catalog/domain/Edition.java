@@ -93,7 +93,8 @@ public class Edition {
 	@NotNull
 	@Enumerated(EnumType.STRING)
 	@Column(name = "verification_state", nullable = false, length = 20)
-	private VerificationState verificationState = VerificationState.UNVERIFIED;
+	// R1-19: vestigial on Edition (like Competition) — held at CURATED, never read.
+	private VerificationState verificationState = VerificationState.CURATED;
 
 	@Column(name = "archived_at")
 	private Instant archivedAt;

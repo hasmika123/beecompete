@@ -4,7 +4,7 @@ import { ArrowLeft, buttonClasses, Plus, Tab, TabList, TabPanel, Tabs } from '@b
 import { PageHeader } from '@/components/admin/page-header';
 import { AdminTable } from '@/components/admin/admin-table';
 import { enumLabel } from '@/components/admin/native-select';
-import { ArchivedBadge, VerificationBadge } from '@/components/admin/status-badges';
+import { ArchivedBadge } from '@/components/admin/status-badges';
 import { CompetitionForm } from '@/components/admin/competition-form';
 import { CompetitionHeaderActions } from '@/components/admin/competition-header-actions';
 import { FaqManager } from '@/components/admin/faq-manager';
@@ -52,16 +52,10 @@ export default async function EditCompetitionPage({ params }: { params: Promise<
 
       <PageHeader
         title={competition.name}
-        actions={
-          <CompetitionHeaderActions
-            id={id}
-            verificationState={competition.verificationState}
-            archived={competition.archivedAt !== null}
-          />
-        }
+        actions={<CompetitionHeaderActions id={id} archived={competition.archivedAt !== null} />}
       />
+      {/* R1-19: no competition-level verification badge — maintainer derives from the org. */}
       <div className="mb-6 flex items-center gap-2 text-sm text-muted">
-        <VerificationBadge state={competition.verificationState} />
         <ArchivedBadge archivedAt={competition.archivedAt} />
         <span>
           · provenance:{' '}

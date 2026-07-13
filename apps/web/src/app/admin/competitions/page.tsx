@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowRight, buttonClasses, Input, Plus, Search } from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
 import { AdminTable } from '@/components/admin/admin-table';
-import { ArchivedBadge, VerificationBadge } from '@/components/admin/status-badges';
+import { ArchivedBadge } from '@/components/admin/status-badges';
 import { adminFetch } from '@/lib/admin-api';
 import type { Competition, Page } from '@/lib/admin-types';
 
@@ -74,10 +74,6 @@ export default async function CompetitionsPage({
             ),
           },
           { header: 'Slug', cell: (c) => <span className="text-muted">{c.slug}</span> },
-          {
-            header: 'Verification',
-            cell: (c) => <VerificationBadge state={c.verificationState} />,
-          },
           { header: 'State', cell: (c) => <ArchivedBadge archivedAt={c.archivedAt} /> },
           {
             header: 'Updated',

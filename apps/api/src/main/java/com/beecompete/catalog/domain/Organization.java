@@ -53,7 +53,9 @@ public class Organization {
 	@NotNull
 	@Enumerated(EnumType.STRING)
 	@Column(name = "verification_state", nullable = false, length = 20)
-	private VerificationState verificationState = VerificationState.UNVERIFIED;
+	// R1-19 org trust ladder: a new org is CURATED (unclaimed); → CLAIMED → VERIFIED. UNVERIFIED
+	// retired. The verified SEAL (DQ13) sits on the org — this is the only real trust signal.
+	private VerificationState verificationState = VerificationState.CURATED;
 
 	@Column(name = "archived_at")
 	private Instant archivedAt;

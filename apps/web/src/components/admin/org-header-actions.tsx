@@ -2,12 +2,20 @@
 
 import { useState, useTransition } from 'react';
 import { Button, Trash, useToast } from '@beecompete/ui';
-import { NativeSelect, enumOptions } from '@/components/admin/native-select';
-import { VERIFICATION_STATES } from '@/lib/admin-types';
+import { NativeSelect } from '@/components/admin/native-select';
 import {
   archiveOrganization,
   setOrganizationVerification,
 } from '@/app/admin/organizations/actions';
+
+// The org trust ladder (R1-19): CURATED (unclaimed — verification N/A) → CLAIMED (host claimed,
+// unverified) → VERIFIED. Claiming/verifying the org is what makes its competitions
+// host-maintained (derived, no per-competition control). UNVERIFIED is retired.
+const ORG_TRUST_OPTIONS = [
+  { value: 'CURATED', label: 'Curated (unclaimed)' },
+  { value: 'CLAIMED', label: 'Claimed (unverified)' },
+  { value: 'VERIFIED', label: 'Verified' },
+];
 
 export function OrgHeaderActions({
   id,
@@ -35,15 +43,15 @@ export function OrgHeaderActions({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <NativeSelect
-        aria-label="Verification state"
-        options={enumOptions(VERIFICATION_STATES)}
+        aria-label="Trust state"
+        options={ORG_TRUST_OPTIONS}
         value={state}
         disabled={pending}
-        className="w-40"
+        className="w-52"
         onChange={(e) => {
           const next = e.target.value;
           setState(next);
-          run(() => setOrganizationVerification(id, next), 'Verification updated');
+          run(() => setOrganizationVerification(id, next), 'Trust state updated');
         }}
       />
       {!archived && (

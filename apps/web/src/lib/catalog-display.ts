@@ -80,3 +80,15 @@ export function toCardData(item: CompetitionSummary): CompetitionCardData {
     deadlineUrgent: deadline?.urgent,
   };
 }
+
+/**
+ * Derived listing maintainer (R1-19): a competition is host-maintained when its organizer ORG
+ * is claimed or verified; otherwise BeeCompete curates it. Competitions carry no trust state of
+ * their own — this is the single source of that fact for cards + the detail trust panel.
+ */
+export function isHostMaintained(item: {
+  organizer?: { verificationState: string } | null;
+}): boolean {
+  const s = item.organizer?.verificationState;
+  return s === 'claimed' || s === 'verified';
+}
