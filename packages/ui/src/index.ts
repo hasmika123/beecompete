@@ -76,4 +76,7 @@ export type { CategoryArt } from './components/category-art';
 export { CompetitionCard } from './components/competition-card';
 export type { CompetitionCardData, CompetitionCardProps } from './components/competition-card';
 
+export { TrustBadge, trustTierMeta, isElevatedTier } from './components/trust-badge';
+export type { TrustBadgeProps, TrustTier, TrustTierMeta } from './components/trust-badge';
+
 export * from './icons';

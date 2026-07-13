@@ -47,7 +47,13 @@
 > (default OFF)** — robots `Disallow:/` + page `noindex` until R1-17 flips it in prod (legal +
 > COPPA gate first; the machinery is all in place). Build-once-promote (no API at build time)
 > precludes build-time SSG for no-param pages — those render at request with data-cached reads.
-> **Next:** R1-9 trust/verification badges. Deferred: PR C (S3 hero-image upload + inline
+> **R1-9 done (2026-07-13) — trust/verification badges (DQ13):** shared `packages/ui`
+> `TrustBadge` (+ `trustTierMeta`/`isElevatedTier`) for the listing trust tier
+> (curated→claimed→verified→unverified) — on cards (elevated + unverified caution; curated
+> hidden as the R1 baseline) and the detail trust panel (badge + tier blurb, replacing the R1-7
+> first-pass). Organizer verified seal stays a separate org-level signal; locked "maintained
+> by" wording preserved. Frontend-only.
+> **Next:** R1-11 share a competition. Deferred: PR C (S3 hero-image upload + inline
 > FAQ/Resource edit).
 
 The ordered, buildable task list for Phase 1. **Every task below becomes a GitHub Issue** (titled with its

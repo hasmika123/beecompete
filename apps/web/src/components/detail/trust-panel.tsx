@@ -1,24 +1,12 @@
-import { Badge, CheckCircle, Info, VerifiedSeal } from '@beecompete/ui';
-import type { BadgeVariant } from '@beecompete/ui';
+import { CheckCircle, Info, TrustBadge, trustTierMeta } from '@beecompete/ui';
 import { formatDate } from '@/lib/dates';
 import type { CompetitionDetail } from '@/lib/catalog-types';
 
-// Trust & attribution panel (blueprints Page 3.4c, → DQ1/DQ13): tier badge · source +
-// confidence · "Last verified …" · maintained-by line. The badge tier here is a first pass;
-// R1-9 owns the full Curated/Verified trust-badge system. Maintained-by wording is LOCKED —
-// "maintained", never "managed"; it flips from the Curation Team to the host org after claim.
-
-const UNVERIFIED: { label: string; variant: BadgeVariant } = {
-  label: 'Unverified',
-  variant: 'outline',
-};
-
-const TIER: Record<string, { label: string; variant: BadgeVariant }> = {
-  verified: { label: 'Verified', variant: 'verified' },
-  curated: { label: 'Curated', variant: 'gold' },
-  claimed: { label: 'Host-claimed', variant: 'neutral' },
-  unverified: UNVERIFIED,
-};
+// Trust & attribution panel (blueprints Page 3.4c, → DQ1/DQ13): the listing trust badge + what
+// it means · source + confidence · "Last verified …" · maintained-by line. The badge + tier copy
+// come from the shared `TrustBadge`/`trustTierMeta` (R1-9) so cards and the detail page agree.
+// Maintained-by wording is LOCKED — "maintained", never "managed"; it flips from the Curation
+// Team to the host org after claim.
 
 const SOURCE_LABELS: Record<string, string> = {
   curated: 'Curated by the BeeCompete team',
@@ -28,7 +16,7 @@ const SOURCE_LABELS: Record<string, string> = {
 };
 
 export function TrustPanel({ competition }: { competition: CompetitionDetail }) {
-  const tier = TIER[competition.verificationState] ?? UNVERIFIED;
+  const meta = trustTierMeta(competition.verificationState);
   const provenance = competition.provenance;
   const claimed =
     (competition.verificationState === 'claimed' || competition.verificationState === 'verified') &&
@@ -38,13 +26,9 @@ export function TrustPanel({ competition }: { competition: CompetitionDetail }) 
   return (
     <section aria-label="Trust and attribution" className="grid gap-2.5 text-sm">
       <div className="flex items-center gap-2">
-        <Badge variant={tier.variant}>
-          {competition.verificationState === 'verified' && (
-            <VerifiedSeal aria-hidden="true" weight="fill" className="size-3.5" />
-          )}
-          {tier.label}
-        </Badge>
+        <TrustBadge tier={competition.verificationState} titleHint={false} />
       </div>
+      <p className="text-muted">{meta.blurb}</p>
 
       {provenance?.source && (
         <p className="flex items-start gap-2 text-muted">
