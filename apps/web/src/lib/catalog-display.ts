@@ -72,6 +72,7 @@ export function toCardData(item: CompetitionSummary): CompetitionCardData {
     gradeLabel: gradeLabel(item.minGrade, item.maxGrade),
     organizerName: item.organizer?.name,
     organizerVerified: item.organizer?.verificationState === 'verified',
+    trustTier: item.verificationState,
     summary: item.summary ?? undefined,
     free: item.costType === 'free',
     regionLabel: regionLabel(item.regions),

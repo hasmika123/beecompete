@@ -197,8 +197,16 @@ marketing pages render at request with data-cached reads — the web image build
 reachable, so build-time SSG isn't possible). **Indexing is env-gated (`SEARCH_INDEXING`,
 default OFF):** robots.txt serves `Disallow:/` and pages emit `noindex` until the flag is
 flipped in the prod runtime env at **R1-17** (minors-facing; legal + COPPA gate first). Order
-built out of registry order at owner request (R1-10 before R1-9). Next per
-`docs/phase-1-plan.md`: **R1-9 trust/verification badges**. **Deferred (PR C):** S3 pre-signed
+built out of registry order at owner request (R1-10 before R1-9). **R1-9 done (2026-07-13) —
+trust/verification badges (DQ13):** shared `packages/ui` **TrustBadge** + `trustTierMeta`/
+`isElevatedTier` — the LISTING trust tier (curated → claimed → verified → unverified) with
+per-tier icon/variant/blurb, used on the CompetitionCard (elevated + `unverified` caution; the
+`curated` R1 baseline is hidden to avoid wall-of-sameness) and the detail trust panel (badge +
+the tier blurb as visible text, replacing the R1-7 first-pass tier map). The **organizer**
+verified seal (org-level) stays separate on the card + header. Locked "maintained by … Curation
+Team → host org after claim" wording preserved. Frontend-only (verificationState + provenance
+already exposed since R1-4). Next per `docs/phase-1-plan.md`: **R1-11 share a competition**.
+**Deferred (PR C):** S3 pre-signed
 hero-image upload + inline FAQ/
 Resource row-edit. **Before prod users:** set `ADMIN_API_TOKEN` in both VPS `.env` + `/admin`
 behind Cloudflare Access (setup-runbook §5).

@@ -24,6 +24,7 @@ import {
   ToastProvider,
   Tooltip,
   Trophy,
+  TrustBadge,
   useToast,
 } from '@beecompete/ui';
 
@@ -69,6 +70,18 @@ export function NewComponentsShowcase() {
 
   return (
     <ToastProvider>
+      <Section title="Trust badges (DQ13)">
+        <p className="mb-2 text-sm text-muted">
+          Listing trust tiers — hover for the tier explanation. `curated` is the R1 baseline (hidden
+          on dense card grids); elevated/caution tiers surface.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {['curated', 'claimed', 'verified', 'unverified'].map((tier) => (
+            <TrustBadge key={tier} tier={tier} />
+          ))}
+        </div>
+      </Section>
+
       <Section title="Chips">
         <p className="mb-2 text-sm text-muted">Grade quick-chips (single-select toggle):</p>
         <div className="flex flex-wrap gap-2">

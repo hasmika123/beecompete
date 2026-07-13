@@ -5,6 +5,7 @@ import { Avatar } from './avatar';
 import { Badge } from './badge';
 import { Card, CardDescription, CardTitle } from './card';
 import { CategoryCover, CategoryTag } from './category-art';
+import { TrustBadge, isElevatedTier } from './trust-badge';
 
 /**
  * The CompetitionCard (blueprints "Shared components"; approved F7 direction from the /design
@@ -28,6 +29,12 @@ export interface CompetitionCardData {
   organizerName?: string;
   /** Renders the verified seal on the organizer row (DQ13 — the ORG carries the seal). */
   organizerVerified?: boolean;
+  /**
+   * The LISTING trust tier (DQ13) — curated | claimed | verified | unverified. The baseline
+   * `curated` is hidden on the card (BeeCompete curates everything — it'd be wall-of-sameness);
+   * elevated host tiers and the `unverified` caution get a badge.
+   */
+  trustTier?: string;
   summary?: string;
   /** Cost fact: free renders positive (success green, owner r5). */
   free: boolean;
@@ -68,6 +75,10 @@ export function CompetitionCard({
         <div className="flex flex-wrap items-center gap-1.5">
           <CategoryTag slug={data.categorySlug} name={data.categoryName} />
           {data.gradeLabel && <Badge variant="outline">{data.gradeLabel}</Badge>}
+          {data.trustTier &&
+            (isElevatedTier(data.trustTier) || data.trustTier === 'unverified') && (
+              <TrustBadge tier={data.trustTier} />
+            )}
         </div>
         <CardTitle className="truncate pt-1 text-lg">{data.name}</CardTitle>
         {data.organizerName && (
