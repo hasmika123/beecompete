@@ -83,6 +83,13 @@ public class OrganizationAdminController {
 		return OrganizationResponse.from(organization);
 	}
 
+	@PostMapping("/{id}/restore")
+	public OrganizationResponse restore(@PathVariable UUID id) {
+		Organization organization = require(id);
+		organization.setArchivedAt(null);
+		return OrganizationResponse.from(organization);
+	}
+
 	@PutMapping("/{id}/verification")
 	public OrganizationResponse setVerification(@PathVariable UUID id,
 			@Valid @RequestBody CompetitionAdminController.VerificationRequest request) {

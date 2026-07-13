@@ -63,6 +63,8 @@ export type { TooltipProps } from './components/tooltip';
 
 export { Modal } from './components/modal';
 export type { ModalProps } from './components/modal';
+export { useConfirm } from './components/confirm-dialog';
+export type { ConfirmOptions } from './components/confirm-dialog';
 
 export { ToastProvider, useToast } from './components/toast';
 export type { ToastOptions, ToastTone } from './components/toast';

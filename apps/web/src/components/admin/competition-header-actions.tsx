@@ -1,7 +1,7 @@
 'use client';
 
 import { useTransition } from 'react';
-import { Button, Restore, Trash, useToast } from '@beecompete/ui';
+import { Button, Restore, Trash, useConfirm, useToast } from '@beecompete/ui';
 import { archiveCompetition, restoreCompetition } from '@/app/admin/competitions/actions';
 
 // R1-19: a competition has no verification/maintainer control of its own — that's derived from
@@ -9,6 +9,7 @@ import { archiveCompetition, restoreCompetition } from '@/app/admin/competitions
 // archive/restore lives here now.
 export function CompetitionHeaderActions({ id, archived }: { id: string; archived: boolean }) {
   const [pending, startTransition] = useTransition();
+  const { confirm, dialog } = useConfirm();
   const { toast } = useToast();
 
   const run = (fn: () => Promise<void>, ok: string) =>
@@ -23,6 +24,7 @@ export function CompetitionHeaderActions({ id, archived }: { id: string; archive
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      {dialog}
       {archived ? (
         <Button
           variant="secondary"
@@ -37,7 +39,18 @@ export function CompetitionHeaderActions({ id, archived }: { id: string; archive
           variant="secondary"
           size="sm"
           disabled={pending}
-          onClick={() => run(() => archiveCompetition(id), 'Archived')}
+          onClick={async () => {
+            if (
+              await confirm({
+                title: 'Archive this competition?',
+                message: 'It will be hidden from the public catalog. You can restore it later.',
+                confirmLabel: 'Archive',
+                tone: 'danger',
+              })
+            ) {
+              run(() => archiveCompetition(id), 'Archived');
+            }
+          }}
         >
           <Trash aria-hidden="true" className="size-4" /> Archive
         </Button>
