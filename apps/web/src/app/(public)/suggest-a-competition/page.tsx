@@ -24,8 +24,10 @@ export default function SuggestCompetitionPage() {
         check back soon. Every suggestion is reviewed by our curation team before it goes live.
       </p>
       <p className="mt-3 text-sm text-muted">
-        Spotted something wrong in an <em>existing</em> listing? Use the &ldquo;Suggest a
-        correction&rdquo; link on that competition&apos;s page instead.
+        {/* Literal “”’ (not &ldquo;-style entities) — an HTML entity anywhere in this text
+            block makes SWC drop the space after the inline element ("existinglisting"). */}
+        Spotted something wrong in an <em>existing</em> listing? Use the “Suggest a correction” link
+        on that competition’s page instead.
       </p>
       <div className="mt-6">
         <Link href="/competitions" className={buttonClasses()}>

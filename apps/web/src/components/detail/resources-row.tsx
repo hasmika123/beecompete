@@ -86,7 +86,7 @@ export function ResourcesRow({ resources }: { resources: ResourceView[] }) {
   const hasAffiliate = resources.some((r) => r.isAffiliate);
 
   return (
-    <section aria-labelledby="resources-heading" className="grid gap-3">
+    <section aria-labelledby="resources-heading" className="grid grid-cols-1 gap-3">
       <h2 id="resources-heading" className="font-display text-xl text-foreground">
         Prep resources
       </h2>

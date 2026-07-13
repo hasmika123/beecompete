@@ -49,7 +49,9 @@ export default async function LandingPage() {
   const moreCount = Math.max(0, landing.totalCompetitions - landing.featured.length);
 
   return (
-    <div className="grid gap-16 sm:gap-20">
+    // grid-cols-1 (minmax(0,1fr)) — a bare `grid` auto track grows to the ScrollRows'
+    // intrinsic width and hands the whole page a horizontal scrollbar.
+    <div className="grid grid-cols-1 gap-16 sm:gap-20">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(siteJsonLd()) }}

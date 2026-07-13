@@ -43,7 +43,9 @@ export function ScrollRow({
   };
 
   return (
-    <div className={cn('group/row relative', className)}>
+    // min-w-0: when this row is itself a grid/flex item, don't let the strip's intrinsic
+    // width blow the track out (ancestor grids still need grid-cols-1 / minmax(0,1fr)).
+    <div className={cn('group/row relative min-w-0', className)}>
       <div
         ref={ref}
         role="list"
