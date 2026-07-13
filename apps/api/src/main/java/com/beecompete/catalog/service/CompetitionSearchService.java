@@ -36,8 +36,10 @@ import org.springframework.transaction.annotation.Transactional;
  * <li><b>Grade</b> = range overlap; a null bound on the record means open on that side.</li>
  * <li><b>participation/pathway are eligibility questions</b>, not exact matches: filtering
  * "individual" includes BOTH/EITHER records — a parent asks "can my kid enter this way?".</li>
- * <li><b>next deadline</b> = earliest FUTURE {@code REG_CLOSE} across live editions (matches
- * the {@link EffectiveStatus} deadline notion). Deadline sort puts no-deadline records last.</li>
+ * <li><b>next deadline</b> = earliest FUTURE {@code REG_CLOSE} across live editions, falling
+ * back to {@code SUBMISSION_DUE} (matches the {@link EffectiveStatus} deadline notion;
+ * submission-driven competitions often have no registration step). Deadline sort puts
+ * no-deadline records last.</li>
  * <li><b>Facet counts</b> (Grade + Category only, per blueprint) exclude the facet's own
  * filter, so the user sees what switching within the facet would yield.</li>
  * <li><b>Popularity sort (M4) is deferred</b> — the signal (M31 save counts) arrives at R2-10.</li>
@@ -77,12 +79,19 @@ public class CompetitionSearchService {
 	/** A region that has at least one live listing — the filter panel's option source. */
 	public record RegionOption(UUID id, String level, String name, String code, long count) {}
 
+	// Earliest future REG_CLOSE, falling back to earliest future SUBMISSION_DUE (post-review
+	// fix): submission-driven competitions (essay/arts — often no registration step at all)
+	// otherwise carry no deadline on cards and vanish from the deadline filter and sort. Same
+	// fallback notion as EffectiveStatus; the web detail page mirrors this rule exactly.
 	private static final String DEADLINE_LATERAL = """
 			 LEFT JOIN LATERAL (
-			   SELECT min(kd.starts_at) AS next_deadline
+			   SELECT COALESCE(
+			     min(kd.starts_at) FILTER (WHERE kd.type = 'REG_CLOSE'),
+			     min(kd.starts_at) FILTER (WHERE kd.type = 'SUBMISSION_DUE')
+			   ) AS next_deadline
 			   FROM edition e2 JOIN key_date kd ON kd.edition_id = e2.id
 			   WHERE e2.competition_id = c.id AND e2.archived_at IS NULL
-			     AND kd.type = 'REG_CLOSE' AND kd.starts_at > :now
+			     AND kd.type IN ('REG_CLOSE', 'SUBMISSION_DUE') AND kd.starts_at > :now
 			 ) d ON true
 			""";
 
@@ -346,12 +355,18 @@ public class CompetitionSearchService {
 		return items;
 	}
 
-	/** Earliest FUTURE REG_CLOSE per competition (same deadline notion as the search lateral). */
+	/**
+	 * Earliest FUTURE REG_CLOSE per competition, SUBMISSION_DUE fallback — the same deadline
+	 * notion as the search lateral (the two must never drift).
+	 */
 	private Map<UUID, Instant> nextDeadlines(List<UUID> ids) {
-		String sql = "SELECT e.competition_id, min(kd.starts_at)"
+		String sql = "SELECT e.competition_id,"
+				+ " COALESCE(min(kd.starts_at) FILTER (WHERE kd.type = 'REG_CLOSE'),"
+				+ " min(kd.starts_at) FILTER (WHERE kd.type = 'SUBMISSION_DUE'))"
 				+ " FROM edition e JOIN key_date kd ON kd.edition_id = e.id"
 				+ " WHERE e.competition_id IN (:ids) AND e.archived_at IS NULL"
-				+ " AND kd.type = 'REG_CLOSE' AND kd.starts_at > :now GROUP BY e.competition_id";
+				+ " AND kd.type IN ('REG_CLOSE', 'SUBMISSION_DUE') AND kd.starts_at > :now"
+				+ " GROUP BY e.competition_id";
 		Map<UUID, Instant> result = new HashMap<>();
 		mapRows(sql, Map.of("ids", ids, "now", Instant.now()),
 				row -> result.put(asUuid(row[0]), asInstant(row[1])));

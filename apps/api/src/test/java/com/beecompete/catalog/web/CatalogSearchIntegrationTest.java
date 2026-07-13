@@ -32,11 +32,16 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
  * other integration classes' data (shared Spring context + database). Seeds:
  *
  * <pre>
- * algebra   math      grades 3–8   FREE  VIRTUAL    INDIVIDUAL  INDIVIDUAL pathway  [exam]        deadline +10d
- * robotics  sci-eng   grades 6–12  PAID  IN_PERSON  TEAM        SCHOOL_OR_CHAPTER   [live_perf.]  deadline +60d, region TX
+ * algebra   math      grades 3–8   FREE  VIRTUAL    INDIVIDUAL  INDIVIDUAL pathway  [exam]        REG_CLOSE +10d (+ SUBMISSION_DUE +5d decoy)
+ * robotics  sci-eng   grades 6–12  PAID  IN_PERSON  TEAM        SCHOOL_OR_CHAPTER   [live_perf.]  REG_CLOSE +60d, region TX
  * essay     comp-sci  all grades   FREE  HYBRID     BOTH        EITHER              [submission,portfolio]  no editions
+ * writing   writing   all grades   FREE  VIRTUAL    INDIVIDUAL  INDIVIDUAL pathway  [submission]  SUBMISSION_DUE +20d only (no reg step)
  * archived  math      —            (archived — must never appear)
  * </pre>
+ *
+ * <p>The writing seed pins the deadline rule: submission-only competitions surface their
+ * SUBMISSION_DUE as the deadline; algebra's earlier SUBMISSION_DUE decoy pins the precedence
+ * (a future REG_CLOSE always wins, even when a submission date is sooner).
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(properties = "admin.api-token=test-admin-token")
@@ -62,10 +67,11 @@ class CatalogSearchIntegrationTest {
 	void keywordSearchMatchesTextAndToleratesTypos() throws Exception {
 		seed();
 
-		// The marker token reaches all three live seeds via FTS on the summary; archived is out.
+		// The marker token reaches all four live seeds via FTS on the summary; archived is out.
 		List<String> all = slugs("/api/v1/competitions?q=" + MARK + "&size=50");
 		org.junit.jupiter.api.Assertions.assertEquals(
-				List.of("r15-algebra-open", "r15-essay-prize", "r15-robotics-league"),
+				List.of("r15-algebra-open", "r15-essay-prize", "r15-robotics-league",
+						"r15-writing-award"),
 				all.stream().sorted().toList());
 
 		// Multi-word FTS across name + description.
@@ -81,15 +87,22 @@ class CatalogSearchIntegrationTest {
 	@Order(2)
 	void facetFiltersNarrowTheSet() throws Exception {
 		assertSlugs("category=math", "r15-algebra-open");
-		assertSlugs("minGrade=9&maxGrade=9", "r15-essay-prize", "r15-robotics-league"); // null grades = open
-		assertSlugs("cost=free", "r15-algebra-open", "r15-essay-prize");
+		assertSlugs("minGrade=9&maxGrade=9", "r15-essay-prize", "r15-robotics-league",
+				"r15-writing-award"); // null grades = open
+		assertSlugs("cost=free", "r15-algebra-open", "r15-essay-prize", "r15-writing-award");
 		assertSlugs("delivery=in_person", "r15-robotics-league");
 		// Eligibility semantics: "individual" includes BOTH / EITHER records.
-		assertSlugs("participation=individual", "r15-algebra-open", "r15-essay-prize");
-		assertSlugs("pathway=individual", "r15-algebra-open", "r15-essay-prize");
+		assertSlugs("participation=individual", "r15-algebra-open", "r15-essay-prize",
+				"r15-writing-award");
+		assertSlugs("pathway=individual", "r15-algebra-open", "r15-essay-prize",
+				"r15-writing-award");
 		assertSlugs("evaluation=portfolio", "r15-essay-prize");
 		assertSlugs("region=tx", "r15-robotics-league"); // by code, case-insensitive
-		assertSlugs("deadlineWithinDays=30", "r15-algebra-open");
+		// Deadline = next future REG_CLOSE, falling back to SUBMISSION_DUE (submission-only
+		// competitions must not vanish from the deadline filter).
+		assertSlugs("deadlineWithinDays=30", "r15-algebra-open", "r15-writing-award");
+		// Precedence: algebra's +5d SUBMISSION_DUE decoy must NOT shadow its +10d REG_CLOSE.
+		assertSlugs("deadlineWithinDays=7" /* nothing */);
 		// Unknown filter VALUE = empty result, not an error.
 		assertSlugs("category=no-such-category" /* nothing */);
 	}
@@ -97,20 +110,23 @@ class CatalogSearchIntegrationTest {
 	@Test
 	@Order(3)
 	void sortsOrderTheFeed() throws Exception {
-		// deadline: soonest first, no-deadline last.
+		// deadline: soonest first (REG_CLOSE +10d, SUBMISSION_DUE +20d, +60d), no-deadline last.
 		org.junit.jupiter.api.Assertions.assertEquals(
-				List.of("r15-algebra-open", "r15-robotics-league", "r15-essay-prize"),
+				List.of("r15-algebra-open", "r15-writing-award", "r15-robotics-league",
+						"r15-essay-prize"),
 				slugs("/api/v1/competitions?q=" + MARK + "&sort=deadline&size=50"));
 		// newest: last-created seed first.
-		org.junit.jupiter.api.Assertions.assertEquals("r15-essay-prize",
+		org.junit.jupiter.api.Assertions.assertEquals("r15-writing-award",
 				slugs("/api/v1/competitions?q=" + MARK + "&sort=newest&size=50").get(0));
 		// The card facts ride along on every item: deadline, prize line, region names.
 		mvc.perform(get("/api/v1/competitions?q=" + MARK + "&sort=deadline&size=50"))
 				.andExpect(jsonPath("$.content[0].nextDeadline").isNotEmpty())
 				.andExpect(jsonPath("$.content[0].prizeSummary", is("Champion trophy")))
-				.andExpect(jsonPath("$.content[2].nextDeadline").isEmpty())
-				.andExpect(jsonPath("$.content[2].prizeSummary").isEmpty())
-				.andExpect(jsonPath("$.content[2].regions", hasSize(0)));
+				// submission-only competitions carry their SUBMISSION_DUE as the card deadline
+				.andExpect(jsonPath("$.content[1].nextDeadline").isNotEmpty())
+				.andExpect(jsonPath("$.content[3].nextDeadline").isEmpty())
+				.andExpect(jsonPath("$.content[3].prizeSummary").isEmpty())
+				.andExpect(jsonPath("$.content[3].regions", hasSize(0)));
 		mvc.perform(get("/api/v1/competitions?q=" + MARK + "&region=tx"))
 				.andExpect(jsonPath("$.content[0].regions[0]", is("Texas")));
 		// The public region options (filter panel source) carry live counts.
@@ -125,14 +141,14 @@ class CatalogSearchIntegrationTest {
 	void facetCountsExcludeTheirOwnDimension() throws Exception {
 		mvc.perform(get("/api/v1/competitions?q=" + MARK + "&facets=true&size=50"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.facets.categories", hasSize(3)))
+				.andExpect(jsonPath("$.facets.categories", hasSize(4)))
 				.andExpect(jsonPath("$.facets.categories[?(@.slug=='math')].count", is(List.of(1))))
-				// grade 7 is inside all three ranges (3–8, 6–12, open).
-				.andExpect(jsonPath("$.facets.grades[?(@.grade==7)].count", is(List.of(3))));
+				// grade 7 is inside all four ranges (3–8, 6–12, open ×2).
+				.andExpect(jsonPath("$.facets.grades[?(@.grade==7)].count", is(List.of(4))));
 
 		// With category=math active, the category facet still shows the alternatives…
 		mvc.perform(get("/api/v1/competitions?q=" + MARK + "&category=math&facets=true&size=50"))
-				.andExpect(jsonPath("$.facets.categories", hasSize(3)))
+				.andExpect(jsonPath("$.facets.categories", hasSize(4)))
 				// …while the grade facet DOES apply the category filter (grade 9 is outside 3–8).
 				.andExpect(jsonPath("$.facets.grades[?(@.grade==7)].count", is(List.of(1))))
 				.andExpect(jsonPath("$.facets.grades[?(@.grade==9)]", hasSize(0)));
@@ -240,6 +256,7 @@ class CatalogSearchIntegrationTest {
 		String math = categoryId("math");
 		String sciEng = categoryId("science-engineering");
 		String compSci = categoryId("computer-science");
+		String writingEssay = categoryId("writing-essay");
 		Instant now = Instant.now();
 
 		String algebra = createCompetition("""
@@ -250,7 +267,9 @@ class CatalogSearchIntegrationTest {
 				 "evaluationType": ["exam"]}
 				""".formatted(math, MARK));
 		String algebraEdition = createEdition(algebra);
-		addRegClose(algebraEdition, now.plus(10, ChronoUnit.DAYS));
+		addKeyDate(algebraEdition, "REG_CLOSE", now.plus(10, ChronoUnit.DAYS));
+		// Precedence decoy: an EARLIER submission date must not shadow the REG_CLOSE deadline.
+		addKeyDate(algebraEdition, "SUBMISSION_DUE", now.plus(5, ChronoUnit.DAYS));
 
 		String robotics = createCompetition("""
 				{"slug": "r15-robotics-league", "name": "Robotics League r15", "categoryId": "%s",
@@ -259,7 +278,7 @@ class CatalogSearchIntegrationTest {
 				 "costType": "PAID", "recurrence": "ANNUAL", "evaluationType": ["live_performance"]}
 				""".formatted(sciEng, MARK));
 		String roboticsEdition = createEdition(robotics);
-		addRegClose(roboticsEdition, now.plus(60, ChronoUnit.DAYS));
+		addKeyDate(roboticsEdition, "REG_CLOSE", now.plus(60, ChronoUnit.DAYS));
 		String texas = mapper.readTree(mvc.perform(withToken(post("/api/v1/admin/regions"))
 						.contentType("application/json")
 						.content("{\"level\": \"STATE\", \"name\": \"Texas\", \"code\": \"TX\"}"))
@@ -276,6 +295,16 @@ class CatalogSearchIntegrationTest {
 				 "entryPathway": "EITHER", "costType": "FREE", "recurrence": "ANNUAL",
 				 "evaluationType": ["submission", "portfolio"]}
 				""".formatted(compSci, MARK));
+
+		// Submission-only (no registration step at all) — its SUBMISSION_DUE is the deadline.
+		String writing = createCompetition("""
+				{"slug": "r15-writing-award", "name": "Writing Award r15", "categoryId": "%s",
+				 "summary": "Submission-only writing award — %s", "participationMode": "INDIVIDUAL",
+				 "delivery": "VIRTUAL", "entryPathway": "INDIVIDUAL", "costType": "FREE",
+				 "recurrence": "ANNUAL", "evaluationType": ["submission"]}
+				""".formatted(writingEssay, MARK));
+		String writingEdition = createEdition(writing);
+		addKeyDate(writingEdition, "SUBMISSION_DUE", now.plus(20, ChronoUnit.DAYS));
 
 		String archived = createCompetition("""
 				{"slug": "r15-archived", "name": "Archived r15", "categoryId": "%s", "summary": "%s",
@@ -307,10 +336,10 @@ class CatalogSearchIntegrationTest {
 		return mapper.readTree(json).get("id").asText();
 	}
 
-	private void addRegClose(String editionId, Instant startsAt) throws Exception {
+	private void addKeyDate(String editionId, String type, Instant startsAt) throws Exception {
 		mvc.perform(withToken(post("/api/v1/admin/editions/" + editionId + "/key-dates"))
 						.contentType("application/json")
-						.content("{\"type\": \"REG_CLOSE\", \"startsAt\": \"%s\"}".formatted(startsAt)))
+						.content("{\"type\": \"%s\", \"startsAt\": \"%s\"}".formatted(type, startsAt)))
 				.andExpect(status().isCreated());
 	}
 }

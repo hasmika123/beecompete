@@ -146,7 +146,8 @@ weighted tsvector via immutable wrapper fn + GIN on vector/`lower(name)` trgm/`e
 `word_similarity ≥ 0.3` typo tolerance), all M3 facets (**grade = range overlap**;
 **participation/pathway = eligibility semantics**, individual includes BOTH/EITHER; region by
 id-or-code; `evaluation` = canonical lowercase tokens in `EvaluationTypes`, also validated at the
-curation write boundary now; `deadlineWithinDays` on next FUTURE REG_CLOSE), sorts
+curation write boundary now; `deadlineWithinDays` on next FUTURE REG_CLOSE **with
+SUBMISSION_DUE fallback** — post-review fix 2026-07-12, mirrored by the web detail page), sorts
 relevance/name/newest/deadline (popularity waits for R2-10 save counts), Grade+Category facet
 counts (exclude own dimension); unknown token → 400, unknown value → empty page. As-built §13c.
 **R1-6 + R1-6b done (2026-07-12) — public frontend v1** (styling delegated to builder judgment,
