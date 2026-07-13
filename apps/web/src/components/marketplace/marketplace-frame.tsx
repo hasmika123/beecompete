@@ -98,7 +98,7 @@ export function MarketplaceFrame({
         {open && (
           <aside
             id="marketplace-filters"
-            className="sticky top-20 hidden max-h-[calc(100dvh-6rem)] w-64 shrink-0 overflow-y-auto pr-1 lg:block"
+            className="sticky top-20 hidden max-h-[calc(100dvh-6rem)] w-72 shrink-0 overflow-x-hidden overflow-y-auto pr-2 lg:block"
           >
             {panel}
           </aside>

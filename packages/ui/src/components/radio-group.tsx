@@ -57,7 +57,10 @@ export function Radio({ value, label, className, disabled, ...props }: RadioProp
   return (
     <label
       className={cn(
-        'inline-flex items-center gap-2 text-sm text-foreground select-none',
+        // `flex` (not inline-flex) so a radio row fills its column and the label text can
+        // wrap instead of forcing the container wider — long options in a narrow filter
+        // panel were spilling and giving the panel its own horizontal scrollbar.
+        'flex items-start gap-2 text-sm text-foreground select-none',
         disabled ? 'opacity-45' : 'cursor-pointer',
         className,
       )}
@@ -75,7 +78,7 @@ export function Radio({ value, label, className, disabled, ...props }: RadioProp
         />
         <span className="pointer-events-none absolute inset-0 m-auto size-2 rounded-full bg-primary opacity-0 peer-checked:opacity-100" />
       </span>
-      {label != null && <span>{label}</span>}
+      {label != null && <span className="min-w-0">{label}</span>}
     </label>
   );
 }

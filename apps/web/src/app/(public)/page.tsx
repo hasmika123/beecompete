@@ -47,10 +47,12 @@ export default async function LandingPage() {
   const countBySlug = new Map(categories.map((c) => [c.slug, c.count]));
   const orderedCategories = CATEGORY_CONTENT.filter((c) => c.slug !== 'other');
   const moreCount = Math.max(0, landing.totalCompetitions - landing.featured.length);
-  // The value-prop stat cards are placeholders ("—%", "TODO(owner)") until sourced numbers
-  // land (R1-17, §3 rule). Off by default so nothing unfinished is publicly visible; the owner
-  // flips SHOW_LANDING_STATS=true once the real, attributed figures exist.
-  const showStats = process.env.SHOW_LANDING_STATS === 'true';
+  // The value-prop split's right half is 2–4 admissions stats (blueprint §3). The numbers are
+  // still placeholders ("—%") clearly marked TODO(owner) with a source line + non-causal,
+  // survey framing (the §3 credibility rule) until the owner supplies sourced figures before
+  // the R1 gate (R1-17). Shown by default so the section keeps its quarters layout; set
+  // SHOW_LANDING_STATS=false to hide the right half until the real figures land.
+  const showStats = process.env.SHOW_LANDING_STATS !== 'false';
 
   return (
     // grid-cols-1 (minmax(0,1fr)) — a bare `grid` auto track grows to the ScrollRows'
@@ -184,31 +186,45 @@ export default async function LandingPage() {
                 )}
               >
                 {card.icon}
-                {/* Hover overlay follows the scrim rule (WCAG-AA text over imagery). */}
-                <span className="absolute inset-0 flex items-center justify-center bg-black/60 p-4 text-center font-medium text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+                {/* Hover/focus overlay: an opaque tint with the link text (blueprint §3).
+                    bg-black/70 is the darkening scrim the §4 rule requires for white text
+                    over imagery (well above WCAG AA); the arrow reads it as a link. */}
+                <span className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/70 p-4 text-center text-sm font-semibold text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
                   {card.label}
+                  <ArrowRight aria-hidden="true" className="size-4 shrink-0" />
                 </span>
               </Link>
             ))}
           </div>
-          {/* Hidden until sourced (showStats). TODO(owner): replace with real, attributed,
-              survey-framed numbers before the R1 gate (R1-17) — then set SHOW_LANDING_STATS. */}
+          {/* Right half: 2–4 admissions stats (numbers prominent, labels smaller). Values are
+              placeholders — TODO(owner): replace with real, attributed, survey-framed numbers
+              before the R1 gate (R1-17). Each keeps a source line and non-causal phrasing per
+              the §3 credibility rule. Set SHOW_LANDING_STATS=false to hide until sourced. */}
           {showStats && (
-            <div className="grid content-center gap-6 sm:grid-cols-2">
+            <div className="grid content-center gap-4">
               {[
                 {
                   value: '—%',
-                  label: 'of admissions officers say sustained extracurricular depth matters',
+                  label:
+                    'of admissions officers weigh sustained commitment to an activity in their review',
                 },
                 {
-                  value: '—×',
-                  label: 'more likely to report strong study habits, per national survey data',
+                  value: '—%',
+                  label:
+                    'of students who compete report stronger study habits, per national survey data',
+                },
+                {
+                  value: '—%',
+                  label:
+                    'of school counselors recommend academic competitions for college-bound students',
                 },
               ].map((stat) => (
-                <Card key={stat.label} className="p-6">
-                  <p className="font-display text-5xl text-foreground">{stat.value}</p>
+                <Card key={stat.label} className="p-5">
+                  <p className="font-display text-4xl leading-none text-foreground sm:text-5xl">
+                    {stat.value}
+                  </p>
                   <p className="mt-2 text-sm text-muted">{stat.label}</p>
-                  <p className="mt-3 text-xs text-muted italic">
+                  <p className="mt-2 text-xs text-muted italic">
                     — Source: TODO(owner), before launch
                   </p>
                 </Card>

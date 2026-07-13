@@ -14,7 +14,7 @@ const NAV = [
   { href: '/admin/landing', label: 'Landing content', icon: ImageSquare },
 ];
 
-export function AdminNav() {
+export function AdminNav({ collapsed = false }: { collapsed?: boolean }) {
   const pathname = usePathname();
 
   return (
@@ -26,8 +26,13 @@ export function AdminNav() {
             key={href}
             href={href}
             aria-current={active ? 'page' : undefined}
+            // When collapsed, the label text is hidden but stays the accessible name via
+            // aria-label, and `title` gives a hover tooltip so the icon-only rail is usable.
+            aria-label={collapsed ? label : undefined}
+            title={collapsed ? label : undefined}
             className={cn(
-              'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+              'flex items-center gap-2.5 rounded-lg py-2 text-sm font-medium transition-colors',
+              collapsed ? 'justify-center px-2' : 'px-3',
               active
                 ? 'bg-surface text-foreground'
                 : 'text-muted hover:bg-surface/60 hover:text-foreground',
@@ -38,7 +43,7 @@ export function AdminNav() {
               weight={active ? 'fill' : 'regular'}
               className="size-4.5 shrink-0"
             />
-            {label}
+            {!collapsed && label}
           </Link>
         );
       })}

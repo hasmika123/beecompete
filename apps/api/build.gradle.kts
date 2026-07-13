@@ -57,3 +57,15 @@ dependencies {
 tasks.withType<Test> {
 	useJUnitPlatform()
 }
+
+// Local dev only: `./gradlew bootRun` supplies a default ADMIN_API_TOKEN (matching the
+// checked-in apps/web/.env.local `dev-admin-token`) UNLESS the environment already sets one,
+// so a fresh bootRun + the web BFF agree out of the box. Without this the API boots with a
+// blank token and rejects every /admin call with 401. It flows through the same
+// `${ADMIN_API_TOKEN:}` binding as prod; an explicit export still wins. Production runs the
+// built jar (`java -jar`), never this task, so the admin surface stays fail-closed there.
+tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
+	if (System.getenv("ADMIN_API_TOKEN") == null) {
+		environment("ADMIN_API_TOKEN", "dev-admin-token")
+	}
+}
