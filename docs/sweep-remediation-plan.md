@@ -76,78 +76,103 @@ America/New_York in July → stored `23:00Z`.
 
 ---
 
-### A2. R1-19 — competition "approved/listed" vs "verified" realignment — schema
+### A2. R1-19 — org trust ladder + derived competition maintainer — schema
 
-**Owner rule.** Verification is an **organization** property. A competition is only ever
-admin-**approved** (published to the catalog); it is never "verified". The CompetitionCard
-already complies (2026-07-13). Remaining: detail trust panel, admin control + list column,
-the shared enum/model, docs.
+**Owner rule (2026-07-13, refined).** Trust lives on the **organization only**, as a ladder:
 
-**Key insight:** "approved" already exists implicitly — a competition row that exists and
-isn't archived IS approved (the import-review queue is the approval gate). **No new
-listing-status column is needed for R1.** What the competition record still legitimately
-needs is the *maintainer* fact that drives the locked "Listing maintained by …" wording:
-**curated** (BeeCompete maintains the listing) vs **claimed** (the host org took it over).
+| Org state | Meaning |
+|---|---|
+| `CURATED` | **Unclaimed** — BeeCompete maintains the record. Verification does not apply at all here. |
+| `CLAIMED` | A host claimed the org — **not (yet) verified**. |
+| `VERIFIED` | Claimed **and** identity-verified. `VERIFIED` implies claimed — verification only exists for claimed orgs. |
 
-**Design — reuse `verification_state`, restrict it to the maintainer pair:**
+**Competitions (and Editions) carry NO trust state of their own** — never
+verified/unverified, and not individually claimed or curated either. Their maintainer status
+is **derived from the organizer org**: when a host claims an organization, all of its
+competitions become host-maintained; while the org is curated (unclaimed), all of its
+competitions are curated. A competition with **no organizer** is curated by definition.
+Claiming is therefore a pure derivation — no cascade writes to competitions, ever.
 
-1. **Domain restriction (API).** Competitions (and Editions) may only hold
-   `CURATED | CLAIMED`. Enforce in `CompetitionCurationService` (and the edition service):
-   reject `VERIFIED`/`UNVERIFIED` with a 422 + explicit message. Keep the shared
-   `VerificationState` enum type (Organization still uses the full range — see decision C1).
-   Rename nothing in Java (additive philosophy); add Javadoc: "on Competition/Edition this is
-   the LISTING MAINTAINER, restricted to CURATED|CLAIMED (R1-19)".
+**Design:**
 
-2. **Migration (additive changeset `0008`)** — data only:
+1. **Org enum usage.** Reuse the existing `VerificationState` enum; org-legal values are
+   `CURATED | CLAIMED | VERIFIED` (`UNVERIFIED` retired). `OrganizationCurationService`
+   rejects `UNVERIFIED` with a 422 + explicit message. Javadoc documents the ladder and
+   "VERIFIED implies claimed".
+
+2. **Competition/Edition `verification_state` becomes vestigial.** Nothing reads it anymore
+   — not the public API mapping, not the web, not the admin UI. The curation write path stops
+   accepting it (drop from the request DTO or ignore) and always stamps the constant
+   `CURATED`. The column stays (additive-only); mark it deprecated in entity Javadoc with a
+   pointer to this rule.
+
+3. **Migration (additive changeset `0008`)** — data only:
 
    ```sql
-   UPDATE competition SET verification_state = 'CURATED'  WHERE verification_state = 'UNVERIFIED';
-   UPDATE competition SET verification_state = 'CLAIMED'  WHERE verification_state = 'VERIFIED';
-   UPDATE edition     SET verification_state = 'CURATED'  WHERE verification_state = 'UNVERIFIED';
-   UPDATE edition     SET verification_state = 'CLAIMED'  WHERE verification_state = 'VERIFIED';
+   UPDATE organization SET verification_state = 'CURATED' WHERE verification_state = 'UNVERIFIED';
+   UPDATE competition  SET verification_state = 'CURATED';  -- vestigial, tidied to the constant
+   UPDATE edition      SET verification_state = 'CURATED';  -- vestigial, tidied to the constant
    ```
 
-   Rationale: every seeded/imported record is maintained by BeeCompete → CURATED; a
-   previously-"verified" competition implied a host relationship → CLAIMED (see decision C2).
-   Optionally add `CHECK (verification_state IN ('CURATED','CLAIMED'))` on both tables after
-   the UPDATEs (safe once data is clean; belt + suspenders with the service rule).
+   Optional CHECKs after the UPDATEs: organization IN ('CURATED','CLAIMED','VERIFIED');
+   competition/edition = 'CURATED'.
 
-3. **Admin UI.** `competition-header-actions.tsx`: the "Verification state" select becomes
-   **"Maintained by"** with two options — `Curated — BeeCompete Curation Team` /
-   `Claimed — host organization`. Same action (`setCompetitionVerification`) underneath.
-   Competitions **list column** header "Verification" → "Maintained by", values via
-   `enumLabel`. `org-header-actions.tsx` unchanged except decision C1.
+4. **Derivation — one rule, computed web-side (zero public-API change).** Both the card
+   summary and the detail payload already expose `organizer.verificationState`, so the web
+   derives everything:
 
-4. **Public trust panel redesign** (`apps/web/src/components/detail/trust-panel.tsx`) — this
+   ```
+   hostMaintained(competition) = organizer != null
+                                 && organizer.verificationState ∈ { claimed, verified }
+   ```
+
+   Add it as a tiny helper (e.g. `lib/catalog-display.ts: isHostMaintained()`) so the rule
+   exists in exactly one place. The payload's competition-level `verificationState` field can
+   keep being emitted for compatibility, but the web stops reading it; mark deprecated.
+
+5. **Admin UI.**
+   - `competition-header-actions.tsx`: **remove the verification select entirely**
+     (archive/restore stays). There is nothing to set at competition level anymore.
+   - Competitions **list column** "Verification": **drop it** (the A4 listing-health
+     checklist covers attribution; deriving it in the list would need org state joined into
+     the admin list payload — not worth it).
+   - `org-header-actions.tsx`: three options via a new `ORG_TRUST_STATES` const in
+     `admin-types.ts` — labeled `Curated (unclaimed)` / `Claimed (unverified)` / `Verified`.
+     `VERIFICATION_STATES` (4 values) is deleted once nothing references it.
+
+6. **Public trust panel redesign** (`apps/web/src/components/detail/trust-panel.tsx`) — this
    also kills the live contradiction ("Unverified" badge above "Curated by the BeeCompete
    team"). New rendering rules, top to bottom:
-   - **Org seal line** (only when `competition.organizer?.verificationState === 'verified'`):
-     `VerifiedSeal` + "Verified organizer" — the ONLY "verified" language on the page.
-   - **Maintained-by line** (always): curated → "Listing maintained by the BeeCompete
-     Curation Team."; claimed → "Listing maintained by {organizer.name}." (locked wording).
+   - **Org seal line** (only when org is `verified`): `VerifiedSeal` + "Verified organizer" —
+     the ONLY "verified" language on the page.
+   - **Maintained-by line** (always, from the derivation helper): host-maintained →
+     "Listing maintained by {organizer.name}."; otherwise → "Listing maintained by the
+     BeeCompete Curation Team." (locked wording).
    - **Provenance line** (as today): source + confidence + last-verified date.
-   - **Claim CTA** (as today, when not claimed).
+   - **Claim CTA**: shown when NOT host-maintained (org curated, or no organizer).
    - Delete the `TrustBadge tier={competition.verificationState}` + tier-blurb rendering.
-     `TrustBadge`/`trustTierMeta` stay in `packages/ui` (org surfaces + design showcase);
-     narrow their doc comment.
-5. **Web types.** Keep `verificationState` on the payload (values now only
-   curated|claimed) — no public API break. `admin-types.ts`: add
-   `MAINTAINER_STATES = ['CURATED','CLAIMED']` and use it for the competition control;
-   leave `VERIFICATION_STATES` for orgs.
-6. **Docs.** Replace the "pending realignment" warning in `domain-model.md` §3f with the new
-   rule (Competition/Edition = maintainer CURATED|CLAIMED; Organization = verification);
-   update glossary "Verification / Trust Tier" entry; mark R1-19 done in phase-1-plan; update
-   CLAUDE.md current-state note for R1-9.
+     `TrustBadge`/`trustTierMeta` are re-scoped to the ORG ladder (blurbs rewritten:
+     curated = "Maintained by the BeeCompete curation team", claimed = "Claimed by the
+     organizer — identity not yet verified", verified = "Organizer identity verified by
+     BeeCompete"); `unverified` tier + `isElevatedTier` deleted with their last usages.
+     Cards are already compliant (org seal only).
+
+7. **Docs.** Replace the "pending realignment" warning in `domain-model.md` §3f with the new
+   rule (org ladder + derived maintainer; Competition/Edition state vestigial); update the
+   glossary "Verification / Trust Tier" entry to the org ladder; mark R1-19 done in
+   phase-1-plan; update the CLAUDE.md R1-9 current-state note.
 
 **Phase 0 (optional interim, ships in minutes if full R1-19 waits):** in `trust-panel.tsx`,
-stop rendering the tier badge/blurb when the state is `unverified` — removes the public
-contradiction without schema work.
+stop rendering the tier badge/blurb entirely and derive the maintained-by line from the org
+per rule 4 — the web-side half of this design works without any schema change.
 
-**Tests.** Service test: setting VERIFIED on a competition → 422. Migration verified by
-`ddl-auto: validate` boot + a repository test asserting no UNVERIFIED/VERIFIED rows.
-Web: trust-panel snapshot for curated vs claimed vs verified-org variants.
+**Tests.** Service: org set to UNVERIFIED → 422; competition write ignores/stamps CURATED.
+Web unit tests for `isHostMaintained` across the four cases (no org / curated org / claimed
+org / verified org); trust-panel render for the same four. Migration verified by
+`ddl-auto: validate` boot + a repository test asserting the constants.
 
-**Size:** M. Full loop (schema).
+**Size:** M. Full loop (schema). Note the web-display half (rules 4–6) is schema-independent
+and can ship first as its own light-loop PR.
 
 ---
 
@@ -365,8 +390,8 @@ Small UX:
 
 | # | Decision | Recommendation |
 |---|---|---|
-| C1 | Org verification states: keep all four or trim to `UNVERIFIED`/`VERIFIED`? | **Trim the org admin dropdown to those two** (org "curated/claimed" is meaningless); leave the enum type untouched |
-| C2 | A2 migration mapping for previously-`VERIFIED` competitions | **VERIFIED → CLAIMED** (a verified competition implied host involvement); UNVERIFIED → CURATED |
+| C1 | Org trust states | **RESOLVED (owner 2026-07-13):** ladder `CURATED` (unclaimed — verification N/A) → `CLAIMED` (unverified) → `VERIFIED` (claimed + verified). `UNVERIFIED` retired. See A2. |
+| C2 | Competition-level trust state | **RESOLVED (owner 2026-07-13):** competitions have none — maintainer is derived from the organizer org (org claimed/verified ⇒ all its competitions host-maintained; org curated or no org ⇒ curated). Column vestigial, tidied to constant `CURATED`. See A2. |
 | C3 | Grade upper bound (entity comment says "13 reserved") | **12 everywhere** (server `@Max(12)` + form `max=12`); relax later if the reserved 13 ever ships — validation loosening is cheap |
 | C4 | Reject-note: require a note on queue rejections? | **Optional, relabeled "Note (optional)"** + confirm dialog (A6.5) |
 | C5 | Team-size vs participation mode: hard server rule? | **No hard rule** (imports carry sloppy data); client-side disable + listing-health warning |
