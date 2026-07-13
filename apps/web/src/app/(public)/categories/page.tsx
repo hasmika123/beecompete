@@ -6,12 +6,18 @@ import { ScrollRow } from '@/components/scroll-row';
 import { fetchCategories, fetchRegions, searchCompetitions } from '@/lib/catalog-api';
 import { toCardData } from '@/lib/catalog-display';
 import { CATEGORY_CONTENT, GRADE_BANDS } from '@/lib/category-content';
+import { pageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Browse Competitions by Category, Grade & State — BeeCompete',
-  description:
-    'Every way into the catalog: K-12 competitions by subject category, by grade level, by state, and by closing-soon deadlines.',
-};
+export const dynamic = 'force-dynamic'; // no-param page — render at request, cached data reads (R1-10)
+
+export function generateMetadata(): Metadata {
+  return pageMetadata({
+    title: 'Browse Competitions by Category, Grade & State — BeeCompete',
+    description:
+      'Every way into the catalog: K-12 competitions by subject category, by grade level, by state, and by closing-soon deadlines.',
+    path: '/categories',
+  });
+}
 
 // Page 5: Categories index (approved 2026-07-08) — every browse angle as a crawlable entry
 // point: category tiles → hub URLs (#16), grade-band hubs, state tiles, closing-soon row.

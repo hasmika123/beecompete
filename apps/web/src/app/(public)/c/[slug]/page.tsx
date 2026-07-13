@@ -29,15 +29,17 @@ import { fetchCompetition } from '@/lib/catalog-api';
 import type { CompetitionDetail } from '@/lib/catalog-types';
 import { currentEdition } from '@/lib/detail-display';
 import { PublicApiError } from '@/lib/public-api';
-import { absoluteUrl } from '@/lib/site';
+import { pageMetadata } from '@/lib/seo';
 import { breadcrumbJsonLd, eventJsonLd, faqJsonLd, jsonLdScript } from '@/lib/structured-data';
 
 // Competition detail — page-blueprints Page 3, the primary SEO landing surface (schema.org
-// Event + BreadcrumbList + FAQPage). Route locked to /c/<slug> (decision #30). Public
-// indexing stays off site-wide until the R1 gate (root layout robots), so this ships SEO-ready
-// and inert — it no longer sets its own noindex the interim stub carried; it inherits the
-// site default and starts indexing when R1-10/R1-17 flips it. The Resources row (3b) lands at
-// R1-8; the Follow/Claim capture backends at R1-15b.
+// Event + BreadcrumbList + FAQPage, per-competition OG image, canonical). Route locked to
+// /c/<slug> (decision #30). Robots is env-gated via pageMetadata (R1-10): the markup ships
+// SEO-ready but stays noindex until SEARCH_INDEXING flips on at R1-17. Resources row (3b) =
+// R1-8; Follow/Claim capture backends = R1-15b.
+
+// ISR (R1-10): statically rendered per slug + revalidated hourly (curated data changes slowly).
+export const revalidate = 3600;
 
 const SENTINEL_ID = 'detail-header-sentinel';
 
@@ -59,22 +61,17 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const competition = await load((await params).slug);
   if (!competition) return {};
-  const path = `/c/${competition.slug}`;
   const description =
     competition.summary ??
     competition.description?.slice(0, 200) ??
     `${competition.name} — grades, deadlines, cost, and how to enter.`;
-  return {
+  // The per-competition OG image comes from the sibling opengraph-image route (file convention).
+  return pageMetadata({
     title: competition.name,
     description,
-    alternates: { canonical: path },
-    openGraph: {
-      title: `${competition.name} · BeeCompete`,
-      description,
-      url: absoluteUrl(path),
-      type: 'website',
-    },
-  };
+    path: `/c/${competition.slug}`,
+    ogType: 'article',
+  });
 }
 
 export default async function CompetitionDetailPage({

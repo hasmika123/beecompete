@@ -21,14 +21,24 @@ interface PublicFetchOptions {
   method?: 'GET' | 'POST';
   body?: unknown;
   cache?: RequestCache;
+  /**
+   * ISR window in seconds (R1-10). When set, the read is cached and revalidated instead of
+   * `no-store`, which lets the calling page be statically rendered + periodically refreshed
+   * (the whole point of SSG/ISR). Ignored for mutations — those stay uncached.
+   */
+  revalidate?: number;
 }
 
 /** Calls `/api/v1{path}` on the Spring API. Throws {@link PublicApiError} on a non-2xx. */
 export async function publicFetch<T>(path: string, options: PublicFetchOptions = {}): Promise<T> {
-  const { method = 'GET', body, cache = 'no-store' } = options;
+  const { method = 'GET', body, cache, revalidate } = options;
+  // A single no-store fetch anywhere in a page opts the whole page into dynamic rendering, so
+  // ISR pages MUST pass revalidate on every read. Default stays no-store (mutations, dynamic).
+  const cacheOpts =
+    revalidate !== undefined ? { next: { revalidate } } : { cache: cache ?? 'no-store' };
   const res = await fetch(`${API_BASE_URL}/api/v1${path}`, {
     method,
-    cache,
+    ...cacheOpts,
     headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });

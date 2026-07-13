@@ -1,12 +1,17 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { buttonClasses } from '@beecompete/ui';
+import { pageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Suggest a Competition — BeeCompete',
-  description: 'Know a great K-12 competition we should list? Tell our curators.',
-  robots: { index: false }, // interim page — the wizard form ships at R1-15b
-};
+export function generateMetadata(): Metadata {
+  // noindex: interim stub page — the wizard form ships at R1-15b.
+  return pageMetadata({
+    title: 'Suggest a Competition — BeeCompete',
+    description: 'Know a great K-12 competition we should list? Tell our curators.',
+    path: '/suggest-a-competition',
+    noindex: true,
+  });
+}
 
 // INTERIM page: Page 6 (the multi-step suggestion wizard → DQ15) ships at R1-15b. This stub
 // exists so zero-results CTAs and the footer link never dead-end.

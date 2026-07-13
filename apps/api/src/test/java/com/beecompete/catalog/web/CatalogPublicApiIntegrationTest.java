@@ -109,6 +109,22 @@ class CatalogPublicApiIntegrationTest {
 
 	@Test
 	@Order(3)
+	void sitemapListsLiveCompetitionsWithLastmodAndHidesArchived() throws Exception {
+		String json = mvc.perform(get("/api/v1/sitemap"))
+				.andExpect(status().isOk())
+				// the live seed is present with its category slug + updatedAt; archived is not.
+				.andExpect(jsonPath("$[?(@.slug=='catalog-read-live')]", hasSize(1)))
+				.andExpect(jsonPath("$[?(@.slug=='catalog-read-live')].categorySlug", notNullValue()))
+				.andExpect(jsonPath("$[?(@.slug=='catalog-read-live')].updatedAt", notNullValue()))
+				.andExpect(jsonPath("$[?(@.slug=='catalog-read-archived')]", hasSize(0)))
+				.andReturn().getResponse().getContentAsString();
+		if (json.isBlank()) {
+			throw new AssertionError("empty sitemap feed");
+		}
+	}
+
+	@Test
+	@Order(4)
 	void archivedAndUnknownSlugsAre404() throws Exception {
 		mvc.perform(get("/api/v1/competitions/catalog-read-archived")).andExpect(status().isNotFound());
 		mvc.perform(get("/api/v1/competitions/never-existed")).andExpect(status().isNotFound());

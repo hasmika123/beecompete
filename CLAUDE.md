@@ -188,7 +188,17 @@ server-local), tabs keep panels in the SSR HTML (`hidden`, SEO), Register CTA ga
 status, valid all-day ICS, Event JSON-LD virtual-only, runtime `SITE_URL`, **search deadline =
 REG_CLOSE with SUBMISSION_DUE fallback** (blueprint decision #31 records the behavior deltas),
 S3 hardening (fetched-URL provenance, penalty-only confidence, fetch/robots/private-IP guards).
-Next per `docs/phase-1-plan.md`: **R1-9 trust/verification badges**. **Deferred (PR C):** S3 pre-signed
+**R1-10 done (2026-07-12) — SEO:** API `GET /api/v1/sitemap` (slug + categorySlug + updatedAt,
+archived hidden); web `app/robots.ts` + `app/sitemap.ts`, a shared `lib/seo.pageMetadata`
+(canonical + OG + Twitter + robots) on every public page, per-competition + default dynamic OG
+images via `next/og` (self-contained, bundled font), `ItemList` on listings + `WebSite`/
+`Organization` on Landing, and ISR (detail pages via dynamic `[slug]`; the no-param
+marketing pages render at request with data-cached reads — the web image builds with no API
+reachable, so build-time SSG isn't possible). **Indexing is env-gated (`SEARCH_INDEXING`,
+default OFF):** robots.txt serves `Disallow:/` and pages emit `noindex` until the flag is
+flipped in the prod runtime env at **R1-17** (minors-facing; legal + COPPA gate first). Order
+built out of registry order at owner request (R1-10 before R1-9). Next per
+`docs/phase-1-plan.md`: **R1-9 trust/verification badges**. **Deferred (PR C):** S3 pre-signed
 hero-image upload + inline FAQ/
 Resource row-edit. **Before prod users:** set `ADMIN_API_TOKEN` in both VPS `.env` + `/admin`
 behind Cloudflare Access (setup-runbook §5).

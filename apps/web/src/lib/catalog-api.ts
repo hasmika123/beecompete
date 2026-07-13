@@ -7,7 +7,13 @@ import type {
   LandingView,
   RegionOption,
   SearchResponse,
+  SitemapEntry,
 } from '@/lib/catalog-types';
+
+// Public catalog reads are cached + revalidated (ISR, R1-10) rather than no-store, so the
+// pages that use them (detail, landing, category/grade hubs, sitemap) render statically and
+// refresh hourly. One window for the whole catalog surface; the admin write path is uncached.
+const CATALOG_REVALIDATE = 3600;
 
 /** The marketplace's filter state — mirrors the R1-5 search params (all optional). */
 export interface SearchParams {
@@ -35,21 +41,29 @@ export async function searchCompetitions(params: SearchParams): Promise<SearchRe
     }
   }
   const qs = query.toString();
-  return publicFetch<SearchResponse>(`/competitions${qs ? `?${qs}` : ''}`);
+  return publicFetch<SearchResponse>(`/competitions${qs ? `?${qs}` : ''}`, {
+    revalidate: CATALOG_REVALIDATE,
+  });
 }
 
 export async function fetchCompetition(slug: string): Promise<CompetitionDetail> {
-  return publicFetch<CompetitionDetail>(`/competitions/${encodeURIComponent(slug)}`);
+  return publicFetch<CompetitionDetail>(`/competitions/${encodeURIComponent(slug)}`, {
+    revalidate: CATALOG_REVALIDATE,
+  });
 }
 
 export async function fetchRegions(): Promise<RegionOption[]> {
-  return publicFetch<RegionOption[]>('/regions');
+  return publicFetch<RegionOption[]>('/regions', { revalidate: CATALOG_REVALIDATE });
 }
 
 export async function fetchCategories(): Promise<CategoryOption[]> {
-  return publicFetch<CategoryOption[]>('/categories');
+  return publicFetch<CategoryOption[]>('/categories', { revalidate: CATALOG_REVALIDATE });
 }
 
 export async function fetchLanding(): Promise<LandingView> {
-  return publicFetch<LandingView>('/landing');
+  return publicFetch<LandingView>('/landing', { revalidate: CATALOG_REVALIDATE });
+}
+
+export async function fetchSitemapEntries(): Promise<SitemapEntry[]> {
+  return publicFetch<SitemapEntry[]>('/sitemap', { revalidate: CATALOG_REVALIDATE });
 }

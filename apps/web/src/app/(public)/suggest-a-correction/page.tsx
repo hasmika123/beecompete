@@ -1,12 +1,17 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { pageMetadata } from '@/lib/seo';
 import { SuggestCorrectionForm } from './suggest-correction-form';
 
-export const metadata: Metadata = {
-  title: 'Suggest a correction — BeeCompete',
-  description: 'Spotted something wrong in a listing? Send our curators a fix.',
-  robots: { index: false }, // query-param variants; not an SEO target
-};
+export function generateMetadata(): Metadata {
+  // noindex: query-param variants, a utility form — not an SEO target.
+  return pageMetadata({
+    title: 'Suggest a correction — BeeCompete',
+    description: 'Spotted something wrong in a listing? Send our curators a fix.',
+    path: '/suggest-a-correction',
+    noindex: true,
+  });
+}
 
 const SUBJECT_TYPES = ['COMPETITION', 'EDITION', 'RESOURCE'] as const;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

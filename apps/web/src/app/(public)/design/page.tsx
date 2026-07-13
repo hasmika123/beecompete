@@ -26,7 +26,10 @@ import {
 import { SelectDemo } from './select-demo';
 import { NewComponentsShowcase } from './new-components-demo';
 
-export const metadata: Metadata = { title: 'Design system' };
+export const metadata: Metadata = {
+  title: 'Design system',
+  robots: { index: false, follow: false }, // internal dev showcase — never indexed
+};
 
 /**
  * Living showcase of @beecompete/ui — the owner-review surface for F7 styling
