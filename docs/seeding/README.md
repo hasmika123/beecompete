@@ -35,8 +35,24 @@ that the extraction pipeline and curators work down, in rank order, until the R1
 - Every live listing has a **current or upcoming Edition with verified dates**.
 - The **top ~50 by expected search volume** get a full spine + curated resources.
 
-This long-list deliberately **over-supplies** that gate (300+ rows) so that attrition during
-extraction and verification (dead pages, defunct programs, thin editions) still leaves ≥ 200 live.
+This long-list deliberately **over-supplies** that gate (284 rows post-audit) so that attrition
+during extraction and verification (dead pages, defunct programs, thin editions) still leaves
+≥ 200 live.
+
+### Intentional multi-row programs (S3 dedup note)
+
+A few umbrella programs are **deliberately split across rows/categories** because they serve
+distinct demand lanes. S3 must treat each group as **one source page** (extract once, then fan out),
+not as independent competitions:
+
+- **Scholastic Art & Writing Awards** — `(Art)` row in `arts-music` + `(Writing)` row in
+  `writing-essay`; both point at `artandwriting.org`.
+- **YoungArts** — the umbrella `National YoungArts Foundation` row (`arts-music`) plus the
+  `Writing disciplines` (`writing-essay`) and `dance discipline` (`arts-music`) rows; all point at
+  `youngarts.org`.
+
+Other same-URL row groups (e.g. the MAA AMC family, NSDA events, VFW Patriot's Pen / Voice of
+Democracy) are genuinely distinct competitions that share an organizer homepage.
 
 ## Ranking methodology
 
@@ -111,3 +127,9 @@ model attaches regions at the Edition level (`EditionRegion`).
   calendars, and gifted-program directories**, then de-duplicated. Every row is a real,
   US-operating, currently-active K-12 competition to the best of research knowledge at compile time;
   S3/S4 re-verify each before anything is published. Confirmed-defunct programs were excluded.
+- **Post-S2 audit cleanup (2026-07-12):** a data-quality audit removed 42 rows from the original
+  326 — cross-category duplicates, confirmed-defunct programs (e.g. Nat Geo GeoBee/GeoChallenge,
+  Google coding competitions, the Treasury Financial Capability Challenge), and vague umbrella rows
+  whose `official_url` pointed at a different program — and repaired a few in place with
+  web-verified real programs (NASA Student Launch, USESO, INCubatoredu National Pitch). Rule going
+  forward: **a row's `official_url` must belong to that specific competition.**
