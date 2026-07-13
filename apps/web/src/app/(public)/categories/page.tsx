@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic'; // no-param page — render at request, 
 
 export function generateMetadata(): Metadata {
   return pageMetadata({
-    title: 'Browse Competitions by Category, Grade & State — BeeCompete',
+    title: 'Browse Competitions by Category, Grade & State',
     description:
       'Every way into the catalog: K-12 competitions by subject category, by grade level, by state, and by closing-soon deadlines.',
     path: '/categories',

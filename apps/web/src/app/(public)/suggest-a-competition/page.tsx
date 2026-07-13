@@ -6,7 +6,7 @@ import { pageMetadata } from '@/lib/seo';
 export function generateMetadata(): Metadata {
   // noindex: interim stub page — the wizard form ships at R1-15b.
   return pageMetadata({
-    title: 'Suggest a Competition — BeeCompete',
+    title: 'Suggest a Competition',
     description: 'Know a great K-12 competition we should list? Tell our curators.',
     path: '/suggest-a-competition',
     noindex: true,

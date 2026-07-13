@@ -21,7 +21,7 @@ export async function generateMetadata({
   const content = categoryContent(category);
   if (!content) return {};
   return pageMetadata({
-    title: `${content.name} Competitions for K-12 Students — BeeCompete`,
+    title: `${content.name} Competitions for K-12 Students`,
     description: `${content.oneLiner} Browse curated ${content.name.toLowerCase()} competitions by grade, cost, and deadline.`,
     path: `/competitions/${content.slug}`,
   });

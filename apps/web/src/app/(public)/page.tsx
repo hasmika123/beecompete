@@ -28,6 +28,8 @@ export const dynamic = 'force-dynamic';
 
 export function generateMetadata(): Metadata {
   return pageMetadata({
+    // Brand-led title — absolute so the layout template doesn't append "· BeeCompete" again.
+    absoluteTitle: true,
     title: 'BeeCompete — Find K-12 Academic Competitions',
     description:
       'One place to find K-12 academic competitions: math, science, coding, debate, writing, and more — curated listings with real dates, grade ranges, and costs.',
