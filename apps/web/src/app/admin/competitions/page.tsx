@@ -33,7 +33,7 @@ export default async function CompetitionsPage({
         }
       />
 
-      <form className="mb-4 flex max-w-sm items-center gap-2" role="search">
+      <form className="mb-4 flex max-w-md items-center gap-2" role="search">
         <div className="relative flex-1">
           <Search
             aria-hidden="true"
@@ -47,6 +47,17 @@ export default async function CompetitionsPage({
             className="pl-9"
           />
         </div>
+        <button type="submit" className={buttonClasses({ size: 'sm' })}>
+          Search
+        </button>
+        {query && (
+          <Link
+            href="/admin/competitions"
+            className={buttonClasses({ variant: 'ghost', size: 'sm' })}
+          >
+            Clear
+          </Link>
+        )}
       </form>
 
       <AdminTable

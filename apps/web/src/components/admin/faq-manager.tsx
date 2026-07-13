@@ -67,7 +67,7 @@ export function FaqManager({ competitionId, faqs }: { competitionId: string; faq
           <Input name="question" required maxLength={500} />
         </FormField>
         <FormField label="Answer" required>
-          <Textarea name="answer" required rows={2} />
+          <Textarea name="answer" required rows={4} />
         </FormField>
         <div className="flex items-center gap-3">
           <div className="w-24">

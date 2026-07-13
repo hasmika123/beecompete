@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft, buttonClasses, Plus, Tab, TabList, TabPanel, Tabs } from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
 import { AdminTable } from '@/components/admin/admin-table';
+import { enumLabel } from '@/components/admin/native-select';
 import { ArchivedBadge, VerificationBadge } from '@/components/admin/status-badges';
 import { CompetitionForm } from '@/components/admin/competition-form';
 import { CompetitionHeaderActions } from '@/components/admin/competition-header-actions';
@@ -60,7 +61,10 @@ export default async function EditCompetitionPage({ params }: { params: Promise<
       <div className="mb-6 flex items-center gap-2 text-sm text-muted">
         <VerificationBadge state={competition.verificationState} />
         <ArchivedBadge archivedAt={competition.archivedAt} />
-        <span>· provenance: {competition.provenanceSource?.toLowerCase() ?? 'none'}</span>
+        <span>
+          · provenance:{' '}
+          {competition.provenanceSource ? enumLabel(competition.provenanceSource) : 'none'}
+        </span>
       </div>
 
       <Tabs defaultValue="details">
@@ -107,8 +111,8 @@ export default async function EditCompetitionPage({ params }: { params: Promise<
                     </Link>
                   ),
                 },
-                { header: 'Status', cell: (ed) => ed.status.toLowerCase() },
-                { header: 'Scope', cell: (ed) => ed.scopeLevel.toLowerCase() },
+                { header: 'Status', cell: (ed) => enumLabel(ed.status) },
+                { header: 'Scope', cell: (ed) => enumLabel(ed.scopeLevel) },
                 { header: 'State', cell: (ed) => <ArchivedBadge archivedAt={ed.archivedAt} /> },
               ]}
             />

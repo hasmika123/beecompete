@@ -2,14 +2,15 @@
 
 import { useActionState, useEffect, useRef } from 'react';
 import { Alert, Button, FormField, Input, Plus, useToast } from '@beecompete/ui';
+import { NativeSelect } from '@/components/admin/native-select';
 import { createCategory } from '@/app/admin/categories/actions';
-import type { FormState } from '@/lib/admin-types';
+import type { Category, FormState } from '@/lib/admin-types';
 
 const INITIAL: FormState = { ok: false };
 
 // createCategory redirects to the new category's edit page on success, so this form only shows
 // the error path; the redirect handles the happy path.
-export function CategoryCreateForm() {
+export function CategoryCreateForm({ allCategories }: { allCategories: Category[] }) {
   const [state, formAction, pending] = useActionState(createCategory, INITIAL);
   const ref = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
@@ -36,7 +37,16 @@ export function CategoryCreateForm() {
       </div>
       <div className="min-w-40 flex-1">
         <FormField label="Slug" required>
-          <Input name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" />
+          <Input name="slug" required maxLength={140} pattern="[a-z0-9]+(-[a-z0-9]+)*" />
+        </FormField>
+      </div>
+      <div className="min-w-40 flex-1">
+        <FormField label="Parent" hint="optional — for subcategories">
+          <NativeSelect
+            name="parentId"
+            options={allCategories.map((c) => ({ value: c.id, label: c.name }))}
+            placeholder="— none (top level) —"
+          />
         </FormField>
       </div>
       <Button type="submit" size="sm" disabled={pending}>

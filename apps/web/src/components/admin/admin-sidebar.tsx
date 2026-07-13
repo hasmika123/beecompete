@@ -2,7 +2,7 @@
 
 import { useCallback, useSyncExternalStore } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Logo, cn } from '@beecompete/ui';
+import { ChevronLeft, ChevronRight, Logo, ThemeToggle, cn } from '@beecompete/ui';
 import { AdminNav } from './admin-nav';
 
 const STORAGE_KEY = 'admin:sidebar-collapsed';
@@ -53,25 +53,32 @@ export function AdminSidebar() {
         collapsed ? 'lg:w-[4.75rem] lg:p-3' : 'lg:w-60',
       )}
     >
-      <Link
-        href="/admin"
-        aria-label="BeeCompete Admin"
-        className={cn('flex items-center gap-2', collapsed && 'lg:justify-center')}
-      >
-        {/* Collapsed: the wordmark won't fit the rail, so show just the gold brand mark. */}
-        {collapsed ? (
-          <span
-            aria-hidden="true"
-            className="hidden size-3 rounded-full bg-brand-gold lg:inline-block"
-          />
-        ) : null}
-        <span className={cn('flex items-center gap-2', collapsed && 'lg:hidden')}>
-          <Logo />
-          <span className="rounded bg-surface px-1.5 py-0.5 text-xs font-semibold text-muted">
-            Admin
+      <div className="flex items-center justify-between gap-2">
+        <Link
+          href="/admin"
+          aria-label="BeeCompete Admin"
+          className={cn('flex items-center gap-2', collapsed && 'lg:justify-center')}
+        >
+          {/* Collapsed: the wordmark won't fit the rail, so show just the gold brand mark. */}
+          {collapsed ? (
+            <span
+              aria-hidden="true"
+              className="hidden size-3 rounded-full bg-brand-gold lg:inline-block"
+            />
+          ) : null}
+          <span className={cn('flex items-center gap-2', collapsed && 'lg:hidden')}>
+            <Logo />
+            <span className="rounded bg-surface px-1.5 py-0.5 text-xs font-semibold text-muted">
+              Admin
+            </span>
           </span>
-        </span>
-      </Link>
+        </Link>
+        {/* Mobile top bar gets the theme toggle inline (the fixed top-right one is desktop-only,
+            where it would collide with this bar). */}
+        <div className="lg:hidden">
+          <ThemeToggle />
+        </div>
+      </div>
 
       <AdminNav collapsed={collapsed} />
 

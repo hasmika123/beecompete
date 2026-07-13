@@ -37,6 +37,11 @@ export function FeaturedManager({
 
   return (
     <div className="grid gap-4">
+      {ids.length === 0 && (
+        <p className="text-sm text-muted">
+          No featured competitions yet — add up to 10 below to fill the Landing carousel.
+        </p>
+      )}
       <ol className="grid gap-2">
         {ids.map((id, i) => (
           <li
@@ -79,23 +84,27 @@ export function FeaturedManager({
         ))}
       </ol>
 
-      {ids.length < 10 && available.length > 0 && (
-        <NativeSelect
-          aria-label="Add competition to carousel"
-          options={available.map((c) => ({ value: c.id, label: c.name }))}
-          placeholder="Add a competition…"
-          value=""
-          onChange={(e) => {
-            if (e.target.value) setIds([...ids, e.target.value]);
-          }}
-          className="max-w-sm"
-        />
+      {ids.length >= 10 ? (
+        <p className="text-sm text-muted">Maximum of 10 featured picks reached.</p>
+      ) : (
+        available.length > 0 && (
+          <NativeSelect
+            aria-label="Add competition to carousel"
+            options={available.map((c) => ({ value: c.id, label: c.name }))}
+            placeholder="Add a competition…"
+            value=""
+            onChange={(e) => {
+              if (e.target.value) setIds([...ids, e.target.value]);
+            }}
+            className="max-w-sm"
+          />
+        )
       )}
 
       <div>
         <Button
           size="sm"
-          disabled={pending}
+          disabled={pending || ids.length === 0}
           onClick={() =>
             startTransition(async () => {
               try {

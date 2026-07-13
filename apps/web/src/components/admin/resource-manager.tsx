@@ -98,6 +98,9 @@ export function ResourceManager({
         <FormField label="Type">
           <NativeSelect name="type" options={enumOptions(RESOURCE_TYPES)} defaultValue="GUIDE" />
         </FormField>
+        <FormField label="Order" hint="lower shows first">
+          <Input name="displayOrder" type="number" min={0} defaultValue={resources.length} />
+        </FormField>
         <div className="flex items-end">
           <div className="mb-2">
             <Checkbox name="isAffiliate" label="Affiliate link" />

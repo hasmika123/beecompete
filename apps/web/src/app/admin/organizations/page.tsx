@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { buttonClasses, Plus } from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
 import { AdminTable } from '@/components/admin/admin-table';
+import { enumLabel } from '@/components/admin/native-select';
 import { ArchivedBadge, VerificationBadge } from '@/components/admin/status-badges';
 import { adminFetch } from '@/lib/admin-api';
 import type { Organization, Page } from '@/lib/admin-types';
@@ -34,7 +35,7 @@ export default async function OrganizationsPage() {
           },
           {
             header: 'Type',
-            cell: (o) => <span className="text-muted">{o.type.toLowerCase()}</span>,
+            cell: (o) => <span className="text-muted">{enumLabel(o.type)}</span>,
           },
           { header: 'Domain', cell: (o) => <span className="text-muted">{o.domain ?? '—'}</span> },
           {

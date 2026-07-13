@@ -22,7 +22,7 @@ export default async function CategoriesPage() {
       />
 
       <div className="mb-4">
-        <CategoryCreateForm />
+        <CategoryCreateForm allCategories={categories} />
       </div>
 
       <AdminTable

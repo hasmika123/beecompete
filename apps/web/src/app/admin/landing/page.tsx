@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
+import { enumLabel } from '@/components/admin/native-select';
 import { HeroCardForm } from '@/components/admin/hero-card-form';
 import { FeaturedManager } from '@/components/admin/featured-manager';
 import { adminFetch } from '@/lib/admin-api';
@@ -32,9 +33,7 @@ export default async function LandingPage() {
           <CardContent className="grid gap-6 p-5 lg:grid-cols-3">
             {HERO_POSITIONS.map((position) => (
               <div key={position} className="grid gap-3">
-                <h3 className="text-sm font-semibold text-foreground">
-                  {position.toLowerCase().replace(/_/g, ' ')}
-                </h3>
+                <h3 className="text-sm font-semibold text-foreground">{enumLabel(position)}</h3>
                 <HeroCardForm position={position} card={byPosition.get(position)} />
               </div>
             ))}

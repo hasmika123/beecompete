@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef } from 'react';
 import { Alert, Button, FormField, Input, Plus, useToast } from '@beecompete/ui';
-import { NativeSelect, enumOptions } from '@/components/admin/native-select';
+import { NativeSelect, enumLabel, enumOptions } from '@/components/admin/native-select';
 import { createRegion } from '@/app/admin/categories/actions';
 import { REGION_LEVELS, type FormState, type Region } from '@/lib/admin-types';
 
@@ -29,7 +29,7 @@ export function RegionManager({ regions }: { regions: Region[] }) {
               key={r.id}
               className="rounded-full border border-border px-3 py-1 text-sm text-foreground"
             >
-              {r.name} <span className="text-muted">· {r.level.toLowerCase()}</span>
+              {r.name} <span className="text-muted">· {enumLabel(r.level)}</span>
             </li>
           ))}
         </ul>
@@ -61,6 +61,15 @@ export function RegionManager({ regions }: { regions: Region[] }) {
         <div className="w-24">
           <FormField label="Code">
             <Input name="code" maxLength={20} placeholder="US" />
+          </FormField>
+        </div>
+        <div className="w-44">
+          <FormField label="Parent" hint="nest under a broader region">
+            <NativeSelect
+              name="parentId"
+              options={regions.map((r) => ({ value: r.id, label: r.name }))}
+              placeholder="— none (top level) —"
+            />
           </FormField>
         </div>
         <Button type="submit" size="sm" disabled={pending}>

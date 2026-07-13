@@ -6,7 +6,7 @@ import { pageMetadata } from '@/lib/seo';
 export function generateMetadata(): Metadata {
   // noindex: interim stub page — the wizard form ships at R1-15b.
   return pageMetadata({
-    title: 'Suggest a Competition',
+    title: 'Request a Competition',
     description: 'Know a great K-12 competition we should list? Tell our curators.',
     path: '/suggest-a-competition',
     noindex: true,
@@ -18,10 +18,10 @@ export function generateMetadata(): Metadata {
 export default function SuggestCompetitionPage() {
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="font-display text-3xl text-foreground sm:text-4xl">Suggest a competition</h1>
+      <h1 className="font-display text-3xl text-foreground sm:text-4xl">Request a competition</h1>
       <p className="mt-3 text-muted">
-        Know a great K-12 competition we haven&apos;t listed? Our suggestion form is almost ready —
-        check back soon. Every suggestion is reviewed by our curation team before it goes live.
+        Know a great K-12 competition we haven&apos;t listed? Our request form is almost ready —
+        check back soon. Every request is reviewed by our curation team before it goes live.
       </p>
       <p className="mt-3 text-sm text-muted">
         {/* Literal “”’ (not &ldquo;-style entities) — an HTML entity anywhere in this text
