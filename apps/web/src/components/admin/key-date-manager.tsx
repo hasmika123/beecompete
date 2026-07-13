@@ -2,9 +2,22 @@
 
 import { useRef, useTransition } from 'react';
 import { Button, FormField, Input, Plus, Trash, useToast } from '@beecompete/ui';
-import { NativeSelect, enumOptions } from '@/components/admin/native-select';
+import { NativeSelect, enumLabel, enumOptions } from '@/components/admin/native-select';
 import { addKeyDate, deleteKeyDate } from '@/app/admin/competitions/[id]/editions/actions';
+import { formatInZone } from '@/lib/dates';
 import { KEY_DATE_TYPES, type KeyDate } from '@/lib/admin-types';
+
+// The wall-clock an admin types is interpreted in THIS zone (default Eastern), never the
+// server's — the display + the stored instant both use it (see lib/dates.zonedWallClockToInstant).
+const TIMEZONES = [
+  { value: 'America/New_York', label: 'Eastern (New York)' },
+  { value: 'America/Chicago', label: 'Central (Chicago)' },
+  { value: 'America/Denver', label: 'Mountain (Denver)' },
+  { value: 'America/Los_Angeles', label: 'Pacific (Los Angeles)' },
+  { value: 'America/Anchorage', label: 'Alaska (Anchorage)' },
+  { value: 'Pacific/Honolulu', label: 'Hawaii (Honolulu)' },
+  { value: 'UTC', label: 'UTC' },
+];
 
 export function KeyDateManager({
   competitionId,
@@ -27,12 +40,13 @@ export function KeyDateManager({
             key={k.id}
             className="flex items-center justify-between gap-3 rounded-[var(--radius-panel)] border border-border p-3 text-sm"
           >
-            <span>
-              <span className="font-medium text-foreground">
-                {k.type.toLowerCase().replace(/_/g, ' ')}
-              </span>
-              <span className="ml-2 text-muted">{new Date(k.startsAt).toLocaleString()}</span>
-              {k.timezone && <span className="ml-2 text-xs text-muted">({k.timezone})</span>}
+            <span className="min-w-0">
+              <span className="font-medium text-foreground">{enumLabel(k.type)}</span>
+              {k.label && <span className="ml-2 text-foreground">— {k.label}</span>}
+              <span className="ml-2 text-muted">{formatInZone(k.startsAt, k.timezone)}</span>
+              {k.endsAt && (
+                <span className="ml-1 text-muted">→ {formatInZone(k.endsAt, k.timezone)}</span>
+              )}
             </span>
             <Button
               variant="ghost"
@@ -81,13 +95,19 @@ export function KeyDateManager({
             defaultValue="REG_CLOSE"
           />
         </FormField>
-        <FormField label="When">
+        <FormField label="Starts">
           <Input name="startsAt" type="datetime-local" required />
         </FormField>
-        <FormField label="Timezone" hint="IANA, e.g. America/New_York">
-          <Input name="timezone" placeholder="America/New_York" />
+        <FormField label="Timezone">
+          <NativeSelect name="timezone" options={TIMEZONES} defaultValue="America/New_York" />
         </FormField>
-        <div className="sm:col-span-3">
+        <FormField label="Ends" hint="optional — for windows">
+          <Input name="endsAt" type="datetime-local" />
+        </FormField>
+        <FormField label="Label" hint="optional — shown for Custom dates">
+          <Input name="label" maxLength={200} />
+        </FormField>
+        <div className="flex items-end sm:col-span-3">
           <Button type="submit" size="sm" disabled={pending}>
             <Plus aria-hidden="true" className="size-4" /> Add key date
           </Button>
