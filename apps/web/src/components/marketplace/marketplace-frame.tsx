@@ -1,21 +1,25 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Filter, Input, Search, Select, X, cn } from '@beecompete/ui';
+import type { RegionOption, SearchFacets } from '@/lib/catalog-types';
 import { marketplaceHref, SORTS, type MarketplaceParams } from '@/lib/marketplace-params';
+import { FilterPanel } from './filter-panel';
 
 // Page-2 toolbar + filter-panel chrome (client): search · sort · Filter toggle · live count.
-// The panel itself is a server-rendered GET form passed in as a node; this component only
-// owns visibility — desktop side panel (grid reflows via container queries) and the mobile
-// bottom sheet (blueprint Page 2 mobile note).
+// Owns filter navigation (A10 instant-apply) — each panel change routes here and shows a
+// pending state on the results while the new page streams in. Desktop = a sticky side panel
+// (no internal scroll; the page grows); mobile = a bottom sheet with a "Show N" button.
 
 interface MarketplaceFrameProps {
   path: string;
   params: MarketplaceParams;
   total: number;
-  panel: ReactNode;
-  /** Chips + quick-chips rows (server-rendered). */
+  facets: SearchFacets | null;
+  regions: RegionOption[];
+  categoryFilter?: { active?: string };
+  /** Removable-tags row (server-rendered, incl. the "Clear all" link). */
   chips?: ReactNode;
   quickChips: ReactNode;
   children: ReactNode;
@@ -25,15 +29,33 @@ export function MarketplaceFrame({
   path,
   params,
   total,
-  panel,
+  facets,
+  regions,
+  categoryFilter,
   chips,
   quickChips,
   children,
 }: MarketplaceFrameProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
   const sortValue = params.sort ?? (params.q ? 'relevance' : 'name');
   const sortOptions = SORTS.filter((s) => s.value !== 'relevance' || !!params.q);
+
+  // Instant-apply navigation with a pending transition — one RSC fetch per change (same cost
+  // as an Apply click), and `pending` dims the results while it lands.
+  const navigate = (href: string) => startTransition(() => router.push(href, { scroll: false }));
+
+  const filterPanel = (
+    <FilterPanel
+      path={path}
+      params={params}
+      facets={facets}
+      regions={regions}
+      categoryFilter={categoryFilter}
+      onNavigate={navigate}
+    />
+  );
 
   return (
     <div className="grid gap-4">
@@ -72,7 +94,7 @@ export function MarketplaceFrame({
         <Select
           aria-label="Sort"
           value={sortValue}
-          onValueChange={(sort) => router.push(marketplaceHref(path, params, { sort }))}
+          onValueChange={(sort) => navigate(marketplaceHref(path, params, { sort }))}
           options={sortOptions.map((s) => ({ value: s.value, label: s.label }))}
           className="w-44"
         />
@@ -96,15 +118,25 @@ export function MarketplaceFrame({
 
       <div className="flex items-start gap-6">
         {open && (
+          // No internal scroll (owner): the panel sits in normal flow and the PAGE grows;
+          // facets are collapsed by default so it stays short. w-[270px] = one card track.
           <aside
             id="marketplace-filters"
-            className="scrollbar-slim sticky top-20 hidden max-h-[calc(100dvh-6rem)] w-72 shrink-0 overflow-x-hidden overflow-y-auto pr-2 lg:block"
+            className="sticky top-20 hidden w-[270px] shrink-0 self-start lg:block"
           >
-            {panel}
+            {filterPanel}
           </aside>
         )}
-        {/* Container queries reflow the card grid 4-per-row ↔ 3-per-row when the panel opens. */}
-        <div className="min-w-0 flex-1 @container">{children}</div>
+        {/* Fixed 270px card tracks mean the card width is invariant to the panel opening. */}
+        <div
+          className={cn(
+            'min-w-0 flex-1 transition-opacity',
+            pending && 'pointer-events-none opacity-60',
+          )}
+          aria-busy={pending}
+        >
+          {children}
+        </div>
       </div>
 
       {/* Mobile: the panel is a bottom sheet behind the Filter button. */}
@@ -123,8 +155,8 @@ export function MarketplaceFrame({
           />
           <div
             className={cn(
-              'scrollbar-slim absolute inset-x-0 bottom-0 max-h-[80dvh] overflow-y-auto',
-              'rounded-t-[var(--radius-panel)] border-t border-border bg-background p-5 pb-8',
+              'scrollbar-slim absolute inset-x-0 bottom-0 flex max-h-[80dvh] flex-col overflow-y-auto',
+              'rounded-t-[var(--radius-panel)] border-t border-border bg-background p-5 pb-4',
             )}
           >
             <div className="mb-3 flex items-center justify-between">
@@ -138,7 +170,13 @@ export function MarketplaceFrame({
                 <X aria-hidden="true" className="size-4" />
               </Button>
             </div>
-            {panel}
+            {filterPanel}
+            {/* Live count IS the feedback loop that replaces Apply — it updates as you pick. */}
+            <div className="sticky bottom-0 -mx-5 mt-4 border-t border-border bg-background px-5 pt-3">
+              <Button className="w-full" onClick={() => setOpen(false)}>
+                Show {total} competition{total === 1 ? '' : 's'}
+              </Button>
+            </div>
           </div>
         </div>
       )}

@@ -27,6 +27,13 @@ describe('CompetitionCard', () => {
     expect(screen.getByText('Paid')).toBeTruthy();
     expect(screen.getByText('Medals + AIME invite')).toBeTruthy();
     expect(screen.getByText('9 days to go')).toBeTruthy();
+    // Share corner is present + labeled; the card link is still the primary action (A8).
+    expect(screen.getByRole('button', { name: 'Share AMC 10' })).toBeTruthy();
+  });
+
+  it('omits the share corner when shareable is false', () => {
+    render(<CompetitionCard data={DATA} shareable={false} />);
+    expect(screen.queryByRole('button', { name: 'Share AMC 10' })).toBeNull();
   });
 
   it('keeps the footer slot and cost positivity for free competitions without a prize', () => {

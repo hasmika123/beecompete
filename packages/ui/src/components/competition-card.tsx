@@ -5,15 +5,17 @@ import { Avatar } from './avatar';
 import { Badge } from './badge';
 import { Card, CardDescription, CardTitle } from './card';
 import { CategoryCover, CategoryTag } from './category-art';
+import { ShareMenu } from './share-menu';
 
 /**
  * The CompetitionCard (blueprints "Shared components"; approved F7 direction from the /design
  * study). Equal-height flex column: cover → meta tags → title → organizer → blurb → two
- * fixed-slot facts (Cost + Region, owner r10) → footer pinned to the bottom with PRIZE bold
- * and the deadline quiet (Kaggle pattern, owner r8). The whole card is one link.
+ * fixed-slot facts (Cost + Region, owner r10, pinned to the card bottom) → footer with PRIZE
+ * bold and the deadline quiet (Kaggle pattern, owner r8). The whole card is one link, with a
+ * Share button in the top-right corner (A8, reveals on hover/focus).
  *
- * R1 variant: the top-right social-proof / save / share corner from the study is omitted —
- * its data and actions arrive with M31/M7 (R2) and M21 (R1-11).
+ * R1 variant: only Share is in the corner; the study's social-proof pill + Save arrive with
+ * M31/M7 (R2) — the corner is a slot they drop into without relayout.
  *
  * Presentation-only: callers derive the display strings (grade band, deadline wording,
  * region label) — see apps/web `lib/catalog-display`.
@@ -49,12 +51,15 @@ export interface CompetitionCardProps {
   data: CompetitionCardData;
   /** Pass next/link's Link for client-side nav; defaults to a plain anchor. */
   linkComponent?: ElementType;
+  /** Render the Share corner (default true). Opt out where the card must stay inert. */
+  shareable?: boolean;
   className?: string;
 }
 
 export function CompetitionCard({
   data,
   linkComponent: LinkComponent = 'a',
+  shareable = true,
   className,
 }: CompetitionCardProps) {
   return (
@@ -63,8 +68,17 @@ export function CompetitionCard({
       className={cn('group relative flex flex-col overflow-hidden', className)}
       data-testid="competition-card"
     >
-      {/* Whole-card link (stretched); no other interactive elements inside at R1. */}
+      {/* Whole-card link (stretched); the corner Share button sits above it (z-20). */}
       <LinkComponent href={data.href} aria-label={data.name} className="absolute inset-0 z-10" />
+
+      {shareable && (
+        // z-20 so clicks hit Share, not the card link. Hidden until hover/focus on pointer
+        // devices (pointer-events-none so it doesn't eat clicks meant for the link), always
+        // visible + interactive on touch. The popover portals to <body>, so no clip.
+        <div className="absolute top-2 right-2 z-20 opacity-0 transition-opacity pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100">
+          <ShareMenu variant="icon" path={data.href} title={data.name} />
+        </div>
+      )}
 
       <CategoryCover slug={data.categorySlug} className="h-36" />
 
@@ -79,10 +93,9 @@ export function CompetitionCard({
             </Badge>
           )}
         </div>
-        {/* line-clamp-2 (not truncate): long competition names — common — clip to ~4 words on
-            a single line; two lines keep them scannable. Cards stay equal-height (grid stretch
-            + mt-auto footer). */}
-        <CardTitle className="line-clamp-2 pt-1 text-lg">{data.name}</CardTitle>
+        {/* Single-line title (owner 2026-07-13): long names trail off with an ellipsis rather
+            than wrapping, so every card's header block is the same height. */}
+        <CardTitle className="truncate pt-1 text-lg">{data.name}</CardTitle>
         {data.organizerName && (
           <div className="flex items-center gap-2">
             <Avatar name={data.organizerName} size="sm" className="size-6 text-[10px]" />
@@ -100,8 +113,10 @@ export function CompetitionCard({
         {data.summary && <CardDescription className="line-clamp-2">{data.summary}</CardDescription>}
       </div>
 
-      {/* Two logistics facts in fixed half-width slots (owner r10): Cost + Region. */}
-      <div className="mt-3 grid grid-cols-2 gap-x-3 border-t border-border p-4 py-3">
+      {/* Two logistics facts in fixed half-width slots (owner r10): Cost + Region. `mt-auto`
+          pins this row (and the footer below it) to the card bottom, so the facts sit in the
+          same place on every card regardless of how much body content there is above. */}
+      <div className="mt-auto grid grid-cols-2 gap-x-3 border-t border-border p-4 py-3">
         <div className="flex min-w-0 items-center gap-1.5">
           <Ticket
             aria-hidden="true"
@@ -124,8 +139,9 @@ export function CompetitionCard({
         </div>
       </div>
 
-      {/* Footer pinned to the bottom: PRIZE bold + deadline quiet (Kaggle pattern, owner r8). */}
-      <div className="mt-auto flex items-center justify-between gap-2.5 border-t border-border p-4 py-3">
+      {/* Footer: PRIZE bold + deadline quiet (Kaggle pattern, owner r8). Sits directly under
+          the facts row, both anchored to the bottom via the facts row's mt-auto. */}
+      <div className="flex items-center justify-between gap-2.5 border-t border-border p-4 py-3">
         <span className="flex min-w-0 items-center gap-1.5">
           {data.prizeLabel ? (
             <>

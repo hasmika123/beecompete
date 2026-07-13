@@ -1,14 +1,24 @@
-import Link from 'next/link';
-import { Button, ChevronDown, Radio, RadioGroup, buttonClasses } from '@beecompete/ui';
+'use client';
+
+import { useId, useState } from 'react';
+import { ChevronDown, Radio, RadioGroup, cn } from '@beecompete/ui';
 import { NativeSelect } from '@/components/admin/native-select';
 import { gradeName } from '@/lib/catalog-display';
 import type { SearchFacets, RegionOption } from '@/lib/catalog-types';
-import { DEADLINE_WINDOWS, type MarketplaceParams } from '@/lib/marketplace-params';
+import {
+  DEADLINE_WINDOWS,
+  marketplaceHref,
+  type MarketplaceParams,
+} from '@/lib/marketplace-params';
 
 // Page-2 filter panel — facet order per decision #10 (owner): Grade → Category →
 // State/Region → Deadline window → Cost → Format (individual/team) → Entry pathway →
-// Delivery. Per-option counts on Grade + Category ONLY (decision #10/#13). A plain GET form:
-// every filter state is a crawlable, shareable URL; no client state to lose.
+// Delivery. Per-option counts on Grade + Category ONLY (decision #10/#13).
+//
+// Instant-apply (A10): each control change navigates immediately via `onNavigate` — no Apply
+// button. Every filter state is still a canonical, shareable GET-param URL (marketplaceHref);
+// the chips/quick-chips remain real links, so crawlability is unchanged. Reset lives on the
+// tags row ("Clear all"), not here.
 
 const GRADES = Array.from({ length: 14 }, (_, i) => i - 1); // Pre-K(-1) … 12
 
@@ -19,27 +29,59 @@ interface FilterPanelProps {
   regions: RegionOption[];
   /** Category radios only render on /competitions — hub pages are locked to their category. */
   categoryFilter?: { active?: string };
+  /** Navigate to a new filter URL (lifted to the frame so it can show a pending state). */
+  onNavigate: (href: string) => void;
 }
 
-// Each facet is a collapsible <details> section (open by default) so the panel reads as a set of
-// tidy, dropdown-style groups the user can fold away. `min-w-0` overrides a section's default
-// min-content width so long options wrap instead of pushing a horizontal scrollbar into the panel.
-function Facet({ legend, children }: { legend: string; children: React.ReactNode }) {
+// Collapsible facet section — its own open state (persists across instant-apply re-renders).
+// Opens by default for the first facet + any facet whose filter is currently active, so an
+// applied filter is never hidden behind a fold.
+function Facet({
+  legend,
+  defaultOpen,
+  children,
+}: {
+  legend: string;
+  defaultOpen: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const id = useId();
   return (
-    <details open className="group min-w-0 border-t border-border pt-3">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
+    <div className="min-w-0 border-t border-border pt-3">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full cursor-pointer items-center justify-between gap-2 text-left"
+      >
         <span className="text-sm font-semibold text-foreground">{legend}</span>
         <ChevronDown
           aria-hidden="true"
-          className="size-4 shrink-0 text-muted transition-transform group-open:rotate-180"
+          className={cn('size-4 shrink-0 text-muted transition-transform', open && 'rotate-180')}
         />
-      </summary>
-      <div className="mt-3 min-w-0">{children}</div>
-    </details>
+      </button>
+      {open && (
+        <div id={id} className="mt-3 min-w-0">
+          {children}
+        </div>
+      )}
+    </div>
   );
 }
 
-export function FilterPanel({ path, params, facets, regions, categoryFilter }: FilterPanelProps) {
+export function FilterPanel({
+  path,
+  params,
+  facets,
+  regions,
+  categoryFilter,
+  onNavigate,
+}: FilterPanelProps) {
+  const set = (patch: Partial<Record<keyof MarketplaceParams, string | number | undefined>>) =>
+    onNavigate(marketplaceHref(path, params, patch));
+
   const gradeCount = (grade: number) => facets?.grades.find((g) => g.grade === grade)?.count;
   const gradeOptions = GRADES.map((grade) => {
     const count = gradeCount(grade);
@@ -50,23 +92,8 @@ export function FilterPanel({ path, params, facets, regions, categoryFilter }: F
   });
 
   return (
-    <form method="get" action={path} className="grid gap-3" aria-label="Filters">
-      {/* Apply/Reset pinned to the top of the (scrolling) panel so they're always visible —
-          no scrolling to the bottom to find them. bg-background masks facets scrolling under. */}
-      <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-background pb-3">
-        <Button type="submit" size="sm" className="flex-1">
-          Apply filters
-        </Button>
-        <Link href={path} className={buttonClasses({ variant: 'ghost', size: 'sm' })}>
-          Reset
-        </Link>
-      </div>
-
-      {/* Preserve non-facet state across an Apply. */}
-      {params.q && <input type="hidden" name="q" value={params.q} />}
-      {params.sort && <input type="hidden" name="sort" value={params.sort} />}
-
-      <Facet legend="Grade">
+    <div className="grid gap-3" aria-label="Filters">
+      <Facet legend="Grade" defaultOpen>
         <div className="grid grid-cols-2 gap-2">
           <label className="grid gap-1 text-xs text-muted">
             From
@@ -75,9 +102,10 @@ export function FilterPanel({ path, params, facets, regions, categoryFilter }: F
               // Explicit label — both selects otherwise expose only "Any" to AT (the wrapping
               // label text isn't reliably taken as the accessible name in Chromium).
               aria-label="Minimum grade"
-              defaultValue={params.minGrade !== undefined ? String(params.minGrade) : ''}
+              value={params.minGrade !== undefined ? String(params.minGrade) : ''}
               placeholder="Any"
               options={gradeOptions}
+              onChange={(e) => set({ minGrade: e.target.value || undefined })}
             />
           </label>
           <label className="grid gap-1 text-xs text-muted">
@@ -85,111 +113,107 @@ export function FilterPanel({ path, params, facets, regions, categoryFilter }: F
             <NativeSelect
               name="maxGrade"
               aria-label="Maximum grade"
-              defaultValue={params.maxGrade !== undefined ? String(params.maxGrade) : ''}
+              value={params.maxGrade !== undefined ? String(params.maxGrade) : ''}
               placeholder="Any"
               options={gradeOptions}
+              onChange={(e) => set({ maxGrade: e.target.value || undefined })}
             />
           </label>
         </div>
       </Facet>
 
       {categoryFilter && (
-        <Facet legend="Category">
-          <RadioGroup name="category" className="grid gap-1.5">
-            <Radio value="" label="All categories" defaultChecked={!categoryFilter.active} />
+        <Facet legend="Category" defaultOpen={!!categoryFilter.active}>
+          <RadioGroup
+            className="grid gap-1.5"
+            value={categoryFilter.active ?? ''}
+            onValueChange={(v) => set({ category: v || undefined })}
+          >
+            <Radio value="" label="All categories" />
             {(facets?.categories ?? []).map((c) => (
-              <Radio
-                key={c.slug}
-                value={c.slug}
-                label={`${c.name} (${c.count})`}
-                defaultChecked={categoryFilter.active === c.slug}
-              />
+              <Radio key={c.slug} value={c.slug} label={`${c.name} (${c.count})`} />
             ))}
           </RadioGroup>
         </Facet>
       )}
 
       {regions.length > 0 && (
-        <Facet legend="State / Region">
+        <Facet legend="State / Region" defaultOpen={!!params.region}>
           <NativeSelect
             name="region"
             aria-label="Region"
-            defaultValue={params.region ?? ''}
+            value={params.region ?? ''}
             placeholder="Anywhere"
             options={regions.map((r) => ({
               value: r.code ?? r.id,
               label: `${r.name} (${r.count})`,
             }))}
+            onChange={(e) => set({ region: e.target.value || undefined })}
           />
         </Facet>
       )}
 
-      <Facet legend="Deadline">
-        <RadioGroup name="deadlineWithinDays" className="grid gap-1.5">
-          <Radio
-            value=""
-            label="Any time"
-            defaultChecked={params.deadlineWithinDays === undefined}
-          />
+      <Facet legend="Deadline" defaultOpen={params.deadlineWithinDays !== undefined}>
+        <RadioGroup
+          className="grid gap-1.5"
+          value={params.deadlineWithinDays !== undefined ? String(params.deadlineWithinDays) : ''}
+          onValueChange={(v) => set({ deadlineWithinDays: v || undefined })}
+        >
+          <Radio value="" label="Any time" />
           {DEADLINE_WINDOWS.map((w) => (
-            <Radio
-              key={w.value}
-              value={String(w.value)}
-              label={w.label}
-              defaultChecked={params.deadlineWithinDays === w.value}
-            />
+            <Radio key={w.value} value={String(w.value)} label={w.label} />
           ))}
         </RadioGroup>
       </Facet>
 
-      <Facet legend="Cost">
-        <RadioGroup name="cost" className="grid gap-1.5">
-          <Radio value="" label="Any" defaultChecked={!params.cost} />
-          <Radio value="free" label="Free" defaultChecked={params.cost === 'free'} />
-          <Radio value="paid" label="Paid" defaultChecked={params.cost === 'paid'} />
+      <Facet legend="Cost" defaultOpen={!!params.cost}>
+        <RadioGroup
+          className="grid gap-1.5"
+          value={params.cost ?? ''}
+          onValueChange={(v) => set({ cost: v || undefined })}
+        >
+          <Radio value="" label="Any" />
+          <Radio value="free" label="Free" />
+          <Radio value="paid" label="Paid" />
         </RadioGroup>
       </Facet>
 
-      <Facet legend="Individual or team">
-        <RadioGroup name="participation" className="grid gap-1.5">
-          <Radio value="" label="Any" defaultChecked={!params.participation} />
-          <Radio
-            value="individual"
-            label="Individual"
-            defaultChecked={params.participation === 'individual'}
-          />
-          <Radio value="team" label="Team" defaultChecked={params.participation === 'team'} />
+      <Facet legend="Individual or team" defaultOpen={!!params.participation}>
+        <RadioGroup
+          className="grid gap-1.5"
+          value={params.participation ?? ''}
+          onValueChange={(v) => set({ participation: v || undefined })}
+        >
+          <Radio value="" label="Any" />
+          <Radio value="individual" label="Individual" />
+          <Radio value="team" label="Team" />
         </RadioGroup>
       </Facet>
 
-      <Facet legend="Entry pathway">
-        <RadioGroup name="pathway" className="grid gap-1.5">
-          <Radio value="" label="Any" defaultChecked={!params.pathway} />
-          <Radio
-            value="individual"
-            label="Enter on your own"
-            defaultChecked={params.pathway === 'individual'}
-          />
-          <Radio
-            value="school_or_chapter"
-            label="Through a school or chapter"
-            defaultChecked={params.pathway === 'school_or_chapter'}
-          />
+      <Facet legend="Entry pathway" defaultOpen={!!params.pathway}>
+        <RadioGroup
+          className="grid gap-1.5"
+          value={params.pathway ?? ''}
+          onValueChange={(v) => set({ pathway: v || undefined })}
+        >
+          <Radio value="" label="Any" />
+          <Radio value="individual" label="Enter on your own" />
+          <Radio value="school_or_chapter" label="Through a school or chapter" />
         </RadioGroup>
       </Facet>
 
-      <Facet legend="Delivery">
-        <RadioGroup name="delivery" className="grid gap-1.5">
-          <Radio value="" label="Any" defaultChecked={!params.delivery} />
-          <Radio
-            value="in_person"
-            label="In person"
-            defaultChecked={params.delivery === 'in_person'}
-          />
-          <Radio value="virtual" label="Virtual" defaultChecked={params.delivery === 'virtual'} />
-          <Radio value="hybrid" label="Hybrid" defaultChecked={params.delivery === 'hybrid'} />
+      <Facet legend="Delivery" defaultOpen={!!params.delivery}>
+        <RadioGroup
+          className="grid gap-1.5"
+          value={params.delivery ?? ''}
+          onValueChange={(v) => set({ delivery: v || undefined })}
+        >
+          <Radio value="" label="Any" />
+          <Radio value="in_person" label="In person" />
+          <Radio value="virtual" label="Virtual" />
+          <Radio value="hybrid" label="Hybrid" />
         </RadioGroup>
       </Facet>
-    </form>
+    </div>
   );
 }
