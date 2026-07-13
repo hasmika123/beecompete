@@ -15,6 +15,8 @@ export interface SeedItem {
 export interface RunOptions {
   dryRun: boolean;
   offline: boolean;
+  /** SSRF-guard opt-out for the fetch step (--allow-private). */
+  allowPrivate?: boolean;
 }
 
 export interface ItemReport {
@@ -23,6 +25,10 @@ export interface ItemReport {
   confidence?: number;
   valid: boolean;
   errors: string[];
+  /** Non-blocking hints for the human reviewer (domain mismatch, odd field combos). */
+  warnings: string[];
+  /** Model uncertainty notes for the S4 reviewer (M1 — printed, never POSTed). */
+  reviewerNotes?: string;
   submission?: ImportSubmission;
   submittedId?: string;
   outcome: 'dry-run' | 'submitted' | 'invalid' | 'error';
@@ -38,49 +44,42 @@ export async function runItem(
   opts: RunOptions,
 ): Promise<ItemReport> {
   try {
-    const { sourceUrl, pageText, inputPath } = await acquireText(item, config);
+    const { sourceUrl, pageText, inputPath, remote } = await acquireText(item, config, opts);
     const { extraction, backend } = await extract({ sourceUrl, pageText, inputPath }, config, {
       offline: opts.offline,
     });
 
-    const { ok, errors } = validatePayload(extraction.payload);
+    const { ok, errors, warnings } = validatePayload(extraction.payload);
+    warnings.push(...crossCheckOfficialUrl(extraction.payload.officialUrl, sourceUrl, remote));
     const confidence = scoreConfidence(extraction);
+    // H2: sourceUrl is ALWAYS the URL we actually fetched (or the local file path) — never the
+    // LLM-extracted officialUrl, which page content can steer. officialUrl stays in the payload.
     const submission: ImportSubmission = {
       payload: extraction.payload,
-      sourceUrl: extraction.payload.officialUrl ?? sourceUrl,
+      sourceUrl,
       confidence,
     };
 
-    if (!ok) {
-      return {
-        source: item.source,
-        backend,
-        confidence,
-        valid: false,
-        errors,
-        submission,
-        outcome: 'invalid',
-      };
-    }
-    if (opts.dryRun) {
-      return {
-        source: item.source,
-        backend,
-        confidence,
-        valid: true,
-        errors: [],
-        submission,
-        outcome: 'dry-run',
-      };
-    }
-    const result = await submitToImportQueue(submission, config);
-    return {
+    const base = {
       source: item.source,
       backend,
       confidence,
+      warnings,
+      ...(extraction.reviewerNotes ? { reviewerNotes: extraction.reviewerNotes } : {}),
+      submission,
+    };
+
+    if (!ok) {
+      return { ...base, valid: false, errors, outcome: 'invalid' };
+    }
+    if (opts.dryRun) {
+      return { ...base, valid: true, errors: [], outcome: 'dry-run' };
+    }
+    const result = await submitToImportQueue(submission, config);
+    return {
+      ...base,
       valid: true,
       errors: [],
-      submission,
       submittedId: result.id,
       outcome: 'submitted',
       message: `queued ${result.id} (${result.status})`,
@@ -90,21 +89,62 @@ export async function runItem(
       source: item.source,
       valid: false,
       errors: [],
+      warnings: [],
       outcome: 'error',
       message: err instanceof Error ? err.message : String(err),
     };
   }
 }
 
+/**
+ * H2 companion check: when the LLM's officialUrl points somewhere other than the site we actually
+ * fetched, flag it for the reviewer — a page-injected "official URL" is exactly how a phishing
+ * domain would try to ride an extraction. Registrable-domain comparison is the naive last-two-
+ * labels heuristic (no public-suffix list in v0), which is enough to catch cross-site steering.
+ */
+function crossCheckOfficialUrl(
+  officialUrl: string | null | undefined,
+  fetchedUrl: string,
+  remote: boolean,
+): string[] {
+  if (!remote || !officialUrl) return [];
+  let official: URL;
+  let fetched: URL;
+  try {
+    official = new URL(officialUrl);
+    fetched = new URL(fetchedUrl);
+  } catch {
+    return []; // malformed URLs are reported by validatePayload
+  }
+  if (registrableDomain(official.hostname) !== registrableDomain(fetched.hostname)) {
+    return [
+      `officialUrl domain (${official.hostname}) differs from the fetched page's domain ` +
+        `(${fetched.hostname}) — verify before approving`,
+    ];
+  }
+  return [];
+}
+
+function registrableDomain(hostname: string): string {
+  const labels = hostname.toLowerCase().split('.').filter(Boolean);
+  return labels.slice(-2).join('.');
+}
+
 async function acquireText(
   item: SeedItem,
   config: Config,
-): Promise<{ sourceUrl: string; pageText: string; inputPath?: string }> {
+  opts: RunOptions,
+): Promise<{ sourceUrl: string; pageText: string; inputPath?: string; remote: boolean }> {
   if (isUrl(item.source)) {
-    const page = await fetchPage(item.source, config);
-    return { sourceUrl: page.finalUrl, pageText: page.text };
+    const page = await fetchPage(item.source, config, { allowPrivate: opts.allowPrivate });
+    return { sourceUrl: page.finalUrl, pageText: page.text, remote: true };
   }
   // Local HTML file — the offline/fixture path.
   const html = await readFile(item.source, 'utf8');
-  return { sourceUrl: item.source, pageText: htmlToText(html), inputPath: item.source };
+  return {
+    sourceUrl: item.source,
+    pageText: htmlToText(html),
+    inputPath: item.source,
+    remote: false,
+  };
 }

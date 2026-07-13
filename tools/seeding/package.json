@@ -10,7 +10,7 @@
   "scripts": {
     "seed": "tsx src/index.ts",
     "dry-run": "tsx src/index.ts --dry-run --input fixtures/sample-competition.html",
-    "test": "node --import tsx --test test/validate.test.ts test/fetch.test.ts",
+    "test": "node --import tsx --test test/validate.test.ts test/fetch.test.ts test/submit.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

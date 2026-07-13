@@ -9,10 +9,16 @@ export interface Config {
   fetchTimeoutMs: number;
 }
 
+/**
+ * Default model id (H1). Overridable via ANTHROPIC_MODEL; if Anthropic retires this id the
+ * extract step fails with an explicit "set ANTHROPIC_MODEL" error instead of a bare 404.
+ */
+export const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-5';
+
 export function loadConfig(): Config {
   return {
     anthropicApiKey: emptyToUndefined(process.env.ANTHROPIC_API_KEY),
-    anthropicModel: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-latest',
+    anthropicModel: process.env.ANTHROPIC_MODEL || DEFAULT_ANTHROPIC_MODEL,
     apiBase: (process.env.BEECOMPETE_API_BASE || 'http://localhost:8080').replace(/\/+$/, ''),
     adminToken: emptyToUndefined(process.env.ADMIN_API_TOKEN),
     userAgent:
