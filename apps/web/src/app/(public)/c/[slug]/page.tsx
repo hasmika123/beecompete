@@ -10,6 +10,7 @@ import {
   ExternalLink,
   Flag,
   Pencil,
+  ShareMenu,
   VerifiedSeal,
   buttonClasses,
   cn,
@@ -21,7 +22,6 @@ import { KeyDatesTimeline } from '@/components/detail/key-dates-timeline';
 import { KeyFacts } from '@/components/detail/key-facts';
 import { RelatedCompetitions } from '@/components/detail/related-competitions';
 import { ResourcesRow } from '@/components/detail/resources-row';
-import { ShareButton } from '@/components/detail/share-button';
 import { StickyBottomBar } from '@/components/detail/sticky-bottom-bar';
 import { StubAction } from '@/components/detail/stub-action';
 import { TrustPanel } from '@/components/detail/trust-panel';
@@ -161,7 +161,7 @@ export default async function CompetitionDetailPage({
               ) : (
                 <span />
               )}
-              <ShareButton title={competition.name} path={path} />
+              <ShareMenu title={competition.name} path={path} />
             </div>
 
             <div className="mt-6 rounded-[var(--radius-panel)] border border-border bg-surface-raised p-5">

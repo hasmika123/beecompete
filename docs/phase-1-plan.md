@@ -53,7 +53,10 @@
 > hidden as the R1 baseline) and the detail trust panel (badge + tier blurb, replacing the R1-7
 > first-pass). Organizer verified seal stays a separate org-level signal; locked "maintained
 > by" wording preserved. Frontend-only.
-> **Next:** R1-11 share a competition. Deferred: PR C (S3 hero-image upload + inline
+> **R1-11 done (2026-07-13) — share a competition (M21):** shared `packages/ui` `ShareMenu` on
+> the detail header (channels + copy-link + native sheet). Privacy: plain intent links, clean
+> URL, no tracking, collects nothing (M21/M34 rule).
+> **Next:** R1-12 legal pages. Deferred: PR C (S3 hero-image upload + inline
 > FAQ/Resource edit).
 
 The ordered, buildable task list for Phase 1. **Every task below becomes a GitHub Issue** (titled with its

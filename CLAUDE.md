@@ -205,7 +205,12 @@ per-tier icon/variant/blurb, used on the CompetitionCard (elevated + `unverified
 the tier blurb as visible text, replacing the R1-7 first-pass tier map). The **organizer**
 verified seal (org-level) stays separate on the card + header. Locked "maintained by … Curation
 Team → host org after claim" wording preserved. Frontend-only (verificationState + provenance
-already exposed since R1-4). Next per `docs/phase-1-plan.md`: **R1-11 share a competition**.
+already exposed since R1-4). **R1-11 done (2026-07-13) — share a competition (M21):** shared
+`packages/ui` **ShareMenu** on the detail header (supersedes the R1-7 light share button) — a
+popover of explicit channels (Copy link, Email, X, Facebook, WhatsApp, LinkedIn) + the OS share
+sheet where available. **Privacy (M21/M34 rule): plain intent links, clean page URL with NO
+tracking/UTM params, no login, collects nothing.** A11y: Escape/click-outside close + focus
+return. Next per `docs/phase-1-plan.md`: **R1-12 legal pages** (launch surface).
 **Deferred (PR C):** S3 pre-signed
 hero-image upload + inline FAQ/
 Resource row-edit. **Before prod users:** set `ADMIN_API_TOKEN` in both VPS `.env` + `/admin`
