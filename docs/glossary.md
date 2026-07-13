@@ -83,7 +83,7 @@ the **canonical** term is bolded and the synonyms-to-avoid are listed so we stay
 | **Rubric** | The scoring criteria (often weighted) judges use. | |
 | **Judging Mode** | The evaluation method: weighted-score, ranked-choice/STV, points, consensus, public vote, screening, gallery. | See `competitive-analysis.md` §3. |
 | **Promotion** (a.k.a. **Featured Listing**) | A paid, labeled, capped visibility boost for an Edition (search/spotlight/digest/rec). | Facet-1 revenue. Distinct from Sponsorship. |
-| **Verification / Trust Tier** | A listing's trust state: **Curated → Claimed → Verified → Unverified**. Shown to users. | Anti-scam; see registry DQ11–DQ14. Surfaced as **maintainer attribution**: "Listing *maintained by* BeeCompete Curation Team" (curated) → host org (claimed+). Never "managed by" — the organizer runs the competition; the maintainer keeps the *listing* accurate. |
+| **Verification / Trust Ladder** | The **Organization's** trust state: **Curated (unclaimed) → Claimed (unverified) → Verified** — verified implies claimed; "Unverified" retired (owner 2026-07-13). Listings carry no trust state of their own: a competition's maintainer is **derived** from its organizer org (org claimed/verified ⇒ host-maintained; org curated or no org ⇒ curated). | Anti-scam; see registry DQ11–DQ14 + domain-model §3f. Surfaced as **maintainer attribution**: "Listing *maintained by* BeeCompete Curation Team" (org unclaimed / no org) → host org (claimed+). Never "managed by" — the organizer runs the competition; the maintainer keeps the *listing* accurate. The verified seal is org-level only. |
 
 ## System, money & data
 
@@ -93,7 +93,7 @@ the **canonical** term is bolded and the synonyms-to-avoid are listed so we stay
 | **Entitlement** | A record granting access to a paid Product, scoped to a Competition or Edition. The one abstraction behind all purchases. | `{scope, beneficiary, payer, product/tier, validity}`. |
 | **Payer vs. Beneficiary** | The party who *pays* (parent, educator, host, sponsor) can differ from who *holds* the benefit (student, host org). | Foundation Hook #12. |
 | **Product / Tier** | A purchasable thing and its level (Participant+, host Starter/Pro/Championship, Promotion). | |
-| **Provenance** | The origin + verification metadata on a data record (source, freshness, confidence). | Powers Trust Tiers. |
+| **Provenance** | The origin + verification metadata on a data record (source, freshness, confidence). | Powers the Trust Ladder. |
 | **Event Log** (a.k.a. **Activity Log**) | The append-only record of things that happened; the single source all *progress* is derived from. | Foundation Hook #9. Never store bespoke progress fields. |
 | **HeroCard** | One of the **three admin-managed image cards** in the Landing hero's right half (1 main + 2 satellites): image, position, and — main card — a link + short description shown on a hover scrim. | → M36, R1-1 schema, R1-3 admin CRUD, R1-6b render. Avoid "banner", "hero image". |
 | **FeaturedSlot** | An **admin-picked, ordered** entry in the Landing "Featured Competitions" carousel, pointing at a Competition. | → M36. Editorial picks; distinct from **Promotion** (paid, labeled — M28, Phase 3). |

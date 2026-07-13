@@ -1,362 +1,113 @@
-# Sweep remediation — implementation plans (2026-07-13)
+# Sweep remediation — remaining backlog (rev 2026-07-13)
 
 Source: the full admin/app audit run 2026-07-13 (three-agent code sweep + live browser
-verification). This doc is the **approved implementation plan** for the complicated findings —
-written so an implementing session can execute without re-investigating. Part A = designed
-plans, Part B = the straightforward fix checklist, Part C = decision points (each with a
-recommended default so work never stalls), plus suggested PR slicing.
+verification). **The bulk of the plan shipped the same day** on branch
+`fix/filter-panel-ux-and-landing-stats` (commits `00aff4d`…`3db0525`, local); the completed
+designs were removed from this doc and their **durable decisions moved to the planning docs**:
 
-Ground rules that apply throughout: additive-only migrations; server is the source of truth
-(client validation mirrors it); all shared UI from `packages/ui`; Conventional Commits;
-schema-touching PRs run the full loop (this doc serves as their plan artifact).
+- **`domain-model.md` §3f** — org-only trust ladder (CURATED → CLAIMED → VERIFIED; `UNVERIFIED`
+  retired; competition maintainer derived from the organizer org; migration `0009`).
+- **`domain-model.md` §8** (sweep as-built block) — TBD key dates (nullable `starts_at`,
+  migration `0008`), key-date timezone semantics (`zonedWallClockToInstant` / `formatInZone`),
+  validation bounds (grades −1..12, fees ⇒ currency, cross-field ranges; failures return
+  **400**), and the deliberate non-constraints (no team-size×participation hard rule; organizer
+  + deadline never required — the listing-health checklist surfaces completeness instead).
+- **`page-blueprints.md` decisions #32–36** — instant-apply filter panel + "Clear all",
+  band↔quick-chip canonicalization, invariant 270px card tracks, one-line card titles +
+  share-only corner (R2 slot for Save/social-proof), collapsed-by-default facets / no panel
+  scroll.
+- **`glossary.md`** — "Verification / Trust Ladder" entry rewritten to the org ladder.
+- **CLAUDE.md** current-state — sweep summary; R1-9's listing tier marked superseded.
 
----
+This doc now holds **only the remaining work**, grouped by when/how to build it. Ground rules
+still apply: additive-only migrations; server is the source of truth; all shared UI from
+`packages/ui`; Conventional Commits.
 
-## Implementation status — as built (2026-07-13)
+Two carry-over facts an implementer should know:
 
-Built on branch `fix/filter-panel-ux-and-landing-stats` (not pushed). Each PR was typechecked +
-linted + verified live against the local stack. The designs below are unchanged; this section
-records outcome + any variation.
-
-| PR  | Status | Commit | Notes / variations from the plan |
-|-----|--------|--------|----------------------------------|
-| B1  | ✅ done | `00aff4d` | A8 + A9 + A10 + round-2 card/marketplace items. **Variation:** removed the `RadioGroup` `name` attrs — without the `<form>`, the desktop+mobile panel instances collided as one native radio group. Grade selects already matched the universal dropdown (the earlier "mismatch" was a stale dev chunk). |
-| B2  | ✅ done, **2 deferred** | `d0a3f51` | **Deferred:** evaluationType checkbox group (couples to the action's CSV parsing) and featured-manager archived-filter (needs the picker payload to carry `archivedAt`); internal-docs terminology propagation also not done. |
-| A1  | ✅ done | `f2a3139` | endsAt>startsAt server rule shipped in A5. **No committed unit test** — apps/web has no test harness; converter verified in-browser across DST edges. |
-| A5  | ✅ done | `52c04f0` | **Variation:** bean-validation failures return **400** (Spring default), not the plan's speculated 422 — still rejected, message echoed. **No committed `@WebMvcTest`** (apps/api needs Testcontainers/Docker); verified via live rejections. |
-| A4  | ✅ done | `b5b0d56` | **Variation:** the deadline-key-date + region health checks were omitted from v1 (need the edition-list payload to carry a key-date/region summary — no-new-fetches rule). |
-| A7  | ✅ done (bug fix only) | `b5b0d56` | uiHints round-trip fixed; schema-driven renderer deferred per owner. |
-| A3  | ✅ done | `a2ab18b` | Migration `0008-keydate-tbd`. Card-level "Date TBD" deferred per owner (detail page only). **Extra fix:** `structured-data.ts` Event excludes TBD dates. No committed API tests. |
-| A2  | ✅ done | `29e5cba` | Migration **`0009`** (plan said "0008" — renumbered; A3 took 0008). Entity defaults → CURATED. Competition/edition `setVerification` endpoints left in place but unused. **Caveat:** the positive detail render (org seal + host-maintainer line) was NOT confirmed in-browser — a local dev SSR cache served a pre-change render; the API/DB are confirmed correct and the derivation is a typechecked conditional on `organizer.verificationState`. |
-| A6  | ⚠️ **partial** | `81dbb59` | **Done:** org restore (fixes stuck-archived) + `useConfirm` ConfirmDialog on competition+org archive. **Deferred → follow-up:** reject/remove confirms; get-by-id detail endpoints + non-PENDING links; queue pagination/search; corrections `subjectName` join. |
-
-**Owner scope decisions honored:** the two optional extras (card-level TBD label; import→
-competition link column) held out; A7 renderer deferred; decisions C1–C6 applied as recommended
-(org ladder, competition maintainer derived, grade cap 12, reject-note optional, no hard
-team-size server rule, TBD on all key-date types).
-
-**Out-of-plan gap surfaced:** Edition `advancesToEditionId` is still not exposed in the edition
-form (audit HIGH; it never had a plan section) — folded into the A6 follow-up.
-
-**Docs updated as-built alongside the code:** `domain-model.md §3f` (org trust ladder + derived
-maintainer) and `phase-1-plan.md` (R1-18/R1-19 stubs removed — now owned by this doc).
+- **A2 render caveat:** the positive detail render (org verified seal + host-maintained line
+  for a claimed/verified org) was never confirmed in a browser — a sticky local dev SSR cache
+  served a pre-change render. API/DB confirmed correct; the derivation is a typechecked
+  conditional. **Re-verify once on staging** after the branch deploys.
+- **Test debt:** `apps/web` has no test harness (converter/`isHostMaintained`/`activeChips`
+  were verified live, not by committed tests); the new API validation rules have no committed
+  `@WebMvcTest`s (needs Docker/Testcontainers locally). Folded into item 6 below.
 
 ---
 
-## Part A — designed plans
+## Now — Opus (mechanical; the patterns all exist in the codebase)
 
-### A1. Key-date timezone correctness (+ `endsAt` / `label`) — bug, HIGH
+Everything here is spec-complete, follows an existing in-repo pattern, and needs no design
+judgment — a workhorse pass. Suggested as **one PR** (items 1–4 touch adjacent admin surfaces),
+docs (5) and tests (6) can ride along or follow.
 
-**Problem.** `addKeyDate` (`apps/web/src/app/admin/competitions/[id]/editions/actions.ts`)
-converts the `datetime-local` string with `new Date(local).toISOString()` **inside the server
-action**, so the wall-clock is interpreted in the *server's* zone (UTC in prod) — not the
-admin's browser and not the IANA `timezone` field the admin picked. The chosen timezone is
-stored as a dead label. Every key date entered while server tz ≠ intended tz stores a wrong
-instant, which flows into public deadlines, effective status, and the deadline filter.
+### 1. Admin queue reachability (the A6 follow-up) — M
 
-**Design.**
-
-1. **Converter** — add `zonedWallClockToInstant(local: string, timeZone: string): string` in
-   `apps/web/src/lib/dates.ts` (server-safe, no deps), using the standard two-pass
-   Intl offset probe:
-
-   ```ts
-   // parse "YYYY-MM-DDTHH:mm" → numeric parts; guess = Date.UTC(parts)
-   // offset(utcMs, tz) = wallClock(formatToParts(utcMs, tz)) - utcMs
-   // candidate = guess - offset(guess, tz)
-   // re-probe: if offset(candidate, tz) !== offset(guess, tz), candidate = guess - offset(candidate, tz)
-   // return new Date(candidate).toISOString()
-   ```
-
-   This matches `date-fns-tz`'s `fromZonedTime` behavior, incl. DST edges (spring-forward gaps
-   resolve to the shifted instant; fall-back ambiguity resolves deterministically to the first
-   offset). Alternative if hand-rolling is unwanted: add `date-fns-tz` — but the helper is
-   ~20 lines and unit-testable, so prefer no new dep.
-
-2. **Timezone input → dropdown.** Replace the free-text IANA `Input` in
-   `key-date-manager.tsx` with a `NativeSelect`: common zones (America/New_York, Chicago,
-   Denver, Los_Angeles, Anchorage, Honolulu, UTC) + keep the current stored value as an option
-   when editing rows created with something else. **Default `America/New_York`** (matches the
-   public Eastern-fallback rule in `lib/dates.ts`). Store the zone explicitly — never empty.
-
-3. **Action fix.** `addKeyDate`: `startsAt = zonedWallClockToInstant(startsAtLocal, timezone)`.
-   Same for `endsAt` (below). Delete the `new Date(...).toISOString()` path.
-
-4. **Add the missing fields** (same form, same PR):
-   - `endsAt` — optional second `datetime-local` "Ends (optional)", converted with the SAME
-     zone. Client + server rule: `endsAt` requires `startsAt` and must be after it
-     (`@AssertTrue` on `KeyDateRequest`).
-   - `label` — optional `Input maxLength={200}` ("Label (optional) — shown for Custom dates").
-     Render it in the list row when present (esp. for `CUSTOM`, which today shows just
-     "custom").
-
-5. **Display fix.** The list row currently does `new Date(k.startsAt).toLocaleString()`
-   (server-local). Format in the key date's stored zone instead:
-   `new Intl.DateTimeFormat('en-US', { timeZone: k.timezone ?? 'America/New_York', dateStyle: 'medium', timeStyle: 'short', timeZoneName: 'short' })`
-   — ideally as a small `formatInZone()` helper next to the converter.
-
-6. **Existing data audit.** Wrong instants can't be auto-corrected (original intent unknown).
-   Ship a one-off check: list all key dates + zones, eyeball against organizer sites (catalog
-   is still small). No migration.
-
-**Tests.** Unit: converter across EST/EDT boundary (US DST 2026: Mar 8 / Nov 1), UTC,
-half-hour zone (Asia/Kolkata), gap time (2:30 AM Mar 8). Integration: create 19:00
-America/New_York in July → stored `23:00Z`.
-
-**Size:** S–M. No schema change (`ends_at`, `label`, `timezone` columns already exist).
-
----
-
-### A2. R1-19 — org trust ladder + derived competition maintainer — schema
-
-**Owner rule (2026-07-13, refined).** Trust lives on the **organization only**, as a ladder:
-
-| Org state | Meaning |
-|---|---|
-| `CURATED` | **Unclaimed** — BeeCompete maintains the record. Verification does not apply at all here. |
-| `CLAIMED` | A host claimed the org — **not (yet) verified**. |
-| `VERIFIED` | Claimed **and** identity-verified. `VERIFIED` implies claimed — verification only exists for claimed orgs. |
-
-**Competitions (and Editions) carry NO trust state of their own** — never
-verified/unverified, and not individually claimed or curated either. Their maintainer status
-is **derived from the organizer org**: when a host claims an organization, all of its
-competitions become host-maintained; while the org is curated (unclaimed), all of its
-competitions are curated. A competition with **no organizer** is curated by definition.
-Claiming is therefore a pure derivation — no cascade writes to competitions, ever.
-
-**Design:**
-
-1. **Org enum usage.** Reuse the existing `VerificationState` enum; org-legal values are
-   `CURATED | CLAIMED | VERIFIED` (`UNVERIFIED` retired). `OrganizationCurationService`
-   rejects `UNVERIFIED` with a 422 + explicit message. Javadoc documents the ladder and
-   "VERIFIED implies claimed".
-
-2. **Competition/Edition `verification_state` becomes vestigial.** Nothing reads it anymore
-   — not the public API mapping, not the web, not the admin UI. The curation write path stops
-   accepting it (drop from the request DTO or ignore) and always stamps the constant
-   `CURATED`. The column stays (additive-only); mark it deprecated in entity Javadoc with a
-   pointer to this rule.
-
-3. **Migration (additive changeset `0008`)** — data only:
-
-   ```sql
-   UPDATE organization SET verification_state = 'CURATED' WHERE verification_state = 'UNVERIFIED';
-   UPDATE competition  SET verification_state = 'CURATED';  -- vestigial, tidied to the constant
-   UPDATE edition      SET verification_state = 'CURATED';  -- vestigial, tidied to the constant
-   ```
-
-   Optional CHECKs after the UPDATEs: organization IN ('CURATED','CLAIMED','VERIFIED');
-   competition/edition = 'CURATED'.
-
-4. **Derivation — one rule, computed web-side (zero public-API change).** Both the card
-   summary and the detail payload already expose `organizer.verificationState`, so the web
-   derives everything:
-
-   ```
-   hostMaintained(competition) = organizer != null
-                                 && organizer.verificationState ∈ { claimed, verified }
-   ```
-
-   Add it as a tiny helper (e.g. `lib/catalog-display.ts: isHostMaintained()`) so the rule
-   exists in exactly one place. The payload's competition-level `verificationState` field can
-   keep being emitted for compatibility, but the web stops reading it; mark deprecated.
-
-5. **Admin UI.**
-   - `competition-header-actions.tsx`: **remove the verification select entirely**
-     (archive/restore stays). There is nothing to set at competition level anymore.
-   - Competitions **list column** "Verification": **drop it** (the A4 listing-health
-     checklist covers attribution; deriving it in the list would need org state joined into
-     the admin list payload — not worth it).
-   - `org-header-actions.tsx`: three options via a new `ORG_TRUST_STATES` const in
-     `admin-types.ts` — labeled `Curated (unclaimed)` / `Claimed (unverified)` / `Verified`.
-     `VERIFICATION_STATES` (4 values) is deleted once nothing references it.
-
-6. **Public trust panel redesign** (`apps/web/src/components/detail/trust-panel.tsx`) — this
-   also kills the live contradiction ("Unverified" badge above "Curated by the BeeCompete
-   team"). New rendering rules, top to bottom:
-   - **Org seal line** (only when org is `verified`): `VerifiedSeal` + "Verified organizer" —
-     the ONLY "verified" language on the page.
-   - **Maintained-by line** (always, from the derivation helper): host-maintained →
-     "Listing maintained by {organizer.name}."; otherwise → "Listing maintained by the
-     BeeCompete Curation Team." (locked wording).
-   - **Provenance line** (as today): source + confidence + last-verified date.
-   - **Claim CTA**: shown when NOT host-maintained (org curated, or no organizer).
-   - Delete the `TrustBadge tier={competition.verificationState}` + tier-blurb rendering.
-     `TrustBadge`/`trustTierMeta` are re-scoped to the ORG ladder (blurbs rewritten:
-     curated = "Maintained by the BeeCompete curation team", claimed = "Claimed by the
-     organizer — identity not yet verified", verified = "Organizer identity verified by
-     BeeCompete"); `unverified` tier + `isElevatedTier` deleted with their last usages.
-     Cards are already compliant (org seal only).
-
-7. **Docs.** Replace the "pending realignment" warning in `domain-model.md` §3f with the new
-   rule (org ladder + derived maintainer; Competition/Edition state vestigial); update the
-   glossary "Verification / Trust Tier" entry to the org ladder; note this section (§A2) done
-   in the phase-1-plan follow-ups pointer; update the CLAUDE.md R1-9 current-state note.
-
-**Phase 0 (optional interim, ships in minutes if full R1-19 waits):** in `trust-panel.tsx`,
-stop rendering the tier badge/blurb entirely and derive the maintained-by line from the org
-per rule 4 — the web-side half of this design works without any schema change.
-
-**Tests.** Service: org set to UNVERIFIED → 422; competition write ignores/stamps CURATED.
-Web unit tests for `isHostMaintained` across the four cases (no org / curated org / claimed
-org / verified org); trust-panel render for the same four. Migration verified by
-`ddl-auto: validate` boot + a repository test asserting the constants.
-
-**Size:** M. Full loop (schema). Note the web-display half (rules 4–6) is schema-independent
-and can ship first as its own light-loop PR.
-
----
-
-### A3. R1-18 — "TBD" deadlines — schema
-
-**Model.** A key date whose `starts_at IS NULL` means "this milestone exists but its date is
-TBD". Applies to **any** `KeyDateType` (uniform; see decision C6).
-
-1. **Migration (additive changeset)** — `ALTER TABLE key_date ALTER COLUMN starts_at DROP NOT NULL;`
-   (constraint *relaxation* — non-destructive, allowed under additive-only; say so in the
-   changeset comment). Entity: remove `@NotNull` from `KeyDate.startsAt` + `nullable = false`.
-   DTO: `KeyDateRequest.startsAt` optional; **new rule**: `endsAt != null ⇒ startsAt != null`
-   (`@AssertTrue`, shared with A1's after-check).
-
-2. **`EffectiveStatus` — critical NPE fix.** `earliest()` streams
-   `.map(KeyDate::getStartsAt).min(naturalOrder())` — a null date **throws NPE** today, it
-   doesn't just misbehave. Add `.filter(k -> k.getStartsAt() != null)` before the map. A TBD
-   REG_CLOSE therefore never renders CLOSED (correct).
-
-3. **Search is already null-safe** (verified): the deadline lateral filters
-   `kd.starts_at > :now` (NULL excluded by SQL semantics) and the deadline sort is already
-   `NULLS LAST`. A TBD-only competition simply carries no `next_deadline` — no SQL change
-   needed for correctness.
-
-4. **Admin UI** (`key-date-manager.tsx`): a "Date TBD" `Checkbox` per add-row. Checked →
-   disable + clear the `datetime-local`, drop `required`, submit no `startsAt` (the action's
-   `startsAt ? … : null` path already tolerates empty once the input stops blocking it).
-   List rows render **"TBD"** (muted) for null dates. Postgres orders `ASC NULLS LAST` by
-   default, so repository `OrderByStartsAt` lists TBD rows last automatically — verify once.
-
-5. **Public rendering:**
-   - **Timeline** (`key-dates-timeline.tsx` + `detail-display`): null-date items render a
-     "TBD" chip instead of a date, sorted last; skip ics/Google add-to-calendar links for
-     them (nothing to export).
-   - **At-a-glance**: if a future dated deadline exists → today's behavior; else if a
-     REG_CLOSE/SUBMISSION_DUE key date with null date exists → show `Deadline · TBD`; else
-     omit the row (today's behavior).
-   - **Card** (phase 2, optional): showing "TBD" on cards needs the search projection to also
-     surface a `deadline_tbd` boolean (`EXISTS (… kd.type IN (REG_CLOSE,SUBMISSION_DUE) AND
-     kd.starts_at IS NULL)` when `next_deadline IS NULL`) → `CompetitionSummary.deadlineTbd`
-     → `toCardData` maps `deadlineLabel: 'Date TBD'`. Ship the detail-page TBD first; add
-     this only if cards should say TBD too.
-
-6. **Types:** web `KeyDate.startsAt: string | null` (public + admin payload types).
-
-**Tests.** EffectiveStatus with a null-date REG_CLOSE (stays OPEN, no NPE); repository round-
-trip with null starts_at; web: timeline renders TBD chip; at-a-glance TBD row.
-
-**Size:** M (M+ with the card boolean). Full loop (schema).
-
----
-
-### A4. Listing-health checklist (answers "should organizer/deadline be required?")
-
-**Decision embedded here:** neither becomes hard-`required`. Organizer must stay nullable
-(imports start unattributed — entity + docs are explicit); deadline can't exist at
-competition-create (dates live on Edition key dates, D3). Enforcement UX = a **derived
-completeness checklist**, no schema.
-
-1. **Helper** `apps/web/src/lib/listing-health.ts`:
-   `listingHealth(competition, editions, faqs, resources): HealthCheck[]` where
-   `HealthCheck = { key, label, ok, detail? }`. Checks (v1):
-   - has organizer (`organizerOrgId != null`) — *"unattributed listing"*
-   - has summary · has description
-   - has ≥1 non-archived edition
-   - current edition has a REG_CLOSE or SUBMISSION_DUE key date (dated **or TBD** once A3
-     lands) — *"no deadline on record"*
-   - current edition has a registration URL
-   - current edition has ≥1 region
-2. **Component** `components/admin/listing-health.tsx`: a `Card` titled "Listing health" —
-   one row per check, `CheckCircle` (success) / `Warning` (warning tone) icon + label; all-ok
-   collapses to a single "Complete ✓" line. Purely informational — never blocks saves.
-3. **Placement:** admin competition page Details tab, above the form (the page already
-   fetches editions/faqs/resources for tab counts — no new fetches). A list-page column needs
-   child aggregates in the admin list endpoint — defer.
-4. **Future hook:** this component is the natural home for an explicit "approved/listed"
-   status if R2+ adds a draft/publish gate.
-
-**Size:** S.
-
----
-
-### A5. Validation hardening — exact spec
-
-Server first (source of truth), forms mirror. All bounds currently client-only.
-
-**`CompetitionRequest`** (Java record — put `@AssertTrue` on instance methods):
-
-| Field | Add |
-|---|---|
-| `minGrade`, `maxGrade` | `@Min(-1) @Max(12)` (see decision C3) |
-| `minAge`, `maxAge` | `@Min(0) @Max(25)` |
-| `teamSizeMin`, `teamSizeMax` | `@Min(1)` |
-| cross-field | `@AssertTrue isGradeRangeValid()` (`min==null || max==null || min<=max`); same for ages, team sizes |
-| team-size gating | **no hard server rule** (imports may carry sloppy data — decision C5); UI-only |
-
-**`EditionRequest`:**
-
-| Field | Add |
-|---|---|
-| `entryFee`, `prizeValue` | `@PositiveOrZero @Digits(integer = 10, fraction = 2)` |
-| `currency`, `prizeCurrency` | `@Pattern(regexp = "[A-Z]{3}")` (null allowed) |
-| cross-field | `@AssertTrue`: `entryFee != null ⇒ currency != null`; `prizeValue != null ⇒ prizeCurrency != null` |
-
-**`KeyDateRequest`:** `@AssertTrue`: `endsAt == null || (startsAt != null && endsAt.isAfter(startsAt))` (shared with A1/A3).
-
-**Form mirrors** (client): competition grade `max={13}` → `max={12}`; team-size inputs
-disabled + cleared when `participationMode === 'INDIVIDUAL'` (client-side `useState` watch);
-fee/prize `min={0}`; currency inputs `pattern="[A-Za-z]{3}"` + uppercase on submit
-(`.toUpperCase()` in the action); missing `maxLength`s: slug 160, officialUrl/logo/
-registrationUrl 1000, category slug 140.
-
-`ApiExceptionHandler` already surfaces messages — give each `@AssertTrue` a clear
-`message = "…"`. Tests: one `@WebMvcTest`/validator unit per rule.
-
-**Size:** S–M, mechanical.
-
----
-
-### A6. Admin queues & reachability — get-by-id, pagination, names, confirmations
-
-1. **Get-by-id endpoints.** Add `GET /api/v1/admin/import-records/{id}` (and mirror for
-   corrections if its detail page also digs through the list — verify at impl). Detail pages
-   fetch by id → deep links + back-after-decision work for ANY status. Reviewed records
-   render a read-only outcome panel (status badge + note + reviewed date). Linking an
-   approved import to the created competition needs an additive
-   `import_record.created_competition_id` column — **phase 2, optional** (column doesn't
-   exist today; verified).
+1. **Get-by-id endpoints.** `GET /api/v1/admin/import-records/{id}` (and mirror for
+   corrections if its detail page digs through the list — verify at impl). Detail pages fetch
+   by id → deep links + back-after-decision work for ANY status. Reviewed records render a
+   read-only outcome panel (status badge + note + reviewed date).
 2. **Non-PENDING rows become links** in both queues (works once #1 lands).
 3. **Pagination + search.** Reuse the competitions-list pattern (page param + shared
-   pagination UI): organizations (currently hard `size=100`, no search — add `q` name filter
+   pagination UI): organizations (currently hard `size=100`, no search — add a `q` name filter
    to the org admin endpoint), import-records, corrections (both `size=50`).
 4. **Corrections queue subject names.** Extend the corrections list payload with
    `subjectName` (single JOIN server-side against competition — never N+1 from the web).
-   Column shows the name, UUID demoted to a tooltip/secondary line.
-5. **`ConfirmDialog` in `packages/ui`.** Small wrapper over the existing `Modal`:
-   `<ConfirmDialog title message confirmLabel tone onConfirm>` + a `useConfirm()` hook. Apply
-   to: Archive (competition + org), Reject (both queues), carousel Remove. Reject keeps its
-   note field **optional** but relabeled "Note (optional)" (decision C4).
-6. **Org restore.** Add `restoreOrganization` server action + API call (competitions already
-   have the endpoint pattern) and render Archive/Restore toggle in `org-header-actions.tsx`
-   exactly like `competition-header-actions.tsx:50-58`.
+   Column shows the name; UUID demoted to a tooltip/secondary line.
+5. **Confirm dialogs on the remaining destructive actions** via the existing
+   `useConfirm`/ConfirmDialog (`packages/ui`, shipped in the sweep): **Reject** (both queues)
+   and carousel **Remove**. Reject's note stays **optional**, relabeled "Note (optional)"
+   (owner decision C4). Archive (competition + org) already has confirms.
 
-**Size:** M (spread across small API + web changes).
+### 2. Expose Edition `advancesToEditionId` in the edition form — S
+
+Audit HIGH: the column exists (R1-1) but the admin edition form never surfaces it, so
+advancement chains can't be curated. Add a `NativeSelect` of the competition's other editions
+(exclude self) + clear option; plain nullable-UUID write through the existing edition action.
+
+### 3. `evaluationType` free-text CSV → checkbox group — S
+
+Replace the competition form's free-text CSV input with a checkbox group of the 5 canonical
+tokens (mirror `EvaluationTypes.TOKENS` as a const in `admin-types.ts` — `submission, exam,
+live_performance, interview, portfolio`). Couples to the competition action's parsing: switch
+that field from CSV-split to `formData.getAll(...)`. Server already validates tokens at the
+write boundary (R1-5) — this is pure UX hardening.
+
+### 4. Featured-manager archived filter — S
+
+The landing admin picker's `allCompetitions` payload is `{id, name}` only, so archived
+competitions are selectable. Have the landing admin page pass `archivedAt` (or pre-filter
+server-side) and exclude archived from the picker.
+
+### 5. "Request a Competition" docs propagation — S (docs only)
+
+The public rename shipped (how-it-works + suggest pages); the canonical label decision —
+**"Request a Competition"** supersedes "Suggest a competition" — still needs propagating:
+CLAUDE.md, `page-blueprints.md` (43/143/261/322/370), `design-brief.md:180`,
+`feature-registry.md` DQ15, `glossary.md`. Route slug `/suggest-a-competition` may stay
+(rename at R1-15b when the wizard is built, with a redirect if changed).
+
+### 6. Test-debt payoff (optional, decoupled) — S–M
+
+- `apps/web`: add the Vitest harness (mirror `packages/ui`'s setup) + unit tests for
+  `zonedWallClockToInstant` (DST edges: spring-gap, fall-back, half-hour zones),
+  `isHostMaintained` (no org / curated / claimed / verified), `activeChips` band suppression,
+  `listingHealth`.
+- `apps/api`: validator tests for the A5 rules + `EffectiveStatus` with a null-date REG_CLOSE
+  (no NPE, stays OPEN). Needs Docker/Testcontainers only for repository tests — validator +
+  EffectiveStatus tests are plain JUnit.
 
 ---
 
-### A7. Schema-driven attributes form (+ the `uiHints` wipe fix) — larger, do last
+## Now — Fable (design-heavy; the one item needing real judgment)
 
-1. **Bug fix first (tiny, independent):** `putCategoryTemplate` hardcodes `uiHints: null`,
-   wiping stored hints on every save. Add a "UI hints (JSON, optional)" textarea to
-   `template-editor.tsx` round-tripping the existing value.
-2. **Define the `uiHints` shape** (nothing consumes it yet — this doc fixes the contract):
+### 7. Schema-driven attributes form (the A7 renderer) — M–L
+
+Today the admin edits a competition's `attributes` bag as raw JSON in a textarea. The uiHints
+wipe bug is already fixed (textarea round-trips); the renderer remains. Highest
+admin-ergonomics leverage of the backlog. Design (preserved from the original plan):
+
+1. **`uiHints` shape** (nothing consumes it yet — this contract is authoritative):
 
    ```json
    { "order": ["topics", "rounds"],
@@ -365,7 +116,7 @@ registrationUrl 1000, category slug 140.
      "widgets": { "notes": "textarea" } }
    ```
 
-3. **Renderer** `components/admin/attributes-fields.tsx` (client):
+2. **Renderer** `components/admin/attributes-fields.tsx` (client):
    `<AttributesFields schema uiHints value onChange>` supporting the subset the 11 launch
    templates use — `properties` of type `string` (→ `Input`; `enum` → `NativeSelect`;
    `format: uri` → `type=url`), `number`/`integer` (→ number `Input` w/ schema min/max),
@@ -373,254 +124,47 @@ registrationUrl 1000, category slug 140.
    unsupported property (nested object, `oneOf`, array-of-object) falls back to a raw JSON
    sub-textarea **for that key only**; a global "Edit raw JSON" toggle preserves today's
    full-textarea mode.
-4. **Data flow:** controlled object in the form → serialized into the existing hidden
+3. **Data flow:** controlled object in the form → serialized into the existing hidden
    `attributes` field on submit, so the server action + networknt schema validation path is
    untouched (server stays the real gate).
 
-**Size:** M–L. Highest admin-ergonomics leverage; schedule after A1–A6.
+Why Fable: the JSON-Schema→widget mapping, per-key fallback ergonomics, and the controlled↔raw
+mode switching are the judgment calls; everything else in this backlog is paint-by-numbers.
 
 ---
 
-### A8. CompetitionCard corner actions — Share on the card (align with the approved /design card)
+## Phase R2 — batch with the R2 schema/payload work (don't build now)
 
-**Problem.** The approved `/design` study card has a top-right corner: a social-proof pill
-("1.2k registered") that crossfades on hover to Save + Share icon buttons. The shipped R1
-card deliberately omitted the corner (data/actions arrive with M31/M7 at R2). Owner
-(2026-07-13): the live card must align with the study — at minimum the **Share** button.
+These all reopen API payloads or schema that R2 tasks touch anyway (R2-1 FKs, R2-7 RBAC,
+R2-10 search/popularity). Building them now means touching those surfaces twice.
 
-**Scope at R1 — Share only.** Save (Heart) needs accounts (M7, R2) and the social-proof pill
-needs M31 data (R2); build the corner as a slot-shaped container so R2 drops those in without
-relayout. Nothing else renders in the corner at R1.
+### 8. Import → created-competition link — schema (additive)
 
-**Design.**
+Approving an import creates a competition but records no link. Add
+`import_record.created_competition_id` (additive column; owner explicitly deferred 2026-07-13),
+stamp it at approve, render a "created listing" link on reviewed import detail/rows.
 
-1. **Layering inside the stretched-link card.** The whole card is an `absolute inset-0 z-10`
-   link. The corner mounts as `absolute top-2 right-2 z-20` — above the link, so clicks hit
-   the button, not the link. Real `<button>`s (keyboard-reachable; DOM/tab order: card link
-   first, then Share). A11y label: `Share ${name}`.
-2. **Reuse `ShareMenu` (R1-11)** — its API already fits cards: `path` is site-relative
-   (`/c/<slug>`, resolved to `window.location.origin` at open time — clean URL, no params, so
-   the M21/M34 privacy rule holds automatically) + `title` = competition name. Two required
-   extensions:
-   - **Icon-only trigger variant** — add a `variant?: 'button' | 'icon'` prop (icon = a
-     small ghost circle with the `Share` icon, `size-8`, `bg-surface-raised/80` backdrop so
-     it reads over any cover art per the §4 text-over-imagery rule).
-   - **Popover clipping** — `Card` is `overflow-hidden`, and ShareMenu renders its popover
-     in-tree, so it would clip. Preferred fix: render the popover through a **portal**
-     (`createPortal` to `document.body`, positioned from the trigger's
-     `getBoundingClientRect`, closed on scroll/resize). Alternative (simpler, evaluate
-     first): move the clipping to the cover element (`CategoryCover` gets the top rounding)
-     and drop `overflow-hidden` from the card root — if nothing else depends on root
-     clipping, this avoids the portal entirely.
-3. **Reveal treatment** (matches the study): corner is `opacity-0` →
-   `group-hover:opacity-100 group-focus-within:opacity-100`, and **always visible on
-   non-hover devices** (`@media (hover:none)` / Tailwind `[@media(hover:none)]:opacity-100`)
-   so touch users aren't locked out.
-4. **Server/client boundary.** `CompetitionCard` stays a server-compatible component;
-   `ShareMenu` is `'use client'` and composes fine as a child. The card gains an optional
-   `shareable?: boolean` (default true) so contexts that must stay interaction-free can opt
-   out.
-5. **Update the `/design` showcase** to show the shipped R1 corner (share-only) next to the
-   full R2 study version, and extend `competition-card.test.tsx` (share button present +
-   labeled; card link still the primary action).
+### 9. Card-level "Date TBD" label — search projection
 
-**Size:** S–M. Light loop (no schema).
+Detail pages show "Deadline · TBD" (shipped); cards show nothing for TBD-only competitions
+(owner deferred 2026-07-13). Design: the search projection surfaces a `deadline_tbd` boolean
+(`EXISTS (… kd.type IN (REG_CLOSE, SUBMISSION_DUE) AND kd.starts_at IS NULL)` when
+`next_deadline IS NULL`) → `CompetitionSummary.deadlineTbd` → `toCardData` maps
+`deadlineLabel: 'Date TBD'`. Pairs naturally with R2-10's search work (popularity sort touches
+the same native SQL + payload).
 
----
+### 10. Listing-health v2 checks — admin payload
 
-### A9. Invariant card width across the filter-panel toggle — fixed grid tracks
+The v1 checklist (shipped) omits two checks because the admin edition-list payload carries no
+key-date/region aggregates (no-new-fetches rule): *current edition has a REG_CLOSE or
+SUBMISSION_DUE key date (dated or TBD)* and *current edition has ≥1 region*. Add a small
+key-date/region summary to the edition list payload when R2 admin work reopens it, then add
+the two checks (+ the deferred list-page health column, which needs the same aggregates).
 
-**Problem (verified).** `CardGrid` uses stretchy tracks
-(`grid-cols-1 gap-5 @xl:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-4` in a `@container`), so
-every card's width is `available/N` — opening the w-72 panel narrows all cards a few px
-instead of dropping a column cleanly. Owner: card width must be **identical** with the panel
-open and closed; make the panel narrower so the math works.
+### 11. Retire the vestigial verification write paths — rides R2-7 (RBAC)
 
-**Design — cards get a fixed track width; the panel is exactly one track wide.**
-
-1. **Fixed tracks at ≥ sm:** replace the column-count container queries with
-   `repeat(auto-fill, 270px)` (Tailwind arbitrary value) + `justify-between` — card width is
-   **270px by construction**, invariant to panel state and viewport; the column count falls
-   out of `auto-fill` (no breakpoints to maintain), and leftover space breathes into the gaps
-   instead of the cards. 270px is the blueprint card width ("4 per row on desktop, ~270px").
-2. **Unify the gaps so the panel consumes exactly one column:** grid `gap-5` (20px) → `gap-6`
-   (24px) to match the aside↔results `gap-6`; then set the desktop aside to **`w-[270px]`**
-   (from `w-72`/288px — also satisfies the owner's "make the panel a little more narrow").
-   Panel + gap = track + gap ⇒ opening the panel drops exactly one column, same card width.
-3. **Mobile stays fluid:** below `sm`, keep a single full-width column
-   (`grid-cols-1` → fixed tracks only from `sm:` up, via
-   `sm:grid-cols-[repeat(auto-fill,270px)]`), so phones keep edge-to-edge cards.
-4. **Verify live** (both panel states, 1280/1360/1536 viewports): card
-   `getBoundingClientRect().width === 270` in both states; no horizontal overflow; the
-   `@container` wrapper can stay (harmless) or go if nothing else consumes it.
-5. **Consistency pass (optional):** the landing featured row already fixes width
-   (`w-[270px]` wrappers) ✓; the detail-page related grid uses `lg:grid-cols-4` stretch —
-   align it to the same fixed-track pattern for pixel-identical cards everywhere.
-
-**Size:** S. Light loop. Fiddly — do the live measurements, don't trust the math blind.
-
----
-
-### A10. Instant-apply filters + canonical chip/tag split
-
-**Owner decisions (2026-07-13, all confirmed):**
-
-1. **Instant apply** — every left-panel change applies immediately (URL + results + tags
-   update as you pick). The Apply button is removed; Reset becomes a "Clear all" link on the
-   tags row.
-2. **Band overlap renders on the quick-chip** — a grade range that exactly matches a
-   quick-chip band (Elementary −1–5 / Middle 6–8 / High 9–12) is represented ONLY by the
-   highlighted quick-chip, never by a removable tag; custom ranges (e.g. Grades 3–7) still
-   get a tag. The rule is **value-canonical** (depends only on the URL), so shared/reloaded
-   URLs render identically — provenance ("was it set via chip or panel?") is deliberately
-   not tracked.
-3. **No toggle-off on the active quick-chip** — clicking the already-selected band does
-   nothing; "All" is the deselect.
-
-**Current-state facts (verified):** the quick-chips already highlight the active band
-(`activeBand()` + `variant: 'primary'` + `aria-current` — `marketplace-page.tsx:205-233`);
-the duplication is that `activeChips()` (`marketplace-params.ts:173-183`) ALSO pushes a
-grade tag for band-exact ranges. The panel is a server-rendered GET form (blueprint decision
-#10) — instant apply converts its interaction, not its URL model.
-
-**Design.**
-
-1. **Chip/tag split (tiny, server-side):** in `activeChips()`, skip the grade chip when
-   `activeBand(params)` is defined (band-exact → the quick-chip is the representation).
-   Custom ranges keep today's "Grades X–Y" tag. One unit test.
-2. **FilterPanel → client component with instant apply:**
-   - `'use client'`; props (`path`, `params`, `facets`, `regions`) are already serializable.
-   - Drop the `<form>` submit model. Each control change computes
-     `marketplaceHref(path, params, { [key]: value })` and navigates: `RadioGroup` via its
-     controlled `value`/`onValueChange` (values from `params`), `NativeSelect`s via
-     `onChange`. Verify `marketplaceHref` resets `page` to 0 on refinement changes (the
-     Apply form drops it today — must stay true). `q` + `sort` are preserved automatically
-     (they live in `params`; the hidden inputs go away with the form).
-   - **Pending state:** lift navigation into `MarketplaceFrame` — it passes an
-     `onNavigate(href)` that wraps `startTransition(() => router.push(href))` and, while
-     pending, dims the results container (`aria-busy` + reduced opacity). The toolbar's
-     existing `aria-live` count announces the new total. Discrete controls → no debounce
-     needed; one RSC fetch per change = same cost as an Apply click today.
-   - **History:** `push` (consistent with chips/quick-chips being links; back = undo last
-     filter).
-3. **Apply/Reset removal:** delete the panel's sticky action bar entirely (this
-   **supersedes** the round-2 "Apply/Reset differentiation" Part B item). Append a quiet
-   **"Clear all"** text link to the tags row when ≥1 tag is active. Recommended semantics:
-   clear refinements but **keep `q` + `sort`** (a user's search text shouldn't vanish when
-   clearing filters) — i.e. href built from defaults + current `q`/`sort`, unlike today's
-   Reset (`href={path}`) which wipes everything.
-4. **Mobile sheet:** instant apply inside the bottom sheet too. The sheet's `open` state
-   lives in `MarketplaceFrame` (client) and should survive soft navigations — verify at
-   impl. Upgrade the sheet's close affordance to a primary **"Show {total} competitions"**
-   button (the live count updating as you pick is the feedback loop that replaces Apply).
-5. **Blueprint note:** Page-2 decision #10 documents the "plain GET form". Amend the
-   blueprint (structure unchanged; interaction is now instant-apply; every filter state
-   remains a canonical, shareable GET-param URL — chips/quick-chips stay real links, so
-   crawlability is unchanged).
-6. **Tests/verification:** `activeChips` band-suppression unit test; live browser pass —
-   radio change → URL updates → tag appears → count updates → back-button undoes; band-exact
-   panel selection highlights the quick-chip with no tag.
-
-**Size:** M. Light loop (no schema). Rides PR-B1.
-
----
-
-## Part B — straightforward fixes (no design needed)
-
-Terminology (rename → "Request a Competition"):
-- [ ] `how-it-works/page.tsx:188` button text
-- [ ] `suggest-a-competition/page.tsx:9` metadata title; `:21` `<h1>`; `:23` body copy
-      ("suggestion form" → "request form")
-- [ ] Docs propagation: CLAUDE.md, page-blueprints (43/143/261/322/370), design-brief:180,
-      feature-registry DQ15, glossary — reconcile the canonical DQ15 label
-
-Styling / consistency:
-- [ ] `admin-table.tsx:29` — drop the outer border wrapper around `EmptyState` (double border)
-- [ ] Enum rendering → `enumLabel()` everywhere: `organizations/page.tsx:37`,
-      `competitions/[id]/page.tsx:63,110-111`, `landing/page.tsx:36` (inline re-impl)
-- [ ] Edition status/scope in tables → badges (match sibling tables) — optional polish
-- [ ] **Mobile theme-toggle collision** (verified live): wrap the fixed toggle in
-      `hidden lg:block`; render a second static `ThemeToggle` inside the sidebar's top row
-      with `lg:hidden` (mobile top bar gets it inline, desktop keeps the floating corner)
-- [ ] Admin dates: 4 `toLocale*` call sites → `lib/dates.ts` helpers (or A1's
-      `formatInZone`) for consistency
-
-Small UX:
-- [x] Featured manager: disable Save at 0 items; show "Maximum of 10 featured picks" note
-      instead of silently hiding the add control; add an empty state. **Archived-filter part
-      DEFERRED** — the picker's `allCompetitions` payload is `{id,name}` only (no `archivedAt`),
-      so filtering archived needs the landing page to pass that flag.
-- [ ] Competitions-list search: add a submit `Button` + a clear (✕) link
-- [ ] **DEFERRED** — `evaluationType` free-text CSV → checkbox group of the 5 canonical tokens
-      (mirror `EvaluationTypes.TOKENS` as a const in `admin-types.ts`). Not done in the build:
-      couples to the competition action's CSV parsing (needs `form.getAll`); fold into a later pass.
-- [ ] FAQ answer textarea `rows={2}` → `rows={4}`
-- [ ] Hero-card image preview: when `imageKey` is a full URL, render a small `<img>` preview
-      (same rule the landing page uses — `hero-cards.tsx:12`); S3-key upload remains PR C
-- [ ] Category create form: add the Parent `NativeSelect` (edit form already has it)
-- [ ] Region manager: add Parent `NativeSelect` (regions tree — COUNTRY→STATE nesting)
-- [ ] Resource manager: add `displayOrder` number input (or up/down reorder like Featured);
-      FAQ-manager parity
-- [ ] Empty states: pass `description` + action (e.g. "New competition") through `AdminTable`
-
-Marketplace & card polish (owner round 2, 2026-07-13):
-
-- [ ] **Card title → one line.** `competition-card.tsx`: `CardTitle` `line-clamp-2` →
-      `truncate` (owner overrides the earlier two-line rationale — update the in-code comment
-      and the /design study note; adjust the card test if it asserts wrapping)
-- [ ] **Pin the Cost/Region facts row to the card bottom** (above the prize/deadline footer):
-      move `mt-auto` from the footer row to the facts row — both rows then anchor to the
-      bottom regardless of missing summary/organizer content; verify with a sparse card (no
-      org, no summary, no prize). Equal heights per row already come from `h-full` + grid
-      stretch — re-verify after the change with mixed sparse/full cards side by side
-- [ ] **Filter facets collapsed by default, first one open:** give `Facet` a
-      `defaultOpen?: boolean`; `FilterPanel` passes it only to the first facet.
-      *Recommended enhancement:* also default-open any facet whose filter is ACTIVE (its
-      params are set) so applied state is never hidden behind a fold
-- [ ] **No panel-internal scroll — page grows instead:** drop
-      `max-h-[calc(100dvh-6rem)] overflow-y-auto overflow-x-hidden scrollbar-slim pr-2` from
-      the desktop aside; the panel sits in normal flow. Keep `sticky top-20 self-start` —
-      with facets collapsed by default the panel fits the viewport; nuance: a
-      taller-than-viewport expanded panel won't fully stick (bottom reachable only via page
-      scroll) — acceptable; drop `sticky` entirely if that feels off in practice. The
-      mobile bottom sheet KEEPS its own scroll (it's an overlay; page growth doesn't apply).
-      The `scrollbar-slim` utility stays in globals.css (mobile sheet still uses it)
-- [ ] ~~**Apply/Reset differentiation**~~ — **SUPERSEDED by A10** (instant apply removes the
-      Apply/Reset bar entirely; Reset becomes the "Clear all" link on the tags row)
-- [ ] **Grade From/To selects don't match the universal dropdown** (owner report): they DO
-      route through `NativeSelect` — diagnose the visual delta at impl. Check, in order:
-      (1) stale dev-server chunk (restart + hard reload before debugging), (2) the wrapping
-      `<label className="grid gap-1 text-xs text-muted">` leaking `text-xs text-muted` vs
-      the Select trigger's `text-sm`/`text-foreground`, (3) cramped two-column width making
-      the closed trigger look different (padding/chevron overlap at ~120px), (4) placeholder
-      color: ui `Select` renders placeholder `text-muted`, `NativeSelect` renders the
-      selected empty option `text-foreground` — mirror by styling the select `text-muted`
-      when `value === ''` (`has-[option:checked[value='']]` or a data attribute). Fix so the
-      closed trigger is pixel-identical to the ui `Select`
-- [ ] (Designed items for this round: **A8** share-on-card, **A9** invariant card width)
-
-## Part C — decision points (recommended defaults inline)
-
-| # | Decision | Recommendation |
-|---|---|---|
-| C1 | Org trust states | **RESOLVED (owner 2026-07-13):** ladder `CURATED` (unclaimed — verification N/A) → `CLAIMED` (unverified) → `VERIFIED` (claimed + verified). `UNVERIFIED` retired. See A2. |
-| C2 | Competition-level trust state | **RESOLVED (owner 2026-07-13):** competitions have none — maintainer is derived from the organizer org (org claimed/verified ⇒ all its competitions host-maintained; org curated or no org ⇒ curated). Column vestigial, tidied to constant `CURATED`. See A2. |
-| C3 | Grade upper bound (entity comment says "13 reserved") | **12 everywhere** (server `@Max(12)` + form `max=12`); relax later if the reserved 13 ever ships — validation loosening is cheap |
-| C4 | Reject-note: require a note on queue rejections? | **Optional, relabeled "Note (optional)"** + confirm dialog (A6.5) |
-| C5 | Team-size vs participation mode: hard server rule? | **No hard rule** (imports carry sloppy data); client-side disable + listing-health warning |
-| C6 | TBD allowed on all key-date types or only deadline types? | **All types** (uniform model, simpler UI) |
-
-## Suggested PR slicing (order)
-
-1. **PR-B1** — marketplace & card polish: the round-2 Part B items + **A9** (invariant card
-   width) + **A8** (share-on-card) + **A10** (instant-apply filters + chip/tag split) — one
-   coherent public-UI pass, verified together live
-2. **PR-B2** — the admin/terminology Part B checklist (light loop; no schema)
-3. **PR-A1** — key-date timezone + endsAt/label (bug fix; light loop)
-4. **PR-A6** — queues: get-by-id, pagination, subject names, ConfirmDialog, org restore
-5. **PR-A5** — validation hardening (API + form mirrors)
-6. **PR-A3** — R1-18 TBD deadlines (schema; full loop)
-7. **PR-A2** — R1-19 org ladder + derived maintainer (schema; full loop) — or ship its
-   schema-independent web half (rules 4–6) first inside PR-B2 if the migration waits
-8. **PR-A4** — listing-health checklist
-9. **PR-A7** — uiHints fix (can ride PR-B2) + schema-driven attributes form
+Competition/edition `setVerification` endpoints exist but nothing calls them, and the columns
+are held at `CURATED` (domain-model §3f). When R2-7 replaces the shared-secret admin auth with
+real RBAC (and the claim flow formalizes org-ladder writes, DQ11), remove the dead endpoints +
+request-DTO field, and consider a CHECK or code-level assert that competition/edition
+`verification_state` stays `CURATED`. Columns themselves stay (additive-only).

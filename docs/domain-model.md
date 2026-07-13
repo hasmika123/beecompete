@@ -96,8 +96,10 @@ competitions actually state age rules; `prize_summary`/`prize_value`/`prize_curr
 display/sort fields behind the card + at-a-glance Prize; structured detail lives on `Award`.)*
 
 **`KeyDate`** [P1] — typed timeline events on an Edition.
-`id, edition_id, type (reg_open|reg_close|round_start|submission_due|results|custom), label,
-starts_at, ends_at?, timezone`
+`id, edition_id, type (reg_open|reg_close|round_start|submission_due|results|custom), label?,
+starts_at?, ends_at?, timezone`
+*(2026-07-13, R1-18 / migration `0008`: `starts_at` is nullable — NULL = the milestone exists but
+its date is **TBD**, allowed on any type. Rules + the timezone semantics live in §8.)*
 
 **`Category`** [P1] — taxonomy node. `id, parent_id?, name, slug`
 **`CategoryTemplate`** [P1] — `id, category_id, json_schema (JSONB), ui_hints (JSONB)` — validates a Competition's `attributes`.
@@ -358,3 +360,34 @@ The R1-1 catalog schema shipped (12 tables: the §5 catalog set + `CompetitionFa
   `effectiveStatus` on public edition DTOs. v0 rules: curated CLOSED/ONGOING/ARCHIVED stand;
   UPCOMING/OPEN whose deadline (earliest `REG_CLOSE`, fallback earliest `SUBMISSION_DUE`) has
   passed → closed; UPCOMING whose `REG_OPEN` has passed (deadline ahead) → open.
+
+**Sweep-remediation as-built (2026-07-13 — migrations `0008`/`0009`; remaining backlog in
+`sweep-remediation-plan.md`):**
+- **TBD key dates (R1-18, `0008`):** `key_date.starts_at` dropped NOT NULL — NULL means "this
+  milestone exists, its date is TBD", uniform across **all** key-date types (owner). Rules:
+  `ends_at` requires `starts_at` and must be after it (`@AssertTrue`); effective-status
+  computation filters null dates (a TBD `REG_CLOSE` never closes a listing); search's
+  next-deadline lateral excludes NULLs by SQL semantics and the deadline sort is `NULLS LAST`;
+  UI renders "TBD" / "Deadline · TBD" sorted last, with no add-to-calendar links; JSON-LD Event
+  omits TBD dates. A card-level "Date TBD" label is deferred (needs a `deadline_tbd` search
+  projection — see the backlog, R2).
+- **Key-date timezone semantics (bug fix):** `starts_at`/`ends_at` are instants; the `timezone`
+  column (IANA, admin-picked from a dropdown, default `America/New_York`) is the authoritative
+  wall-clock zone. Admin wall-clock input is converted server-zone-independently via web
+  `lib/dates.ts zonedWallClockToInstant` (two-pass Intl offset probe, DST-safe) and rendered
+  back via `formatInZone` in the stored zone — never `toLocaleString()` / server-local.
+- **Org trust ladder (R1-19, `0009`):** see §3f — trust is org-only (`CURATED → CLAIMED →
+  VERIFIED`; `UNVERIFIED` retired, existing rows folded to `CURATED`); competition/edition
+  `verification_state` is vestigial, held at the constant `CURATED`, never read.
+- **Validation bounds (server = source of truth; forms mirror):** grades `-1..12` (the entity
+  comment's "13 reserved" is NOT accepted yet — loosening validation later is cheap, owner);
+  ages `0..25`; team sizes `≥ 1`; cross-field `min ≤ max` on grades/ages/team sizes;
+  `entry_fee`/`prize_value` `≥ 0` with ≤ 2 decimals, each requiring its 3-letter uppercase
+  ISO-4217 currency; key-date `ends_at > starts_at`. Bean-validation failures return **400**
+  with the rule's message echoed (Spring default; `ApiExceptionHandler` surfaces it).
+- **Deliberate non-constraints (completeness ≠ validity):** NO hard rule tying team-size fields
+  to `participation_mode` (imports carry sloppy data — owner; the UI disables the inputs
+  instead), and `organizer_org_id` + deadlines are never required (imports start unattributed;
+  dates live on Edition key dates, D3). Completeness is surfaced by the admin **listing-health
+  checklist** instead (web `lib/listing-health.ts` — derived, informational, never blocks
+  saves; the natural home for an explicit draft/publish gate if R2+ adds one).

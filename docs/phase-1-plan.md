@@ -114,11 +114,13 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
 - **R1-16** — In-app **bug/feedback report**. (DQ7 precursor)
 - **R1-17** — **R1 release gate** (dev-process §8): a11y (WCAG AA) on public pages, WAF/rate-limit on, backups tested, legal pages live, **legal foundation done** (entity + insurance + trademark search — setup-runbook §1b), **content gate met** (see "Data seeding & catalog readiness" below), **search indexing flipped ON** (R1-10 gate — the site is invisible to Google until this): (1) set `SEARCH_INDEXING=on` in `~/beecompete-prod/.env` + `docker compose -f docker-compose.prod.yml up -d web`, (2) verify `https://beecompete.com/robots.txt` serves the allow ruleset + a spot-checked page emits `index, follow`, (3) submit `sitemap.xml` in Google Search Console + Bing Webmaster Tools, (4) confirm staging still serves `Disallow: /` → **tag R1, deploy to prod.**
 
-**R1 UI/data follow-ups (surfaced 2026-07-13 during the admin/marketplace UI review)** are
-planned — with designs, decisions, and PR slicing — in **`docs/sweep-remediation-plan.md`**,
-which is the source of truth for that work. This includes the two deferred schema items once
-tracked here as standalone tasks: **deadline "TBD" support** (→ §A3) and the **org trust
-ladder + derived competition maintainer** (→ §A2).
+**R1 UI/data follow-ups (surfaced 2026-07-13 during the admin/marketplace UI review)** were
+**built the same day** — including the two schema items once tracked here as standalone tasks:
+**deadline "TBD" support** (migration `0008`) and the **org trust ladder + derived competition
+maintainer** (migration `0009`); as-built rules live in `domain-model.md` §3f/§8 and
+`page-blueprints.md` decisions #32–36. The small **remaining backlog** (admin-queue
+reachability, the schema-driven attributes form, and the R2-batched payload items) is tracked
+in **`docs/sweep-remediation-plan.md`**.
 
 ---
 

@@ -359,6 +359,32 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
 27. **Community pages approved as a Phase-2 surface** (public label "Community", entity Article — M19/M34/M35): admin-published articles with linked-competition cards, like/love + share, and comments that are **adult-visible-only, read and write** (hidden from minors and logged-out visitors; amended same day). Blueprint before build; added to Deferred pages meanwhile.
 28. **Typography revised from owner reference images** (supersedes #20's Inter-Display clause; details `design-brief.md` §3): **display serif for headlines** — *similar* to the reference; **exact face/size/weight delegated to builder judgment at F7** (owner, same day — no blocking specimen approval; hero prototype approvals stay the checkpoint). **Inter stays for body/UI**. Self-hosted, no font CDN, as before. Hero/section headings across all blueprints render in the display serif.
 
+**2026-07-13 (owner — marketplace/card sweep; built same day):**
+32. **Filter panel is instant-apply** (amends the Page-2 interaction; the URL model is
+    unchanged): every panel change navigates immediately — the Apply/Reset bar is gone; a quiet
+    **"Clear all"** link on the active-tags row clears refinements but **keeps `q` + sort**.
+    Every filter state remains a canonical, shareable GET-param URL (chips/quick-chips stay real
+    links — crawlability unchanged). Pending navigation dims the results (`aria-busy`); the
+    mobile sheet applies instantly too and closes via a primary **"Show {total} competitions"**
+    button (the live count is the feedback loop that replaced Apply).
+33. **Grade band ↔ quick-chip canonicalization:** a grade range that exactly matches a
+    quick-chip band (Elementary −1–5 / Middle 6–8 / High 9–12) renders ONLY as the highlighted
+    quick-chip — never as a removable tag; custom ranges still get a "Grades X–Y" tag. The rule
+    is **value-canonical** (derived from the URL alone), so shared/reloaded URLs render
+    identically. Clicking the already-active chip does nothing — "All" is the deselect.
+34. **Card width is invariant** to the filter-panel toggle: fixed grid tracks
+    (`repeat(auto-fill, 270px)` — the blueprint card width) from `sm:` up, and the desktop panel
+    is exactly one track wide (270px), so opening it drops exactly one column at identical card
+    width. Mobile stays a fluid single column.
+35. **Card refinements:** the title is **one line, truncated** (supersedes the two-line clamp);
+    the Cost/Region facts row pins to the card bottom above the prize/deadline footer; the
+    top-right corner ships **Share-only at R1** (ShareMenu icon variant, popover rendered
+    through a portal; hover/focus-revealed, always visible on touch devices) — the corner is
+    the R2 slot for Save (M7) and the social-proof pill (M31, #18), added without relayout.
+36. **Panel facets are collapsed by default** (the first facet plus any facet with an active
+    filter open); the desktop panel has no internal scroll — the page grows instead (the mobile
+    bottom sheet keeps its own scroll).
+
 ## Status
 | Page | Blueprint | Style prototype | Built |
 |---|---|---|---|
