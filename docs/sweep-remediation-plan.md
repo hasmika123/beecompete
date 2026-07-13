@@ -12,6 +12,37 @@ schema-touching PRs run the full loop (this doc serves as their plan artifact).
 
 ---
 
+## Implementation status — as built (2026-07-13)
+
+Built on branch `fix/filter-panel-ux-and-landing-stats` (not pushed). Each PR was typechecked +
+linted + verified live against the local stack. The designs below are unchanged; this section
+records outcome + any variation.
+
+| PR  | Status | Commit | Notes / variations from the plan |
+|-----|--------|--------|----------------------------------|
+| B1  | ✅ done | `00aff4d` | A8 + A9 + A10 + round-2 card/marketplace items. **Variation:** removed the `RadioGroup` `name` attrs — without the `<form>`, the desktop+mobile panel instances collided as one native radio group. Grade selects already matched the universal dropdown (the earlier "mismatch" was a stale dev chunk). |
+| B2  | ✅ done, **2 deferred** | `d0a3f51` | **Deferred:** evaluationType checkbox group (couples to the action's CSV parsing) and featured-manager archived-filter (needs the picker payload to carry `archivedAt`); internal-docs terminology propagation also not done. |
+| A1  | ✅ done | `f2a3139` | endsAt>startsAt server rule shipped in A5. **No committed unit test** — apps/web has no test harness; converter verified in-browser across DST edges. |
+| A5  | ✅ done | `52c04f0` | **Variation:** bean-validation failures return **400** (Spring default), not the plan's speculated 422 — still rejected, message echoed. **No committed `@WebMvcTest`** (apps/api needs Testcontainers/Docker); verified via live rejections. |
+| A4  | ✅ done | `b5b0d56` | **Variation:** the deadline-key-date + region health checks were omitted from v1 (need the edition-list payload to carry a key-date/region summary — no-new-fetches rule). |
+| A7  | ✅ done (bug fix only) | `b5b0d56` | uiHints round-trip fixed; schema-driven renderer deferred per owner. |
+| A3  | ✅ done | `a2ab18b` | Migration `0008-keydate-tbd`. Card-level "Date TBD" deferred per owner (detail page only). **Extra fix:** `structured-data.ts` Event excludes TBD dates. No committed API tests. |
+| A2  | ✅ done | `29e5cba` | Migration **`0009`** (plan said "0008" — renumbered; A3 took 0008). Entity defaults → CURATED. Competition/edition `setVerification` endpoints left in place but unused. **Caveat:** the positive detail render (org seal + host-maintainer line) was NOT confirmed in-browser — a local dev SSR cache served a pre-change render; the API/DB are confirmed correct and the derivation is a typechecked conditional on `organizer.verificationState`. |
+| A6  | ⚠️ **partial** | `81dbb59` | **Done:** org restore (fixes stuck-archived) + `useConfirm` ConfirmDialog on competition+org archive. **Deferred → follow-up:** reject/remove confirms; get-by-id detail endpoints + non-PENDING links; queue pagination/search; corrections `subjectName` join. |
+
+**Owner scope decisions honored:** the two optional extras (card-level TBD label; import→
+competition link column) held out; A7 renderer deferred; decisions C1–C6 applied as recommended
+(org ladder, competition maintainer derived, grade cap 12, reject-note optional, no hard
+team-size server rule, TBD on all key-date types).
+
+**Out-of-plan gap surfaced:** Edition `advancesToEditionId` is still not exposed in the edition
+form (audit HIGH; it never had a plan section) — folded into the A6 follow-up.
+
+**Docs updated as-built alongside the code:** `domain-model.md §3f` (org trust ladder + derived
+maintainer) and `phase-1-plan.md` (R1-18/R1-19 stubs removed — now owned by this doc).
+
+---
+
 ## Part A — designed plans
 
 ### A1. Key-date timezone correctness (+ `endsAt` / `label`) — bug, HIGH
@@ -515,12 +546,14 @@ Styling / consistency:
       `formatInZone`) for consistency
 
 Small UX:
-- [ ] Featured manager: disable Save at 0 items; show "Maximum of 10 featured picks" note
-      instead of silently hiding the add control; add an empty state; filter archived
-      competitions out of `available` (admin list payload already carries `archivedAt`)
+- [x] Featured manager: disable Save at 0 items; show "Maximum of 10 featured picks" note
+      instead of silently hiding the add control; add an empty state. **Archived-filter part
+      DEFERRED** — the picker's `allCompetitions` payload is `{id,name}` only (no `archivedAt`),
+      so filtering archived needs the landing page to pass that flag.
 - [ ] Competitions-list search: add a submit `Button` + a clear (✕) link
-- [ ] `evaluationType` free-text CSV → checkbox group of the 5 canonical tokens (mirror
-      `EvaluationTypes.TOKENS` as a const in `admin-types.ts`)
+- [ ] **DEFERRED** — `evaluationType` free-text CSV → checkbox group of the 5 canonical tokens
+      (mirror `EvaluationTypes.TOKENS` as a const in `admin-types.ts`). Not done in the build:
+      couples to the competition action's CSV parsing (needs `form.getAll`); fold into a later pass.
 - [ ] FAQ answer textarea `rows={2}` → `rows={4}`
 - [ ] Hero-card image preview: when `imageKey` is a full URL, render a small `<img>` preview
       (same rule the landing page uses — `hero-cards.tsx:12`); S3-key upload remains PR C
