@@ -9,9 +9,10 @@ const EXPLORE = [
   { href: '/how-it-works', label: 'How It Works' },
 ];
 
+// Title Case both, consistent with each other and the Explore links ("How It Works").
 const CONTRIBUTE = [
   { href: '/suggest-a-competition', label: 'Suggest a Competition' },
-  { href: '/suggest-a-correction', label: 'Suggest a correction' },
+  { href: '/suggest-a-correction', label: 'Suggest a Correction' },
 ];
 
 export function SiteFooter() {
@@ -25,8 +26,10 @@ export function SiteFooter() {
             details.
           </p>
           <p className="mt-3 text-xs">
+            {/* Literal ’ (not &apos;) — an HTML entity anywhere in this text block makes SWC
+                drop the space after the inline element ("beta— the"). */}
             BeeCompete is in <strong className="font-medium text-foreground">beta</strong> — the
-            catalog is growing and details can change; always confirm dates on the organizer&apos;s
+            catalog is growing and details can change; always confirm dates on the organizer’s
             official site.
           </p>
         </div>

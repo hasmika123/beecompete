@@ -47,7 +47,9 @@ export function KeyDatesTimeline({
                 </span>
               )}
             </div>
-            <p className={cn('text-sm', past ? 'text-muted/70 line-through' : 'text-muted')}>
+            {/* Full-strength muted (not /70) — the dimmed variant fell below AA (2.97:1 light,
+                3.94:1 dark); line-through already signals "past". */}
+            <p className={cn('text-sm', past ? 'text-muted line-through' : 'text-muted')}>
               {formatDate(date.startsAt, date.timezone)}
               {multiDay && ` – ${formatDate(date.endsAt as string, date.timezone)}`}
             </p>

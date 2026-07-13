@@ -15,6 +15,14 @@ const SOURCE_LABELS: Record<string, string> = {
   crowdsourced: 'Community-submitted',
 };
 
+// Qualitative confidence, not a raw percentage: "40% confidence" reads as alarming precision on
+// a parent-facing page. Still exposes the provenance signal (DQ13), just in plain words.
+function confidenceLabel(confidence: number): string {
+  if (confidence >= 0.75) return 'high confidence';
+  if (confidence >= 0.5) return 'moderate confidence';
+  return 'details still being verified';
+}
+
 export function TrustPanel({ competition }: { competition: CompetitionDetail }) {
   const meta = trustTierMeta(competition.verificationState);
   const provenance = competition.provenance;
@@ -36,7 +44,7 @@ export function TrustPanel({ competition }: { competition: CompetitionDetail }) 
           <span>
             {SOURCE_LABELS[provenance.source] ?? provenance.source}
             {provenance.confidence != null && (
-              <> · {Math.round(Number(provenance.confidence) * 100)}% confidence</>
+              <> · {confidenceLabel(Number(provenance.confidence))}</>
             )}
           </span>
         </p>

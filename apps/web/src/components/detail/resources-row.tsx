@@ -49,35 +49,38 @@ function ResourceCard({ resource }: { resource: ResourceView }) {
     ? 'sponsored nofollow noopener noreferrer'
     : 'nofollow noopener noreferrer';
   return (
-    <a
-      role="listitem"
-      href={resource.url}
-      target="_blank"
-      rel={rel}
-      className={cn(
-        'group/res flex w-56 shrink-0 snap-start flex-col overflow-hidden rounded-[var(--radius-panel)]',
-        'border border-border bg-surface-raised transition-colors hover:border-muted/50',
-        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
-      )}
-    >
-      <div className={cn('flex h-24 items-center justify-center', tint)}>
-        <Icon aria-hidden="true" weight="duotone" className="size-9" />
-      </div>
-      <div className="flex flex-1 flex-col gap-1.5 p-3">
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-muted">{resourceTypeLabel(resource.type)}</span>
-          {resource.isAffiliate && (
-            <span className="rounded-full bg-brand-gold-soft px-2 py-0.5 text-[11px] font-medium text-foreground">
-              Affiliate
-            </span>
-          )}
+    // role="listitem" on a wrapper — on the <a> it would replace the link role, so AT would
+    // announce a nameless list item instead of a link (a11y).
+    <div role="listitem" className="flex w-56 shrink-0 snap-start">
+      <a
+        href={resource.url}
+        target="_blank"
+        rel={rel}
+        className={cn(
+          'group/res flex w-full flex-col overflow-hidden rounded-[var(--radius-panel)]',
+          'border border-border bg-surface-raised transition-colors hover:border-muted/50',
+          'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+        )}
+      >
+        <div className={cn('flex h-24 items-center justify-center', tint)}>
+          <Icon aria-hidden="true" weight="duotone" className="size-9" />
         </div>
-        <p className="line-clamp-2 text-sm font-medium text-foreground">{resource.title}</p>
-        <span className="mt-auto inline-flex items-center gap-1 pt-1 text-xs text-muted group-hover/res:text-foreground">
-          Open <ExternalLink aria-hidden="true" className="size-3" />
-        </span>
-      </div>
-    </a>
+        <div className="flex flex-1 flex-col gap-1.5 p-3">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted">{resourceTypeLabel(resource.type)}</span>
+            {resource.isAffiliate && (
+              <span className="rounded-full bg-brand-gold-soft px-2 py-0.5 text-[11px] font-medium text-foreground">
+                Affiliate
+              </span>
+            )}
+          </div>
+          <p className="line-clamp-2 text-sm font-medium text-foreground">{resource.title}</p>
+          <span className="mt-auto inline-flex items-center gap-1 pt-1 text-xs text-muted group-hover/res:text-foreground">
+            Open <ExternalLink aria-hidden="true" className="size-3" />
+          </span>
+        </div>
+      </a>
+    </div>
   );
 }
 
@@ -86,7 +89,7 @@ export function ResourcesRow({ resources }: { resources: ResourceView[] }) {
   const hasAffiliate = resources.some((r) => r.isAffiliate);
 
   return (
-    <section aria-labelledby="resources-heading" className="grid gap-3">
+    <section aria-labelledby="resources-heading" className="grid grid-cols-1 gap-3">
       <h2 id="resources-heading" className="font-display text-xl text-foreground">
         Prep resources
       </h2>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Badge, ListIcon, Logo, ThemeToggle, X, cn } from '@beecompete/ui';
@@ -18,6 +18,7 @@ export function SiteHeader() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const toggleRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -25,6 +26,20 @@ export function SiteHeader() {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  // Escape closes the mobile menu and returns focus to its toggle (parity with the ShareMenu
+  // popover; keyboard users need a way out that isn't tabbing to a link).
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMenuOpen(false);
+        toggleRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [menuOpen]);
 
   return (
     <header
@@ -71,6 +86,7 @@ export function SiteHeader() {
           {/* Sign In / Sign Up slot reserved — hidden until accounts exist (R2). */}
           <ThemeToggle />
           <button
+            ref={toggleRef}
             type="button"
             className="rounded-full p-2 text-muted hover:bg-surface hover:text-foreground sm:hidden"
             aria-expanded={menuOpen}

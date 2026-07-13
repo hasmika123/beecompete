@@ -33,7 +33,9 @@ export default async function CategoriesPage() {
   const stateRegions = regions.filter((r) => r.level === 'state');
 
   return (
-    <div className="grid gap-14">
+    // grid-cols-1: constrain the auto track — the Closing-soon ScrollRow's intrinsic width
+    // otherwise stretches every section past the viewport.
+    <div className="grid grid-cols-1 gap-14">
       <header className="max-w-2xl">
         <h1 className="font-display text-4xl text-foreground sm:text-5xl">Browse every angle</h1>
         <p className="mt-3 text-lg text-muted">

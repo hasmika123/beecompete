@@ -58,7 +58,7 @@ export default async function HowItWorksPage() {
   ];
 
   return (
-    <div className="grid gap-16">
+    <div className="grid grid-cols-1 gap-16">
       <section className="max-w-3xl">
         <h1 className="font-display text-4xl text-foreground sm:text-5xl">
           Competitions are scattered. <em>We gather them.</em>

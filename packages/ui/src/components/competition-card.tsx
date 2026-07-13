@@ -80,7 +80,10 @@ export function CompetitionCard({
               <TrustBadge tier={data.trustTier} />
             )}
         </div>
-        <CardTitle className="truncate pt-1 text-lg">{data.name}</CardTitle>
+        {/* line-clamp-2 (not truncate): long competition names — common — clip to ~4 words on
+            a single line; two lines keep them scannable. Cards stay equal-height (grid stretch
+            + mt-auto footer). */}
+        <CardTitle className="line-clamp-2 pt-1 text-lg">{data.name}</CardTitle>
         {data.organizerName && (
           <div className="flex items-center gap-2">
             <Avatar name={data.organizerName} size="sm" className="size-6 text-[10px]" />
