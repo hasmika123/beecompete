@@ -159,8 +159,8 @@ Claiming is therefore a pure derivation — no cascade writes to competitions, e
 
 7. **Docs.** Replace the "pending realignment" warning in `domain-model.md` §3f with the new
    rule (org ladder + derived maintainer; Competition/Edition state vestigial); update the
-   glossary "Verification / Trust Tier" entry to the org ladder; mark R1-19 done in
-   phase-1-plan; update the CLAUDE.md R1-9 current-state note.
+   glossary "Verification / Trust Tier" entry to the org ladder; note this section (§A2) done
+   in the phase-1-plan follow-ups pointer; update the CLAUDE.md R1-9 current-state note.
 
 **Phase 0 (optional interim, ships in minutes if full R1-19 waits):** in `trust-panel.tsx`,
 stop rendering the tier badge/blurb entirely and derive the maintained-by line from the org
