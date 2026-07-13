@@ -25,6 +25,7 @@ export function TemplateEditor({
   }, [state.ok, toast]);
 
   const schemaText = template ? JSON.stringify(template.jsonSchema, null, 2) : '';
+  const hintsText = template?.uiHints ? JSON.stringify(template.uiHints, null, 2) : '';
 
   return (
     <form action={formAction} className="grid gap-4">
@@ -40,6 +41,18 @@ export function TemplateEditor({
           required
           className="font-mono text-xs"
           placeholder='{ "type": "object", "additionalProperties": true, "properties": {} }'
+        />
+      </FormField>
+      <FormField
+        label="UI hints (JSON, optional)"
+        hint="Field labels/order/widgets for a future schema-driven attributes form."
+      >
+        <Textarea
+          name="uiHints"
+          defaultValue={hintsText}
+          rows={5}
+          className="font-mono text-xs"
+          placeholder='{ "labels": { "topics": "Covered topics" } }'
         />
       </FormField>
       <div>

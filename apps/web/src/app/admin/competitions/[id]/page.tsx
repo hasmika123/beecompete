@@ -9,7 +9,9 @@ import { CompetitionForm } from '@/components/admin/competition-form';
 import { CompetitionHeaderActions } from '@/components/admin/competition-header-actions';
 import { FaqManager } from '@/components/admin/faq-manager';
 import { ResourceManager } from '@/components/admin/resource-manager';
+import { ListingHealth } from '@/components/admin/listing-health';
 import { adminFetch, AdminApiError } from '@/lib/admin-api';
+import { listingHealth } from '@/lib/listing-health';
 import type {
   Category,
   Competition,
@@ -77,6 +79,7 @@ export default async function EditCompetitionPage({ params }: { params: Promise<
 
         <TabPanel value="details">
           <div className="pt-6">
+            <ListingHealth checks={listingHealth(competition, editions, faqs, resources)} />
             <CompetitionForm
               competition={competition}
               categories={categories}

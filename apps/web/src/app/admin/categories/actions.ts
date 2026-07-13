@@ -62,10 +62,20 @@ export async function putCategoryTemplate(
   } catch {
     return { ok: false, error: 'JSON Schema must be valid JSON.' };
   }
+  // Round-trip uiHints instead of wiping it to null on every save. Empty field = null.
+  const rawHints = String(form.get('uiHints') ?? '').trim();
+  let uiHints: unknown = null;
+  if (rawHints) {
+    try {
+      uiHints = JSON.parse(rawHints);
+    } catch {
+      return { ok: false, error: 'UI hints must be valid JSON.' };
+    }
+  }
   try {
     await adminFetch(`/categories/${id}/template`, {
       method: 'PUT',
-      body: { jsonSchema, uiHints: null },
+      body: { jsonSchema, uiHints },
     });
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'save failed' };
