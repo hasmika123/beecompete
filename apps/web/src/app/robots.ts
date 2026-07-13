@@ -16,10 +16,14 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/admin', '/suggest-a-correction', '/suggest-a-competition', '/design'],
+        // Only /admin is robots-BLOCKED (auth-walled; nothing crawlable behind it). The
+        // utility pages (suggest-a-*, /design) are deliberately NOT listed here: they rely on
+        // their noindex meta, and a robots block would HIDE that meta from crawlers — with
+        // site-wide footer links pointing at them, that's the "indexed, though blocked by
+        // robots.txt" URL-only-result trap (review M1). Never both for a linked page.
+        disallow: ['/admin'],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
-    host: SITE_URL,
   };
 }
