@@ -430,6 +430,70 @@ open and closed; make the panel narrower so the math works.
 
 ---
 
+### A10. Instant-apply filters + canonical chip/tag split
+
+**Owner decisions (2026-07-13, all confirmed):**
+
+1. **Instant apply** — every left-panel change applies immediately (URL + results + tags
+   update as you pick). The Apply button is removed; Reset becomes a "Clear all" link on the
+   tags row.
+2. **Band overlap renders on the quick-chip** — a grade range that exactly matches a
+   quick-chip band (Elementary −1–5 / Middle 6–8 / High 9–12) is represented ONLY by the
+   highlighted quick-chip, never by a removable tag; custom ranges (e.g. Grades 3–7) still
+   get a tag. The rule is **value-canonical** (depends only on the URL), so shared/reloaded
+   URLs render identically — provenance ("was it set via chip or panel?") is deliberately
+   not tracked.
+3. **No toggle-off on the active quick-chip** — clicking the already-selected band does
+   nothing; "All" is the deselect.
+
+**Current-state facts (verified):** the quick-chips already highlight the active band
+(`activeBand()` + `variant: 'primary'` + `aria-current` — `marketplace-page.tsx:205-233`);
+the duplication is that `activeChips()` (`marketplace-params.ts:173-183`) ALSO pushes a
+grade tag for band-exact ranges. The panel is a server-rendered GET form (blueprint decision
+#10) — instant apply converts its interaction, not its URL model.
+
+**Design.**
+
+1. **Chip/tag split (tiny, server-side):** in `activeChips()`, skip the grade chip when
+   `activeBand(params)` is defined (band-exact → the quick-chip is the representation).
+   Custom ranges keep today's "Grades X–Y" tag. One unit test.
+2. **FilterPanel → client component with instant apply:**
+   - `'use client'`; props (`path`, `params`, `facets`, `regions`) are already serializable.
+   - Drop the `<form>` submit model. Each control change computes
+     `marketplaceHref(path, params, { [key]: value })` and navigates: `RadioGroup` via its
+     controlled `value`/`onValueChange` (values from `params`), `NativeSelect`s via
+     `onChange`. Verify `marketplaceHref` resets `page` to 0 on refinement changes (the
+     Apply form drops it today — must stay true). `q` + `sort` are preserved automatically
+     (they live in `params`; the hidden inputs go away with the form).
+   - **Pending state:** lift navigation into `MarketplaceFrame` — it passes an
+     `onNavigate(href)` that wraps `startTransition(() => router.push(href))` and, while
+     pending, dims the results container (`aria-busy` + reduced opacity). The toolbar's
+     existing `aria-live` count announces the new total. Discrete controls → no debounce
+     needed; one RSC fetch per change = same cost as an Apply click today.
+   - **History:** `push` (consistent with chips/quick-chips being links; back = undo last
+     filter).
+3. **Apply/Reset removal:** delete the panel's sticky action bar entirely (this
+   **supersedes** the round-2 "Apply/Reset differentiation" Part B item). Append a quiet
+   **"Clear all"** text link to the tags row when ≥1 tag is active. Recommended semantics:
+   clear refinements but **keep `q` + `sort`** (a user's search text shouldn't vanish when
+   clearing filters) — i.e. href built from defaults + current `q`/`sort`, unlike today's
+   Reset (`href={path}`) which wipes everything.
+4. **Mobile sheet:** instant apply inside the bottom sheet too. The sheet's `open` state
+   lives in `MarketplaceFrame` (client) and should survive soft navigations — verify at
+   impl. Upgrade the sheet's close affordance to a primary **"Show {total} competitions"**
+   button (the live count updating as you pick is the feedback loop that replaces Apply).
+5. **Blueprint note:** Page-2 decision #10 documents the "plain GET form". Amend the
+   blueprint (structure unchanged; interaction is now instant-apply; every filter state
+   remains a canonical, shareable GET-param URL — chips/quick-chips stay real links, so
+   crawlability is unchanged).
+6. **Tests/verification:** `activeChips` band-suppression unit test; live browser pass —
+   radio change → URL updates → tag appears → count updates → back-button undoes; band-exact
+   panel selection highlights the quick-chip with no tag.
+
+**Size:** M. Light loop (no schema). Rides PR-B1.
+
+---
+
 ## Part B — straightforward fixes (no design needed)
 
 Terminology (rename → "Request a Competition"):
@@ -488,11 +552,8 @@ Marketplace & card polish (owner round 2, 2026-07-13):
       scroll) — acceptable; drop `sticky` entirely if that feels off in practice. The
       mobile bottom sheet KEEPS its own scroll (it's an overlay; page growth doesn't apply).
       The `scrollbar-slim` utility stays in globals.css (mobile sheet still uses it)
-- [ ] **Apply/Reset differentiation** (they currently read like the chips above): Apply →
-      full-width `variant="brand"` (gold) button; Reset → quiet text link
-      (`text-sm text-muted underline-offset-2 hover:underline`, no pill). Keep the bar at the
-      panel top; with the internal scroll gone the `sticky top-0 bg-background` wrapper can
-      be simplified to a plain row
+- [ ] ~~**Apply/Reset differentiation**~~ — **SUPERSEDED by A10** (instant apply removes the
+      Apply/Reset bar entirely; Reset becomes the "Clear all" link on the tags row)
 - [ ] **Grade From/To selects don't match the universal dropdown** (owner report): they DO
       route through `NativeSelect` — diagnose the visual delta at impl. Check, in order:
       (1) stale dev-server chunk (restart + hard reload before debugging), (2) the wrapping
@@ -519,7 +580,8 @@ Marketplace & card polish (owner round 2, 2026-07-13):
 ## Suggested PR slicing (order)
 
 1. **PR-B1** — marketplace & card polish: the round-2 Part B items + **A9** (invariant card
-   width) + **A8** (share-on-card) — one coherent public-UI pass, verified together live
+   width) + **A8** (share-on-card) + **A10** (instant-apply filters + chip/tag split) — one
+   coherent public-UI pass, verified together live
 2. **PR-B2** — the admin/terminology Part B checklist (light loop; no schema)
 3. **PR-A1** — key-date timezone + endsAt/label (bug fix; light loop)
 4. **PR-A6** — queues: get-by-id, pagination, subject names, ConfirmDialog, org restore
