@@ -177,11 +177,18 @@ DQ10): detail-page "Prep resources" section reusing `ScrollRow` of type-tinted r
 `rel="nofollow noopener noreferrer"` + `target=_blank`, and **affiliate links additionally carry
 `rel="sponsored nofollow"` + a per-card "Affiliate" chip + a clear, conspicuous inline disclosure
 shown with the row whenever any affiliate link is present** (FTC endorsement rule; the dedicated
-affiliate-disclosure legal page is still R1-12). **S2/S3 seeding done (2026-07-12, PRs open, not
-merged):** S2 = `docs/seeding/` master index (326 ranked real competitions, all 11 categories,
-majors ≥15); S3 = `tools/seeding/` extraction pipeline v0 (fetch→LLM-extract→JSON-Schema-validate→
-POST to the R1-3 import queue; standalone, outside CI path filters by design). Next per
-`docs/phase-1-plan.md`: **R1-9 trust/verification badges**. **Deferred (PR C):** S3 pre-signed
+affiliate-disclosure legal page is still R1-12). **S2/S3 seeding done + merged (2026-07-12):** S2 =
+`docs/seeding/` master index (**284** ranked real competitions after the post-audit cleanup —
+dupes/defunct/borrowed-URL rows removed — all 11 categories, every one ≥18); S3 = `tools/seeding/`
+extraction pipeline v0 (fetch→LLM-extract→JSON-Schema-validate→POST to the R1-3 import queue;
+standalone, outside CI path filters by design). **Post-review fix pass done (2026-07-12,
+4 PRs #70–73):** an adversarial review of R1-7/R1-8/S2/S3 was run and ALL findings fixed —
+highlights: timezone-aware date rendering (`apps/web/src/lib/dates.ts`, Eastern fallback — never
+server-local), tabs keep panels in the SSR HTML (`hidden`, SEO), Register CTA gated on effective
+status, valid all-day ICS, Event JSON-LD virtual-only, runtime `SITE_URL`, **search deadline =
+REG_CLOSE with SUBMISSION_DUE fallback** (blueprint decision #31 records the behavior deltas),
+S3 hardening (fetched-URL provenance, penalty-only confidence, fetch/robots/private-IP guards).
+Next per `docs/phase-1-plan.md`: **R1-9 trust/verification badges**. **Deferred (PR C):** S3 pre-signed
 hero-image upload + inline FAQ/
 Resource row-edit. **Before prod users:** set `ADMIN_API_TOKEN` in both VPS `.env` + `/admin`
 behind Cloudflare Access (setup-runbook §5).

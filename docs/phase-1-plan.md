@@ -26,9 +26,14 @@
 > attribution panel, Claim stub, Suggest-a-correction), related row, schema.org Event/
 > BreadcrumbList/FAQPage JSON-LD, mobile sticky Follow+Register bar; interim noindex dropped
 > (page inherits the site-wide gate until R1-10/R1-17). Follow/Claim capture backends = R1-15b;
-> Resources row = R1-8. **S2/S3 seeding done (2026-07-12, PRs open):** S2 master index (326
-> ranked competitions, all 11 categories, majors ≥15) in `docs/seeding/`; S3 extraction-pipeline
-> v0 in `tools/seeding/` (fetch→LLM-extract→schema-validate→POST to the R1-3 import queue).
+> Resources row = R1-8. **S2/S3 seeding done + merged (2026-07-12):** S2 master index (**284**
+> ranked competitions after the post-audit cleanup, all 11 categories ≥18) in `docs/seeding/`;
+> S3 extraction-pipeline v0 in `tools/seeding/` (fetch→LLM-extract→schema-validate→POST to the
+> R1-3 import queue). **Post-review fix pass (2026-07-12, PRs #70–73):** adversarial review of
+> R1-7/R1-8/S2/S3, all findings fixed — timezone-aware dates, SSR tab content (SEO),
+> status-gated Register CTA, valid all-day ICS, virtual-only Event JSON-LD, runtime SITE_URL,
+> deadline rule = REG_CLOSE with SUBMISSION_DUE fallback (server + web, blueprint decision #31),
+> S2 data cleanup (326→284), S3 hardening (provenance/confidence/fetch safety).
 > **R1-8 done (2026-07-12) 🔒** — detail-page resources row (M11): reused `ScrollRow` of
 > type-tinted resource cards (book/past_paper/guide/video/other), each an outbound link with
 > `rel="nofollow noopener noreferrer"`, and **affiliate links carry `rel="sponsored nofollow"`
