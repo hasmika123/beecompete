@@ -23,12 +23,28 @@ public interface CompetitionRepository extends JpaRepository<Competition, UUID> 
 	long countByArchivedAtIsNull();
 
 	/**
-	 * Lean projection for the XML sitemap (R1-10): just the slug, its category slug, and the
-	 * last-modified stamp — no entity hydration for what can be a few hundred rows served on a
-	 * cached route. Archived competitions are excluded (D7 — invisible to the public).
+	 * Lean projection for the XML sitemap (R1-10): slug, category slug, and an HONEST last-modified
+	 * stamp = the greatest of the competition row and its children's {@code updated_at} (editions,
+	 * resources, FAQs). A detail page's volatile content lives in those child tables, so the
+	 * parent row alone under-reports change (review M5). KeyDates have no {@code updated_at}, so
+	 * their writes bump the parent Edition's stamp instead (see EditionAdminController). Postgres
+	 * {@code GREATEST} ignores NULLs, so childless competitions fall back to their own stamp.
+	 * Archived competitions are excluded (D7). No entity hydration — a few hundred rows on a
+	 * cached route. (Scale note: fine to ~10-20k; past Google's 50k-URL sitemap limit the web
+	 * side needs a sitemap index + this query needs paging.)
 	 */
-	@Query("select c.slug as slug, cat.slug as categorySlug, c.updatedAt as updatedAt"
-			+ " from Competition c join c.category cat where c.archivedAt is null")
+	@Query(value = """
+			SELECT c.slug AS "slug", cat.slug AS "categorySlug",
+			  GREATEST(c.updated_at, MAX(e.updated_at), MAX(r.updated_at), MAX(f.updated_at))
+			    AS "updatedAt"
+			FROM competition c
+			  JOIN category cat ON cat.id = c.category_id
+			  LEFT JOIN edition e ON e.competition_id = c.id AND e.archived_at IS NULL
+			  LEFT JOIN resource r ON r.competition_id = c.id
+			  LEFT JOIN competition_faq f ON f.competition_id = c.id
+			WHERE c.archived_at IS NULL
+			GROUP BY c.id, c.slug, cat.slug, c.updated_at
+			""", nativeQuery = true)
 	List<SitemapView> findSitemapViews();
 
 	interface SitemapView {

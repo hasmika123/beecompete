@@ -118,7 +118,9 @@ public class EditionAdminController {
 		Edition edition = require(id);
 		KeyDate keyDate = new KeyDate(edition, request.type(), request.startsAt());
 		applyKeyDate(keyDate, request);
-		return KeyDateResponse.from(keyDates.save(keyDate));
+		KeyDateResponse saved = KeyDateResponse.from(keyDates.save(keyDate));
+		editions.touchUpdatedAt(edition.getId(), Instant.now()); // sitemap lastmod (R1-10)
+		return saved;
 	}
 
 	@PutMapping("/key-dates/{keyDateId}")
@@ -128,13 +130,18 @@ public class EditionAdminController {
 		keyDate.setType(request.type());
 		keyDate.setStartsAt(request.startsAt());
 		applyKeyDate(keyDate, request);
+		editions.touchUpdatedAt(keyDate.getEdition().getId(), Instant.now()); // sitemap lastmod (R1-10)
 		return KeyDateResponse.from(keyDate);
 	}
 
 	@DeleteMapping("/key-dates/{keyDateId}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void deleteKeyDate(@PathVariable UUID keyDateId) {
+		UUID editionId = keyDates.findById(keyDateId).map(kd -> kd.getEdition().getId()).orElse(null);
 		keyDates.deleteById(keyDateId);
+		if (editionId != null) {
+			editions.touchUpdatedAt(editionId, Instant.now()); // sitemap lastmod (R1-10)
+		}
 	}
 
 	// --- Region tags (Q3: the join is Edition-level; set as a whole list) ---

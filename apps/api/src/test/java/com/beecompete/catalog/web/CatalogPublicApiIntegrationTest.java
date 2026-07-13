@@ -47,6 +47,7 @@ class CatalogPublicApiIntegrationTest {
 
 	private static String liveId;
 	private static String archivedId;
+	private static String liveEditionId;
 
 	private MockHttpServletRequestBuilder withToken(MockHttpServletRequestBuilder builder) {
 		return builder.header(AdminTokenFilter.HEADER, "test-admin-token");
@@ -109,18 +110,31 @@ class CatalogPublicApiIntegrationTest {
 
 	@Test
 	@Order(3)
-	void sitemapListsLiveCompetitionsWithLastmodAndHidesArchived() throws Exception {
-		String json = mvc.perform(get("/api/v1/sitemap"))
-				.andExpect(status().isOk())
-				// the live seed is present with its category slug + updatedAt; archived is not.
-				.andExpect(jsonPath("$[?(@.slug=='catalog-read-live')]", hasSize(1)))
+	void sitemapLastmodTracksChildWritesAndHidesArchived() throws Exception {
+		// Live seed present with category slug + a parseable updatedAt; archived hidden (L10).
+		Instant before = sitemapUpdatedAt("catalog-read-live");
+		mvc.perform(get("/api/v1/sitemap"))
 				.andExpect(jsonPath("$[?(@.slug=='catalog-read-live')].categorySlug", notNullValue()))
-				.andExpect(jsonPath("$[?(@.slug=='catalog-read-live')].updatedAt", notNullValue()))
-				.andExpect(jsonPath("$[?(@.slug=='catalog-read-archived')]", hasSize(0)))
+				.andExpect(jsonPath("$[?(@.slug=='catalog-read-archived')]", hasSize(0)));
+
+		// M5: a key-date write (a child row with no updated_at of its own) must move the
+		// competition's sitemap lastmod — it touches the parent edition, which the GREATEST()
+		// projection folds in. Without the fix this timestamp would not budge.
+		addKeyDate(liveEditionId, "RESULTS", Instant.now().plus(60, ChronoUnit.DAYS));
+		Instant after = sitemapUpdatedAt("catalog-read-live");
+		org.junit.jupiter.api.Assertions.assertTrue(after.isAfter(before),
+				"sitemap lastmod should advance after a key-date write: " + before + " -> " + after);
+	}
+
+	private Instant sitemapUpdatedAt(String slug) throws Exception {
+		String json = mvc.perform(get("/api/v1/sitemap")).andExpect(status().isOk())
 				.andReturn().getResponse().getContentAsString();
-		if (json.isBlank()) {
-			throw new AssertionError("empty sitemap feed");
+		for (JsonNode row : mapper.readTree(json)) {
+			if (slug.equals(row.get("slug").asText())) {
+				return Instant.parse(row.get("updatedAt").asText()); // also asserts it's a valid instant
+			}
 		}
+		throw new AssertionError("slug not in sitemap: " + slug);
 	}
 
 	@Test
@@ -158,6 +172,7 @@ class CatalogPublicApiIntegrationTest {
 
 		// Edition 2: curated UPCOMING, REG_OPEN yesterday + REG_CLOSE in 30 days → effectively open.
 		String e2 = createEdition(liveId, "2026", "UPCOMING");
+		liveEditionId = e2;
 		addKeyDate(e2, "REG_OPEN", now.minus(1, ChronoUnit.DAYS));
 		addKeyDate(e2, "REG_CLOSE", now.plus(30, ChronoUnit.DAYS));
 
