@@ -25,8 +25,12 @@ export function KeyDatesTimeline({
   return (
     // role="list" restored explicitly — `list-none` strips list semantics in Safari/VoiceOver.
     <ol role="list" className="relative ml-1 list-none border-l border-border">
-      {dates.map(({ date, label, past, isNext }, i) => {
-        const multiDay = date.endsAt && !sameCalendarDay(date.startsAt, date.endsAt, date.timezone);
+      {dates.map(({ date, label, past, isNext, isTbd }, i) => {
+        const multiDay =
+          !isTbd &&
+          date.startsAt &&
+          date.endsAt &&
+          !sameCalendarDay(date.startsAt, date.endsAt, date.timezone);
         return (
           <li key={`${date.type}-${date.startsAt}-${i}`} className="ml-4 pb-5 last:pb-0">
             <span
@@ -48,12 +52,18 @@ export function KeyDatesTimeline({
               )}
             </div>
             {/* Full-strength muted (not /70) — the dimmed variant fell below AA (2.97:1 light,
-                3.94:1 dark); line-through already signals "past". */}
+                3.94:1 dark); line-through already signals "past". TBD renders as text (R1-18). */}
             <p className={cn('text-sm', past ? 'text-muted line-through' : 'text-muted')}>
-              {formatDate(date.startsAt, date.timezone)}
-              {multiDay && ` – ${formatDate(date.endsAt as string, date.timezone)}`}
+              {isTbd || !date.startsAt ? (
+                'Date TBD'
+              ) : (
+                <>
+                  {formatDate(date.startsAt, date.timezone)}
+                  {multiDay && ` – ${formatDate(date.endsAt as string, date.timezone)}`}
+                </>
+              )}
             </p>
-            {isNext && (
+            {isNext && date.startsAt && (
               <AddToCalendar
                 title={`${competitionName} — ${label}`}
                 start={date.startsAt}

@@ -5,6 +5,7 @@ import { formatDate } from '@/lib/dates';
 import {
   costLabel,
   currentEdition,
+  hasTbdDeadline,
   locationLabel,
   nextDeadline,
   pathwayLabel,
@@ -49,6 +50,9 @@ export function AtAGlance({ competition }: { competition: CompetitionDetail }) {
       value: deadlineView?.label ?? `Closes ${formatDate(deadline.iso, deadline.timezone)}`,
       urgent: deadlineView?.urgent,
     });
+  } else if (hasTbdDeadline(competition.editions)) {
+    // A deadline milestone exists but its date is TBD (R1-18) — show it rather than omit.
+    items.push({ key: 'deadline', icon: Clock, label: 'Next deadline', value: 'TBD' });
   }
   items.push(
     { key: 'cost', icon: Ticket, label: 'Cost', value: costLabel(competition, edition) },

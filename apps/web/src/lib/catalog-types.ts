@@ -108,7 +108,8 @@ export interface LandingView {
 export interface KeyDateView {
   type: string;
   label: string | null;
-  startsAt: string;
+  /** null = TBD (R1-18): the milestone exists but its date isn't known yet. */
+  startsAt: string | null;
   endsAt: string | null;
   timezone: string | null;
 }

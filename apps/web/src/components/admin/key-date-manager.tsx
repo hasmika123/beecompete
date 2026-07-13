@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useTransition } from 'react';
-import { Button, FormField, Input, Plus, Trash, useToast } from '@beecompete/ui';
+import { useRef, useState, useTransition } from 'react';
+import { Button, Checkbox, FormField, Input, Plus, Trash, useToast } from '@beecompete/ui';
 import { NativeSelect, enumLabel, enumOptions } from '@/components/admin/native-select';
 import { addKeyDate, deleteKeyDate } from '@/app/admin/competitions/[id]/editions/actions';
 import { formatInZone } from '@/lib/dates';
@@ -29,6 +29,7 @@ export function KeyDateManager({
   keyDates: KeyDate[];
 }) {
   const [pending, startTransition] = useTransition();
+  const [tbd, setTbd] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
 
@@ -43,7 +44,9 @@ export function KeyDateManager({
             <span className="min-w-0">
               <span className="font-medium text-foreground">{enumLabel(k.type)}</span>
               {k.label && <span className="ml-2 text-foreground">— {k.label}</span>}
-              <span className="ml-2 text-muted">{formatInZone(k.startsAt, k.timezone)}</span>
+              <span className="ml-2 text-muted">
+                {k.startsAt ? formatInZone(k.startsAt, k.timezone) : 'Date TBD'}
+              </span>
               {k.endsAt && (
                 <span className="ml-1 text-muted">→ {formatInZone(k.endsAt, k.timezone)}</span>
               )}
@@ -80,6 +83,7 @@ export function KeyDateManager({
             try {
               await addKeyDate(competitionId, editionId, form);
               formRef.current?.reset();
+              setTbd(false);
               toast({ title: 'Key date added', tone: 'success' });
             } catch (err) {
               toast({ title: err instanceof Error ? err.message : 'Add failed', tone: 'error' });
@@ -96,17 +100,25 @@ export function KeyDateManager({
           />
         </FormField>
         <FormField label="Starts">
-          <Input name="startsAt" type="datetime-local" required />
+          <Input name="startsAt" type="datetime-local" required={!tbd} disabled={tbd} />
         </FormField>
         <FormField label="Timezone">
           <NativeSelect name="timezone" options={TIMEZONES} defaultValue="America/New_York" />
         </FormField>
         <FormField label="Ends" hint="optional — for windows">
-          <Input name="endsAt" type="datetime-local" />
+          <Input name="endsAt" type="datetime-local" disabled={tbd} />
         </FormField>
         <FormField label="Label" hint="optional — shown for Custom dates">
           <Input name="label" maxLength={200} />
         </FormField>
+        <div className="flex items-center sm:col-span-3">
+          {/* TBD (R1-18): the milestone exists but its date is unknown — submit without a date. */}
+          <Checkbox
+            label="Date TBD (to be determined)"
+            checked={tbd}
+            onChange={(e) => setTbd(e.target.checked)}
+          />
+        </div>
         <div className="flex items-end sm:col-span-3">
           <Button type="submit" size="sm" disabled={pending}>
             <Plus aria-hidden="true" className="size-4" /> Add key date

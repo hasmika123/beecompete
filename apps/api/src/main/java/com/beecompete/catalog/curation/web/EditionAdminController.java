@@ -181,8 +181,9 @@ public class EditionAdminController {
 
 	// --- DTOs (EditionRequest lives in catalog.curation — shared with the correction queue) ---
 
+	// startsAt is optional: null = "TBD" (R1-18). An endsAt still requires a startsAt (below).
 	public record KeyDateRequest(@NotNull KeyDateType type, @Size(max = 200) String label,
-			@NotNull Instant startsAt, Instant endsAt, @Size(max = 60) String timezone) {
+			Instant startsAt, Instant endsAt, @Size(max = 60) String timezone) {
 
 		@AssertTrue(message = "endsAt must be after startsAt")
 		public boolean isEndAfterStart() {
