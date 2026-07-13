@@ -6,6 +6,14 @@ import { SITE_NAME, absoluteUrl, indexingEnabled } from '@/lib/site';
 // value reflects the RUNTIME indexing flag (a static `export const metadata` would freeze it at
 // build). OG *images* come from the file-convention opengraph-image routes, not from here, so
 // they aren't duplicated.
+//
+// LANDMINE (L1): this only tracks the runtime flag for pages that are dynamically rendered. A
+// STATICALLY prerendered page (no dynamic APIs — e.g. a future page with no searchParams/params)
+// bakes the BUILD-time `indexingEnabled()` and won't respond to a runtime flag flip. Today every
+// public page is either dynamic (searchParams / revalidate=0) or on-demand ISR, and the only
+// build-static pages are hard-`noindex`, so it's masked — but if you add a static public page
+// meant to be indexable, force it dynamic (`export const revalidate = 0`) or it'll be stuck at
+// its build-time robots value.
 
 interface PageSeoInput {
   /**

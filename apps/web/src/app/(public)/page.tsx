@@ -20,11 +20,14 @@ import { CATEGORY_CONTENT } from '@/lib/category-content';
 import { pageMetadata } from '@/lib/seo';
 import { jsonLdScript, siteJsonLd } from '@/lib/structured-data';
 
-// Rendered at request time (R1-10): the web image is built with no API reachable (build-once-
-// promote), so no-param pages can't be prerendered at build. The catalog reads are still data-
-// cached (revalidate), so this isn't a fresh API round-trip per visitor. The high-volume SEO
-// surfaces — the per-competition detail pages — use true ISR (dynamic [slug], on-demand).
-export const dynamic = 'force-dynamic';
+// Always dynamically rendered (R1-10) — not prerendered at build, since the web image builds
+// with no API reachable (build-once-promote). revalidate=0 is the doc-guaranteed way to force
+// dynamic rendering while PRESERVING each fetch's own revalidate data-cache — unlike
+// force-dynamic, which the Next docs define as forcing every fetch to no-store. So the catalog
+// reads (fetchLanding/fetchCategories) are still served from the hourly data cache, not a fresh
+// API round-trip per visitor. The high-volume SEO surfaces — detail pages — are true on-demand
+// ISR via the dynamic [slug].
+export const revalidate = 0;
 
 export function generateMetadata(): Metadata {
   return pageMetadata({

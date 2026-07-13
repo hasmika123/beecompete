@@ -8,7 +8,9 @@ import { toCardData } from '@/lib/catalog-display';
 import { CATEGORY_CONTENT, GRADE_BANDS } from '@/lib/category-content';
 import { pageMetadata } from '@/lib/seo';
 
-export const dynamic = 'force-dynamic'; // no-param page — render at request, cached data reads (R1-10)
+// Dynamic (no build prerender) but keeps the per-fetch data cache — see the Landing page's note
+// on revalidate=0 vs force-dynamic (R1-10).
+export const revalidate = 0;
 
 export function generateMetadata(): Metadata {
   return pageMetadata({

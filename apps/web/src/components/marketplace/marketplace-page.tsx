@@ -20,6 +20,7 @@ import {
   RELAX_ORDER,
   activeBand,
   activeChips,
+  hasActiveRefinement,
   marketplaceHref,
   parseMarketplaceParams,
   type MarketplaceParams,
@@ -126,7 +127,11 @@ export async function MarketplacePage({ rawSearchParams, hub }: MarketplacePageP
   const chips = activeChips(path, params, regionName, categoryName);
   const band = activeBand(params);
   const miss = total === 0 ? await nearMiss(params, categorySlug) : null;
-  const itemList = itemListJsonLd(items);
+  // ItemList only on the canonical listing (no refinement, first page) — the same page whose
+  // canonical is self-referential (R1-10 L7). Filtered/paged variants canonicalize away, so
+  // emitting their differing lists is noise.
+  const itemList =
+    !hasActiveRefinement(params) && params.page === 0 ? itemListJsonLd(items) : undefined;
 
   return (
     <div className="grid gap-6">

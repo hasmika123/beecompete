@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { MarketplacePage } from '@/components/marketplace/marketplace-page';
 import { CATEGORY_CONTENT, categoryContent } from '@/lib/category-content';
+import { canonicalPath } from '@/lib/marketplace-params';
 import { pageMetadata } from '@/lib/seo';
 
 // Category hub (hybrid decision #16): canonical /competitions/<category-slug> renders the
@@ -14,8 +15,10 @@ export function generateStaticParams() {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ category: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }): Promise<Metadata> {
   const { category } = await params;
   const content = categoryContent(category);
@@ -23,7 +26,7 @@ export async function generateMetadata({
   return pageMetadata({
     title: `${content.name} Competitions for K-12 Students`,
     description: `${content.oneLiner} Browse curated ${content.name.toLowerCase()} competitions by grade, cost, and deadline.`,
-    path: `/competitions/${content.slug}`,
+    path: canonicalPath(`/competitions/${content.slug}`, await searchParams),
   });
 }
 

@@ -1,56 +1,30 @@
 import { ImageResponse } from 'next/og';
+import { categoryHue } from '@beecompete/ui';
 import { fetchCompetition } from '@/lib/catalog-api';
 import { gradeLabel } from '@/lib/catalog-display';
 import { PublicApiError } from '@/lib/public-api';
+import { BrandRow, GOLD, GROUND, INK, MUTED, OG_SIZE } from '@/lib/og';
 
-// Per-competition OpenGraph/share card (R1-10). Self-contained (next/og bundled font, no CDN):
-// category-accent bar + name + grade/cost facts + brand footer. Falls back to a brand card if
-// the slug is missing so a share link never renders a broken image.
+// Per-competition OpenGraph/share card (R1-10). Fully self-contained — next/og's bundled font
+// plus an inline SVG brand mark (no emoji → no runtime twemoji CDN fetch): category-accent bar
+// + name + grade/cost facts + brand footer. Falls back to a brand card if the slug is missing
+// so a share link never renders a broken image.
 export const runtime = 'nodejs';
-export const alt = 'Competition on BeeCompete';
-export const size = { width: 1200, height: 630 };
+export const size = OG_SIZE;
 export const contentType = 'image/png';
 
-const GOLD = '#f5c330';
-const INK = '#26251f';
-const GROUND = '#faf9f5';
-const MUTED = '#6c6a61';
-
-// Category accent (the ~600 tone of each category's hue in packages/ui category-art).
-const ACCENT: Record<string, string> = {
-  math: '#2563eb',
-  'science-engineering': '#059669',
-  'computer-science': '#7c3aed',
-  robotics: '#ea580c',
-  'debate-speech': '#e11d48',
-  'business-entrepreneurship': '#0d9488',
-  'writing-essay': '#4f46e5',
-  'arts-music': '#c026d3',
-  'academic-bowl': '#d97706',
-  'history-geography-civics': '#0284c7',
-  other: '#78716c',
-};
-
-function Brand() {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-      <div
-        style={{
-          width: '44px',
-          height: '44px',
-          borderRadius: '12px',
-          background: GOLD,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '26px',
-        }}
-      >
-        🐝
-      </div>
-      <div style={{ fontSize: '30px', fontWeight: 700, color: INK }}>BeeCompete</div>
-    </div>
-  );
+// Dynamic alt text carrying the competition name (a11y). Separate invocation from Image(), but
+// the fetch is revalidate-cached so it's a cache hit, not a second round-trip.
+export async function generateImageMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  let alt = 'Competition on BeeCompete';
+  try {
+    const c = await fetchCompetition(slug);
+    alt = `${c.name} — on BeeCompete`;
+  } catch {
+    // keep the generic alt
+  }
+  return [{ id: 'og', size: OG_SIZE, contentType: 'image/png', alt }];
 }
 
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
@@ -65,7 +39,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
     const c = await fetchCompetition(slug);
     name = c.name;
     categoryName = c.category.name;
-    accent = ACCENT[c.category.slug] ?? GOLD;
+    accent = categoryHue(c.category.slug);
     const grades = gradeLabel(c.minGrade, c.maxGrade);
     facts = [grades ?? 'All grades', c.costType === 'free' ? 'Free to enter' : 'Paid'];
   } catch (e) {
@@ -85,7 +59,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
           padding: '64px',
         }}
       >
-        <Brand />
+        <BrandRow />
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           {categoryName ? (
             <div
@@ -100,6 +74,8 @@ export default async function Image({ params }: { params: Promise<{ slug: string
               {categoryName}
             </div>
           ) : null}
+          {/* lineClamp truncates long names with an ellipsis so they can't push the fact row
+                off the 630px canvas (names allow up to 300 chars). */}
           <div
             style={{
               marginTop: '18px',
@@ -107,7 +83,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
               fontWeight: 800,
               color: INK,
               lineHeight: 1.05,
-              display: 'flex',
+              lineClamp: 3,
             }}
           >
             {name}

@@ -101,6 +101,36 @@ export function marketplaceHref(
   return qs ? `${path}?${qs}` : path;
 }
 
+/**
+ * Canonical path for a marketplace URL (R1-10). Filter/search/sort variants all fold to the
+ * clean base path (their result sets are subsets/reorders — not distinct indexable pages), but a
+ * page-only variant self-canonicalizes: declaring `?page=2` a duplicate of page 1 is exactly
+ * what Google's post-rel-next pagination guidance warns against, and it would neuter the
+ * crawlable "Load more" path (decision #13).
+ */
+/** Any search/sort/facet refinement active (page number aside)? Drives canonical + ItemList. */
+export function hasActiveRefinement(p: MarketplaceParams): boolean {
+  return (
+    p.q !== undefined ||
+    p.category !== undefined ||
+    p.minGrade !== undefined ||
+    p.maxGrade !== undefined ||
+    p.region !== undefined ||
+    p.cost !== undefined ||
+    p.delivery !== undefined ||
+    p.participation !== undefined ||
+    p.pathway !== undefined ||
+    p.deadlineWithinDays !== undefined ||
+    p.sort !== undefined
+  );
+}
+
+export function canonicalPath(basePath: string, raw: RawSearchParams): string {
+  const p = parseMarketplaceParams(raw);
+  if (hasActiveRefinement(p)) return basePath;
+  return p.page > 0 ? `${basePath}?page=${p.page}` : basePath;
+}
+
 /** The active grade quick-chip band, if the current range exactly matches one. */
 export function activeBand(params: MarketplaceParams): string | undefined {
   return GRADE_BANDS.find((b) => params.minGrade === b.minGrade && params.maxGrade === b.maxGrade)
