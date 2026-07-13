@@ -19,6 +19,7 @@ export async function submitToImportQueue(
   if (!config.adminToken) {
     throw new Error('ADMIN_API_TOKEN is required to submit (set it in env, or use --dry-run)');
   }
+  warnIfTokenOverCleartext(config.apiBase);
   const url = `${config.apiBase}/api/v1/admin/import-records`;
   const res = await fetch(url, {
     method: 'POST',
@@ -34,4 +35,27 @@ export async function submitToImportQueue(
   }
   const body = bodyText ? JSON.parse(bodyText) : {};
   return { id: body.id ?? '(unknown)', status: body.status ?? 'PENDING' };
+}
+
+let warnedCleartext = false;
+
+/** L5: shout (once) when the admin token would travel over plain http to a non-local host. */
+function warnIfTokenOverCleartext(apiBase: string): void {
+  if (warnedCleartext) return;
+  let base: URL;
+  try {
+    base = new URL(apiBase);
+  } catch {
+    return; // an unparseable base will fail the fetch with its own error
+  }
+  const host = base.hostname.toLowerCase();
+  const isLocal =
+    host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]';
+  if (base.protocol === 'http:' && !isLocal) {
+    warnedCleartext = true;
+    process.stderr.write(
+      `\nWARNING: BEECOMPETE_API_BASE (${apiBase}) is plain http to a non-local host — ` +
+        'ADMIN_API_TOKEN will be sent in CLEARTEXT. Use https.\n\n',
+    );
+  }
 }

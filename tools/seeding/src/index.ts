@@ -19,7 +19,7 @@ interface Args extends RunOptions {
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { dryRun: false, offline: false, help: false };
+  const args: Args = { dryRun: false, offline: false, allowPrivate: false, help: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     switch (a) {
@@ -28,6 +28,9 @@ function parseArgs(argv: string[]): Args {
         break;
       case '--offline':
         args.offline = true;
+        break;
+      case '--allow-private':
+        args.allowPrivate = true;
         break;
       case '--help':
       case '-h':
@@ -39,9 +42,15 @@ function parseArgs(argv: string[]): Args {
       case '--batch':
         args.batch = argv[++i];
         break;
-      case '--limit':
-        args.limit = Number.parseInt(argv[++i] ?? '', 10);
+      case '--limit': {
+        const raw = argv[++i];
+        // L4: a malformed limit is a hard error, not a silently ignored NaN.
+        if (raw === undefined || !/^\d+$/.test(raw) || Number.parseInt(raw, 10) < 1) {
+          throw new Error(`--limit must be a positive integer (got ${raw ?? 'nothing'})`);
+        }
+        args.limit = Number.parseInt(raw, 10);
         break;
+      }
       default:
         throw new Error(`unknown argument: ${a} (try --help)`);
     }
@@ -56,13 +65,14 @@ Usage:
   tsx src/index.ts --batch <file.csv|file.txt> [--limit N] [--dry-run] [--offline]
 
 Options:
-  --input <src>   A single competition: an http(s) URL to fetch, or a local .html file.
-  --batch <file>  Many competitions: a .csv with a URL column, or a .txt of one URL per line.
-  --limit N       Process at most N items from the batch.
-  --dry-run       Extract + validate + PRINT the payload. Never POSTs to the import queue.
-  --offline       Force the offline stub extractor (sibling <name>.expected.json), no LLM call.
-                  (Also implied automatically when ANTHROPIC_API_KEY is unset.)
-  -h, --help      Show this help.
+  --input <src>    A single competition: an http(s) URL to fetch, or a local .html file.
+  --batch <file>   Many competitions: a .csv with a URL column, or a .txt of one URL per line.
+  --limit N        Process at most N items from the batch (positive integer).
+  --dry-run        Extract + validate + PRINT the payload. Never POSTs to the import queue.
+  --offline        Force the offline stub extractor (sibling <name>.expected.json), no LLM call.
+                   (Also implied automatically when ANTHROPIC_API_KEY is unset.)
+  --allow-private  Permit fetching private/loopback/link-local addresses (off by default — SSRF guard).
+  -h, --help       Show this help.
 
 Env (see .env.example): ANTHROPIC_API_KEY, ANTHROPIC_MODEL, BEECOMPETE_API_BASE, ADMIN_API_TOKEN.
 Without ANTHROPIC_API_KEY the tool runs offline (stub extractor) so --dry-run works in CI.
@@ -81,7 +91,11 @@ async function main(): Promise<number> {
 
   const config = loadConfig();
   const forcedOffline = args.offline || !config.anthropicApiKey;
-  const opts: RunOptions = { dryRun: args.dryRun, offline: forcedOffline };
+  const opts: RunOptions = {
+    dryRun: args.dryRun,
+    offline: forcedOffline,
+    allowPrivate: args.allowPrivate,
+  };
 
   const items = await resolveInputs(args);
   if (items.length === 0) {
@@ -118,6 +132,13 @@ function printReport(r: ItemReport): void {
   if (r.errors.length) {
     process.stdout.write(`validation errors:\n${r.errors.map((e) => `  - ${e}`).join('\n')}\n`);
   }
+  if (r.warnings.length) {
+    process.stdout.write(`warnings:\n${r.warnings.map((w) => `  - ${w}`).join('\n')}\n`);
+  }
+  if (r.reviewerNotes) {
+    // M1: the model's uncertainty notes reach the human, instead of being silently dropped.
+    process.stdout.write(`reviewer notes: ${r.reviewerNotes}\n`);
+  }
   if (r.submission && (r.outcome === 'dry-run' || r.outcome === 'invalid')) {
     process.stdout.write(`${JSON.stringify(r.submission, null, 2)}\n`);
   }
@@ -126,6 +147,6 @@ function printReport(r: ItemReport): void {
 main()
   .then((code) => process.exit(code))
   .catch((err) => {
-    process.stderr.write(`fatal: ${err instanceof Error ? err.stack : String(err)}\n`);
+    process.stderr.write(`fatal: ${err instanceof Error ? err.message : String(err)}\n`);
     process.exit(1);
   });

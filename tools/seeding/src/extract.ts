@@ -34,12 +34,24 @@ export async function extract(
 
 async function anthropicExtract(input: ExtractInput, config: Config): Promise<Extraction> {
   const client = new Anthropic({ apiKey: config.anthropicApiKey });
-  const message = await client.messages.create({
-    model: config.anthropicModel,
-    max_tokens: 2048,
-    system: buildSystemPrompt(),
-    messages: [{ role: 'user', content: buildUserPrompt(input.sourceUrl, input.pageText) }],
-  });
+  let message: Anthropic.Message;
+  try {
+    message = await client.messages.create({
+      model: config.anthropicModel,
+      max_tokens: 2048,
+      system: buildSystemPrompt(),
+      messages: [{ role: 'user', content: buildUserPrompt(input.sourceUrl, input.pageText) }],
+    });
+  } catch (err) {
+    // H1: a retired/unknown model id 404s — surface an actionable message, not a bare API error.
+    if (err instanceof Anthropic.NotFoundError) {
+      throw new Error(
+        `Anthropic model "${config.anthropicModel}" was not found (retired or unknown id). ` +
+          'Set ANTHROPIC_MODEL to a current model id (see .env.example) and retry.',
+      );
+    }
+    throw err;
+  }
   const text = message.content
     .filter((block): block is Anthropic.TextBlock => block.type === 'text')
     .map((block) => block.text)
@@ -69,7 +81,11 @@ async function stubExtract(input: ExtractInput): Promise<Extraction> {
 
 /**
  * Normalizes raw model/fixture JSON into an Extraction: resolves `categorySlug` -> `categoryId`,
- * forces `description` to null (curator-authored later), and coerces the confidence range.
+ * forces `description` to null (curator-authored later), coerces the confidence range, and
+ * SANITIZES free-text fields (M4): `<`, `>`, and control characters are stripped from name,
+ * summary, tags, and every string inside the `attributes` bag — page-injected markup never
+ * reaches the queue. Wrong-TYPED fields are passed through untouched so `validatePayload` can
+ * report them as validation errors instead of this module throwing (L3).
  */
 export function normalize(raw: unknown, sourceUrl: string): Extraction {
   if (typeof raw !== 'object' || raw === null) {
@@ -94,6 +110,10 @@ export function normalize(raw: unknown, sourceUrl: string): Extraction {
   const { categorySlug: _drop, ...rest } = payloadRaw;
   const payload = {
     ...rest,
+    name: sanitizeIfString(rest.name),
+    summary: sanitizeIfString(rest.summary),
+    tags: Array.isArray(rest.tags) ? rest.tags.map((t) => sanitizeIfString(t)) : rest.tags,
+    attributes: sanitizeDeep(rest.attributes),
     categoryId,
     description: null, // never carry model prose — S4 writes our own
     officialUrl: (payloadRaw.officialUrl as string | undefined) ?? sourceUrl,
@@ -105,6 +125,37 @@ export function normalize(raw: unknown, sourceUrl: string): Extraction {
     ...(modelConfidence !== undefined ? { modelConfidence } : {}),
     ...(typeof obj.reviewerNotes === 'string' ? { reviewerNotes: obj.reviewerNotes } : {}),
   };
+}
+
+/** Strips `<`, `>`, and ASCII control characters from a string (M4). */
+export function sanitizeText(value: string): string {
+  let out = '';
+  for (const ch of value) {
+    const code = ch.codePointAt(0) ?? 0;
+    if (ch === '<' || ch === '>') continue;
+    if (code < 0x20 && ch !== '\n' && ch !== '\t') continue;
+    if (code === 0x7f) continue;
+    out += ch;
+  }
+  return out.trim();
+}
+
+function sanitizeIfString<T>(value: T): T {
+  return (typeof value === 'string' ? sanitizeText(value) : value) as T;
+}
+
+/** Recursively sanitizes string values in the attributes bag (objects + arrays). */
+function sanitizeDeep<T>(value: T): T {
+  if (typeof value === 'string') return sanitizeText(value) as T;
+  if (Array.isArray(value)) return value.map((v) => sanitizeDeep(v)) as T;
+  if (value !== null && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      out[k] = sanitizeDeep(v);
+    }
+    return out as T;
+  }
+  return value;
 }
 
 function clampUnit(value: unknown): number | undefined {
