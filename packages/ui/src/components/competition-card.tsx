@@ -5,7 +5,6 @@ import { Avatar } from './avatar';
 import { Badge } from './badge';
 import { Card, CardDescription, CardTitle } from './card';
 import { CategoryCover, CategoryTag } from './category-art';
-import { TrustBadge, isElevatedTier } from './trust-badge';
 
 /**
  * The CompetitionCard (blueprints "Shared components"; approved F7 direction from the /design
@@ -27,14 +26,12 @@ export interface CompetitionCardData {
   /** e.g. "Grades 8–10" · "All grades" — derived by the caller (Q2 encoding lives there). */
   gradeLabel?: string;
   organizerName?: string;
-  /** Renders the verified seal on the organizer row (DQ13 — the ORG carries the seal). */
-  organizerVerified?: boolean;
   /**
-   * The LISTING trust tier (DQ13) — curated | claimed | verified | unverified. The baseline
-   * `curated` is hidden on the card (BeeCompete curates everything — it'd be wall-of-sameness);
-   * elevated host tiers and the `unverified` caution get a badge.
+   * Renders the verified seal on the organizer row. Verification is an ORGANIZATION property
+   * (DQ13 — the ORG carries the seal); a competition itself is never "verified" (it's admin-
+   * approved to be listed), so the card has no competition-level trust/"unverified" badge.
    */
-  trustTier?: string;
+  organizerVerified?: boolean;
   summary?: string;
   /** Cost fact: free renders positive (success green, owner r5). */
   free: boolean;
@@ -72,13 +69,15 @@ export function CompetitionCard({
       <CategoryCover slug={data.categorySlug} className="h-36" />
 
       <div className="flex flex-col gap-1 p-4 pb-0">
-        <div className="flex flex-wrap items-center gap-1.5">
+        {/* Tags stay on a single line (approved design): the category tag truncates if needed,
+            the grade badge never shrinks. */}
+        <div className="flex items-center gap-1.5 overflow-hidden">
           <CategoryTag slug={data.categorySlug} name={data.categoryName} />
-          {data.gradeLabel && <Badge variant="outline">{data.gradeLabel}</Badge>}
-          {data.trustTier &&
-            (isElevatedTier(data.trustTier) || data.trustTier === 'unverified') && (
-              <TrustBadge tier={data.trustTier} />
-            )}
+          {data.gradeLabel && (
+            <Badge variant="outline" className="shrink-0">
+              {data.gradeLabel}
+            </Badge>
+          )}
         </div>
         {/* line-clamp-2 (not truncate): long competition names — common — clip to ~4 words on
             a single line; two lines keep them scannable. Cards stay equal-height (grid stretch

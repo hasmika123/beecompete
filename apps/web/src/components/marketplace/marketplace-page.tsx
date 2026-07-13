@@ -263,7 +263,7 @@ export async function MarketplacePage({ rawSearchParams, hub }: MarketplacePageP
               }
               action={
                 <Link href="/suggest-a-competition" className={buttonClasses({ variant: 'brand' })}>
-                  Suggest a competition
+                  Request a competition
                 </Link>
               }
             />

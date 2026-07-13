@@ -2,7 +2,7 @@
 
 import { useCallback, useSyncExternalStore } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Logo, ThemeToggle, cn } from '@beecompete/ui';
+import { ChevronLeft, ChevronRight, Logo, cn } from '@beecompete/ui';
 import { AdminNav } from './admin-nav';
 
 const STORAGE_KEY = 'admin:sidebar-collapsed';
@@ -37,10 +37,11 @@ function useSidebarCollapsed(): [boolean, () => void] {
 }
 
 /**
- * Admin sidebar shell (client) — owns the desktop collapse state and gives the theme
- * toggle a dedicated, un-squished footer row (it previously shared the logo line and got
- * crammed into the corner of the narrow rail). Collapse is a desktop (lg) affordance;
- * on mobile the sidebar is a full-width top bar and always shows labels.
+ * Admin sidebar shell (client) — owns the desktop collapse state. The collapse control is a
+ * full-width button in the footer styled like a nav item, so it clearly sits on the rail and
+ * is easy to hit (the old floating corner button read as detached from the menu). Collapse is
+ * a desktop (lg) affordance; on mobile the sidebar is a full-width top bar and always expanded.
+ * The theme toggle now lives fixed at the screen's top-right (see the admin layout).
  */
 export function AdminSidebar() {
   const [collapsed, toggle] = useSidebarCollapsed();
@@ -52,57 +53,48 @@ export function AdminSidebar() {
         collapsed ? 'lg:w-[4.75rem] lg:p-3' : 'lg:w-60',
       )}
     >
-      <div
-        className={cn(
-          'flex items-center gap-2',
-          collapsed ? 'lg:justify-center' : 'justify-between',
-        )}
+      <Link
+        href="/admin"
+        aria-label="BeeCompete Admin"
+        className={cn('flex items-center gap-2', collapsed && 'lg:justify-center')}
       >
-        <Link href="/admin" className="flex items-center gap-2" aria-label="BeeCompete Admin">
-          {/* Collapsed: the wordmark won't fit the rail, so show just the gold brand mark. */}
-          {collapsed ? (
-            <span
-              aria-hidden="true"
-              className="hidden size-3 rounded-full bg-brand-gold lg:inline-block"
-            />
-          ) : null}
-          <span className={cn('flex items-center gap-2', collapsed && 'lg:hidden')}>
-            <Logo />
-            <span className="rounded bg-surface px-1.5 py-0.5 text-xs font-semibold text-muted">
-              Admin
-            </span>
+        {/* Collapsed: the wordmark won't fit the rail, so show just the gold brand mark. */}
+        {collapsed ? (
+          <span
+            aria-hidden="true"
+            className="hidden size-3 rounded-full bg-brand-gold lg:inline-block"
+          />
+        ) : null}
+        <span className={cn('flex items-center gap-2', collapsed && 'lg:hidden')}>
+          <Logo />
+          <span className="rounded bg-surface px-1.5 py-0.5 text-xs font-semibold text-muted">
+            Admin
           </span>
-        </Link>
-        {/* Collapse control — desktop only (the mobile top bar has no width to reclaim). */}
-        <button
-          type="button"
-          onClick={toggle}
-          aria-pressed={collapsed}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="hidden size-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface hover:text-foreground lg:inline-flex"
-        >
-          {collapsed ? (
-            <ChevronRight aria-hidden="true" className="size-4.5" />
-          ) : (
-            <ChevronLeft aria-hidden="true" className="size-4.5" />
-          )}
-        </button>
-      </div>
+        </span>
+      </Link>
 
       <AdminNav collapsed={collapsed} />
 
-      {/* Footer — pushed to the bottom on the tall desktop rail; gives the theme toggle
-          room to breathe instead of sharing the logo line. */}
-      <div
+      {/* Collapse control — desktop only (the mobile top bar has no width to reclaim). Styled
+          like a nav item + pinned to the bottom so it clearly belongs to the rail. */}
+      <button
+        type="button"
+        onClick={toggle}
+        aria-pressed={collapsed}
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         className={cn(
-          'mt-auto flex items-center border-t border-border pt-4',
-          collapsed ? 'lg:justify-center' : 'gap-2',
+          'mt-auto hidden items-center gap-2.5 rounded-lg py-2 text-sm font-medium text-muted transition-colors hover:bg-surface hover:text-foreground lg:flex',
+          collapsed ? 'justify-center px-2' : 'px-3',
         )}
       >
-        <ThemeToggle />
-        {!collapsed && <span className="text-sm text-muted">Theme</span>}
-      </div>
+        {collapsed ? (
+          <ChevronRight aria-hidden="true" className="size-4.5 shrink-0" />
+        ) : (
+          <ChevronLeft aria-hidden="true" className="size-4.5 shrink-0" />
+        )}
+        {!collapsed && 'Collapse'}
+      </button>
     </aside>
   );
 }

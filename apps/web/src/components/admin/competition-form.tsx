@@ -1,7 +1,7 @@
 'use client';
 
-import { useActionState, useEffect } from 'react';
-import { Alert, Button, FormField, Input, Textarea, useToast } from '@beecompete/ui';
+import { useActionState, useEffect, type ReactNode } from 'react';
+import { Alert, Button, FormField, Input, Textarea, cn, useToast } from '@beecompete/ui';
 import { NativeSelect, enumOptions } from '@/components/admin/native-select';
 import { createCompetition, updateCompetition } from '@/app/admin/competitions/actions';
 import {
@@ -17,6 +17,30 @@ import {
 } from '@/lib/admin-types';
 
 const INITIAL: FormState = { ok: false };
+
+// Titled, evenly-spaced group with a top rule — gives the long form a scannable structure
+// instead of one undifferentiated column of fields.
+function FormSection({
+  title,
+  description,
+  cols,
+  children,
+}: {
+  title: string;
+  description?: string;
+  cols?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="grid gap-4 border-t border-border pt-6 first:border-t-0 first:pt-0">
+      <div>
+        <h2 className="font-display text-base text-foreground">{title}</h2>
+        {description && <p className="mt-1 text-xs text-muted">{description}</p>}
+      </div>
+      <div className={cn('grid gap-4', cols)}>{children}</div>
+    </section>
+  );
+}
 
 export function CompetitionForm({
   competition,
@@ -42,10 +66,10 @@ export function CompetitionForm({
   const attributesText = c?.attributes ? JSON.stringify(c.attributes, null, 2) : '';
 
   return (
-    <form action={formAction} className="grid gap-6">
+    <form action={formAction} className="grid gap-8">
       {state.error && <Alert tone="danger">{state.error}</Alert>}
 
-      <section className="grid gap-4 sm:grid-cols-2">
+      <FormSection title="Basics" cols="sm:grid-cols-2">
         <FormField label="Name" required>
           <Input name="name" defaultValue={c?.name} required maxLength={300} />
         </FormField>
@@ -69,20 +93,21 @@ export function CompetitionForm({
             defaultValue={c?.organizerOrgId ?? ''}
           />
         </FormField>
-      </section>
+      </FormSection>
 
-      <FormField label="Summary" hint="1–2 sentences shown on the card (max 300 chars).">
-        <Textarea name="summary" defaultValue={c?.summary ?? ''} maxLength={300} rows={2} />
-      </FormField>
+      <FormSection title="Description" description="Shown on the card and the About tab.">
+        <FormField label="Summary" hint="1–2 sentences shown on the card (max 300 chars).">
+          <Textarea name="summary" defaultValue={c?.summary ?? ''} maxLength={300} rows={2} />
+        </FormField>
+        <FormField
+          label="Description"
+          hint="Full write-up (About tab). Write our own — never paste theirs."
+        >
+          <Textarea name="description" defaultValue={c?.description ?? ''} rows={5} />
+        </FormField>
+      </FormSection>
 
-      <FormField
-        label="Description"
-        hint="Full write-up (About tab). Write our own — never paste theirs."
-      >
-        <Textarea name="description" defaultValue={c?.description ?? ''} rows={5} />
-      </FormField>
-
-      <section className="grid gap-4 sm:grid-cols-3">
+      <FormSection title="Format" cols="sm:grid-cols-3">
         <FormField label="Participation">
           <NativeSelect
             name="participationMode"
@@ -118,9 +143,15 @@ export function CompetitionForm({
             defaultValue={c?.recurrence ?? 'ANNUAL'}
           />
         </FormField>
-      </section>
+        <FormField label="Team size (min)" hint="team competitions only">
+          <Input name="teamSizeMin" type="number" defaultValue={c?.teamSizeMin ?? ''} min={1} />
+        </FormField>
+        <FormField label="Team size (max)" hint="team competitions only">
+          <Input name="teamSizeMax" type="number" defaultValue={c?.teamSizeMax ?? ''} min={1} />
+        </FormField>
+      </FormSection>
 
-      <section className="grid gap-4 sm:grid-cols-4">
+      <FormSection title="Eligibility" cols="sm:grid-cols-4">
         <FormField label="Min grade" hint="Pre-K −1, K 0">
           <Input name="minGrade" type="number" defaultValue={c?.minGrade ?? ''} min={-1} max={13} />
         </FormField>
@@ -133,9 +164,9 @@ export function CompetitionForm({
         <FormField label="Max age">
           <Input name="maxAge" type="number" defaultValue={c?.maxAge ?? ''} min={0} />
         </FormField>
-      </section>
+      </FormSection>
 
-      <section className="grid gap-4 sm:grid-cols-2">
+      <FormSection title="Classification & links" cols="sm:grid-cols-2">
         <FormField label="Tags" hint="comma-separated">
           <Input name="tags" defaultValue={c?.tags?.join(', ') ?? ''} />
         </FormField>
@@ -151,20 +182,30 @@ export function CompetitionForm({
         <FormField label="Logo (S3 key or URL)">
           <Input name="logo" defaultValue={c?.logo ?? ''} />
         </FormField>
-      </section>
+      </FormSection>
 
-      <FormField
-        label="Attributes (JSON)"
-        hint="Category-specific fields — validated against the category template on save."
+      <FormSection
+        title="Category attributes"
+        description="Category-specific fields — validated against the category template on save."
       >
-        <Textarea
-          name="attributes"
-          defaultValue={attributesText}
-          rows={6}
-          className="font-mono text-xs"
-          placeholder='{ "topics": ["algebra"] }'
-        />
-      </FormField>
+        <FormField label="Attributes (JSON)">
+          <Textarea
+            name="attributes"
+            defaultValue={attributesText}
+            rows={6}
+            className="font-mono text-xs"
+            placeholder='{ "topics": ["algebra"] }'
+          />
+        </FormField>
+      </FormSection>
+
+      {/* Dates aren't part of the competition record — they live on its Editions (D3, timeline
+          as data). Surface where to set them, since admins expect a "deadline" field here. */}
+      <Alert tone="info">
+        Dates &amp; deadlines aren&apos;t set here — they live on the competition&apos;s{' '}
+        <strong>Editions</strong>. After saving, open the competition, add an Edition, then add its
+        key dates (registration close, submission due, results).
+      </Alert>
 
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={pending}>
