@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -40,14 +41,16 @@ import { breadcrumbJsonLd, eventJsonLd, faqJsonLd, jsonLdScript } from '@/lib/st
 
 const SENTINEL_ID = 'detail-header-sentinel';
 
-async function load(slug: string): Promise<CompetitionDetail | null> {
+// cache(): generateMetadata and the page share one upstream fetch per request regardless of
+// Next's fetch-memoization behavior for no-store requests (review fix L6).
+const load = cache(async (slug: string): Promise<CompetitionDetail | null> => {
   try {
     return await fetchCompetition(slug);
   } catch (e) {
     if (e instanceof PublicApiError && e.status === 404) return null;
     throw e;
   }
-}
+});
 
 export async function generateMetadata({
   params,
@@ -84,8 +87,16 @@ export default async function CompetitionDetailPage({
   if (!competition) notFound();
 
   const edition = currentEdition(competition.editions);
-  const registerUrl = edition?.registrationUrl ?? competition.officialUrl ?? null;
   const path = `/c/${competition.slug}`;
+
+  // Register CTA only while registering is plausible (review fix M1): a closed/ongoing
+  // edition gets a neutral official-site link instead of a gold "Register" pointing at a dead
+  // form — and a missing registration URL is never papered over with the org homepage.
+  const registrationOpen =
+    edition?.effectiveStatus === 'open' || edition?.effectiveStatus === 'upcoming';
+  const registerUrl = registrationOpen ? (edition?.registrationUrl ?? null) : null;
+  const registrationClosed =
+    edition?.effectiveStatus === 'closed' || edition?.effectiveStatus === 'ongoing';
 
   const event = eventJsonLd(competition);
   const breadcrumb = breadcrumbJsonLd(competition);
@@ -211,6 +222,26 @@ export default async function CompetitionDetailPage({
                       Registration happens on the organizer&apos;s official site ↗
                     </p>
                   </>
+                ) : competition.officialUrl ? (
+                  <>
+                    <a
+                      href={competition.officialUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={cn(
+                        buttonClasses({ variant: 'secondary' }),
+                        'w-full justify-center',
+                      )}
+                    >
+                      Visit official site
+                      <ExternalLink aria-hidden="true" className="size-4" />
+                    </a>
+                    <p className="text-center text-xs text-muted">
+                      {registrationClosed
+                        ? 'Registration is closed for this edition — follow below to hear about the next one.'
+                        : 'No registration link yet — the official site has the latest.'}
+                    </p>
+                  </>
                 ) : (
                   <p className="text-center text-xs text-muted">
                     No registration link yet — check back, or{' '}
@@ -226,8 +257,10 @@ export default async function CompetitionDetailPage({
               </div>
             </div>
 
-            {/* Follow — the page's conversion event (R1 stub; capture at R1-15b). */}
-            <div id="follow-cta">
+            {/* Follow — the page's conversion event (R1 stub; capture at R1-15b).
+                tabIndex + scroll-margin: the mobile bar's anchor jump lands focus here
+                cleanly under the sticky header (review fix L5). */}
+            <div id="follow-cta" tabIndex={-1} className="scroll-mt-24 focus-visible:outline-none">
               <StubAction
                 label="Follow this competition"
                 icon={<Bell aria-hidden="true" className="size-4" />}
@@ -253,7 +286,11 @@ export default async function CompetitionDetailPage({
                 <h2 id="dates-heading" className="mb-4 text-sm font-semibold text-foreground">
                   Key dates{edition.cycleLabel ? ` · ${edition.cycleLabel}` : ''}
                 </h2>
-                <KeyDatesTimeline edition={edition} competitionName={competition.name} />
+                <KeyDatesTimeline
+                  edition={edition}
+                  competitionName={competition.name}
+                  competitionSlug={competition.slug}
+                />
               </section>
             )}
 

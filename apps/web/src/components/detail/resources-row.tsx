@@ -67,7 +67,7 @@ function ResourceCard({ resource }: { resource: ResourceView }) {
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-muted">{resourceTypeLabel(resource.type)}</span>
           {resource.isAffiliate && (
-            <span className="rounded-full bg-brand-gold-soft px-1.5 py-0.5 text-[10px] font-medium text-foreground">
+            <span className="rounded-full bg-brand-gold-soft px-2 py-0.5 text-[11px] font-medium text-foreground">
               Affiliate
             </span>
           )}
@@ -98,7 +98,7 @@ export function ResourcesRow({ resources }: { resources: ResourceView[] }) {
             Some links below are{' '}
             <strong className="font-medium text-foreground">affiliate links</strong>. If you buy
             through them, BeeCompete may earn a small commission at no extra cost to you — it never
-            affects what we list or how we rank it.
+            affects what we list or recommend.
           </span>
         </p>
       )}

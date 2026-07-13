@@ -28,6 +28,9 @@ export function StickyBottomBar({ sentinelId, registerUrl }: StickyBottomBarProp
 
   return (
     <div
+      // inert while hidden — the slide-out is transform-only, so without it the invisible
+      // Follow/Register links stay in the keyboard tab order (review fix M5).
+      inert={!show}
       className={cn(
         'fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 backdrop-blur lg:hidden',
         'transition-transform duration-200',

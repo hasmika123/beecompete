@@ -1,6 +1,6 @@
 import { Badge, CheckCircle, Info, VerifiedSeal } from '@beecompete/ui';
 import type { BadgeVariant } from '@beecompete/ui';
-import { formatDate } from '@/lib/detail-display';
+import { formatDate } from '@/lib/dates';
 import type { CompetitionDetail } from '@/lib/catalog-types';
 
 // Trust & attribution panel (blueprints Page 3.4c, → DQ1/DQ13): tier badge · source +
