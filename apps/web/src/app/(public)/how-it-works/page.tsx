@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic'; // no-param page — render at request, 
 
 export function generateMetadata(): Metadata {
   return pageMetadata({
-    title: 'How It Works — BeeCompete',
+    title: 'How It Works',
     description:
       'How BeeCompete works: we curate K-12 academic competitions into one honest catalog — you find the right one and register on the organizer’s official site.',
     path: '/how-it-works',

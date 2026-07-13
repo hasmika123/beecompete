@@ -6,7 +6,7 @@ import { pageMetadata } from '@/lib/seo';
 // all canonicalize here so the facet combinations don't read as duplicate content (R1-10).
 export function generateMetadata(): Metadata {
   return pageMetadata({
-    title: 'Browse K-12 Academic Competitions — BeeCompete',
+    title: 'Browse K-12 Academic Competitions',
     description:
       'Search and filter curated K-12 academic competitions by grade, category, cost, deadline, and more — math, science, coding, debate, writing, and beyond.',
     path: '/competitions',

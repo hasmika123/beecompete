@@ -6,7 +6,7 @@ import { SuggestCorrectionForm } from './suggest-correction-form';
 export function generateMetadata(): Metadata {
   // noindex: query-param variants, a utility form — not an SEO target.
   return pageMetadata({
-    title: 'Suggest a correction — BeeCompete',
+    title: 'Suggest a correction',
     description: 'Spotted something wrong in a listing? Send our curators a fix.',
     path: '/suggest-a-correction',
     noindex: true,

@@ -8,6 +8,10 @@ import { SITE_NAME, absoluteUrl, indexingEnabled } from '@/lib/site';
 // they aren't duplicated.
 
 interface PageSeoInput {
+  /**
+   * UNBRANDED title — the root layout's title.template appends "· BeeCompete" exactly once.
+   * Never bake the brand into this string (that's the "… — BeeCompete · BeeCompete" bug).
+   */
   title: string;
   description: string;
   /** Site-relative canonical path (no query string). */
@@ -16,6 +20,8 @@ interface PageSeoInput {
   noindex?: boolean;
   /** OpenGraph type; defaults to "website". */
   ogType?: 'website' | 'article';
+  /** Title already carries the brand (e.g. the Landing) — skip the template + og suffix. */
+  absoluteTitle?: boolean;
 }
 
 export function pageMetadata({
@@ -24,20 +30,23 @@ export function pageMetadata({
   path,
   noindex,
   ogType = 'website',
+  absoluteTitle,
 }: PageSeoInput): Metadata {
   const index = indexingEnabled() && !noindex;
+  // og/twitter titles don't get the layout template, so brand them here to match <title>.
+  const socialTitle = absoluteTitle ? title : `${title} · ${SITE_NAME}`;
   return {
-    title,
+    title: absoluteTitle ? { absolute: title } : title,
     description,
     alternates: { canonical: path },
     robots: index ? { index: true, follow: true } : { index: false, follow: false, nocache: true },
     openGraph: {
-      title,
+      title: socialTitle,
       description,
       url: absoluteUrl(path),
       siteName: SITE_NAME,
       type: ogType,
     },
-    twitter: { card: 'summary_large_image', title, description },
+    twitter: { card: 'summary_large_image', title: socialTitle, description },
   };
 }
