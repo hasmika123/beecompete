@@ -350,6 +350,86 @@ registrationUrl 1000, category slug 140.
 
 ---
 
+### A8. CompetitionCard corner actions — Share on the card (align with the approved /design card)
+
+**Problem.** The approved `/design` study card has a top-right corner: a social-proof pill
+("1.2k registered") that crossfades on hover to Save + Share icon buttons. The shipped R1
+card deliberately omitted the corner (data/actions arrive with M31/M7 at R2). Owner
+(2026-07-13): the live card must align with the study — at minimum the **Share** button.
+
+**Scope at R1 — Share only.** Save (Heart) needs accounts (M7, R2) and the social-proof pill
+needs M31 data (R2); build the corner as a slot-shaped container so R2 drops those in without
+relayout. Nothing else renders in the corner at R1.
+
+**Design.**
+
+1. **Layering inside the stretched-link card.** The whole card is an `absolute inset-0 z-10`
+   link. The corner mounts as `absolute top-2 right-2 z-20` — above the link, so clicks hit
+   the button, not the link. Real `<button>`s (keyboard-reachable; DOM/tab order: card link
+   first, then Share). A11y label: `Share ${name}`.
+2. **Reuse `ShareMenu` (R1-11)** — its API already fits cards: `path` is site-relative
+   (`/c/<slug>`, resolved to `window.location.origin` at open time — clean URL, no params, so
+   the M21/M34 privacy rule holds automatically) + `title` = competition name. Two required
+   extensions:
+   - **Icon-only trigger variant** — add a `variant?: 'button' | 'icon'` prop (icon = a
+     small ghost circle with the `Share` icon, `size-8`, `bg-surface-raised/80` backdrop so
+     it reads over any cover art per the §4 text-over-imagery rule).
+   - **Popover clipping** — `Card` is `overflow-hidden`, and ShareMenu renders its popover
+     in-tree, so it would clip. Preferred fix: render the popover through a **portal**
+     (`createPortal` to `document.body`, positioned from the trigger's
+     `getBoundingClientRect`, closed on scroll/resize). Alternative (simpler, evaluate
+     first): move the clipping to the cover element (`CategoryCover` gets the top rounding)
+     and drop `overflow-hidden` from the card root — if nothing else depends on root
+     clipping, this avoids the portal entirely.
+3. **Reveal treatment** (matches the study): corner is `opacity-0` →
+   `group-hover:opacity-100 group-focus-within:opacity-100`, and **always visible on
+   non-hover devices** (`@media (hover:none)` / Tailwind `[@media(hover:none)]:opacity-100`)
+   so touch users aren't locked out.
+4. **Server/client boundary.** `CompetitionCard` stays a server-compatible component;
+   `ShareMenu` is `'use client'` and composes fine as a child. The card gains an optional
+   `shareable?: boolean` (default true) so contexts that must stay interaction-free can opt
+   out.
+5. **Update the `/design` showcase** to show the shipped R1 corner (share-only) next to the
+   full R2 study version, and extend `competition-card.test.tsx` (share button present +
+   labeled; card link still the primary action).
+
+**Size:** S–M. Light loop (no schema).
+
+---
+
+### A9. Invariant card width across the filter-panel toggle — fixed grid tracks
+
+**Problem (verified).** `CardGrid` uses stretchy tracks
+(`grid-cols-1 gap-5 @xl:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-4` in a `@container`), so
+every card's width is `available/N` — opening the w-72 panel narrows all cards a few px
+instead of dropping a column cleanly. Owner: card width must be **identical** with the panel
+open and closed; make the panel narrower so the math works.
+
+**Design — cards get a fixed track width; the panel is exactly one track wide.**
+
+1. **Fixed tracks at ≥ sm:** replace the column-count container queries with
+   `repeat(auto-fill, 270px)` (Tailwind arbitrary value) + `justify-between` — card width is
+   **270px by construction**, invariant to panel state and viewport; the column count falls
+   out of `auto-fill` (no breakpoints to maintain), and leftover space breathes into the gaps
+   instead of the cards. 270px is the blueprint card width ("4 per row on desktop, ~270px").
+2. **Unify the gaps so the panel consumes exactly one column:** grid `gap-5` (20px) → `gap-6`
+   (24px) to match the aside↔results `gap-6`; then set the desktop aside to **`w-[270px]`**
+   (from `w-72`/288px — also satisfies the owner's "make the panel a little more narrow").
+   Panel + gap = track + gap ⇒ opening the panel drops exactly one column, same card width.
+3. **Mobile stays fluid:** below `sm`, keep a single full-width column
+   (`grid-cols-1` → fixed tracks only from `sm:` up, via
+   `sm:grid-cols-[repeat(auto-fill,270px)]`), so phones keep edge-to-edge cards.
+4. **Verify live** (both panel states, 1280/1360/1536 viewports): card
+   `getBoundingClientRect().width === 270` in both states; no horizontal overflow; the
+   `@container` wrapper can stay (harmless) or go if nothing else consumes it.
+5. **Consistency pass (optional):** the landing featured row already fixes width
+   (`w-[270px]` wrappers) ✓; the detail-page related grid uses `lg:grid-cols-4` stretch —
+   align it to the same fixed-track pattern for pixel-identical cards everywhere.
+
+**Size:** S. Light loop. Fiddly — do the live measurements, don't trust the math blind.
+
+---
+
 ## Part B — straightforward fixes (no design needed)
 
 Terminology (rename → "Request a Competition"):
@@ -386,6 +466,45 @@ Small UX:
       FAQ-manager parity
 - [ ] Empty states: pass `description` + action (e.g. "New competition") through `AdminTable`
 
+Marketplace & card polish (owner round 2, 2026-07-13):
+
+- [ ] **Card title → one line.** `competition-card.tsx`: `CardTitle` `line-clamp-2` →
+      `truncate` (owner overrides the earlier two-line rationale — update the in-code comment
+      and the /design study note; adjust the card test if it asserts wrapping)
+- [ ] **Pin the Cost/Region facts row to the card bottom** (above the prize/deadline footer):
+      move `mt-auto` from the footer row to the facts row — both rows then anchor to the
+      bottom regardless of missing summary/organizer content; verify with a sparse card (no
+      org, no summary, no prize). Equal heights per row already come from `h-full` + grid
+      stretch — re-verify after the change with mixed sparse/full cards side by side
+- [ ] **Filter facets collapsed by default, first one open:** give `Facet` a
+      `defaultOpen?: boolean`; `FilterPanel` passes it only to the first facet.
+      *Recommended enhancement:* also default-open any facet whose filter is ACTIVE (its
+      params are set) so applied state is never hidden behind a fold
+- [ ] **No panel-internal scroll — page grows instead:** drop
+      `max-h-[calc(100dvh-6rem)] overflow-y-auto overflow-x-hidden scrollbar-slim pr-2` from
+      the desktop aside; the panel sits in normal flow. Keep `sticky top-20 self-start` —
+      with facets collapsed by default the panel fits the viewport; nuance: a
+      taller-than-viewport expanded panel won't fully stick (bottom reachable only via page
+      scroll) — acceptable; drop `sticky` entirely if that feels off in practice. The
+      mobile bottom sheet KEEPS its own scroll (it's an overlay; page growth doesn't apply).
+      The `scrollbar-slim` utility stays in globals.css (mobile sheet still uses it)
+- [ ] **Apply/Reset differentiation** (they currently read like the chips above): Apply →
+      full-width `variant="brand"` (gold) button; Reset → quiet text link
+      (`text-sm text-muted underline-offset-2 hover:underline`, no pill). Keep the bar at the
+      panel top; with the internal scroll gone the `sticky top-0 bg-background` wrapper can
+      be simplified to a plain row
+- [ ] **Grade From/To selects don't match the universal dropdown** (owner report): they DO
+      route through `NativeSelect` — diagnose the visual delta at impl. Check, in order:
+      (1) stale dev-server chunk (restart + hard reload before debugging), (2) the wrapping
+      `<label className="grid gap-1 text-xs text-muted">` leaking `text-xs text-muted` vs
+      the Select trigger's `text-sm`/`text-foreground`, (3) cramped two-column width making
+      the closed trigger look different (padding/chevron overlap at ~120px), (4) placeholder
+      color: ui `Select` renders placeholder `text-muted`, `NativeSelect` renders the
+      selected empty option `text-foreground` — mirror by styling the select `text-muted`
+      when `value === ''` (`has-[option:checked[value='']]` or a data attribute). Fix so the
+      closed trigger is pixel-identical to the ui `Select`
+- [ ] (Designed items for this round: **A8** share-on-card, **A9** invariant card width)
+
 ## Part C — decision points (recommended defaults inline)
 
 | # | Decision | Recommendation |
@@ -399,12 +518,14 @@ Small UX:
 
 ## Suggested PR slicing (order)
 
-1. **PR-B** — Part B checklist (light loop; no schema)
-2. **PR-A1** — key-date timezone + endsAt/label (bug fix; light loop)
-3. **PR-A6** — queues: get-by-id, pagination, subject names, ConfirmDialog, org restore
-4. **PR-A5** — validation hardening (API + form mirrors)
-5. **PR-A3** — R1-18 TBD deadlines (schema; full loop)
-6. **PR-A2** — R1-19 maintainer realignment (schema; full loop) — or ship its Phase-0
-   trust-panel line first inside PR-B if R1-19 waits
-7. **PR-A4** — listing-health checklist
-8. **PR-A7** — uiHints fix (can ride PR-B) + schema-driven attributes form
+1. **PR-B1** — marketplace & card polish: the round-2 Part B items + **A9** (invariant card
+   width) + **A8** (share-on-card) — one coherent public-UI pass, verified together live
+2. **PR-B2** — the admin/terminology Part B checklist (light loop; no schema)
+3. **PR-A1** — key-date timezone + endsAt/label (bug fix; light loop)
+4. **PR-A6** — queues: get-by-id, pagination, subject names, ConfirmDialog, org restore
+5. **PR-A5** — validation hardening (API + form mirrors)
+6. **PR-A3** — R1-18 TBD deadlines (schema; full loop)
+7. **PR-A2** — R1-19 org ladder + derived maintainer (schema; full loop) — or ship its
+   schema-independent web half (rules 4–6) first inside PR-B2 if the migration waits
+8. **PR-A4** — listing-health checklist
+9. **PR-A7** — uiHints fix (can ride PR-B2) + schema-driven attributes form
