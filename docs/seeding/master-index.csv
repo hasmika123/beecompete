@@ -74,7 +74,6 @@ rank_composite,name,organizer,category_slug,official_url,grade_band,region_scope
 3.3,Congressional Debate,National Speech & Debate Association,debate-speech,https://www.speechanddebate.org,9-12,national,paid,individual,school_or_chapter,annual,3,4,3,Legislative simulation debate
 3.3,National High School Model United Nations (NHSMUN),IMUNA,debate-speech,https://www.imuna.org/nhsmun,9-12,national,paid,both,school_or_chapter,annual,3,4,3,"Large Model UN conference, NYC"
 3.3,Policy (Cross-Examination) Debate,National Speech & Debate Association,debate-speech,https://www.speechanddebate.org,9-12,national,paid,team,school_or_chapter,annual,3,4,3,Two-person evidence-heavy debate
-3.3,National Geographic GeoChallenge,National Geographic Society,history-geography-civics,https://www.nationalgeographic.org/education/student-experiences/geochallenge,5-8,national,free,team,school_or_chapter,annual,3,4,3,Team problem-solving on global issues
 3.3,Cayley/Pascal/Fermat (CEMC) US sittings,University of Waterloo CEMC,math,https://www.cemc.uwaterloo.ca/contests,7-12,national,paid,individual,school_or_chapter,annual,3,4,3,Waterloo contests offered at US schools
 3.3,Continental Mathematics League,Continental Mathematics League,math,https://www.continentalmathematicsleague.com,2-12,national,paid,team,school_or_chapter,annual,3,4,3,Multi-meet league
 3.3,Math League,Math League Press,math,https://www.mathleague.com,4-12,national,paid,both,school_or_chapter,annual,3,4,3,Contests and tournaments
@@ -98,11 +97,8 @@ rank_composite,name,organizer,category_slug,official_url,grade_band,region_scope
 3.3,John Locke Institute Essay Competition,John Locke Institute,writing-essay,https://www.johnlockeinstitute.com/essay-competition,6-12,national,free,individual,individual,annual,3,4,3,Global; under-19; ten subject categories
 3.3,Poetry Out Loud,National Endowment for the Arts,writing-essay,https://www.poetryoutloud.org,9-12,national,free,individual,school_or_chapter,annual,3,4,3,Recitation contest; school-to-national finals
 3.3,YoungArts (Writing disciplines),National YoungArts Foundation,writing-essay,https://www.youngarts.org,10-12,national,paid,individual,individual,annual,3,4,3,National arts awards incl. writing
-3.2,Girls Who Code programs / challenges,Girls Who Code,computer-science,https://girlswhocode.com,6-12,national,free,team,either,rolling,3,3,4,Coding programs and challenges
-3.0,Google Code-in successor / Google programming events,Google,computer-science,https://codingcompetitions.withgoogle.com,9-12,national,free,individual,individual,annual,3,3,3,Coding challenges (Kick Start/Code Jam lineage)
 3.0,Harvard Model United Nations,Harvard International Relations Council,debate-speech,https://www.harvardmun.org,9-12,national,paid,team,school_or_chapter,annual,3,3,3,"Harvard-run MUN conference, Boston, January"
 3.0,Harvard National Forensics Tournament,Harvard University,debate-speech,https://www.hnft.org,9-12,national,paid,both,school_or_chapter,annual,3,3,3,Major national invitational
-3.0,Model UN — National High School conferences (various),various universities,debate-speech,https://www.unausa.org/global-classrooms-model-un,6-12,national,paid,both,school_or_chapter,annual,3,3,3,University-hosted MUN circuit
 3.0,National Speech & Debate Season / Original Oratory,National Speech & Debate Association,debate-speech,https://www.speechanddebate.org,9-12,national,paid,individual,school_or_chapter,annual,3,3,3,Individual speaking event
 3.0,Tournament of Champions (Debate),University of Kentucky,debate-speech,https://www.tournamentofchampions.org,9-12,national,paid,both,school_or_chapter,annual,3,3,3,Elite bid tournament
 3.0,Berkeley Math Tournament (BMT),UC Berkeley,math,https://bmt.berkeley.edu,6-12,national,paid,team,school_or_chapter,annual,3,3,3,University-hosted tournament
@@ -110,7 +106,7 @@ rank_composite,name,organizer,category_slug,official_url,grade_band,region_scope
 3.0,Mu Alpha Theta National Convention,Mu Alpha Theta,math,https://mualphatheta.org,9-12,national,paid,both,school_or_chapter,annual,3,3,3,Honor-society national math event
 3.0,Princeton University Mathematics Competition (PUMaC),Princeton University,math,https://pumac.princeton.edu,9-12,national,paid,team,school_or_chapter,annual,3,3,3,University-hosted invitational
 3.0,Stanford Math Tournament (SMT),Stanford University,math,https://sumo.stanford.edu/smt,9-12,national,paid,team,school_or_chapter,annual,3,3,3,University invitational
-3.0,NASA App / Student Launch challenges,NASA,science-engineering,https://www.nasa.gov/stem,6-12,national,free,team,school_or_chapter,annual,3,3,3,Various NASA STEM design challenges
+3.0,NASA Student Launch,NASA,science-engineering,https://www.nasa.gov/learning-resources/nasa-student-launch/,6-12,national,free,team,school_or_chapter,annual,3,3,3,High-power rocketry; qualify via TARC/Rockets for Schools
 3.0,NFTE World Series of Innovation,Network for Teaching Entrepreneurship,business-entrepreneurship,https://www.nfte.com/world-series-of-innovation,6-12,national,free,both,either,annual,2,4,4,Innovation challenges tied to goals
 3.0,Coolest Projects,Raspberry Pi Foundation,computer-science,https://coolestprojects.org,K-12,national,free,both,either,annual,2,4,4,"Tech creation showcase, ages 7-18"
 3.0,Hack Club / Scrapyard hackathons,Hack Club,computer-science,https://hackclub.com,6-12,national,free,both,either,rolling,2,4,4,Student-run hackathon network
@@ -149,7 +145,6 @@ rank_composite,name,organizer,category_slug,official_url,grade_band,region_scope
 2.8,Ayn Rand Institute Essay Contests (Atlas Shrugged / Anthem / Fountainhead),Ayn Rand Institute,writing-essay,https://www.aynrand.org/students/essay-contests,6-12,national,free,individual,individual,annual,2,4,3,Novel-based essay contests
 2.7,Blue Ocean Entrepreneurship Competition,Blue Ocean,business-entrepreneurship,https://blueoceancompetition.org,9-12,national,free,team,either,annual,2,3,4,Video-pitch entrepreneurship contest
 2.7,CodeDay,CodeDay (Student Rnd),computer-science,https://www.codeday.org,9-12,national,free,both,individual,rolling,2,3,4,24-hour beginner hackathons in many cities
-2.7,Codeforces / Codechef school rounds (US participation),Codeforces,computer-science,https://codeforces.com,9-12,national,free,individual,individual,rolling,2,3,4,Global competitive-programming rounds
 2.7,MIT Battlecode,MIT,computer-science,https://battlecode.org,9-12,national,free,team,either,annual,2,3,4,AI programming tournament; January
 2.7,National Cyber League,Cyber Skyline,computer-science,https://nationalcyberleague.org,9-12,national,paid,both,either,annual,2,3,4,Cybersecurity skills competition
 2.7,The Congressional Award,Congressional Award Foundation,history-geography-civics,https://www.congressionalaward.org,7-12,national,free,individual,individual,rolling,2,3,4,Congress's youth achievement award
@@ -163,10 +158,7 @@ rank_composite,name,organizer,category_slug,official_url,grade_band,region_scope
 2.5,Kentucky Governor's Cup,Kentucky Association for Academic Competition,academic-bowl,https://kaac.com/governors-cup,4-12,state,paid,both,school_or_chapter,annual,2,3,3,Quick-recall + written; statewide series
 2.5,NAQT Small School National Championship (SSNCT),National Academic Quiz Tournaments,academic-bowl,https://www.naqt.com/ssnct,9-12,national,paid,team,school_or_chapter,annual,2,3,3,National championship for small high schools
 2.5,National All-Star Academic Tournament (NASAT),International Quiz Bowl Tournaments,academic-bowl,https://iqbtnasat.com,9-12,national,paid,team,either,annual,2,3,3,State all-star high-school quiz bowl
-2.5,National Geographic GeoBee legacy / GeoChallenge,National Geographic Society,academic-bowl,https://www.nationalgeographic.org,5-8,national,free,team,school_or_chapter,annual,2,3,3,Team geography challenge (post-GeoBee)
-2.5,Quiz Bowl — ACF (Academic Competition Federation),ACF,academic-bowl,https://www.acf-quizbowl.com,9-12,national,paid,team,school_or_chapter,annual,2,3,3,Difficulty-focused collegiate/HS quiz
 2.5,Scholastic Bowl (IHSA state series),state associations,academic-bowl,https://www.ihsa.org,9-12,state,paid,team,school_or_chapter,annual,2,3,3,State-run quiz bowl series
-2.5,US Geography Olympiad,International Academic Competitions,academic-bowl,https://www.usgeographyolympiad.com,4-12,national,paid,individual,either,annual,2,3,3,Geography knowledge competition
 2.5,United States Academic Pentathlon,USAD,academic-bowl,https://www.usad.org/USAP,6-9,national,paid,team,school_or_chapter,annual,2,3,3,Middle-school five-event contest
 2.5,WordMasters Challenge,WordMasters,academic-bowl,https://www.wordmasterschallenge.com,3-8,national,paid,individual,school_or_chapter,annual,2,3,3,Vocabulary/analogy competition
 2.5,ASTA National Orchestra Festival,American String Teachers Association,arts-music,https://www.astastrings.org,6-12,national,paid,team,school_or_chapter,annual,2,3,3,School-orchestra festival/competition
@@ -176,7 +168,7 @@ rank_composite,name,organizer,category_slug,official_url,grade_band,region_scope
 2.5,Lions International Peace Poster Contest,Lions Clubs International,arts-music,https://www.lionsclubs.org/en/resources-for-members/resource-center/peace-poster-contest,6-8,national,free,individual,school_or_chapter,annual,2,3,3,Ages 11-13 peace-themed poster; club-sponsored
 2.5,MTNA Composition Competition,MTNA,arts-music,https://www.mtna.org/competitions,5-12,national,paid,individual,individual,annual,2,3,3,Student composition competition
 2.5,NATS National Student Auditions,National Association of Teachers of Singing,arts-music,https://www.nats.org/national_student_auditions.html,9-12,national,paid,individual,individual,annual,2,3,3,Solo voice; region-to-national
-2.5,National Film Festival for Talented Youth (NFFTY),NFFTY,arts-music,https://www.nffty.org,0-12,national,paid,both,individual,annual,2,3,3,"Youth film festival, Seattle"
+2.5,National Film Festival for Talented Youth (NFFTY),NFFTY,arts-music,https://www.nffty.org,K-12,national,paid,both,individual,annual,2,3,3,"Youth film festival, Seattle"
 2.5,The Music Center's Spotlight,The Music Center (LA),arts-music,https://www.musiccenter.org/education/spotlight,9-12,state,free,individual,individual,annual,2,3,3,Performing-arts scholarship program
 2.5,Toyota Dream Car Art Contest (USA),Toyota,arts-music,https://www.toyota.com/usa/dreamcar,K-11,national,free,individual,either,annual,2,3,3,Car-themed art contest by age
 2.5,Vans Custom Culture,Vans,arts-music,https://www.vans.com/en-us/custom-culture,9-12,national,free,team,school_or_chapter,annual,2,3,3,Shoe-design art competition
@@ -205,13 +197,11 @@ rank_composite,name,organizer,category_slug,official_url,grade_band,region_scope
 2.5,National Junior Forensic League Championship,National Speech & Debate Association,debate-speech,https://www.speechanddebate.org,6-8,national,paid,both,school_or_chapter,annual,2,3,3,Middle-school speech/debate nationals
 2.5,North American Invitational Model UN (NAIMUN),Georgetown International Relations Association,debate-speech,https://naimun.modelun.org,9-12,national,paid,team,school_or_chapter,annual,2,3,3,"Largest student-run high-school MUN, DC"
 2.5,Stoa USA Speech & Debate,Stoa USA,debate-speech,https://www.stoausa.org,6-12,national,paid,both,school_or_chapter,annual,2,3,3,Christian homeschool league
-2.5,We the People: Citizen & the Constitution (hearings),Center for Civic Education,debate-speech,https://www.civiced.org/wtp-the-program,9-12,national,free,team,school_or_chapter,annual,2,3,3,Simulated constitutional hearings
 2.5,World Schools Debate (US),National Speech & Debate Association,debate-speech,https://www.speechanddebate.org,9-12,national,paid,team,school_or_chapter,annual,2,3,3,Team format used at Worlds
 2.5,YMCA Conference on National Affairs,YMCA,debate-speech,https://ymcacona.org,9-12,national,paid,team,school_or_chapter,annual,2,3,3,"National affairs conference, Blue Ridge NC"
 2.5,Center for Civic Education / Project Citizen,Center for Civic Education,history-geography-civics,https://www.civiced.org/project-citizen,6-12,national,free,team,school_or_chapter,annual,2,3,3,Public-policy portfolio project
 2.5,Prudential Emerging Visionaries (civic),Prudential / Ashoka,history-geography-civics,https://www.prudential.com/links/about/prudential-emerging-visionaries,9-12,national,free,individual,individual,annual,2,3,3,Civic/financial-impact awards
 2.5,United States Senate Youth Program,Hearst Foundations,history-geography-civics,https://ussenateyouth.org,11-12,national,free,individual,school_or_chapter,annual,2,3,3,Government leadership scholarship
-2.5,iCivics / civics education challenges,iCivics,history-geography-civics,https://www.icivics.org,6-12,national,free,both,school_or_chapter,rolling,2,3,3,Civics games and challenges
 2.5,Bay Area Mathematical Olympiad (BAMO),MSRI/SLMath,math,https://www.bamo.org,8-12,regional,free,individual,school_or_chapter,annual,2,3,3,Regional proof olympiad
 2.5,Caltech Harvey Mudd Math Competition (CHMMC),Caltech / Harvey Mudd,math,https://chmmc.caltech.edu,9-12,national,paid,team,school_or_chapter,annual,2,3,3,University invitational
 2.5,Duke Math Meet (DMM),Duke University Mathematics Union,math,https://dukemathmeet.org,9-12,regional,paid,team,school_or_chapter,annual,2,3,3,Fall tournament at Duke; teams of six
@@ -227,7 +217,7 @@ rank_composite,name,organizer,category_slug,official_url,grade_band,region_scope
 2.5,Rube Goldberg Machine Contest,Rube Goldberg Institute,other,https://www.rubegoldberg.org,K-12,national,paid,team,school_or_chapter,annual,2,3,3,Overengineered-machine build contest
 2.5,BotBall Educational Robotics,KISS Institute for Practical Robotics,robotics,https://www.botball.org,6-12,national,paid,team,school_or_chapter,annual,2,3,3,Autonomous robotics program
 2.5,FIRST Global Challenge (US team),FIRST Global,robotics,https://first.global,9-12,national,paid,team,school_or_chapter,annual,2,3,3,International robotics olympics
-2.5,FIRST LEGO League Discover,FIRST,robotics,https://www.firstinspires.org/robotics/fll/discover,-1-1,national,paid,team,school_or_chapter,annual,2,3,3,Play-based early-elementary robotics (ages 4-6)
+2.5,FIRST LEGO League Discover,FIRST,robotics,https://www.firstinspires.org/robotics/fll/discover,PreK-1,national,paid,team,school_or_chapter,annual,2,3,3,Play-based early-elementary robotics (ages 4-6)
 2.5,RoboCupJunior US,RoboCup,robotics,https://robocupjunioramerica.org,6-12,national,free,team,school_or_chapter,annual,2,3,3,Soccer/rescue/dance robotics
 2.5,Robofest,Lawrence Technological University,robotics,https://www.robofest.net,4-12,national,paid,team,school_or_chapter,annual,2,3,3,Autonomous robotics competition
 2.5,SeaPerch / RoboNation SeaPerch Challenge,RoboNation,robotics,https://seaperch.org,5-12,national,paid,team,school_or_chapter,annual,2,3,3,Underwater robotics build
@@ -250,14 +240,10 @@ rank_composite,name,organizer,category_slug,official_url,grade_band,region_scope
 2.5,Kenyon Review Patricia Grodd Poetry Prize,The Kenyon Review,writing-essay,https://kenyonreview.org/submit/patricia-grodd,10-11,national,free,individual,individual,annual,2,3,3,Free poetry prize for sophomores/juniors
 2.5,NCTE Promising Young Writers,National Council of Teachers of English,writing-essay,https://ncte.org/awards/promising-young-writers,8-8,national,free,individual,school_or_chapter,annual,2,3,3,Grade-8 teacher-nominated writing award
 2.5,National Council of Teachers of English Achievement Awards,NCTE,writing-essay,https://ncte.org/awards,11-12,national,free,individual,school_or_chapter,annual,2,3,3,Writing recognition program
-2.5,Optimist International Essay Contest,Optimist International,writing-essay,https://www.optimist.org/member/scholarships3.cfm,0-12,national,free,individual,either,annual,2,3,3,Club-sponsored essay scholarship
+2.5,Optimist International Essay Contest,Optimist International,writing-essay,https://www.optimist.org/member/scholarships3.cfm,K-12,national,free,individual,either,annual,2,3,3,Club-sponsored essay scholarship
 2.5,Signet Classics Student Scholarship Essay Contest,Penguin Random House,writing-essay,https://www.penguinrandomhouse.com/pages/signet-classics-scholarship-essay-contest,11-12,national,free,individual,individual,annual,2,3,3,Literature essay scholarship
-2.4,Congressional App Challenge (Senate pilot),U.S. Congress,computer-science,https://www.congressionalappchallenge.us,6-12,national,free,both,individual,annual,2,2,4,Related district app competition
 2.2,National Dance / YoungArts dance discipline,National YoungArts Foundation,arts-music,https://www.youngarts.org,10-12,national,paid,individual,individual,annual,2,2,3,National awards in dance
-2.2,White House / C-SPAN youth film (StudentCam art),C-SPAN,arts-music,https://www.studentcam.org,6-12,national,free,both,individual,annual,2,2,3,Documentary filmmaking contest
 2.2,Extemporaneous Speaking (NSDA),National Speech & Debate Association,debate-speech,https://www.speechanddebate.org,9-12,national,paid,individual,school_or_chapter,annual,2,2,3,Impromptu current-events speech event
-2.2,Profile in Courage Essay (civics),JFK Library Foundation,history-geography-civics,https://www.jfklibrary.org/learn/education/profile-in-courage-essay-contest,9-12,national,free,individual,individual,annual,2,2,3,Political-courage essay (civics track)
-2.2,Kangourou / Le Mathematiques (US),Math Kangaroo USA,math,https://mathkangaroo.org,1-12,national,paid,individual,either,annual,2,2,3,Regional Kangaroo sittings
 2.2,Regeneron Biology Olympiad Open Exam,Center for Excellence in Education,science-engineering,https://www.usabo-trc.org,9-12,national,free,individual,school_or_chapter,annual,2,2,3,USABO first-round open exam
 2.2,Verizon Innovative Learning Emerging Innovators,Verizon,science-engineering,https://www.verizon.com/learning,6-12,national,free,team,school_or_chapter,annual,2,2,3,STEM/social-impact challenge
 2.0,MSHSAA Scholar Bowl,Missouri State High School Activities Association,academic-bowl,https://www.mshsaa.org,9-12,state,paid,team,school_or_chapter,annual,1,3,3,Missouri state-series buzzer competition
@@ -265,13 +251,9 @@ rank_composite,name,organizer,category_slug,official_url,grade_band,region_scope
 2.0,Cooper International Competition (violin/piano),Oberlin Conservatory,arts-music,https://www.oberlin.edu/cooper-competition,9-12,national,paid,individual,individual,annual,1,3,3,Pre-college classical competition
 2.0,Stulberg International String Competition,Stulberg,arts-music,https://stulberg.org,6-12,national,paid,individual,individual,annual,1,3,3,Strings; age 19 & under
 2.0,The American Prize,The American Prize,arts-music,https://theamericanprize.org,9-12,national,paid,both,individual,annual,1,3,3,Performing-arts competitions by category
-2.0,BizWorld / young entrepreneur challenges,BizWorld.org,business-entrepreneurship,https://www.bizworld.org,3-8,national,paid,team,school_or_chapter,annual,1,3,3,Elementary/middle entrepreneurship
-2.0,National Financial Capability Challenge,U.S. Treasury / partners,business-entrepreneurship,https://www.councilforeconed.org,9-12,national,free,individual,school_or_chapter,annual,1,3,3,Personal-finance knowledge test
-2.0,Zooniverse / AI4ALL programs,AI4ALL,computer-science,https://ai4all.org,9-12,national,free,both,either,rolling,1,3,3,AI education programs
-2.0,DAR Christopher Columbus Essay / history contests,Daughters of the American Revolution,history-geography-civics,https://www.dar.org/national-society/education/essay-contests,9-12,national,free,individual,school_or_chapter,annual,1,3,3,American-history essay contests
+2.0,DAR Christopher Columbus Essay Contest,Daughters of the American Revolution,history-geography-civics,https://www.dar.org/national-society/education/essay-contests,9-12,national,free,individual,school_or_chapter,annual,1,3,3,Columbus-themed essay; co-sponsored with NIAF
 2.0,Elks Americanism Essay Contest,Elks USA,history-geography-civics,https://www.elks.org/programs/americanism.cfm,5-8,national,free,individual,school_or_chapter,annual,1,3,3,Grades 5-8 patriotic essay; lodge-submitted
 2.0,International Geography Bee (US),International Academic Competitions,history-geography-civics,https://www.geographybee.com,4-12,national,paid,individual,either,annual,1,3,3,Geography buzzer competition
-2.0,National Constitution Center — youth programs,National Constitution Center,history-geography-civics,https://constitutioncenter.org/education,6-12,national,free,both,school_or_chapter,rolling,1,3,3,Constitution education competitions
 2.0,National World War II Museum student essay/challenge,National WWII Museum,history-geography-civics,https://www.nationalww2museum.org/students-teachers,6-12,national,free,individual,individual,annual,1,3,3,WWII-history student contest
 2.0,SAR Knight Essay Contest,Sons of the American Revolution,history-geography-civics,https://www.sar.org/education/knight-essay-contest,9-12,national,free,individual,either,annual,1,3,3,Essay on Revolution/Constitution; cash awards
 2.0,SAR Rumbaugh Historical Oration Contest,Sons of the American Revolution,history-geography-civics,https://www.sar.org/education/rumbaugh-oration-contest,9-12,national,free,individual,either,annual,1,3,3,Original oration on Revolutionary War topic
@@ -287,41 +269,17 @@ rank_composite,name,organizer,category_slug,official_url,grade_band,region_scope
 2.0,EngineerGirl Writing Contest,National Academy of Engineering,writing-essay,https://www.engineergirl.org/writing-contest,3-12,national,free,individual,individual,annual,1,3,3,STEM-themed essay contest
 2.0,Sejong Writing Competition,Sejong Cultural Society,writing-essay,https://www.sejongculturalsociety.org/writing,K-12,national,free,individual,individual,annual,1,3,3,US/Canada; sijo poetry and essay tracks
 2.0,The Adroit Prizes for Poetry & Prose,The Adroit Journal,writing-essay,https://theadroitjournal.org/prizes,9-12,national,paid,individual,individual,annual,1,3,3,Secondary/undergrad writing prize
-1.8,Earth Science Olympiad / National Earth Science Olympiad,American Geosciences Institute,science-engineering,https://www.earthscienceweek.org,9-12,national,free,individual,school_or_chapter,annual,1,3,2,Earth-science knowledge contest
-1.7,Brain Bowl / regional academic bowls,various,academic-bowl,https://www.naqt.com,6-12,regional,paid,team,school_or_chapter,annual,1,2,3,Assorted regional academic bowls
+1.8,U.S. Earth Science Olympiad (USESO),United States Earth Science Organization,science-engineering,https://www.useso.org,9-12,national,free,individual,individual,annual,1,3,2,Open exam selects US team for IESO
 1.7,National Latin Bee,National Latin Bee,academic-bowl,https://www.nationallatinbee.com,6-12,national,paid,individual,either,annual,1,2,3,Latin knowledge buzzer contest
 1.7,National Quiz Bowl Championships (Questions Unlimited),Questions Unlimited,academic-bowl,https://www.qub.us,6-12,national,paid,team,school_or_chapter,annual,1,2,3,Quiz-bowl championship series
-1.7,Reach for the Top / Academic Challenge (US regional),various,academic-bowl,https://www.naqt.com,9-12,regional,paid,team,school_or_chapter,annual,1,2,3,Regional buzzer quiz series
 1.7,Celebrating Art student poetry & art anthology,Celebrating Art,arts-music,https://www.celebratingart.com,K-12,national,free,individual,individual,rolling,1,2,3,Youth art/poetry anthology contest
-1.7,Emoji / Adobe youth design challenges,Adobe,arts-music,https://edex.adobe.com,6-12,national,free,individual,school_or_chapter,annual,1,2,3,Digital design challenges
-1.7,Fender / student battle-of-the-bands (regional),various,arts-music,https://www.grammy.com/music-education,9-12,regional,free,team,school_or_chapter,annual,1,2,3,Regional student music competitions
-1.7,GRAMMY Museum / Music Educator programs,GRAMMY Museum,arts-music,https://www.grammymuseum.org,9-12,national,free,individual,school_or_chapter,annual,1,2,3,Youth music programs/awards
-1.7,Lenore Marshall / youth poetry-arts (regional),various,arts-music,https://www.youngarts.org,9-12,regional,free,individual,individual,annual,1,2,3,Regional youth arts prizes
-1.7,National Sculpture Society / youth art shows,various,arts-music,https://www.pta.org/home/programs/reflections,K-12,national,free,individual,school_or_chapter,annual,1,2,3,Assorted juried youth art shows
-1.7,H-E-B / regional pitch competitions (youth),various,business-entrepreneurship,https://diamondchallenge.org,9-12,regional,free,team,either,annual,1,2,3,Regional youth pitch events
-1.7,MIT Launch / Global Startup Competition,MIT Launch,business-entrepreneurship,https://launchx.com,9-12,national,paid,team,either,annual,1,2,3,Startup-building competition
-1.7,Prudential / youth social-impact ventures,Prudential (via NFTE),business-entrepreneurship,https://www.nfte.com,9-12,national,free,both,either,annual,1,2,3,Social-entrepreneurship venture awards
-1.7,"Real Money, Real World / financial-literacy challenges",OSU Extension / partners,business-entrepreneurship,https://www.councilforeconed.org,6-12,state,free,both,school_or_chapter,annual,1,2,3,Financial-literacy simulations
-1.7,The Global Youth Economics Forum / economics essay,various,business-entrepreneurship,https://www.councilforeconed.org,9-12,national,free,individual,individual,annual,1,2,3,Economics essay/challenge
-1.7,Uncharted / national high school pitch competitions,Uncharted,business-entrepreneurship,https://www.unchartedlearning.org,9-12,national,free,team,school_or_chapter,annual,1,2,3,INCubatoredu pitch events
-1.7,Cyber Sleuth / Air Force Association Cyber,AFA,computer-science,https://www.uscyberpatriot.org,6-12,national,free,team,school_or_chapter,annual,1,2,3,Elementary cyber education modules
+1.7,INCubatoredu National Pitch,Uncharted Learning,business-entrepreneurship,https://www.unchartedlearning.org,9-12,national,free,team,school_or_chapter,annual,1,2,3,INCubatoredu member schools nominate one team
 1.7,PClassic (Penn),University of Pennsylvania,computer-science,https://pclassic.org,9-12,regional,free,team,school_or_chapter,annual,1,2,3,Beginner-friendly programming contest
-1.7,The Coding School / AI competitions,The Coding School,computer-science,https://the-cs.org,9-12,national,free,both,either,rolling,1,2,3,Coding & quantum programs
-1.7,Kids Guernica / peace-mural civics,Kids Guernica,history-geography-civics,https://www.nhd.org,K-12,national,free,team,school_or_chapter,annual,1,2,3,Collaborative peace mural project
-1.7,National Council for the Social Studies youth awards,NCSS,history-geography-civics,https://www.socialstudies.org,6-12,national,free,individual,school_or_chapter,annual,1,2,3,Social-studies student recognition
-1.7,National Youth Debate on the Constitution / civics forums,various,history-geography-civics,https://www.civiced.org,9-12,national,free,team,school_or_chapter,annual,1,2,3,Constitutional-issues civic forums
-1.7,Rendell Center Civics / Article III Moot Court (youth),Rendell Center,history-geography-civics,https://rendellcenter.org,4-8,regional,free,team,school_or_chapter,annual,1,2,3,Elementary/middle moot-court civics
-1.7,Serve America / youth civic-action challenge,Points of Light / partners,history-geography-civics,https://www.pointsoflight.org,6-12,national,free,both,school_or_chapter,annual,1,2,3,Community civic-action projects
-1.7,Veterans of Foreign Wars youth citizenship,Veterans of Foreign Wars,history-geography-civics,https://www.vfw.org/community/youth-and-education,6-12,national,free,individual,either,annual,1,2,3,Patriotic/citizenship contests
-1.7,By Kids For Kids / youth invention challenges,BKFK,other,https://www.nationalinventionconvention.org,K-12,national,free,individual,school_or_chapter,annual,1,2,3,Youth invention challenges
 1.7,Kids Philosophy Slam,Kids Philosophy Slam,other,https://www.philosophyslam.org,K-12,national,paid,individual,school_or_chapter,annual,1,2,3,"Philosophy essay/art contest, all ages"
-1.7,Hackaday / robotics maker challenges (youth),various,robotics,https://www.recf.org,6-12,national,paid,team,school_or_chapter,annual,1,2,3,Assorted regional robotics events
 1.7,RoboRAVE International,RoboRAVE,robotics,https://roborave.org,3-12,national,paid,team,school_or_chapter,annual,1,2,3,Challenge-based robotics event
-1.7,Sea to Sky / Drone Racing student events,MultiGP / RECF partners,robotics,https://www.recf.org/aerial-drone-competition,6-12,regional,paid,team,school_or_chapter,annual,1,2,3,Regional student drone racing
 1.7,Jane Austen Society of North America Essay Contest,JASNA,writing-essay,https://jasna.org/programs/essay-contest,9-12,national,free,individual,individual,annual,1,2,3,Austen-literature essay
 1.7,Leonard M. Milberg '53 High School Poetry Prize,Princeton University,writing-essay,https://arts.princeton.edu/about/opportunities/high-school-contests,11-11,national,free,individual,individual,annual,1,2,3,Poetry prize for juniors
 1.7,Nancy Thorp Poetry Contest,Hollins University,writing-essay,https://www.hollins.edu/nancy-thorp,10-11,national,free,individual,individual,annual,1,2,3,Poetry contest for girls
 1.7,Princeton Ten-Minute Play Contest,Princeton University,writing-essay,https://arts.princeton.edu/about/opportunities/high-school-contests,11-11,national,free,individual,individual,annual,1,2,3,Playwriting prize for juniors
-1.7,Rattle Young Poets Anthology,Rattle Foundation,writing-essay,https://www.rattle.com/rya,0-12,national,free,individual,individual,annual,1,2,3,Youth-poetry anthology contest
+1.7,Rattle Young Poets Anthology,Rattle Foundation,writing-essay,https://www.rattle.com/rya,K-12,national,free,individual,individual,annual,1,2,3,Youth-poetry anthology contest
 1.7,River of Words / youth environmental poetry & art,The Center for Environmental Literacy,writing-essay,https://www.stmarys-ca.edu/river-of-words,K-12,national,free,individual,school_or_chapter,annual,1,2,3,Environment poetry/art contest
-1.5,Cyberspace Mathematical Competition,MAA / partners,math,https://maa.org/student-programs/amc,11-12,national,free,individual,school_or_chapter,annual,1,2,2,Online modeling-style math event
