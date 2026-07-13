@@ -15,6 +15,7 @@ import {
   Radio,
   RadioGroup,
   Search,
+  ShareMenu,
   Skeleton,
   Spinner,
   Tab,
@@ -80,6 +81,14 @@ export function NewComponentsShowcase() {
             <TrustBadge key={tier} tier={tier} />
           ))}
         </div>
+      </Section>
+
+      <Section title="Share menu (M21)">
+        <p className="mb-2 text-sm text-muted">
+          Explicit channels + copy-link (and the OS share sheet where available). Plain intent
+          links, clean URL — collects nothing.
+        </p>
+        <ShareMenu title="AMC 10" path="/c/amc-10" />
       </Section>
 
       <Section title="Chips">

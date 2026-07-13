@@ -79,4 +79,7 @@ export type { CompetitionCardData, CompetitionCardProps } from './components/com
 export { TrustBadge, trustTierMeta, isElevatedTier } from './components/trust-badge';
 export type { TrustBadgeProps, TrustTier, TrustTierMeta } from './components/trust-badge';
 
+export { ShareMenu } from './components/share-menu';
+export type { ShareMenuProps } from './components/share-menu';
+
 export * from './icons';
