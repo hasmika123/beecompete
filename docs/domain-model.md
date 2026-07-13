@@ -235,6 +235,13 @@ Provenance is a reusable embedded structure on Competition/Edition/Organization:
 plus `verification_state (curated|claimed|verified|unverified)`. Host verification records and the
 moderation queue (DQ11–DQ14) reference these.
 
+> ⚠ **Pending realignment (owner, 2026-07-13 → phase-1-plan R1-19):** "verified" is an
+> **organization** property only. A **competition** is admin-**approved** (published to the
+> catalog), never "verified". The shared `verification_state` enum currently applied to
+> Competition/Edition is to be split from org verification; the CompetitionCard already dropped its
+> competition-level trust badge. Until R1-19 lands, treat a competition's `verification_state` as
+> provisional — the org seal is the only trustworthy signal.
+
 **`CorrectionProposal`** [P1] — user-submitted corrections queue (DQ6, per D7):
 `id, subject_type (competition|edition|resource), subject_id, submitted_by_user_id?, payload (JSONB
 field-level diff), note?, status (pending|approved|rejected), reviewed_by?, reviewed_at?, created_at`
