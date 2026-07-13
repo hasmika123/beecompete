@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, buttonClasses, Input, Plus, Search } from '@beecompete/ui';
+import { buttonClasses, Input, Plus, Search } from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
+import { AdminPagination } from '@/components/admin/admin-pagination';
 import { AdminTable } from '@/components/admin/admin-table';
 import { ArchivedBadge } from '@/components/admin/status-badges';
 import { adminFetch } from '@/lib/admin-api';
@@ -87,31 +88,7 @@ export default async function CompetitionsPage({
         ]}
       />
 
-      {result.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <span className="text-muted">
-            Page {result.number + 1} of {result.totalPages}
-          </span>
-          <div className="flex gap-2">
-            {result.number > 0 && (
-              <Link
-                href={buildHref(result.number - 1)}
-                className={buttonClasses({ variant: 'secondary', size: 'sm' })}
-              >
-                <ArrowLeft aria-hidden="true" className="size-4" /> Prev
-              </Link>
-            )}
-            {result.number < result.totalPages - 1 && (
-              <Link
-                href={buildHref(result.number + 1)}
-                className={buttonClasses({ variant: 'secondary', size: 'sm' })}
-              >
-                Next <ArrowRight aria-hidden="true" className="size-4" />
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
+      <AdminPagination page={result.number} totalPages={result.totalPages} hrefFor={buildHref} />
     </>
   );
 }

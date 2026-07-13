@@ -69,6 +69,14 @@ public class ImportQueueController {
 				.map(ImportRecordResponse::from);
 	}
 
+	/** Any status — reviewed records render a read-only outcome panel; deep links always resolve. */
+	@GetMapping("/{id}")
+	@Transactional(readOnly = true)
+	public ImportRecordResponse get(@PathVariable UUID id) {
+		return ImportRecordResponse.from(importRecords.findById(id).orElseThrow(
+				() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "import record not found")));
+	}
+
 	/** Pipeline ingress (S3). Also usable manually to queue a record for review. */
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)

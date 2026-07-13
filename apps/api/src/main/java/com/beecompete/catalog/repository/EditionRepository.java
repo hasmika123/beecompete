@@ -2,6 +2,7 @@ package com.beecompete.catalog.repository;
 
 import com.beecompete.catalog.domain.Edition;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,6 +16,10 @@ public interface EditionRepository extends JpaRepository<Edition, UUID> {
 
 	/** Public detail (R1-4): live editions, oldest cycle first. */
 	List<Edition> findByCompetitionIdAndArchivedAtIsNullOrderByCreatedAt(UUID competitionId);
+
+	/** Corrections-queue subject names: one query, competition join-fetched (no lazy N+1). */
+	@Query("select e from Edition e join fetch e.competition where e.id in :ids")
+	List<Edition> findAllWithCompetitionByIdIn(@Param("ids") Collection<UUID> ids);
 
 	/**
 	 * Bump an edition's {@code updated_at} (R1-10 sitemap lastmod). KeyDate rows have no

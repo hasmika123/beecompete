@@ -45,7 +45,15 @@ Everything here is spec-complete, follows an existing in-repo pattern, and needs
 judgment — a workhorse pass. Suggested as **one PR** (items 1–4 + 7 touch adjacent admin
 surfaces); docs (5) and tests (6) can ride along or follow.
 
-### 1. Admin queue reachability (the A6 follow-up) — M
+### 1. Admin queue reachability (the A6 follow-up) — M — ✅ built 2026-07-13
+
+> **As built:** all five sub-items shipped and verified live (get-by-id → read-only
+> `ReviewOutcome` panel for reviewed records; every queue row links; pagination via a new
+> shared `AdminPagination` (competitions page refactored onto it); `subjectName` batch-resolved
+> server-side (≤3 queries/page); reject confirms via `useConfirm` + "Note (optional)").
+> **Variation:** the carousel-Remove confirm was deliberately skipped — Remove only edits
+> local state (nothing persists until "Save carousel"), so a confirm there is noise, not
+> safety. Org search needed no API work (the endpoint already had `query`/`page`).
 
 1. **Get-by-id endpoints.** `GET /api/v1/admin/import-records/{id}` (and mirror for
    corrections if its detail page digs through the list — verify at impl). Detail pages fetch

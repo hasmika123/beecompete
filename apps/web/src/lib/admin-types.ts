@@ -168,6 +168,8 @@ export interface CorrectionProposal {
   id: string;
   subjectType: string;
   subjectId: string;
+  /** Display name of the subject (competition name, "competition · cycle", resource title); null if the subject vanished. */
+  subjectName: string | null;
   payload: Record<string, unknown>;
   /** Detail endpoint only: the subject's current whitelisted values (null if the subject is gone). */
   currentValues: Record<string, unknown> | null;

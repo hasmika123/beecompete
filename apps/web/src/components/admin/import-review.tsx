@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Alert, Button, Check, FormField, Textarea, X, useToast } from '@beecompete/ui';
+import { Alert, Button, Check, FormField, Textarea, X, useConfirm, useToast } from '@beecompete/ui';
 import { approveImport, rejectImport } from '@/app/admin/import-records/actions';
 import type { FormState, ImportRecord } from '@/lib/admin-types';
 
@@ -17,6 +17,7 @@ export function ImportReview({ record }: { record: ImportRecord }) {
   const [rejecting, startReject] = useTransition();
   const [note, setNote] = useState('');
   const router = useRouter();
+  const { confirm, dialog } = useConfirm();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -74,7 +75,8 @@ export function ImportReview({ record }: { record: ImportRecord }) {
       </form>
 
       <div className="rounded-[var(--radius-panel)] border border-border p-4">
-        <FormField label="Reject with a note">
+        {dialog}
+        <FormField label="Note (optional)">
           <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
         </FormField>
         <Button
@@ -82,7 +84,14 @@ export function ImportReview({ record }: { record: ImportRecord }) {
           size="sm"
           className="mt-3"
           disabled={approving || rejecting}
-          onClick={() =>
+          onClick={async () => {
+            const ok = await confirm({
+              title: 'Reject this import?',
+              message: 'Rejection is final — a rejected record can’t be reopened for approval.',
+              confirmLabel: 'Reject',
+              tone: 'danger',
+            });
+            if (!ok) return;
             startReject(async () => {
               try {
                 await rejectImport(record.id, note);
@@ -91,8 +100,8 @@ export function ImportReview({ record }: { record: ImportRecord }) {
               } catch (e) {
                 toast({ title: e instanceof Error ? e.message : 'Reject failed', tone: 'error' });
               }
-            })
-          }
+            });
+          }}
         >
           <X aria-hidden="true" className="size-4" /> Reject
         </Button>

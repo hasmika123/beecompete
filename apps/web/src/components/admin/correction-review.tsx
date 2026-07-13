@@ -3,14 +3,12 @@
 import Link from 'next/link';
 import { useActionState, useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Alert, Button, Check, FormField, Textarea, X, useToast } from '@beecompete/ui';
+import { Alert, Button, Check, FormField, Textarea, X, useConfirm, useToast } from '@beecompete/ui';
+import { CorrectionDiffTable } from '@/components/admin/correction-diff-table';
 import { approveCorrection, rejectCorrection } from '@/app/admin/corrections/actions';
 import type { CorrectionProposal, FormState } from '@/lib/admin-types';
 
 const INITIAL: FormState = { ok: false };
-
-const show = (value: unknown) =>
-  value === null || value === undefined ? '—' : JSON.stringify(value);
 
 /**
  * Review one user-submitted correction: current vs proposed per field, an editable diff,
@@ -24,13 +22,12 @@ export function CorrectionReview({ proposal }: { proposal: CorrectionProposal })
   const [rejecting, startReject] = useTransition();
   const [note, setNote] = useState('');
   const router = useRouter();
+  const { confirm, dialog } = useConfirm();
   const { toast } = useToast();
 
   useEffect(() => {
     if (state.error) toast({ title: state.error, tone: 'error' });
   }, [state.error, toast]);
-
-  const fields = Object.keys(proposal.payload);
 
   return (
     <div className="grid gap-6">
@@ -45,10 +42,11 @@ export function CorrectionReview({ proposal }: { proposal: CorrectionProposal })
           <dd>
             {proposal.subjectType === 'COMPETITION' ? (
               <Link href={`/admin/competitions/${proposal.subjectId}`} className="hover:underline">
-                competition {proposal.subjectId}
+                {proposal.subjectName ?? `competition ${proposal.subjectId}`}
               </Link>
             ) : (
-              `${proposal.subjectType.toLowerCase()} ${proposal.subjectId}`
+              (proposal.subjectName ??
+              `${proposal.subjectType.toLowerCase()} ${proposal.subjectId}`)
             )}
           </dd>
         </div>
@@ -61,26 +59,7 @@ export function CorrectionReview({ proposal }: { proposal: CorrectionProposal })
       </dl>
 
       {proposal.currentValues && (
-        <div className="overflow-x-auto rounded-[var(--radius-panel)] border border-border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-xs text-muted">
-                <th className="px-3 py-2 font-medium">Field</th>
-                <th className="px-3 py-2 font-medium">Current</th>
-                <th className="px-3 py-2 font-medium">Proposed</th>
-              </tr>
-            </thead>
-            <tbody>
-              {fields.map((field) => (
-                <tr key={field} className="border-b border-border last:border-0">
-                  <td className="px-3 py-2 font-medium">{field}</td>
-                  <td className="px-3 py-2 text-muted">{show(proposal.currentValues?.[field])}</td>
-                  <td className="px-3 py-2">{show(proposal.payload[field])}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <CorrectionDiffTable payload={proposal.payload} currentValues={proposal.currentValues} />
       )}
 
       <form action={formAction} className="grid gap-3">
@@ -104,7 +83,8 @@ export function CorrectionReview({ proposal }: { proposal: CorrectionProposal })
       </form>
 
       <div className="rounded-[var(--radius-panel)] border border-border p-4">
-        <FormField label="Reject with a note">
+        {dialog}
+        <FormField label="Note (optional)">
           <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
         </FormField>
         <Button
@@ -112,7 +92,14 @@ export function CorrectionReview({ proposal }: { proposal: CorrectionProposal })
           size="sm"
           className="mt-3"
           disabled={approving || rejecting}
-          onClick={() =>
+          onClick={async () => {
+            const ok = await confirm({
+              title: 'Reject this correction?',
+              message: 'Rejection is final — a rejected proposal can’t be reopened for approval.',
+              confirmLabel: 'Reject',
+              tone: 'danger',
+            });
+            if (!ok) return;
             startReject(async () => {
               try {
                 await rejectCorrection(proposal.id, note);
@@ -121,8 +108,8 @@ export function CorrectionReview({ proposal }: { proposal: CorrectionProposal })
               } catch (e) {
                 toast({ title: e instanceof Error ? e.message : 'Reject failed', tone: 'error' });
               }
-            })
-          }
+            });
+          }}
         >
           <X aria-hidden="true" className="size-4" /> Reject
         </Button>
