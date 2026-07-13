@@ -1,5 +1,6 @@
-import type { CompetitionDetail, EditionView, FaqView } from '@/lib/catalog-types';
+import type { CompetitionDetail, EditionView, FaqView, KeyDateView } from '@/lib/catalog-types';
 import { currentEdition } from '@/lib/detail-display';
+import { isoDateInZone } from '@/lib/dates';
 import { absoluteUrl } from '@/lib/site';
 
 // schema.org JSON-LD for the detail page (page-blueprints Page 3 — the SEO landing surface).
@@ -9,55 +10,53 @@ import { absoluteUrl } from '@/lib/site';
 
 type JsonLd = Record<string, unknown>;
 
-const ATTENDANCE_MODE: Record<string, string> = {
-  virtual: 'https://schema.org/OnlineEventAttendanceMode',
-  in_person: 'https://schema.org/OfflineEventAttendanceMode',
-  hybrid: 'https://schema.org/MixedEventAttendanceMode',
-};
+// The dates that describe the EVENT itself — registration windows are excluded on purpose:
+// Google renders startDate as "Event starts …", and "registration opens" is not when the
+// event starts (review fix M3).
+const EVENT_DATE_TYPES = new Set(['round_start', 'submission_due', 'results', 'custom']);
 
-function editionDateRange(edition: EditionView): { start?: string; end?: string } {
-  const dates = [...edition.keyDates]
-    .map((d) => d.startsAt)
-    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-  return { start: dates[0], end: dates[dates.length - 1] };
+function eventDates(edition: EditionView): KeyDateView[] {
+  return edition.keyDates
+    .filter((d) => EVENT_DATE_TYPES.has(d.type))
+    .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
 }
 
-/** schema.org/Event for the current edition. Undefined when there's no dated edition to describe. */
+/**
+ * schema.org/Event for the current edition — VIRTUAL competitions only (review fix M3):
+ * Google requires location.address for offline events and the catalog stores regions, not
+ * street addresses, so an in-person/hybrid Event block would fail rich-result validation.
+ * Revisit if venue addresses ever land in the schema. Dates are date-only strings in the key
+ * date's own zone (H1); undefined when there's no dated virtual edition to describe.
+ */
 export function eventJsonLd(competition: CompetitionDetail): JsonLd | undefined {
+  if (competition.delivery !== 'virtual') return undefined;
   const edition = currentEdition(competition.editions);
   if (!edition) return undefined;
-  const { start, end } = editionDateRange(edition);
-  if (!start) return undefined; // no dates → not a valid Event
+  const dates = eventDates(edition);
+  const first = dates[0];
+  if (!first) return undefined; // no event-phase dates → not a valid Event
+  const last = dates[dates.length - 1] ?? first;
+  const start = isoDateInZone(first.startsAt, first.timezone);
+  const end = isoDateInZone(last.endsAt ?? last.startsAt, last.timezone);
 
-  const online = competition.delivery === 'virtual';
-  const location: JsonLd = online
-    ? {
-        '@type': 'VirtualLocation',
-        url:
-          edition.registrationUrl ??
-          competition.officialUrl ??
-          absoluteUrl(`/c/${competition.slug}`),
-      }
-    : {
-        '@type': 'Place',
-        name: edition.regions.map((r) => r.name).join(', ') || 'See organizer site',
-      };
-
+  // Paid Offer only with a real fee — price 0 on a paid competition reads as "free" (L1).
+  const fee = edition.entryFee != null ? Number(edition.entryFee) : null;
+  const offerUrl = edition.registrationUrl ?? competition.officialUrl ?? undefined;
   const offers: JsonLd | undefined =
     competition.costType === 'free'
       ? {
           '@type': 'Offer',
           price: 0,
           priceCurrency: edition.currency ?? 'USD',
-          url: edition.registrationUrl ?? competition.officialUrl ?? undefined,
+          url: offerUrl,
           availability: 'https://schema.org/InStock',
         }
-      : edition.entryFee != null
+      : fee != null && fee > 0
         ? {
             '@type': 'Offer',
-            price: Number(edition.entryFee),
+            price: fee,
             priceCurrency: edition.currency ?? 'USD',
-            url: edition.registrationUrl ?? competition.officialUrl ?? undefined,
+            url: offerUrl,
           }
         : undefined;
 
@@ -67,11 +66,15 @@ export function eventJsonLd(competition: CompetitionDetail): JsonLd | undefined 
     name: competition.name,
     url: absoluteUrl(`/c/${competition.slug}`),
     startDate: start,
-    eventAttendanceMode: ATTENDANCE_MODE[competition.delivery],
+    eventAttendanceMode: 'https://schema.org/OnlineEventAttendanceMode',
     eventStatus: 'https://schema.org/EventScheduled',
-    location,
+    location: {
+      '@type': 'VirtualLocation',
+      url:
+        edition.registrationUrl ?? competition.officialUrl ?? absoluteUrl(`/c/${competition.slug}`),
+    },
   };
-  if (end && end !== start) event.endDate = end;
+  if (end !== start) event.endDate = end;
   if (competition.summary || competition.description)
     event.description = competition.summary ?? competition.description ?? undefined;
   if (competition.organizer)

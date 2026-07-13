@@ -340,6 +340,19 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
     `/api/v1/competitions/{slug}`. R1-6 ships a minimal noindex placeholder at `/c/<slug>` so
     cards never dead-link; R1-7 builds the real Page 3 there.
 
+**2026-07-12 (builder, under #29 — R1-7/R1-8 post-review fix pack):**
+31. **Details-page behavior refinements** (recorded per the "blueprint first" rule; owner may
+    override with references): (a) the **at-a-glance strip omits the Prize and Deadline slots
+    when the data doesn't exist** rather than rendering a hollow "—" — the remaining items keep
+    the fixed §2 order; (b) the **Register CTA renders only while the current edition's
+    effective status is upcoming/open AND a registration URL exists** — closed/ongoing editions
+    (and listings with no registration link) get a neutral "Visit official site" secondary
+    button with an honest explanation, never a gold Register pointing at a dead or generic
+    page; (c) **schema.org Event JSON-LD is emitted for virtual-delivery competitions only**
+    until venue addresses exist in the data model (Google requires `location.address` for
+    offline events; BreadcrumbList + FAQPage emit for all); (d) key dates display **in the key
+    date's own timezone** (fallback Eastern), and add-to-calendar produces all-day events.
+
 **2026-07-08 (owner — Community + admin-managed landing content, registry Rev 9):**
 25. **Hero right half = image cards, not SVG illustrations** (supersedes the child-SVG + satellite-SVG plan): one **main HeroCard** (a link; hover/focus = translucent WCAG-AA scrim + short destination description) + two satellite HeroCards (top-right, bottom-left, image-only). **All three admin-managed** (→ M36) — image/alt on all, link + description on the main card.
 26. **Featured-carousel picks are admin-managed ordered slots** (`FeaturedSlot`, → M36; CRUD in R1-3). Same carousel rules (#8); paid Promotion slots remain a separate, labeled, later thing (M28).

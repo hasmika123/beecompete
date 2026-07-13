@@ -167,12 +167,16 @@ export interface TabPanelProps extends HTMLAttributes<HTMLDivElement> {
 
 export function TabPanel({ value, className, children, ...props }: TabPanelProps) {
   const { value: active, baseId, variant } = useTabs('TabPanel');
-  if (active !== value) return null;
+  // Inactive panels stay MOUNTED and are hidden with the `hidden` attribute (not unmounted):
+  // panel content must be present in the server-rendered HTML — the detail page's About/FAQ
+  // tabs are an SEO surface and crawlers don't click tabs. Also keeps every tab's
+  // aria-controls target real.
   return (
     <div
       role="tabpanel"
       id={`${baseId}-panel-${value}`}
       aria-labelledby={`${baseId}-tab-${value}`}
+      hidden={active !== value}
       tabIndex={0}
       className={cn(
         'focus-visible:outline-none',

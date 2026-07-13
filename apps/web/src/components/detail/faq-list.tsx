@@ -10,11 +10,13 @@ export function FaqList({ faqs }: { faqs: FaqView[] }) {
     <div className="grid gap-2">
       {faqs.map((faq, i) => (
         <details
-          key={faq.question}
+          key={`${i}-${faq.question}`}
           open={i === 0}
           className="group rounded-[var(--radius-field)] border border-border bg-surface-raised px-4 open:pb-4"
         >
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3 text-sm font-medium text-foreground marker:hidden">
+          {/* list-none hides the marker in modern browsers; the arbitrary variant covers
+              older WebKit's ::-webkit-details-marker (a bare `marker:hidden` is a no-op). */}
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3 text-sm font-medium text-foreground [&::-webkit-details-marker]:hidden">
             {faq.question}
             <ChevronDown
               aria-hidden="true"

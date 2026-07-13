@@ -28,6 +28,8 @@ services:
     environment:
       NODE_ENV: production
       API_BASE_URL: http://api:8080
+      # Canonical origin for metadata/JSON-LD absolute URLs (runtime, NOT NEXT_PUBLIC_*).
+      SITE_URL: https://beecompete.com
       # Node-side (SSR/BFF) Sentry for the WEB project (VPS .env: WEB_SENTRY_DSN; blank =
       # inert). Browser-side uses NEXT_PUBLIC_SENTRY_DSN, baked at image build.
       SENTRY_DSN: ${WEB_SENTRY_DSN:-}

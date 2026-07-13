@@ -17,16 +17,25 @@ function Harness() {
   );
 }
 
+/** Inactive panels stay mounted (SEO/SSR) but carry the `hidden` attribute. */
+function panelHidden(text: string): boolean {
+  const panel = screen.getByText(text).closest('[role="tabpanel"]');
+  if (!panel) throw new Error(`no tabpanel around "${text}"`);
+  return panel.hasAttribute('hidden');
+}
+
 describe('Tabs', () => {
-  it('shows only the active panel and switches on click', async () => {
+  it('keeps every panel mounted, hides inactive ones, and switches on click', async () => {
     const user = userEvent.setup();
     render(<Harness />);
-    expect(screen.getByText('Panel A')).toBeTruthy();
-    expect(screen.queryByText('Panel B')).toBeNull();
+    // All panels are in the DOM (server-rendered HTML must contain tab content — SEO).
+    expect(panelHidden('Panel A')).toBe(false);
+    expect(panelHidden('Panel B')).toBe(true);
+    expect(panelHidden('Panel C')).toBe(true);
 
     await user.click(screen.getByRole('tab', { name: 'Resources' }));
-    expect(screen.getByText('Panel B')).toBeTruthy();
-    expect(screen.queryByText('Panel A')).toBeNull();
+    expect(panelHidden('Panel B')).toBe(false);
+    expect(panelHidden('Panel A')).toBe(true);
     expect(screen.getByRole('tab', { name: 'Resources' }).getAttribute('aria-selected')).toBe(
       'true',
     );
@@ -37,8 +46,8 @@ describe('Tabs', () => {
     render(<Harness />);
     screen.getByRole('tab', { name: 'Overview' }).focus();
     await user.keyboard('{ArrowRight}');
-    expect(screen.getByText('Panel B')).toBeTruthy();
+    expect(panelHidden('Panel B')).toBe(false);
     await user.keyboard('{End}');
-    expect(screen.getByText('Panel C')).toBeTruthy();
+    expect(panelHidden('Panel C')).toBe(false);
   });
 });

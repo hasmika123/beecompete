@@ -81,37 +81,26 @@ export function resourceTypeLabel(token: string): string {
   return RESOURCE_TYPE_LABELS[token] ?? 'Resource';
 }
 
-// --- Dates ---
-
-/** Absolute, human date — "Mar 3, 2026". Time is dropped (competitions are day-grained). */
-export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
-
-/** ICS/Google compact UTC stamp — 20260303T090000Z. */
-export function toCalendarStamp(iso: string): string {
-  return new Date(iso)
-    .toISOString()
-    .replace(/[-:]/g, '')
-    .replace(/\.\d{3}/, '');
-}
-
 // --- Edition + deadline selection ---
+// (Date FORMATTING lives in lib/dates — timezone-aware, review fix H1.)
 
 /**
- * The edition a visitor cares about: the one that's open, else the next upcoming, else the
- * most recent (API returns editions oldest→newest, so the last is newest). Undefined only
- * when a competition has no editions yet.
+ * The edition a visitor cares about: open beats ongoing beats upcoming; otherwise the edition
+ * with the most recent key date wins (review fix M2 — the API orders editions by CREATION
+ * time, so "last in the list" breaks when a curator backfills an older edition later).
+ * Undefined only when a competition has no editions yet.
  */
 export function currentEdition(editions: EditionView[]): EditionView | undefined {
   if (editions.length === 0) return undefined;
+  const byStatus = (status: string) => editions.find((e) => e.effectiveStatus === status);
+  const latestKeyDate = (e: EditionView) =>
+    e.keyDates.reduce((max, d) => Math.max(max, new Date(d.startsAt).getTime()), 0);
+  const latestByDate = [...editions].sort((a, b) => latestKeyDate(b) - latestKeyDate(a))[0];
   return (
-    editions.find((e) => e.effectiveStatus === 'open') ??
-    editions.find((e) => e.effectiveStatus === 'upcoming') ??
+    byStatus('open') ??
+    byStatus('ongoing') ??
+    byStatus('upcoming') ??
+    latestByDate ??
     editions[editions.length - 1]
   );
 }
@@ -120,12 +109,15 @@ export interface NextDeadline {
   iso: string;
   /** The key-date type that produced it (reg_close preferred, then submission_due). */
   kind: string;
+  /** The key date's own IANA zone (display must not use the server's zone — H1). */
+  timezone: string | null;
 }
 
 /**
  * The next actionable deadline across all editions — earliest future REG_CLOSE, falling back
- * to SUBMISSION_DUE, then any future date. Mirrors the R1-5 search deadline semantics so the
- * card and the detail page agree. Undefined when nothing future remains.
+ * to SUBMISSION_DUE. EXACTLY mirrors the server's search/card deadline rule (R1-5 as amended
+ * by the review fix pack) so the card and the detail page always agree; no further fallback.
+ * Undefined when nothing future remains.
  */
 export function nextDeadline(
   editions: EditionView[],
@@ -138,11 +130,10 @@ export function nextDeadline(
     future
       .filter((d) => d.type === type)
       .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())[0];
-  const chosen =
-    pick('reg_close') ??
-    pick('submission_due') ??
-    future.sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())[0];
-  return chosen ? { iso: chosen.startsAt, kind: chosen.type } : undefined;
+  const chosen = pick('reg_close') ?? pick('submission_due');
+  return chosen
+    ? { iso: chosen.startsAt, kind: chosen.type, timezone: chosen.timezone }
+    : undefined;
 }
 
 export interface TimelineDate {
@@ -183,11 +174,14 @@ export function locationLabel(competition: CompetitionDetail, edition?: EditionV
   return deliveryLabel(competition.delivery);
 }
 
-/** Cost value for the at-a-glance strip: free reads positive; paid shows the fee when known. */
+/**
+ * Cost value for the at-a-glance strip: free reads positive; paid shows the fee when known.
+ * A zero fee on a PAID competition is treated as unknown data, not "$0.00" (review fix L1).
+ */
 export function costLabel(competition: CompetitionDetail, edition?: EditionView): string {
   if (competition.costType === 'free') return 'Free';
   const fee = edition?.entryFee;
-  if (fee != null) {
+  if (fee != null && Number(fee) > 0) {
     const currency = edition?.currency ?? 'USD';
     try {
       return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(Number(fee));

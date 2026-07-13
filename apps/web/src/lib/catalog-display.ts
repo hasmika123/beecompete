@@ -1,5 +1,6 @@
 import type { CompetitionCardData } from '@beecompete/ui';
 import type { CompetitionSummary } from '@/lib/catalog-types';
+import { calendarDaysUntil, formatDate } from '@/lib/dates';
 
 // Display derivation for catalog data — the CompetitionCard is presentation-only, so the
 // wording rules live here: grade encoding (Q2: Pre-K = −1, K = 0, 1–12), relative deadline
@@ -23,7 +24,6 @@ export function gradeLabel(min: number | null, max: number | null): string | und
   return `Grade ${gradeName(min as number)}+`;
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const RELATIVE_WINDOW_DAYS = 14;
 const URGENT_DAYS = 3;
 
@@ -32,23 +32,26 @@ export interface DeadlineDisplay {
   urgent: boolean;
 }
 
-/** Factual urgency only — relative wording inside the window, absolute date beyond it. */
+/**
+ * Factual urgency only — relative wording inside the window, absolute date beyond it.
+ * Calendar-day math in the deadline's zone (review fixes H1/M6): a deadline later today is
+ * "Closes today" (not "1 day to go"), and an already-passed instant renders nothing (the
+ * strict `<` guard — no `Math.ceil(-0)` slipping urgent-red past a stale server value).
+ */
 export function deadlineDisplay(
   nextDeadline: string | null,
   now = new Date(),
+  timeZone?: string | null,
 ): DeadlineDisplay | undefined {
   if (!nextDeadline) return undefined;
-  const deadline = new Date(nextDeadline);
-  const days = Math.ceil((deadline.getTime() - now.getTime()) / DAY_MS);
-  if (days < 0) return undefined; // stale data — say nothing rather than "closed" (server decides)
+  if (new Date(nextDeadline).getTime() < now.getTime()) return undefined; // passed — say nothing
+  const days = calendarDaysUntil(nextDeadline, now, timeZone);
   if (days <= RELATIVE_WINDOW_DAYS) {
-    const label = days === 0 ? 'Closes today' : days === 1 ? '1 day to go' : `${days} days to go`;
+    const label =
+      days <= 0 ? 'Closes today' : days === 1 ? 'Closes tomorrow' : `${days} days to go`;
     return { label, urgent: days <= URGENT_DAYS };
   }
-  return {
-    label: `Closes ${deadline.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
-    urgent: false,
-  };
+  return { label: `Closes ${formatDate(nextDeadline, timeZone)}`, urgent: false };
 }
 
 /** "Texas" · "Texas +2" · undefined when untagged (stay factual — no "Nationwide" guess). */

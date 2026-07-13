@@ -1,10 +1,10 @@
 import type { ComponentType } from 'react';
 import { Clock, GraduationCap, MapPin, Ticket, Trophy, Users } from '@beecompete/ui';
 import { deadlineDisplay, gradeLabel } from '@/lib/catalog-display';
+import { formatDate } from '@/lib/dates';
 import {
   costLabel,
   currentEdition,
-  formatDate,
   locationLabel,
   nextDeadline,
   pathwayLabel,
@@ -28,7 +28,9 @@ interface Item {
 export function AtAGlance({ competition }: { competition: CompetitionDetail }) {
   const edition = currentEdition(competition.editions);
   const deadline = nextDeadline(competition.editions);
-  const deadlineView = deadline ? deadlineDisplay(deadline.iso) : undefined;
+  const deadlineView = deadline
+    ? deadlineDisplay(deadline.iso, undefined, deadline.timezone)
+    : undefined;
   const prize = prizeLabel(edition);
 
   const items: Item[] = [
@@ -44,7 +46,7 @@ export function AtAGlance({ competition }: { competition: CompetitionDetail }) {
       key: 'deadline',
       icon: Clock,
       label: 'Next deadline',
-      value: deadlineView?.label ?? `Closes ${formatDate(deadline.iso)}`,
+      value: deadlineView?.label ?? `Closes ${formatDate(deadline.iso, deadline.timezone)}`,
       urgent: deadlineView?.urgent,
     });
   }
