@@ -72,6 +72,14 @@ TXT / `brevo…_domainkey` CNAME) were kept.** After cutover, **purge Cloudflare
 site still shows. The old GoDaddy box (runs a separate app, `dossier`) is left untouched (D5).
 
 **Known gaps / deferred:**
+- **Search indexing is OFF (R1-10) — flip it at the R1-17 gate, not before.** The whole site
+  serves `robots.txt: Disallow:/` + per-page `noindex` until `SEARCH_INDEXING=on` is set in
+  `~/beecompete-prod/.env` and the web service is recreated (`docker compose -f
+  docker-compose.prod.yml up -d web` — env changes require recreate, which also clears the ISR
+  cache so cached noindex HTML can't linger). Then: verify `beecompete.com/robots.txt` + a
+  page's robots meta, submit `sitemap.xml` to Google Search Console + Bing Webmaster Tools, and
+  confirm staging still serves `Disallow:/` (staging's compose deliberately has no way to
+  receive the flag). Full checklist lives in the R1-17 bullet of `docs/phase-1-plan.md`.
 - ~~Web-side Sentry not wired.~~ **Code wired 2026-07-12** (Dockerfile build-arg + deploy-staging
   build-args for the browser side; `WEB_SENTRY_DSN` env on the web services for the Node/SSR side;
   environment inferred from hostname since one image serves both envs). **Two manual steps remain
