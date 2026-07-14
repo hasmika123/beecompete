@@ -32,9 +32,7 @@ export function RegionTagger({
 
   if (allRegions.length === 0) {
     return (
-      <p className="text-sm text-muted">
-        No regions defined yet — add them under Categories → Regions first.
-      </p>
+      <p className="text-sm text-muted">No regions defined yet — add them under Regions first.</p>
     );
   }
 

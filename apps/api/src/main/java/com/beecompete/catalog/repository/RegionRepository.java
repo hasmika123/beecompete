@@ -9,4 +9,7 @@ public interface RegionRepository extends JpaRepository<Region, UUID> {
 
 	/** Public region filter (R1-5) — codes are URL-friendly but not unique, so this returns all matches. */
 	List<Region> findByCodeIgnoreCase(String code);
+
+	/** Delete guard: a region with child regions can't be removed (would orphan the tree). */
+	boolean existsByParentId(UUID parentId);
 }

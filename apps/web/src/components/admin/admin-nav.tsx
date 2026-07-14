@@ -2,13 +2,24 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Buildings, Dashboard, Flag, ImageSquare, Tag, Tray, Trophy, cn } from '@beecompete/ui';
+import {
+  Buildings,
+  Dashboard,
+  Flag,
+  ImageSquare,
+  MapPin,
+  Tag,
+  Tray,
+  Trophy,
+  cn,
+} from '@beecompete/ui';
 
 const NAV = [
   { href: '/admin', label: 'Dashboard', icon: Dashboard, exact: true },
   { href: '/admin/competitions', label: 'Competitions', icon: Trophy },
   { href: '/admin/organizations', label: 'Organizations', icon: Buildings },
   { href: '/admin/categories', label: 'Categories', icon: Tag },
+  { href: '/admin/regions', label: 'Regions', icon: MapPin },
   { href: '/admin/import-records', label: 'Import queue', icon: Tray },
   { href: '/admin/corrections', label: 'Corrections', icon: Flag },
   { href: '/admin/landing', label: 'Landing content', icon: ImageSquare },

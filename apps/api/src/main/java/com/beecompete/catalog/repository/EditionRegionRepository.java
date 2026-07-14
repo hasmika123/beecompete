@@ -9,4 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface EditionRegionRepository extends JpaRepository<EditionRegion, EditionRegionId> {
 
 	List<EditionRegion> findByEditionId(UUID editionId);
+
+	/** Delete guard: a region still tagged on any edition can't be removed. */
+	boolean existsByRegionId(UUID regionId);
 }

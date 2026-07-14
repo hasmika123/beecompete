@@ -83,21 +83,3 @@ export async function putCategoryTemplate(
   revalidatePath(`/admin/categories/${id}`);
   return { ok: true };
 }
-
-export async function createRegion(_prev: FormState, form: FormData): Promise<FormState> {
-  try {
-    await adminFetch('/regions', {
-      method: 'POST',
-      body: {
-        level: form.get('level'),
-        name: (form.get('name') as string)?.trim(),
-        code: ((form.get('code') as string) || '').trim() || null,
-        parentId: ((form.get('parentId') as string) || '').trim() || null,
-      },
-    });
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'create failed' };
-  }
-  revalidatePath('/admin/categories');
-  return { ok: true };
-}
