@@ -131,15 +131,17 @@ export function KeyDateManager({
         <FormField label="Label" hint="optional — shown for Custom dates">
           <Input name="label" maxLength={200} />
         </FormField>
-        <div className="flex items-center sm:col-span-3">
-          {/* TBD (R1-18): the milestone exists but its date is unknown — submit without a date. */}
+        {/* TBD (R1-18): the milestone exists but its date is unknown — submit without a date.
+            mt-[26px] + h-10 centers the checkbox on the neighbors' control band (label 20px +
+            gap 6px above a 40px control). */}
+        <div className="mt-[26px] flex h-10 items-center">
           <Checkbox
             label="Date TBD (to be determined)"
             checked={tbd}
             onChange={(e) => setTbd(e.target.checked)}
           />
         </div>
-        <div className="flex items-end sm:col-span-3">
+        <div className="sm:col-span-3">
           <Button type="submit" size="sm" disabled={pending}>
             <Plus aria-hidden="true" className="size-4" /> Add key date
           </Button>

@@ -180,7 +180,27 @@ Select popover look; owner steers reactively)*
    (Tab → trigger → Enter → type-to-filter → Enter commits → value posts in FormData);
    a required category still blocks/creates correctly; long org list filters.
 
-### 7. Admin form architecture pass — M
+### 7. Admin form architecture pass — M — ✅ built (`<item-7>`)
+
+> **As built (verified live):** `FormSection` extracted to
+> `components/admin/form-section.tsx` and used by the competition + edition forms (the only
+> multi-section forms). Edition form → 5 titled sections (Cycle & status ·
+> Registration · Fees & prize · Advancement · Attributes), all rows verified aligned.
+> Competition Format → 2 clean 3-col rows with **Team size as one paired min–max field**
+> (`aria-label`s keep the two inputs screen-reader-distinct); Evaluation types AND Tags get
+> full-width rows in Classification & links (leaves Official URL | Logo as a clean pair — no
+> orphans). **Sticky save bar** (always sticky — simpler than a taller-than-viewport toggle,
+> harmless on short forms) on both forms: `sticky bottom-0` + `bg-background` + hairline top
+> border, holds Save + the server-error Alert (moved down from the form top so failures appear
+> where you clicked); verified pinned mid-scroll at 900px viewport and on mobile. Widths:
+> sectioned forms `max-w-3xl`, simple forms stay `max-w-xl` (template editor deliberately
+> full-width — wide JSON textarea). Key-date add form → Type | Starts | Timezone / Ends |
+> Label | TBD (checkbox centered on the control band via `mt-[26px] h-10`) + slim button row;
+> TBD-disabled inputs already muted by Input's `disabled:opacity-45`. "Dates live on Editions"
+> Alert moved to the top of the Editions tab; kept in the FORM only on the create page
+> (`!editing`), which has no tabs yet. Responsive pass: 1100px — fixed theme toggle (y≤50)
+> clears PageHeader actions (y≥68) on competition + org pages; mobile — no h-scroll, fields
+> stack, paired team field fits one line, fixed toggle hidden (top bar hosts its own).
 
 1. **Extract `FormSection`** from `competition-form.tsx` into
    `components/admin/form-section.tsx` (title · optional description · top rule · `cols`

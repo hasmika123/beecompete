@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
+  Alert,
   ArrowLeft,
   Badge,
   buttonClasses,
@@ -96,6 +97,12 @@ export default async function EditCompetitionPage({ params }: { params: Promise<
 
         <TabPanel value="editions">
           <div className="pt-6">
+            {/* Moved from the bottom of the competition form (item 7) — this is where the
+                pointer is actionable. */}
+            <Alert tone="info" className="mb-4">
+              Dates &amp; deadlines live here — add an Edition, then set its key dates (registration
+              close, submission due, results) on the edition page.
+            </Alert>
             <div className="mb-3 flex justify-end">
               <Link
                 href={`/admin/competitions/${id}/editions/new`}

@@ -1,8 +1,9 @@
 'use client';
 
-import { useActionState, useEffect, useState, type ReactNode } from 'react';
-import { Alert, Button, Checkbox, FormField, Input, Textarea, cn, useToast } from '@beecompete/ui';
+import { useActionState, useEffect, useState } from 'react';
+import { Alert, Button, Checkbox, FormField, Input, Textarea, useToast } from '@beecompete/ui';
 import { AttributesFields } from '@/components/admin/attributes-fields';
+import { FormSection } from '@/components/admin/form-section';
 import { NativeSelect, enumLabel, enumOptions } from '@/components/admin/native-select';
 import { createCompetition, updateCompetition } from '@/app/admin/competitions/actions';
 import {
@@ -20,30 +21,6 @@ import {
 } from '@/lib/admin-types';
 
 const INITIAL: FormState = { ok: false };
-
-// Titled, evenly-spaced group with a top rule — gives the long form a scannable structure
-// instead of one undifferentiated column of fields.
-function FormSection({
-  title,
-  description,
-  cols,
-  children,
-}: {
-  title: string;
-  description?: string;
-  cols?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="grid gap-4 border-t border-border pt-6 first:border-t-0 first:pt-0">
-      <div>
-        <h2 className="font-display text-base text-foreground">{title}</h2>
-        {description && <p className="mt-1 text-xs text-muted">{description}</p>}
-      </div>
-      <div className={cn('grid gap-4', cols)}>{children}</div>
-    </section>
-  );
-}
 
 export function CompetitionForm({
   competition,
@@ -112,9 +89,7 @@ export function CompetitionForm({
   };
 
   return (
-    <form action={formAction} className="grid gap-8">
-      {state.error && <Alert tone="danger">{state.error}</Alert>}
-
+    <form action={formAction} className="grid max-w-3xl gap-8">
       <FormSection title="Basics" cols="sm:grid-cols-2">
         <FormField label="Name" required>
           <Input name="name" defaultValue={c?.name} required maxLength={300} />
@@ -198,23 +173,31 @@ export function CompetitionForm({
             defaultValue={c?.recurrence ?? 'ANNUAL'}
           />
         </FormField>
-        <FormField label="Team size (min)" hint="team competitions only">
-          <Input
-            name="teamSizeMin"
-            type="number"
-            defaultValue={c?.teamSizeMin ?? ''}
-            min={1}
-            disabled={teamDisabled}
-          />
-        </FormField>
-        <FormField label="Team size (max)" hint="team competitions only">
-          <Input
-            name="teamSizeMax"
-            type="number"
-            defaultValue={c?.teamSizeMax ?? ''}
-            min={1}
-            disabled={teamDisabled}
-          />
+        <FormField label="Team size" hint="team competitions only">
+          {/* Min + max as one paired field — kills the orphan 7th cell in the 3-col grid. */}
+          <div className="flex items-center gap-2">
+            <Input
+              name="teamSizeMin"
+              type="number"
+              aria-label="Team size (min)"
+              placeholder="min"
+              defaultValue={c?.teamSizeMin ?? ''}
+              min={1}
+              disabled={teamDisabled}
+            />
+            <span aria-hidden="true" className="text-muted">
+              –
+            </span>
+            <Input
+              name="teamSizeMax"
+              type="number"
+              aria-label="Team size (max)"
+              placeholder="max"
+              defaultValue={c?.teamSizeMax ?? ''}
+              min={1}
+              disabled={teamDisabled}
+            />
+          </div>
         </FormField>
       </FormSection>
 
@@ -234,10 +217,12 @@ export function CompetitionForm({
       </FormSection>
 
       <FormSection title="Classification & links" cols="sm:grid-cols-2">
-        <FormField label="Tags" hint="comma-separated">
-          <Input name="tags" defaultValue={c?.tags?.join(', ') ?? ''} />
-        </FormField>
-        <FormField label="Evaluation types" hint="how entries are judged — pick any that apply.">
+        {/* The 5-checkbox group wraps raggedly beside a 40px input — give it its own row. */}
+        <FormField
+          label="Evaluation types"
+          hint="how entries are judged — pick any that apply."
+          className="sm:col-span-2"
+        >
           <div className="flex flex-wrap gap-x-4 gap-y-2 pt-1">
             {EVALUATION_TYPES.map((token) => (
               <Checkbox
@@ -249,6 +234,9 @@ export function CompetitionForm({
               />
             ))}
           </div>
+        </FormField>
+        <FormField label="Tags" hint="comma-separated" className="sm:col-span-2">
+          <Input name="tags" defaultValue={c?.tags?.join(', ') ?? ''} />
         </FormField>
         <FormField label="Official URL">
           <Input
@@ -330,17 +318,27 @@ export function CompetitionForm({
       </FormSection>
 
       {/* Dates aren't part of the competition record — they live on its Editions (D3, timeline
-          as data). Surface where to set them, since admins expect a "deadline" field here. */}
-      <Alert tone="info">
-        Dates &amp; deadlines aren&apos;t set here — they live on the competition&apos;s{' '}
-        <strong>Editions</strong>. After saving, open the competition, add an Edition, then add its
-        key dates (registration close, submission due, results).
-      </Alert>
+          as data). On the edit page the pointer lives at the top of the Editions tab; the create
+          page has no tabs yet, so surface it here. */}
+      {!editing && (
+        <Alert tone="info">
+          Dates &amp; deadlines aren&apos;t set here — they live on the competition&apos;s{' '}
+          <strong>Editions</strong>. After saving, open the competition, add an Edition, then add
+          its key dates (registration close, submission due, results).
+        </Alert>
+      )}
 
-      <div className="flex items-center gap-3">
+      {/* Sticky save bar: the action (and any server error) stays visible on a form this tall
+          instead of sitting thousands of pixels below the fold. */}
+      <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border-t border-border bg-background py-3">
         <Button type="submit" disabled={pending}>
           {pending ? 'Saving…' : editing ? 'Save changes' : 'Create competition'}
         </Button>
+        {state.error && (
+          <Alert tone="danger" className="min-w-0 flex-1">
+            {state.error}
+          </Alert>
+        )}
       </div>
     </form>
   );
