@@ -105,15 +105,22 @@ Page 6 heading, decision #19, status table), `design-brief.md`, `feature-registr
 and the route slug `/suggest-a-competition` (renames at R1-15b when the wizard is built).
 `glossary.md` has no DQ15 term entry, so nothing to reconcile there.
 
-### 6. Test-debt payoff (optional, decoupled) — S–M
+### 6. Test-debt payoff — S–M — ✅ built 2026-07-13
 
-- `apps/web`: add the Vitest harness (mirror `packages/ui`'s setup) + unit tests for
-  `zonedWallClockToInstant` (DST edges: spring-gap, fall-back, half-hour zones),
-  `isHostMaintained` (no org / curated / claimed / verified), `activeChips` band suppression,
-  `listingHealth`.
-- `apps/api`: validator tests for the A5 rules + `EffectiveStatus` with a null-date REG_CLOSE
-  (no NPE, stays OPEN). Needs Docker/Testcontainers only for repository tests — validator +
-  EffectiveStatus tests are plain JUnit.
+**As built (all green, no Docker needed):**
+- `apps/web`: new Vitest harness (`vitest.config.ts`, node env, `@/` alias; `test` script +
+  devDep) — **20 tests / 4 files**: `zonedWallClockToInstant` (EDT/EST/UTC/half-hour zone +
+  spring-gap + fall-back edges), `isHostMaintained` (no org / curated / claimed / verified /
+  legacy), `activeChips` band suppression (band-exact vs custom range), `listingHealth`
+  (bare / full / archived-edition). Turbo picks it up via the `test` task.
+- `apps/api`: **16 plain-JUnit tests** — `ValidationRulesTest` (10; the A5 grade/age/team-size
+  + fee⇒currency + [A-Z]{3} rules on `CompetitionRequest`/`EditionRequest` via a standalone
+  `Validator`) and `EffectiveStatusTest` +1 (TBD null-date REG_CLOSE stays OPEN, no NPE; passed
+  real deadline still closes alongside a TBD milestone). No Testcontainers/Docker — pure unit.
+
+Documented gap: `zonedWallClockToInstant`'s spring-forward gap resolves to `06:30Z` for
+`02:30 America/New_York` (the two-pass probe's deterministic landing) — locked as a regression
+guard, not a bug.
 
 ### 7. Admin sidebar collapse button "randomly disappears" — S — ✅ built 2026-07-13
 
