@@ -11,9 +11,12 @@ const INITIAL: FormState = { ok: false };
 export function EditionForm({
   competitionId,
   edition,
+  siblingEditions = [],
 }: {
   competitionId: string;
   edition?: Edition;
+  /** The competition's OTHER editions (self excluded) — options for the "advances to" chain (Q5). */
+  siblingEditions?: { id: string; cycleLabel: string }[];
 }) {
   const editing = edition !== undefined;
   const action = editing
@@ -51,6 +54,19 @@ export function EditionForm({
             defaultValue={e?.scopeLevel ?? 'NATIONAL'}
           />
         </FormField>
+        {siblingEditions.length > 0 && (
+          <FormField
+            label="Advances to"
+            hint="the next edition winners advance into (Q5) — e.g. state → national."
+          >
+            <NativeSelect
+              name="advancesToEditionId"
+              options={siblingEditions.map((s) => ({ value: s.id, label: s.cycleLabel }))}
+              placeholder="— none —"
+              defaultValue={e?.advancesToEditionId ?? ''}
+            />
+          </FormField>
+        )}
         <FormField label="Registration URL">
           <Input
             name="registrationUrl"

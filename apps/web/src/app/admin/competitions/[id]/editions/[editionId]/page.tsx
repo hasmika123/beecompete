@@ -23,11 +23,13 @@ export default async function EditEditionPage({
     throw e;
   }
 
-  const [keyDates, allRegions, selectedRegionIds] = await Promise.all([
+  const [keyDates, allRegions, selectedRegionIds, allEditions] = await Promise.all([
     adminFetch<KeyDate[]>(`/editions/${editionId}/key-dates`),
     adminFetch<Region[]>('/regions'),
     adminFetch<string[]>(`/editions/${editionId}/regions`),
+    adminFetch<Edition[]>(`/competitions/${id}/editions`),
   ]);
+  const siblingEditions = allEditions.filter((ed) => ed.id !== editionId);
 
   return (
     <>
@@ -40,7 +42,7 @@ export default async function EditEditionPage({
       <PageHeader title={`Edition — ${edition.cycleLabel}`} />
 
       <div className="grid gap-6">
-        <EditionForm competitionId={id} edition={edition} />
+        <EditionForm competitionId={id} edition={edition} siblingEditions={siblingEditions} />
 
         <Card>
           <CardHeader className="p-5 pb-0">

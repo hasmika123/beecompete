@@ -8,6 +8,7 @@ import { setFeaturedSlots } from '@/app/admin/landing/actions';
 interface Option {
   id: string;
   name: string;
+  archived?: boolean;
 }
 
 /** Manage the Landing carousel: add/remove/reorder competitions, then save the ordered list (≤10). */
@@ -23,7 +24,9 @@ export function FeaturedManager({
   const { toast } = useToast();
 
   const nameOf = new Map(allCompetitions.map((c) => [c.id, c.name]));
-  const available = allCompetitions.filter((c) => !ids.includes(c.id));
+  // Keep the full map for resolving names of already-featured picks, but never offer an ARCHIVED
+  // competition in the add list — a hidden listing shouldn't reach the public carousel.
+  const available = allCompetitions.filter((c) => !ids.includes(c.id) && !c.archived);
 
   const move = (i: number, dir: -1 | 1) => {
     const j = i + dir;

@@ -71,33 +71,39 @@ surfaces); docs (5) and tests (6) can ride along or follow.
    and carousel **Remove**. Reject's note stays **optional**, relabeled "Note (optional)"
    (owner decision C4). Archive (competition + org) already has confirms.
 
-### 2. Expose Edition `advancesToEditionId` in the edition form — S
+### 2. Expose Edition `advancesToEditionId` in the edition form — S — ✅ built 2026-07-13
 
-Audit HIGH: the column exists (R1-1) but the admin edition form never surfaces it, so
-advancement chains can't be curated. Add a `NativeSelect` of the competition's other editions
-(exclude self) + clear option; plain nullable-UUID write through the existing edition action.
+Audit HIGH: the column exists (R1-1) but the admin edition form never surfaced it, so
+advancement chains couldn't be curated. **As built:** `NativeSelect` of the competition's other
+editions (self excluded on the edit page; every edition is a candidate on the new-edition page)
++ "— none —" clear option; the action already wrote the field. Both edition pages fetch
+`/competitions/{id}/editions`. Verified live (set state→national, persisted). The field hides
+when there are no sibling editions (nothing to advance into).
 
-### 3. `evaluationType` free-text CSV → checkbox group — S
+### 3. `evaluationType` free-text CSV → checkbox group — S — ✅ built 2026-07-13
 
-Replace the competition form's free-text CSV input with a checkbox group of the 5 canonical
-tokens (mirror `EvaluationTypes.TOKENS` as a const in `admin-types.ts` — `submission, exam,
-live_performance, interview, portfolio`). Couples to the competition action's parsing: switch
-that field from CSV-split to `formData.getAll(...)`. Server already validates tokens at the
-write boundary (R1-5) — this is pure UX hardening.
+**As built:** `EVALUATION_TYPES` const in `admin-types.ts` (`exam, submission,
+live_performance, interview, portfolio` — lowercase, matching the R1-5 canonical tokens); the
+competition form's free-text input is a `Checkbox` group; the action parses via a new
+`multi()` helper (`formData.getAll`). Server still validates at the write boundary. Verified
+live (check exam+submission → persisted `['exam','submission']` → round-trips checked on
+reload).
 
-### 4. Featured-manager archived filter — S
+### 4. Featured-manager archived filter — S — ✅ built 2026-07-13
 
-The landing admin picker's `allCompetitions` payload is `{id, name}` only, so archived
-competitions are selectable. Have the landing admin page pass `archivedAt` (or pre-filter
-server-side) and exclude archived from the picker.
+**As built:** the landing picker payload now carries `archived: c.archivedAt !== null`;
+`FeaturedManager` keeps the full map for resolving already-featured names but filters archived
+out of the add-list (`!ids.includes(c.id) && !c.archived`). Verified live (archived a
+competition → absent from the picker → restored).
 
-### 5. "Request a Competition" docs propagation — S (docs only)
+### 5. "Request a Competition" docs propagation — S (docs only) — ✅ built 2026-07-13
 
-The public rename shipped (how-it-works + suggest pages); the canonical label decision —
-**"Request a Competition"** supersedes "Suggest a competition" — still needs propagating:
-CLAUDE.md, `page-blueprints.md` (43/143/261/322/370), `design-brief.md:180`,
-`feature-registry.md` DQ15, `glossary.md`. Route slug `/suggest-a-competition` may stay
-(rename at R1-15b when the wizard is built, with a redirect if changed).
+**As built:** the canonical DQ15 label **"Request a Competition"** (supersedes "Suggest a
+competition") propagated to CLAUDE.md, `page-blueprints.md` (footer link, zero-results CTA,
+Page 6 heading, decision #19, status table), `design-brief.md`, `feature-registry.md` DQ15,
+`phase-1-plan.md`. **Kept unchanged:** "Suggest a **correction**" (DQ6 — a different feature)
+and the route slug `/suggest-a-competition` (renames at R1-15b when the wizard is built).
+`glossary.md` has no DQ15 term entry, so nothing to reconcile there.
 
 ### 6. Test-debt payoff (optional, decoupled) — S–M
 
@@ -109,7 +115,12 @@ CLAUDE.md, `page-blueprints.md` (43/143/261/322/370), `design-brief.md:180`,
   (no NPE, stays OPEN). Needs Docker/Testcontainers only for repository tests — validator +
   EffectiveStatus tests are plain JUnit.
 
-### 7. Admin sidebar collapse button "randomly disappears" — S (owner report 2026-07-13)
+### 7. Admin sidebar collapse button "randomly disappears" — S — ✅ built 2026-07-13
+
+> **As built:** applied `lg:sticky lg:top-0 lg:h-dvh lg:overflow-y-auto` to the aside root.
+> Verified live on a tall page: aside is now `position: sticky`, exactly viewport-height, and
+> the Collapse button stays within the viewport (bottom y=884 of a 900px viewport) even after
+> scrolling to y=2000 — where it previously fell off-screen. No `overscroll-contain` needed.
 
 **Root cause (diagnosed, not random):** the admin shell (`apps/web/src/app/admin/layout.tsx`)
 is a `min-h-dvh flex` row, so the sidebar `<aside>` **stretches to the height of the page

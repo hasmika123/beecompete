@@ -27,6 +27,12 @@ function list(form: FormData, key: string): string[] | undefined {
   return items.length ? items : undefined;
 }
 
+/** Repeated form fields (checkbox groups) → array. Undefined when nothing is checked. */
+function multi(form: FormData, key: string): string[] | undefined {
+  const items = form.getAll(key).filter((v): v is string => typeof v === 'string' && v !== '');
+  return items.length ? items : undefined;
+}
+
 /** Build the CompetitionRequest body from the form; throws a readable message on bad JSON. */
 function buildBody(form: FormData): Record<string, unknown> {
   let attributes: unknown = undefined;
@@ -53,7 +59,7 @@ function buildBody(form: FormData): Record<string, unknown> {
     teamSizeMax: num(form, 'teamSizeMax') ?? null,
     delivery: str(form, 'delivery'),
     entryPathway: str(form, 'entryPathway'),
-    evaluationType: list(form, 'evaluationType') ?? null,
+    evaluationType: multi(form, 'evaluationType') ?? null,
     minGrade: num(form, 'minGrade') ?? null,
     maxGrade: num(form, 'maxGrade') ?? null,
     minAge: num(form, 'minAge') ?? null,

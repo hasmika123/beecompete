@@ -177,7 +177,7 @@ The hero design pass is therefore two checkpoints: 🧑 approve the **blueprint*
 | Competition detail | R1 | ✅ approved (rev 2026-07-08) | not started |
 | How It Works | R1 | ✅ approved (2026-07-08) | not started |
 | Categories (index) | R1 | ✅ approved (2026-07-08, may be tuned) | not started |
-| Suggest a Competition (wizard form) | R1 | ✅ approved (2026-07-08) | light pass (step-form interaction only) |
+| Request a Competition (wizard form) | R1 | ✅ approved (2026-07-08) | light pass (step-form interaction only) |
 | For Parents / For Educators | — | ⛔ deferred (2026-07-08) | — |
 | Community (article index + detail) | Phase 2 | ⛔ deferred (2026-07-08, blueprints #27) — blueprint before build | — |
 | Tracker ("My Competitions") | R2 | ⛔ deferred | — |

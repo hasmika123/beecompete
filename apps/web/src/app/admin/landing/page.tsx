@@ -46,7 +46,11 @@ export default async function LandingPage() {
           </CardHeader>
           <CardContent className="p-5">
             <FeaturedManager
-              allCompetitions={competitions.content.map((c) => ({ id: c.id, name: c.name }))}
+              allCompetitions={competitions.content.map((c) => ({
+                id: c.id,
+                name: c.name,
+                archived: c.archivedAt !== null,
+              }))}
               initial={featured.map((f) => f.competitionId)}
             />
           </CardContent>

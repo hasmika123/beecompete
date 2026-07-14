@@ -55,7 +55,7 @@ Start context: `docs/README.md` → `docs/vision-prd.md`, `docs/glossary.md`.
   gold = "brand" variant** (builder-delegated 2026-07-08); cards/dropdowns + expanded panels/
   inputs ≥12–16px radius; **no glow/colored shadows**; owner steers reactively with reference
   photos (design-brief §1).
-- Hero pages (Landing, Competitions, Details, How It Works, Categories index, Suggest a Competition)
+- Hero pages (Landing, Competitions, Details, How It Works, Categories index, Request a Competition)
   follow the approved blueprints; changing their structure means updating `docs/page-blueprints.md` first.
 
 ## How we work (`docs/development-process.md`)

@@ -35,6 +35,15 @@ export const KEY_DATE_TYPES = [
   'RESULTS',
   'CUSTOM',
 ] as const;
+// Canonical evaluation tokens (R1-5 EvaluationTypes.TOKENS) — stored/validated LOWERCASE, unlike
+// the other UPPERCASE enums. Server validates these at the curation write boundary.
+export const EVALUATION_TYPES = [
+  'exam',
+  'submission',
+  'live_performance',
+  'interview',
+  'portfolio',
+] as const;
 export const RESOURCE_TYPES = ['BOOK', 'PAST_PAPER', 'GUIDE', 'VIDEO', 'OTHER'] as const;
 export const REGION_LEVELS = ['COUNTRY', 'STATE', 'COUNTY', 'CITY', 'VIRTUAL'] as const;
 export const ORG_TYPES = ['HOST', 'SCHOOL', 'SPONSOR', 'OTHER'] as const;

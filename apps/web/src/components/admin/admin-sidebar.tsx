@@ -50,6 +50,12 @@ export function AdminSidebar() {
     <aside
       className={cn(
         'flex shrink-0 flex-col gap-6 border-b border-border p-4 lg:border-r lg:border-b-0',
+        // Pin the rail to the viewport on desktop (lg): without this the aside stretches to the
+        // page's content height, so the bottom-anchored Collapse button (mt-auto) lands far below
+        // the fold on tall pages (a competition's tabs, the categories list) and looks like it
+        // "disappeared". Sticky + h-dvh keeps it viewport-height; a nav taller than the viewport
+        // scrolls inside the rail instead of pushing the button away.
+        'lg:sticky lg:top-0 lg:h-dvh lg:overflow-y-auto',
         collapsed ? 'lg:w-[4.75rem] lg:p-3' : 'lg:w-60',
       )}
     >

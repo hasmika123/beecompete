@@ -40,7 +40,7 @@ All motion respects `prefers-reduced-motion`.
 - **Interaction:** whole card clicks through to the Details page; hover = slight lift/scale.
 
 **Footer** — all pages: Privacy · Terms · Cookie Policy · **affiliate disclosure** (→ DQ10) · beta
-disclaimer (→ R1-13) · contact/support · social links (→ R1-12) · Suggest a Competition (Page 6).
+disclaimer (→ R1-13) · contact/support · social links (→ R1-12) · Request a Competition (Page 6).
 
 ---
 
@@ -140,7 +140,7 @@ carousel & related rows become swipe; audience cards stack.
 - **Scroll:** **"Load more" button** — loads the next page inline (never auto-loads on scroll),
   with crawlable `?page=N` pagination URLs behind it (owner 2026-07-08 — refines the 2026-07-07
   continuous-scroll decision; keeps the footer reachable and back-button position stable).
-- **Zero-results state:** friendly message + **"Suggest a competition"** CTA (→ DQ15, links to
+- **Zero-results state:** friendly message + **"Request a competition"** CTA (→ DQ15, links to
   Page 6) + **2–3 near-miss cards** — relax the least-important active filter and explain the
   relaxation ("Nothing for Grade 3 in Debate — these accept Grade 4"); the grid is never literally
   empty (owner 2026-07-08). Query logged (→ X20).
@@ -258,7 +258,7 @@ deadline-filtered view.
 
 ---
 
-## Page 6: Suggest a Competition *(→ DQ15 — owner-approved 2026-07-08; linked from zero-results + footer)*
+## Page 6: Request a Competition *(→ DQ15 — owner-approved 2026-07-08; canonical label "Request a Competition" per owner 2026-07-13, supersedes "Suggest a Competition"; route slug stays `/suggest-a-competition` until R1-15b; linked from zero-results + footer)*
 
 - **Multi-step wizard form** — one question per step, click/selection advances to the next step,
   with a progress indicator (owner 2026-07-08: designed to feel effortless, not like a form):
@@ -319,7 +319,7 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
 16. **Category URLs:** hybrid — canonical `/competitions/<slug>` = filtered listing + category header + indexable SEO text block.
 17. **Details:** visible breadcrumb **replaces the back button** (supersedes 2026-07-07); "At a glance" strip (Grades · Deadline · Cost · Location · Prize); Register microcopy ("on the organizer's official site ↗"); **FAQ third tab at R1** with FAQPage schema; **sticky sidebar** on desktop; **add-to-calendar** (ics + Google) on the timeline at R1; mobile **sticky bottom bar** (Follow + Register).
 18. **[R2] social-proof counter** with a ~25 cold-start threshold (hidden below it).
-19. **New pages approved:** How It Works (Page 4) · Categories index (Page 5) · Suggest a Competition wizard (Page 6). **Deferred:** For Parents / For Educators (audience cards → digest anchor meanwhile; educators nav link reserved).
+19. **New pages approved:** How It Works (Page 4) · Categories index (Page 5) · Request a Competition wizard (Page 6, labeled "Suggest a Competition" at approval; canonical "Request a Competition" per owner 2026-07-13). **Deferred:** For Parents / For Educators (audience cards → digest anchor meanwhile; educators nav link reserved).
 20. **Cross-cutting style rules** recorded in `design-brief.md` §3/§4: ~~Inter Display + heavy-weight headline scale~~ *(typography superseded by #28)* · gold = fills/accents only (never text/strokes on white) · scrim required behind text over imagery.
 21. **Student Privacy Pledge:** investigate during R1, target signing ~R2 — tracked in `go-to-market.md` §5.
 
@@ -393,7 +393,7 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
 | Competition details | ✅ approved (2026-07-07 · rev 2026-07-08) | delegated (#29) | ✅ R1-7 (2026-07-12; at-a-glance · tabs+FAQ · key-dates timeline w/ add-to-calendar · trust panel · Event/BreadcrumbList/FAQPage JSON-LD · mobile sticky bar · **resources row + affiliate disclosure = R1-8**. Follow/Claim capture = R1-15b) |
 | How It Works | ✅ approved (2026-07-08) | delegated (#29) | ✅ R1-6b (2026-07-12; demo video placeholder) |
 | Categories (index) | ✅ approved (2026-07-08, may be tuned) | delegated (#29) | ✅ R1-6b (2026-07-12) |
-| Suggest a Competition | ✅ approved (2026-07-08) | — | interim stub only (R1-6; wizard = R1-15b) |
+| Request a Competition | ✅ approved (2026-07-08) | — | interim stub only (R1-6; wizard = R1-15b) |
 | For Parents / For Educators | ⛔ deferred (2026-07-08) | — | — |
 | Community (article index + detail) [Phase 2] | ⛔ deferred (2026-07-08, #27) — blueprint before build | — | — |
 | Tracker | ⛔ deferred — do not design yet | — | — |

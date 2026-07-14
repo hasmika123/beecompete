@@ -1,13 +1,14 @@
 'use client';
 
 import { useActionState, useEffect, useState, type ReactNode } from 'react';
-import { Alert, Button, FormField, Input, Textarea, cn, useToast } from '@beecompete/ui';
-import { NativeSelect, enumOptions } from '@/components/admin/native-select';
+import { Alert, Button, Checkbox, FormField, Input, Textarea, cn, useToast } from '@beecompete/ui';
+import { NativeSelect, enumLabel, enumOptions } from '@/components/admin/native-select';
 import { createCompetition, updateCompetition } from '@/app/admin/competitions/actions';
 import {
   COST_TYPES,
   DELIVERIES,
   ENTRY_PATHWAYS,
+  EVALUATION_TYPES,
   PARTICIPATION_MODES,
   RECURRENCES,
   type Category,
@@ -194,11 +195,18 @@ export function CompetitionForm({
         <FormField label="Tags" hint="comma-separated">
           <Input name="tags" defaultValue={c?.tags?.join(', ') ?? ''} />
         </FormField>
-        <FormField
-          label="Evaluation types"
-          hint="comma-separated, allowed: exam, submission, live_performance, interview, portfolio"
-        >
-          <Input name="evaluationType" defaultValue={c?.evaluationType?.join(', ') ?? ''} />
+        <FormField label="Evaluation types" hint="how entries are judged — pick any that apply.">
+          <div className="flex flex-wrap gap-x-4 gap-y-2 pt-1">
+            {EVALUATION_TYPES.map((token) => (
+              <Checkbox
+                key={token}
+                name="evaluationType"
+                value={token}
+                defaultChecked={c?.evaluationType?.includes(token) ?? false}
+                label={enumLabel(token)}
+              />
+            ))}
+          </div>
         </FormField>
         <FormField label="Official URL">
           <Input
