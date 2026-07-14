@@ -180,7 +180,7 @@ Select popover look; owner steers reactively)*
    (Tab → trigger → Enter → type-to-filter → Enter commits → value posts in FormData);
    a required category still blocks/creates correctly; long org list filters.
 
-### 7. Admin form architecture pass — M — ✅ built (`<item-7>`)
+### 7. Admin form architecture pass — M — ✅ built (`dc6eb99`)
 
 > **As built (verified live):** `FormSection` extracted to
 > `components/admin/form-section.tsx` and used by the competition + edition forms (the only
