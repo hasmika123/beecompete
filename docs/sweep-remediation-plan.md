@@ -185,7 +185,7 @@ Select popover look; owner steers reactively)*
 > mirror `required`, FormData carries all 7 values, save round-trip 200; edition page —
 > status/scope/advances + key-date type/timezone post defaults, `updateEdition` save 200;
 > regions page renders both swapped selects. Typecheck + lint green.
-> **Step 4 verification DONE (`4790c0f`):** on the create form with Category empty, the
+> **Step 4 verification DONE (`c10374f`):** on the create form with Category empty, the
 > hidden mirror reports `valueMissing` → `form.checkValidity()`/`reportValidity()` false, a
 > real Save click fires **no** `createCompetition` action, and the opacity-0 mirror is
 > focusable (`document.activeElement` = the `categoryId` select) so the native bubble
