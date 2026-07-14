@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { Checkbox, Input, Textarea } from '@beecompete/ui';
-import { NativeSelect, enumLabel } from '@/components/admin/native-select';
+import { Select } from '@beecompete/ui';
+import { enumLabel } from '@/components/admin/enum-labels';
 
 /**
  * Schema-driven fields for a competition's `attributes` bag (sweep item 8 / A7): renders the
@@ -183,14 +184,17 @@ export function AttributesFields({ schema, uiHints, value, onChange }: Attribute
     if (prop.type === 'string') {
       if (Array.isArray(prop.enum) && prop.enum.length > 0) {
         return (
-          <NativeSelect
+          <Select
             id={id}
             value={typeof v === 'string' ? v : ''}
             placeholder="— none —"
-            options={prop.enum
-              .filter((o): o is string => typeof o === 'string')
-              .map((o) => ({ value: o, label: o }))}
-            onChange={(e) => set(key, e.target.value || undefined)}
+            options={[
+              { value: '', label: '— none —' },
+              ...prop.enum
+                .filter((o): o is string => typeof o === 'string')
+                .map((o) => ({ value: o, label: o })),
+            ]}
+            onValueChange={(val) => set(key, val || undefined)}
           />
         );
       }

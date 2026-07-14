@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef } from 'react';
 import { Alert, Button, FormField, Input, Plus, useToast } from '@beecompete/ui';
-import { NativeSelect } from '@/components/admin/native-select';
+import { Select } from '@beecompete/ui';
 import { createCategory } from '@/app/admin/categories/actions';
 import type { Category, FormState } from '@/lib/admin-types';
 
@@ -45,10 +45,14 @@ export function CategoryCreateForm({ allCategories }: { allCategories: Category[
             siblings and floats the control up under items-end; the placeholder conveys
             "optional / top level" instead. */}
         <FormField label="Parent">
-          <NativeSelect
+          <Select
             name="parentId"
-            options={allCategories.map((c) => ({ value: c.id, label: c.name }))}
+            options={[
+              { value: '', label: '— none (top level) —' },
+              ...allCategories.map((c) => ({ value: c.id, label: c.name })),
+            ]}
             placeholder="— none (top level) —"
+            searchable
           />
         </FormField>
       </div>

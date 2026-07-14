@@ -14,7 +14,8 @@ import {
   useConfirm,
   useToast,
 } from '@beecompete/ui';
-import { NativeSelect, enumLabel, enumOptions } from '@/components/admin/native-select';
+import { Select } from '@beecompete/ui';
+import { enumLabel, enumOptions } from '@/components/admin/enum-labels';
 import { createRegion, deleteRegion, updateRegion } from '@/app/admin/regions/actions';
 import { REGION_LEVELS, type FormState, type Region } from '@/lib/admin-types';
 
@@ -52,11 +53,7 @@ export function RegionAdmin({ regions }: { regions: Region[] }) {
         )}
         <div className="w-36">
           <FormField label="Level">
-            <NativeSelect
-              name="level"
-              options={enumOptions(REGION_LEVELS)}
-              defaultValue="COUNTRY"
-            />
+            <Select name="level" options={enumOptions(REGION_LEVELS)} defaultValue="COUNTRY" />
           </FormField>
         </div>
         <div className="min-w-40 flex-1">
@@ -71,10 +68,14 @@ export function RegionAdmin({ regions }: { regions: Region[] }) {
         </div>
         <div className="w-44">
           <FormField label="Parent">
-            <NativeSelect
+            <Select
               name="parentId"
-              options={regions.map((r) => ({ value: r.id, label: r.name }))}
+              options={[
+                { value: '', label: '— none (top level) —' },
+                ...regions.map((r) => ({ value: r.id, label: r.name })),
+              ]}
               placeholder="— none (top level) —"
+              searchable
             />
           </FormField>
         </div>
@@ -203,7 +204,7 @@ function RegionEditRow({
         >
           <div className="w-36">
             <FormField label="Level">
-              <NativeSelect
+              <Select
                 name="level"
                 options={enumOptions(REGION_LEVELS)}
                 defaultValue={region.level}
@@ -222,11 +223,12 @@ function RegionEditRow({
           </div>
           <div className="w-44">
             <FormField label="Parent">
-              <NativeSelect
+              <Select
                 name="parentId"
-                options={parentOptions}
+                options={[{ value: '', label: '— none (top level) —' }, ...parentOptions]}
                 placeholder="— none (top level) —"
                 defaultValue={region.parentId ?? ''}
+                searchable
               />
             </FormField>
           </div>

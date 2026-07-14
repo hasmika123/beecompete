@@ -12,7 +12,8 @@ import {
   useConfirm,
   useToast,
 } from '@beecompete/ui';
-import { NativeSelect, enumOptions } from '@/components/admin/native-select';
+import { Select } from '@beecompete/ui';
+import { enumOptions } from '@/components/admin/enum-labels';
 import { addResource, deleteResource } from '@/app/admin/competitions/[id]/child-actions';
 import { RESOURCE_TYPES, type Resource } from '@/lib/admin-types';
 
@@ -108,7 +109,7 @@ export function ResourceManager({
           <Input name="url" type="url" required />
         </FormField>
         <FormField label="Type">
-          <NativeSelect name="type" options={enumOptions(RESOURCE_TYPES)} defaultValue="GUIDE" />
+          <Select name="type" options={enumOptions(RESOURCE_TYPES)} defaultValue="GUIDE" />
         </FormField>
         <FormField label="Order" hint="lower shows first">
           <Input name="displayOrder" type="number" min={0} defaultValue={resources.length} />

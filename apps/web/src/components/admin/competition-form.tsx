@@ -13,7 +13,7 @@ import {
 } from '@beecompete/ui';
 import { AttributesFields } from '@/components/admin/attributes-fields';
 import { FormSection } from '@/components/admin/form-section';
-import { NativeSelect, enumLabel, enumOptions } from '@/components/admin/native-select';
+import { enumLabel, enumOptions } from '@/components/admin/enum-labels';
 import { createCompetition, updateCompetition } from '@/app/admin/competitions/actions';
 import {
   COST_TYPES,
@@ -114,12 +114,12 @@ export function CompetitionForm({
         </FormField>
         <FormField label="Category" required>
           {/* Controlled — the Category attributes section below follows the selection. */}
-          <NativeSelect
+          <Select
             name="categoryId"
             options={categoryOptions}
             placeholder="Select category…"
             value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
+            onValueChange={setCategoryId}
             required
           />
         </FormField>
@@ -128,7 +128,7 @@ export function CompetitionForm({
               select; searchable since the org list grows unbounded. */}
           <Select
             name="organizerOrgId"
-            options={orgOptions}
+            options={[{ value: '', label: '— none —' }, ...orgOptions]}
             placeholder="— none —"
             defaultValue={c?.organizerOrgId ?? ''}
             searchable
@@ -150,36 +150,36 @@ export function CompetitionForm({
 
       <FormSection title="Format" cols="sm:grid-cols-3">
         <FormField label="Participation">
-          <NativeSelect
+          <Select
             name="participationMode"
             options={enumOptions(PARTICIPATION_MODES)}
             value={participation}
-            onChange={(e) => setParticipation(e.target.value)}
+            onValueChange={setParticipation}
           />
         </FormField>
         <FormField label="Delivery">
-          <NativeSelect
+          <Select
             name="delivery"
             options={enumOptions(DELIVERIES)}
             defaultValue={c?.delivery ?? 'IN_PERSON'}
           />
         </FormField>
         <FormField label="Entry pathway">
-          <NativeSelect
+          <Select
             name="entryPathway"
             options={enumOptions(ENTRY_PATHWAYS)}
             defaultValue={c?.entryPathway ?? 'INDIVIDUAL'}
           />
         </FormField>
         <FormField label="Cost">
-          <NativeSelect
+          <Select
             name="costType"
             options={enumOptions(COST_TYPES)}
             defaultValue={c?.costType ?? 'FREE'}
           />
         </FormField>
         <FormField label="Recurrence">
-          <NativeSelect
+          <Select
             name="recurrence"
             options={enumOptions(RECURRENCES)}
             defaultValue={c?.recurrence ?? 'ANNUAL'}

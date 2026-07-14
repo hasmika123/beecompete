@@ -1,9 +1,9 @@
 'use client';
 
 import { useActionState, useEffect } from 'react';
-import { Alert, Button, FormField, Input, Textarea, useToast } from '@beecompete/ui';
+import { Alert, Button, FormField, Input, Select, Textarea, useToast } from '@beecompete/ui';
 import { FormSection } from '@/components/admin/form-section';
-import { NativeSelect, enumOptions } from '@/components/admin/native-select';
+import { enumOptions } from '@/components/admin/enum-labels';
 import { createEdition, updateEdition } from '@/app/admin/competitions/[id]/editions/actions';
 import { EDITION_STATUSES, SCOPE_LEVELS, type Edition, type FormState } from '@/lib/admin-types';
 
@@ -40,14 +40,14 @@ export function EditionForm({
           <Input name="cycleLabel" defaultValue={e?.cycleLabel} required maxLength={60} />
         </FormField>
         <FormField label="Status">
-          <NativeSelect
+          <Select
             name="status"
             options={enumOptions(EDITION_STATUSES)}
             defaultValue={e?.status ?? 'UPCOMING'}
           />
         </FormField>
         <FormField label="Scope level">
-          <NativeSelect
+          <Select
             name="scopeLevel"
             options={enumOptions(SCOPE_LEVELS)}
             defaultValue={e?.scopeLevel ?? 'NATIONAL'}
@@ -115,11 +115,15 @@ export function EditionForm({
             label="Advances to"
             hint="the next edition winners advance into (Q5) — e.g. state → national."
           >
-            <NativeSelect
+            <Select
               name="advancesToEditionId"
-              options={siblingEditions.map((s) => ({ value: s.id, label: s.cycleLabel }))}
+              options={[
+                { value: '', label: '— none —' },
+                ...siblingEditions.map((s) => ({ value: s.id, label: s.cycleLabel })),
+              ]}
               placeholder="— none —"
               defaultValue={e?.advancesToEditionId ?? ''}
+              searchable
             />
           </FormField>
         </FormSection>

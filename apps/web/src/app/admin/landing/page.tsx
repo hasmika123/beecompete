@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
-import { enumLabel } from '@/components/admin/native-select';
+import { enumLabel } from '@/components/admin/enum-labels';
 import { HeroCardForm } from '@/components/admin/hero-card-form';
 import { FeaturedManager } from '@/components/admin/featured-manager';
 import { adminFetch } from '@/lib/admin-api';

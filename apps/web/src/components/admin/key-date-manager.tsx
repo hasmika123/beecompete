@@ -7,11 +7,12 @@ import {
   FormField,
   Input,
   Plus,
+  Select,
   Trash,
   useConfirm,
   useToast,
 } from '@beecompete/ui';
-import { NativeSelect, enumLabel, enumOptions } from '@/components/admin/native-select';
+import { enumLabel, enumOptions } from '@/components/admin/enum-labels';
 import { addKeyDate, deleteKeyDate } from '@/app/admin/competitions/[id]/editions/actions';
 import { formatInZone } from '@/lib/dates';
 import { KEY_DATE_TYPES, type KeyDate } from '@/lib/admin-types';
@@ -113,17 +114,13 @@ export function KeyDateManager({
         className="grid gap-3 rounded-[var(--radius-panel)] border border-dashed border-border p-4 sm:grid-cols-3"
       >
         <FormField label="Type">
-          <NativeSelect
-            name="type"
-            options={enumOptions(KEY_DATE_TYPES)}
-            defaultValue="REG_CLOSE"
-          />
+          <Select name="type" options={enumOptions(KEY_DATE_TYPES)} defaultValue="REG_CLOSE" />
         </FormField>
         <FormField label="Starts">
           <Input name="startsAt" type="datetime-local" required={!tbd} disabled={tbd} />
         </FormField>
         <FormField label="Timezone">
-          <NativeSelect name="timezone" options={TIMEZONES} defaultValue="America/New_York" />
+          <Select name="timezone" options={TIMEZONES} defaultValue="America/New_York" />
         </FormField>
         <FormField label="Ends" hint="optional — for windows">
           <Input name="endsAt" type="datetime-local" disabled={tbd} />

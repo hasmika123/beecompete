@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { Button, ChevronDown, ChevronUp, Trash, useToast } from '@beecompete/ui';
-import { NativeSelect } from '@/components/admin/native-select';
+import { Select } from '@beecompete/ui';
 import { setFeaturedSlots } from '@/app/admin/landing/actions';
 
 interface Option {
@@ -91,15 +91,16 @@ export function FeaturedManager({
         <p className="text-sm text-muted">Maximum of 10 featured picks reached.</p>
       ) : (
         available.length > 0 && (
-          <NativeSelect
+          <Select
             aria-label="Add competition to carousel"
             options={available.map((c) => ({ value: c.id, label: c.name }))}
             placeholder="Add a competition…"
             value=""
-            onChange={(e) => {
-              if (e.target.value) setIds([...ids, e.target.value]);
+            onValueChange={(v) => {
+              if (v) setIds([...ids, v]);
             }}
             className="max-w-sm"
+            searchable
           />
         )
       )}

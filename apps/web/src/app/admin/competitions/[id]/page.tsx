@@ -13,7 +13,7 @@ import {
 } from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
 import { AdminTable } from '@/components/admin/admin-table';
-import { enumLabel } from '@/components/admin/native-select';
+import { enumLabel } from '@/components/admin/enum-labels';
 import { ArchivedBadge } from '@/components/admin/status-badges';
 import { CompetitionForm } from '@/components/admin/competition-form';
 import { CompetitionHeaderActions } from '@/components/admin/competition-header-actions';

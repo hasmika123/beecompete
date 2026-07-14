@@ -1,8 +1,7 @@
 'use client';
 
 import { useActionState, useEffect } from 'react';
-import { Alert, Button, FormField, Input, useToast } from '@beecompete/ui';
-import { NativeSelect } from '@/components/admin/native-select';
+import { Alert, Button, FormField, Input, Select, useToast } from '@beecompete/ui';
 import { updateCategory } from '@/app/admin/categories/actions';
 import type { Category, FormState } from '@/lib/admin-types';
 
@@ -39,11 +38,12 @@ export function CategoryEditForm({
         <Input name="slug" defaultValue={category.slug} required pattern="[a-z0-9]+(-[a-z0-9]+)*" />
       </FormField>
       <FormField label="Parent" hint="optional — for subcategories">
-        <NativeSelect
+        <Select
           name="parentId"
-          options={parentOptions}
+          options={[{ value: '', label: '— none (top level) —' }, ...parentOptions]}
           placeholder="— none (top level) —"
           defaultValue={category.parentId ?? ''}
+          searchable
         />
       </FormField>
       <div>

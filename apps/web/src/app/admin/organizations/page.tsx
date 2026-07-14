@@ -3,7 +3,7 @@ import { buttonClasses, Input, Plus, Search } from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
 import { AdminPagination } from '@/components/admin/admin-pagination';
 import { AdminTable } from '@/components/admin/admin-table';
-import { enumLabel } from '@/components/admin/native-select';
+import { enumLabel } from '@/components/admin/enum-labels';
 import { ArchivedBadge, VerificationBadge } from '@/components/admin/status-badges';
 import { adminFetch } from '@/lib/admin-api';
 import type { Organization, Page } from '@/lib/admin-types';

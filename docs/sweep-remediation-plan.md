@@ -153,7 +153,7 @@ import queue "Submitted", corrections "Submitted". Grep for any remaining `toLoc
 
 ## Now — Fable (design-heavy)
 
-### 6. Universal dropdowns in admin: form-postable + searchable `Select` — M — 🟡 core built (`4798545`), swaps remain
+### 6. Universal dropdowns in admin: form-postable + searchable `Select` — M — ✅ built (core `4798545`, swaps `<item-6b>`)
 *(owner 2026-07-13: searchable variant styling = builder judgment, inherits the locked
 Select popover look; owner steers reactively)*
 
@@ -172,16 +172,23 @@ Select popover look; owner steers reactively)*
 > works, save round-trip persisted the org, popover matches the locked 16px-panel look.
 > UI tests + web/ui typecheck green.
 >
-> **REMAINING (hand-off — mechanical, any model):** step 3 — swap the other ~15
-> `NativeSelect` sites to `Select` (uncontrolled forms: `name`+`defaultValue`; controlled
-> sites — org trust, featured picker, attributes enums, edition status: keep
-> `value`/`onValueChange`; searchable on category/region Parent, Advances-to, featured
-> picker; skip Timezone + region level). Then delete `native-select.tsx` and move
-> `enumLabel`/`enumOptions` to `components/admin/enum-labels.ts` (~10 imports). Step 4 —
-> re-verify: a required Category still blocks/creates, keyboard path on one more site,
-> popover styling on a NativeSelect-heavy page (edition form). Watch out: `NativeSelect`
-> passes `onChange` (DOM event) — `Select` uses `onValueChange(value)`; category select in
-> competition-form is CONTROLLED (drives the attributes template).
+> **Swaps done (step 3, all 16 sites):** every `NativeSelect` replaced with `Select`;
+> `native-select.tsx` DELETED; `enumLabel`/`enumOptions` moved to
+> `components/admin/enum-labels.ts` (all ~10 imports updated). Controlled sites kept
+> `value`/`onValueChange` (category→attributes template, participation, org trust, featured
+> picker, attributes enums); searchable on Organizer, category/region Parent (×4),
+> Advances-to, featured picker. **Important behavior preserved:** `NativeSelect`'s
+> placeholder was a selectable "clear" option — optional sites now prepend an explicit
+> `{ value: '', label: '— none —' }` option so values stay clearable (Organizer,
+> Parents, Advances-to, attributes enums).
+> **Verified live:** competition form — 7 triggers, 0 visible native selects, category
+> mirror `required`, FormData carries all 7 values, save round-trip 200; edition page —
+> status/scope/advances + key-date type/timezone post defaults, `updateEdition` save 200;
+> regions page renders both swapped selects. Typecheck + lint green.
+> **Leftover for step 4 (small):** browser-bubble check on an EMPTY required category
+> (create form), one keyboard pass on a swapped page, and a featured-picker add. Gotcha
+> hit during verification (env, not code): a freshly-started dev server 404'd the
+> editions routes until restarted — OneDrive route-scan race; restart fixes it.
 
 1. **`Select` gains form participation:** optional `name` prop → renders
    `<input type="hidden" name value>` synced to the selection, so it drops into the admin's

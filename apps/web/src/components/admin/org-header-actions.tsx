@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { Button, Restore, Trash, useConfirm, useToast } from '@beecompete/ui';
-import { NativeSelect } from '@/components/admin/native-select';
+import { Select } from '@beecompete/ui';
 import {
   archiveOrganization,
   restoreOrganization,
@@ -47,14 +47,13 @@ export function OrgHeaderActions({
       {dialog}
       <label className="flex items-center gap-2 text-sm text-muted">
         Trust:
-        <NativeSelect
+        <Select
           aria-label="Trust state"
           options={ORG_TRUST_OPTIONS}
           value={state}
           disabled={pending}
           className="w-52"
-          onChange={(e) => {
-            const next = e.target.value;
+          onValueChange={(next) => {
             setState(next);
             run(() => setOrganizationVerification(id, next), 'Trust state updated');
           }}
