@@ -76,12 +76,13 @@ async function nearMiss(params: MarketplaceParams, categorySlug: string | undefi
 }
 
 function CardGrid({ items }: { items: CompetitionSummary[] }) {
-  // Fixed 270px tracks (auto-fill) — card width is 270px by construction, so it stays IDENTICAL
-  // whether the filter panel is open or closed (opening the panel just fits one fewer column;
-  // leftover width goes to trailing space, never into the cards). Single full-width column on
-  // phones. 270px = the blueprint card width ("4 per row on desktop, ~270px").
+  // Fixed --card-w tracks (auto-fill) — card width is 258px by construction (the token is
+  // derived to fill the shell EXACTLY: 4 tracks + 3 gaps = the 1104px content width; see
+  // tokens.css), so it stays IDENTICAL whether the filter panel is open or closed: the panel
+  // is one track wide, so opening it drops exactly one column (4 ↔ 3 per row, blueprints #34).
+  // Single full-width column on phones.
   return (
-    <ul className="grid list-none grid-cols-1 gap-6 sm:grid-cols-[repeat(auto-fill,270px)]">
+    <ul className="grid list-none grid-cols-1 gap-6 sm:grid-cols-[repeat(auto-fill,var(--card-w))]">
       {items.map((item) => (
         <li key={item.id}>
           <CompetitionCard data={toCardData(item)} linkComponent={Link} className="h-full" />

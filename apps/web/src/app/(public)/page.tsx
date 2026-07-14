@@ -136,7 +136,7 @@ export default async function LandingPage() {
           </div>
           <ScrollRow label="Featured competitions">
             {landing.featured.map((item) => (
-              <div key={item.id} role="listitem" className="w-[270px] shrink-0 snap-start">
+              <div key={item.id} role="listitem" className="w-(--card-w) shrink-0 snap-start">
                 <CompetitionCard data={toCardData(item)} linkComponent={Link} className="h-full" />
               </div>
             ))}

@@ -67,6 +67,15 @@
 /* ---------- Semantic tokens — light (warm neutrals; no harsh blacks) ---------- */
 
 :root {
+  /* Layout constants (mode-independent) */
+  /* The ONE platform card width (blueprints #34, owner 2026-07-13). Derived from the public
+   * shell: max-w-6xl (1152px) − px-6 (48px) = 1104px usable; 4 tracks + 3 × gap-6 ⇒
+   * (1104 − 72) / 4 = 258px. The marketplace filter panel is exactly one track wide, so
+   * opening it drops exactly one column at IDENTICAL card width (4 ↔ 3 per row). Every card
+   * row (marketplace grid, landing featured, categories closing-soon, detail related) uses
+   * this var — change it here, never inline. */
+  --card-w: 258px;
+
   /* Brand (fixed across modes) */
   --brand-gold: #f5c330;
   --brand-ink: #030201; /* logo/brand constant — text-on-gold; NOT a UI fill */

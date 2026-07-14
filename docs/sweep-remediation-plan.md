@@ -188,7 +188,22 @@ admin-ergonomics leverage of the backlog. Design (preserved from the original pl
 Why Fable: the JSON-Schema→widget mapping, per-key fallback ergonomics, and the controlled↔raw
 mode switching are the judgment calls.
 
-### 9. Marketplace visual pass, round 3 (owner 2026-07-13) — M, one PR
+### 9. Marketplace visual pass, round 3 (owner 2026-07-13) — M, one PR — ✅ built 2026-07-13
+
+> **As built (all four verified live at 1440×900 + mobile 375):** 9a fixed-slot card anatomy —
+> every card 384px with the facts row at identical offset across sparse/full cards (org slot
+> h-6 blank-reserved per owner; description `min-h-[2lh]`); 9b `--card-w: 258px` token in
+> `tokens.css` consumed by the grid, panel, and all four card rows — **4 ↔ 3 columns at
+> pixel-identical 258px width**, no overflow; 9c the three panel `NativeSelect`s → ui `Select`
+> (16px-radius listbox verified; instant-apply URL updates confirmed; zero native selects
+> left; in-sheet listbox unclipped — the Region select couldn't be exercised locally, no
+> seeded regions); 9d bottom-edge stickiness with **one design deviation from the plan**: the
+> naive `top: calc(100dvh − h − m)` displaces a SHORTER-than-viewport panel downward at rest
+> (bottom-docked under a hole — measured live), so the measure effect switches short panels to
+> `static` (scroll with the page, never pin — honoring "never sticky at top") and only
+> bottom-pins taller-than-viewport panels (verified pinning at exactly viewport−24 mid-scroll).
+> Also: sync initial measure (observer delivery can starve in background tabs) + a window
+> resize fallback. Blueprints #34/#35/#36 amended in place.
 
 Four interlocking fixes. **Blueprint-first rule applies:** amend `page-blueprints.md`
 decisions #34/#35/#36 (and add the fixed-slot card anatomy as a new decision) as part of the

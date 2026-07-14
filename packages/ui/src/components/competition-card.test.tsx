@@ -46,4 +46,28 @@ describe('CompetitionCard', () => {
     expect(free.className).toContain('text-success');
     expect(screen.getByText('—')).toBeTruthy();
   });
+
+  it('reserves the organizer + description slots on a sparse card (fixed-slot anatomy)', () => {
+    // Owner 2026-07-13 (blueprints #35): every card renders the same rows at the same heights.
+    // An unattributed, summary-less card keeps BLANK reserved space — the slots exist, empty.
+    render(
+      <CompetitionCard
+        data={{
+          ...DATA,
+          organizerName: undefined,
+          organizerVerified: undefined,
+          summary: undefined,
+          gradeLabel: undefined,
+        }}
+      />,
+    );
+    const orgSlot = screen.getByTestId('organizer-slot');
+    expect(orgSlot).toBeTruthy();
+    expect(orgSlot.textContent).toBe(''); // blank, never placeholder text
+    expect(orgSlot.className).toContain('h-6'); // fixed height even when empty
+    const summarySlot = screen.getByTestId('summary-slot');
+    expect(summarySlot.textContent).toBe('');
+    expect(summarySlot.className).toContain('min-h-[2lh]'); // two lines reserved
+    expect(screen.queryByRole('img', { name: 'Verified organizer' })).toBeNull();
+  });
 });

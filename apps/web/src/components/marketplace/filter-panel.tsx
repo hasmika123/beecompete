@@ -1,8 +1,7 @@
 'use client';
 
 import { useId, useState } from 'react';
-import { ChevronDown, Radio, RadioGroup, cn } from '@beecompete/ui';
-import { NativeSelect } from '@/components/admin/native-select';
+import { ChevronDown, Radio, RadioGroup, Select, cn } from '@beecompete/ui';
 import { gradeName } from '@/lib/catalog-display';
 import type { SearchFacets, RegionOption } from '@/lib/catalog-types';
 import {
@@ -19,6 +18,11 @@ import {
 // button. Every filter state is still a canonical, shareable GET-param URL (marketplaceHref);
 // the chips/quick-chips remain real links, so crawlability is unchanged. Reset lives on the
 // tags row ("Clear all"), not here.
+//
+// Dropdowns are the design-system `Select` (custom listbox), NOT a native <select>: a native
+// popup is OS-rendered and can't match the universal dropdown styling (owner 2026-07-13).
+// Instant-apply means no FormData plumbing is lost, and each options list leads with an
+// explicit clear entry ("Any …") since a custom listbox has no blank state to re-pick.
 
 const GRADES = Array.from({ length: 14 }, (_, i) => i - 1); // Pre-K(-1) … 12
 
@@ -94,31 +98,28 @@ export function FilterPanel({
   return (
     <div className="grid gap-3" aria-label="Filters">
       <Facet legend="Grade" defaultOpen>
+        {/* Plain <div> wrappers, not <label>: the Select trigger is a button, so it takes an
+            explicit aria-label instead (a wrapping label isn't a reliable accessible name for
+            a combobox in Chromium anyway). */}
         <div className="grid grid-cols-2 gap-2">
-          <label className="grid gap-1 text-xs text-muted">
+          <div className="grid gap-1 text-xs text-muted">
             From
-            <NativeSelect
-              name="minGrade"
-              // Explicit label — both selects otherwise expose only "Any" to AT (the wrapping
-              // label text isn't reliably taken as the accessible name in Chromium).
+            <Select
               aria-label="Minimum grade"
               value={params.minGrade !== undefined ? String(params.minGrade) : ''}
-              placeholder="Any"
-              options={gradeOptions}
-              onChange={(e) => set({ minGrade: e.target.value || undefined })}
+              options={[{ value: '', label: 'Any' }, ...gradeOptions]}
+              onValueChange={(v) => set({ minGrade: v || undefined })}
             />
-          </label>
-          <label className="grid gap-1 text-xs text-muted">
+          </div>
+          <div className="grid gap-1 text-xs text-muted">
             To
-            <NativeSelect
-              name="maxGrade"
+            <Select
               aria-label="Maximum grade"
               value={params.maxGrade !== undefined ? String(params.maxGrade) : ''}
-              placeholder="Any"
-              options={gradeOptions}
-              onChange={(e) => set({ maxGrade: e.target.value || undefined })}
+              options={[{ value: '', label: 'Any' }, ...gradeOptions]}
+              onValueChange={(v) => set({ maxGrade: v || undefined })}
             />
-          </label>
+          </div>
         </div>
       </Facet>
 
@@ -139,16 +140,17 @@ export function FilterPanel({
 
       {regions.length > 0 && (
         <Facet legend="State / Region" defaultOpen={!!params.region}>
-          <NativeSelect
-            name="region"
+          <Select
             aria-label="Region"
             value={params.region ?? ''}
-            placeholder="Anywhere"
-            options={regions.map((r) => ({
-              value: r.code ?? r.id,
-              label: `${r.name} (${r.count})`,
-            }))}
-            onChange={(e) => set({ region: e.target.value || undefined })}
+            options={[
+              { value: '', label: 'Anywhere' },
+              ...regions.map((r) => ({
+                value: r.code ?? r.id,
+                label: `${r.name} (${r.count})`,
+              })),
+            ]}
+            onValueChange={(v) => set({ region: v || undefined })}
           />
         </Facet>
       )}

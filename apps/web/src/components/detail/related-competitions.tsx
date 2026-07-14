@@ -38,7 +38,9 @@ export async function RelatedCompetitions({
           <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
       </div>
-      <ul className="grid list-none grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Same fixed --card-w tracks as the marketplace grid — pixel-identical cards everywhere
+          (blueprints #34) instead of the old stretchy lg:grid-cols-4. */}
+      <ul className="grid list-none grid-cols-1 gap-6 sm:grid-cols-[repeat(auto-fill,var(--card-w))]">
         {items.map((item) => (
           <li key={item.id}>
             <CompetitionCard data={toCardData(item)} linkComponent={Link} className="h-full" />

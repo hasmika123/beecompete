@@ -9,10 +9,12 @@ import { ShareMenu } from './share-menu';
 
 /**
  * The CompetitionCard (blueprints "Shared components"; approved F7 direction from the /design
- * study). Equal-height flex column: cover → meta tags → title → organizer → blurb → two
- * fixed-slot facts (Cost + Region, owner r10, pinned to the card bottom) → footer with PRIZE
- * bold and the deadline quiet (Kaggle pattern, owner r8). The whole card is one link, with a
- * Share button in the top-right corner (A8, reveals on hover/focus).
+ * study). FIXED-SLOT anatomy (owner 2026-07-13, blueprints #35): every card renders the same
+ * rows at the same heights — cover → 1 line tags → 1 line title → 1 line organizer (blank
+ * reserved space when unattributed) → exactly 2 lines description → Cost/Region facts row →
+ * PRIZE-bold/deadline-quiet footer (Kaggle pattern, owner r8). Slots reserve their height even
+ * when the data is missing, so a row of mixed sparse/full cards keeps every horizontal rule
+ * aligned. The whole card is one link, with a Share button in the top-right corner (A8).
  *
  * R1 variant: only Share is in the corner; the study's social-proof pill + Save arrive with
  * M31/M7 (R2) — the corner is a slot they drop into without relayout.
@@ -83,9 +85,9 @@ export function CompetitionCard({
       <CategoryCover slug={data.categorySlug} className="h-36" />
 
       <div className="flex flex-col gap-1 p-4 pb-0">
-        {/* Tags stay on a single line (approved design): the category tag truncates if needed,
-            the grade badge never shrinks. */}
-        <div className="flex items-center gap-1.5 overflow-hidden">
+        {/* Slot 1 — tags, exactly one fixed-height line: the category tag truncates if needed,
+            the grade badge never shrinks (and its absence can't change the row height). */}
+        <div className="flex h-6 items-center gap-1.5 overflow-hidden">
           <CategoryTag slug={data.categorySlug} name={data.categoryName} />
           {data.gradeLabel && (
             <Badge variant="outline" className="shrink-0">
@@ -93,29 +95,39 @@ export function CompetitionCard({
             </Badge>
           )}
         </div>
-        {/* Single-line title (owner 2026-07-13): long names trail off with an ellipsis rather
-            than wrapping, so every card's header block is the same height. */}
+        {/* Slot 2 — single-line title (owner 2026-07-13): long names trail off with an ellipsis
+            rather than wrapping. */}
         <CardTitle className="truncate pt-1 text-lg">{data.name}</CardTitle>
-        {data.organizerName && (
-          <div className="flex items-center gap-2">
-            <Avatar name={data.organizerName} size="sm" className="size-6 text-[10px]" />
-            <span className="truncate text-sm text-muted">{data.organizerName}</span>
-            {data.organizerVerified && (
-              <VerifiedSeal
-                weight="fill"
-                role="img"
-                aria-label="Verified organizer"
-                className="size-4 shrink-0 text-success"
-              />
-            )}
-          </div>
-        )}
-        {data.summary && <CardDescription className="line-clamp-2">{data.summary}</CardDescription>}
+        {/* Slot 3 — organizer line, ALWAYS one reserved line (fixed-slot rule): unattributed
+            listings keep the blank space (owner 2026-07-13 — never imply an organizer that
+            isn't on record), so the description/facts below stay row-aligned across cards. */}
+        <div className="flex h-6 items-center gap-2" data-testid="organizer-slot">
+          {data.organizerName && (
+            <>
+              <Avatar name={data.organizerName} size="sm" className="size-6 text-[10px]" />
+              <span className="truncate text-sm text-muted">{data.organizerName}</span>
+              {data.organizerVerified && (
+                <VerifiedSeal
+                  weight="fill"
+                  role="img"
+                  aria-label="Verified organizer"
+                  className="size-4 shrink-0 text-success"
+                />
+              )}
+            </>
+          )}
+        </div>
+        {/* Slot 4 — description, ALWAYS exactly two lines tall: clamp caps it, `2lh` reserves
+            it (lh tracks the real line-height), so a missing/short summary leaves blank space
+            instead of pulling the facts row up. */}
+        <CardDescription className="line-clamp-2 min-h-[2lh]" data-testid="summary-slot">
+          {data.summary}
+        </CardDescription>
       </div>
 
-      {/* Two logistics facts in fixed half-width slots (owner r10): Cost + Region. `mt-auto`
-          pins this row (and the footer below it) to the card bottom, so the facts sit in the
-          same place on every card regardless of how much body content there is above. */}
+      {/* Two logistics facts in fixed half-width slots (owner r10): Cost + Region. With every
+          slot above fixed-height, `mt-auto` is a safety net rather than the aligner — it keeps
+          this row (and the footer) bottom-pinned even if a future slot goes variable. */}
       <div className="mt-auto grid grid-cols-2 gap-x-3 border-t border-border p-4 py-3">
         <div className="flex min-w-0 items-center gap-1.5">
           <Ticket

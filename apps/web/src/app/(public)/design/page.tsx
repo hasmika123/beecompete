@@ -146,7 +146,8 @@ export default function DesignPage() {
 
       <Section title="Cards">
         <p className="mb-3 text-sm text-muted">
-          CompetitionCard shown at its real listing width — 4 per row on desktop (~270px).
+          CompetitionCard shown at its real listing width — 4 per row on desktop (--card-w, 258px;
+          shell-derived, see tokens.css).
         </p>
         <div className="flex flex-wrap items-start gap-5">
           {/* CompetitionCard direction study — the real component ships with R1-6
@@ -157,7 +158,7 @@ export default function DesignPage() {
               description clamped. */}
           <Card
             interactive
-            className="group relative flex w-[270px] shrink-0 flex-col overflow-hidden"
+            className="group relative flex w-(--card-w) shrink-0 flex-col overflow-hidden"
           >
             {/* Top-right corner: at rest shows the social-proof count (→ M31,
                 thresholded at R2); on card hover it crossfades to the quick actions —

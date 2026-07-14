@@ -372,18 +372,32 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
     quick-chip — never as a removable tag; custom ranges still get a "Grades X–Y" tag. The rule
     is **value-canonical** (derived from the URL alone), so shared/reloaded URLs render
     identically. Clicking the already-active chip does nothing — "All" is the deselect.
-34. **Card width is invariant** to the filter-panel toggle: fixed grid tracks
-    (`repeat(auto-fill, 270px)` — the blueprint card width) from `sm:` up, and the desktop panel
-    is exactly one track wide (270px), so opening it drops exactly one column at identical card
-    width. Mobile stays a fluid single column.
+34. **Card width is invariant** to the filter-panel toggle: fixed grid tracks from `sm:` up,
+    and the desktop panel is exactly one track wide, so opening it drops exactly one column at
+    identical card width. Mobile stays a fluid single column. *(Amended at build, same day:
+    the track is the shared **`--card-w` token = 258px** — shell-derived so 4 tracks + gaps
+    EXACTLY fill the `max-w-6xl` content width (4 ↔ 3 per row; the original 270px only fit
+    3 ↔ 2). Every card row — marketplace grid, landing featured, categories closing-soon,
+    detail related — consumes the same token.)*
 35. **Card refinements:** the title is **one line, truncated** (supersedes the two-line clamp);
     the Cost/Region facts row pins to the card bottom above the prize/deadline footer; the
     top-right corner ships **Share-only at R1** (ShareMenu icon variant, popover rendered
     through a portal; hover/focus-revealed, always visible on touch devices) — the corner is
     the R2 slot for Save (M7) and the social-proof pill (M31, #18), added without relayout.
+    *(Extended at build, same day — **fixed-slot anatomy**: every card renders the same rows at
+    the same heights — 1 line tags · 1 line title · 1 line organizer · exactly 2 lines
+    description · facts · footer. Missing data leaves BLANK reserved space (owner: an
+    unattributed card never implies an organizer), so mixed sparse/full rows stay
+    pixel-aligned.)*
 36. **Panel facets are collapsed by default** (the first facet plus any facet with an active
     filter open); the desktop panel has no internal scroll — the page grows instead (the mobile
-    bottom sheet keeps its own scroll).
+    bottom sheet keeps its own scroll). *(Amended at build, same day — **panel stickiness is
+    bottom-edge, never top** (owner): a panel taller than the viewport scrolls with the page
+    and pins only when its bottom touches the viewport bottom (−24px margin); a shorter panel
+    stays in normal flow and scrolls away (a bottom-pin offset would displace it downward at
+    rest). Height is measured (ResizeObserver + resize fallback) into a `--panel-h` var
+    feeding the sticky `top` calc. Panel dropdowns are the design-system `Select` custom
+    listbox — native `<select>` popups can't match the universal dropdown styling.)*
 
 ## Status
 | Page | Blueprint | Style prototype | Built |

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Filter, Input, Search, Select, X, cn } from '@beecompete/ui';
 import type { RegionOption, SearchFacets } from '@/lib/catalog-types';
@@ -9,8 +9,9 @@ import { FilterPanel } from './filter-panel';
 
 // Page-2 toolbar + filter-panel chrome (client): search · sort · Filter toggle · live count.
 // Owns filter navigation (A10 instant-apply) — each panel change routes here and shows a
-// pending state on the results while the new page streams in. Desktop = a sticky side panel
-// (no internal scroll; the page grows); mobile = a bottom sheet with a "Show N" button.
+// pending state on the results while the new page streams in. Desktop = a side panel exactly
+// one card track wide (--card-w) that sticks at the BOTTOM edge (no internal scroll; the page
+// grows); mobile = a bottom sheet with a "Show N" button.
 
 interface MarketplaceFrameProps {
   path: string;
@@ -41,6 +42,39 @@ export function MarketplaceFrame({
   const [pending, startTransition] = useTransition();
   const sortValue = params.sort ?? (params.q ? 'relevance' : 'name');
   const sortOptions = SORTS.filter((s) => s.value !== 'relevance' || !!params.q);
+
+  // Bottom-edge stickiness (owner 2026-07-13, blueprints #36): the panel is NEVER pinned at
+  // the top. When it's taller than the viewport it scrolls with the page and pins only when
+  // its BOTTOM touches the viewport bottom — sticky pins when the element's top hits `top`,
+  // so `top = 100dvh − panelHeight − margin` makes that moment exactly "bottom at viewport
+  // bottom". When it's SHORTER than the viewport that formula would displace it downward at
+  // rest (a sticky top inset acts immediately, bottom-docking it under a hole), so short
+  // panels stay in normal flow and simply scroll with the page. The height changes as facets
+  // expand, so a ResizeObserver + resize listener keep the measurement fresh; the aside
+  // mounts only while `open`, so the effect's lifetime tracks it via the [open] dep.
+  const asideRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = asideRef.current;
+    if (!el) return;
+    const measure = () => {
+      const h = el.offsetHeight;
+      el.style.setProperty('--panel-h', `${h}px`);
+      // Sticky only when the pin line (100dvh − h − 24) sits at/above the header band (80px),
+      // i.e. the panel roughly overfills the viewport — that's when bottom-pinning is
+      // geometrically meaningful and can never displace the panel at rest.
+      el.style.position = h >= window.innerHeight - 104 ? '' : 'static';
+    };
+    // Measure synchronously at mount — the observer's FIRST delivery rides the frame loop,
+    // which can be starved (backgrounded/embedded tabs).
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [open]);
 
   // Instant-apply navigation with a pending transition — one RSC fetch per change (same cost
   // as an Apply click), and `pending` dims the results while it lands.
@@ -119,15 +153,19 @@ export function MarketplaceFrame({
       <div className="flex items-start gap-6">
         {open && (
           // No internal scroll (owner): the panel sits in normal flow and the PAGE grows;
-          // facets are collapsed by default so it stays short. w-[270px] = one card track.
+          // facets are collapsed by default so it stays short. w-(--card-w) = exactly one card
+          // track, which is what keeps the card width invariant to the toggle. The sticky top
+          // offset implements bottom-edge pinning for taller-than-viewport panels (see the
+          // measure effect above — it switches short panels to static so they never pin).
           <aside
+            ref={asideRef}
             id="marketplace-filters"
-            className="sticky top-20 hidden w-[270px] shrink-0 self-start lg:block"
+            className="sticky top-[calc(100dvh-var(--panel-h,100dvh)-1.5rem)] hidden w-(--card-w) shrink-0 self-start lg:block"
           >
             {filterPanel}
           </aside>
         )}
-        {/* Fixed 270px card tracks mean the card width is invariant to the panel opening. */}
+        {/* Fixed --card-w tracks mean the card width is invariant to the panel opening. */}
         <div
           className={cn(
             'min-w-0 flex-1 transition-opacity',
