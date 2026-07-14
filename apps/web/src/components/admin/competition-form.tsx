@@ -1,7 +1,16 @@
 'use client';
 
 import { useActionState, useEffect, useState } from 'react';
-import { Alert, Button, Checkbox, FormField, Input, Textarea, useToast } from '@beecompete/ui';
+import {
+  Alert,
+  Button,
+  Checkbox,
+  FormField,
+  Input,
+  Select,
+  Textarea,
+  useToast,
+} from '@beecompete/ui';
 import { AttributesFields } from '@/components/admin/attributes-fields';
 import { FormSection } from '@/components/admin/form-section';
 import { NativeSelect, enumLabel, enumOptions } from '@/components/admin/native-select';
@@ -115,11 +124,14 @@ export function CompetitionForm({
           />
         </FormField>
         <FormField label="Organizer" hint="the organization the verified seal attaches to.">
-          <NativeSelect
+          {/* First universal-dropdown site (item 6) — posts via Select's hidden native
+              select; searchable since the org list grows unbounded. */}
+          <Select
             name="organizerOrgId"
             options={orgOptions}
             placeholder="— none —"
             defaultValue={c?.organizerOrgId ?? ''}
+            searchable
           />
         </FormField>
       </FormSection>

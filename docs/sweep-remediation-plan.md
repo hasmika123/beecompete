@@ -153,9 +153,35 @@ import queue "Submitted", corrections "Submitted". Grep for any remaining `toLoc
 
 ## Now — Fable (design-heavy)
 
-### 6. Universal dropdowns in admin: form-postable + searchable `Select` — M
+### 6. Universal dropdowns in admin: form-postable + searchable `Select` — M — 🟡 core built (`<item-6>`), swaps remain
 *(owner 2026-07-13: searchable variant styling = builder judgment, inherits the locked
 Select popover look; owner steers reactively)*
+
+> **As built so far (Fable, verified live):** steps 1 + 2 are DONE in
+> `packages/ui/src/components/select.tsx` — `name` renders an invisible-overlay native
+> `<select>` mirror (not `display:none`, so `required` uses real constraint validation with
+> the browser bubble anchored on the trigger; empty option is `disabled+hidden` when
+> required); `searchable` (auto at ≥ 12 options) pins a MagnifyingGlass + filter input above
+> the list inside the locked popover (hairline divider, same panel radius), with
+> case-insensitive substring filtering, ArrowDown/Up moving the active option while focus
+> stays in the input, Enter committing, **Escape clearing the query first then closing**,
+> and a quiet "No matches." row. Space types in the filter (only selects in the plain list).
+> `commit` now takes the option (activeIndex indexes the FILTERED list).
+> **One site swapped as proof:** competition-form Organizer (`searchable`, uncontrolled
+> `name`+`defaultValue`) — verified live: FormData carries the UUID, filter/keyboard path
+> works, save round-trip persisted the org, popover matches the locked 16px-panel look.
+> UI tests + web/ui typecheck green.
+>
+> **REMAINING (hand-off — mechanical, any model):** step 3 — swap the other ~15
+> `NativeSelect` sites to `Select` (uncontrolled forms: `name`+`defaultValue`; controlled
+> sites — org trust, featured picker, attributes enums, edition status: keep
+> `value`/`onValueChange`; searchable on category/region Parent, Advances-to, featured
+> picker; skip Timezone + region level). Then delete `native-select.tsx` and move
+> `enumLabel`/`enumOptions` to `components/admin/enum-labels.ts` (~10 imports). Step 4 —
+> re-verify: a required Category still blocks/creates, keyboard path on one more site,
+> popover styling on a NativeSelect-heavy page (edition form). Watch out: `NativeSelect`
+> passes `onChange` (DOM event) — `Select` uses `onValueChange(value)`; category select in
+> competition-form is CONTROLLED (drives the attributes template).
 
 1. **`Select` gains form participation:** optional `name` prop → renders
    `<input type="hidden" name value>` synced to the selection, so it drops into the admin's
