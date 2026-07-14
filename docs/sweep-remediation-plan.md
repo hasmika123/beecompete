@@ -185,10 +185,18 @@ Select popover look; owner steers reactively)*
 > mirror `required`, FormData carries all 7 values, save round-trip 200; edition page —
 > status/scope/advances + key-date type/timezone post defaults, `updateEdition` save 200;
 > regions page renders both swapped selects. Typecheck + lint green.
-> **Leftover for step 4 (small):** browser-bubble check on an EMPTY required category
-> (create form), one keyboard pass on a swapped page, and a featured-picker add. Gotcha
-> hit during verification (env, not code): a freshly-started dev server 404'd the
-> editions routes until restarted — OneDrive route-scan race; restart fixes it.
+> **Step 4 verification DONE (`4790c0f`):** on the create form with Category empty, the
+> hidden mirror reports `valueMissing` → `form.checkValidity()`/`reportValidity()` false, a
+> real Save click fires **no** `createCompetition` action, and the opacity-0 mirror is
+> focusable (`document.activeElement` = the `categoryId` select) so the native bubble
+> anchors on the trigger. Keyboard path on the controlled Category select: ArrowDown opens
+> (11 options, no filter since < 12), ArrowDown+Enter commits "Math", focus returns to the
+> trigger, category+form become valid, and the controlled binding still drove the attributes
+> template (8 schema controls + hidden `attributes` field rendered). Featured picker
+> (searchable, controlled): opening shows the filter, clicking an option added it to the
+> carousel (5→6) via `onValueChange`; reload confirmed it was unsaved local state (back to
+> 5, DB clean). Gotcha (env, not code): a freshly-started dev server 404'd the editions
+> routes until restarted — OneDrive route-scan race; restart fixes it. **Item 6 COMPLETE.**
 
 1. **`Select` gains form participation:** optional `name` prop → renders
    `<input type="hidden" name value>` synced to the selection, so it drops into the admin's
