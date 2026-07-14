@@ -14,6 +14,7 @@ import { adminFetch, AdminApiError } from '@/lib/admin-api';
 import { listingHealth } from '@/lib/listing-health';
 import type {
   Category,
+  CategoryTemplate,
   Competition,
   Edition,
   Faq,
@@ -33,8 +34,9 @@ export default async function EditCompetitionPage({ params }: { params: Promise<
     throw e;
   }
 
-  const [categories, organizations, editions, faqs, resources] = await Promise.all([
+  const [categories, templates, organizations, editions, faqs, resources] = await Promise.all([
     adminFetch<Category[]>('/categories'),
+    adminFetch<CategoryTemplate[]>('/categories/templates'),
     adminFetch<Page<Organization>>('/organizations?size=100'),
     adminFetch<Edition[]>(`/competitions/${id}/editions`),
     adminFetch<Faq[]>(`/competitions/${id}/faqs`),
@@ -78,6 +80,7 @@ export default async function EditCompetitionPage({ params }: { params: Promise<
               competition={competition}
               categories={categories}
               organizations={organizations.content}
+              templates={templates}
             />
           </div>
         </TabPanel>

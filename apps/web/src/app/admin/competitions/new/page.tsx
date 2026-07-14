@@ -3,11 +3,12 @@ import { ArrowLeft } from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
 import { CompetitionForm } from '@/components/admin/competition-form';
 import { adminFetch } from '@/lib/admin-api';
-import type { Category, Organization, Page } from '@/lib/admin-types';
+import type { Category, CategoryTemplate, Organization, Page } from '@/lib/admin-types';
 
 export default async function NewCompetitionPage() {
-  const [categories, organizations] = await Promise.all([
+  const [categories, templates, organizations] = await Promise.all([
     adminFetch<Category[]>('/categories'),
+    adminFetch<CategoryTemplate[]>('/categories/templates'),
     adminFetch<Page<Organization>>('/organizations?size=100'),
   ]);
 
@@ -20,7 +21,11 @@ export default async function NewCompetitionPage() {
         <ArrowLeft aria-hidden="true" className="size-4" /> Competitions
       </Link>
       <PageHeader title="New competition" />
-      <CompetitionForm categories={categories} organizations={organizations.content} />
+      <CompetitionForm
+        categories={categories}
+        organizations={organizations.content}
+        templates={templates}
+      />
     </>
   );
 }

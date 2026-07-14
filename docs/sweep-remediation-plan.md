@@ -158,7 +158,21 @@ most-seen public surface, where two previous rounds have bounced, so it gets the
 model and ships as **one coherent PR** verified live (same files throughout:
 `competition-card.tsx`, `marketplace-frame.tsx`, `marketplace-page.tsx`, `filter-panel.tsx`).
 
-### 8. Schema-driven attributes form (the A7 renderer) — M–L
+### 8. Schema-driven attributes form (the A7 renderer) — M–L — ✅ built 2026-07-13
+
+> **As built (verified live end-to-end):** `components/admin/attributes-fields.tsx` renders
+> the SELECTED category's template (category select is controlled; templates come from a new
+> `GET /api/v1/admin/categories/templates` — all 11 in one call). Widgets: string → Input
+> (enum → NativeSelect, `format: uri` → url, uiHints widget → Textarea), number/integer →
+> bounded number Input, boolean → Checkbox, array&lt;string&gt; → CSV Input (local text so
+> typing ", " isn't re-normalized); unsupported shapes AND bag keys the schema doesn't declare
+> → per-key raw-JSON rows (labeled "not in template" — nothing hidden or dropped). The object
+> serializes into a hidden `attributes` input; "Edit raw JSON" ⇄ "Back to fields" toggle
+> (invalid JSON refuses the toggle with a toast); no-template categories keep the plain
+> textarea. Server action + networknt validation untouched. uiHints contract verified live
+> (order/labels/placeholders/widgets — seeded on the math template as demo data in the local
+> DB) and documented in the template editor's hint text. Verified: fill → serialized bag →
+> save → DB → reload repopulates; raw round-trip with extra keys.
 
 Today the admin edits a competition's `attributes` bag as raw JSON in a textarea. The uiHints
 wipe bug is already fixed (textarea round-trips); the renderer remains. Highest

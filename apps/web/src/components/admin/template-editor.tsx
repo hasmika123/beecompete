@@ -45,14 +45,14 @@ export function TemplateEditor({
       </FormField>
       <FormField
         label="UI hints (JSON, optional)"
-        hint="Field labels/order/widgets for a future schema-driven attributes form."
+        hint='Drives the competition form’s attributes fields. Shape: { "order": [keys…], "labels": { key: text }, "placeholders": { key: text }, "widgets": { key: "textarea" } }.'
       >
         <Textarea
           name="uiHints"
           defaultValue={hintsText}
           rows={5}
           className="font-mono text-xs"
-          placeholder='{ "labels": { "topics": "Covered topics" } }'
+          placeholder='{ "order": ["topics"], "labels": { "topics": "Covered topics" }, "placeholders": { "topics": "algebra, geometry" }, "widgets": { "syllabus": "textarea" } }'
         />
       </FormField>
       <div>

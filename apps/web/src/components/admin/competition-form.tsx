@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState, type ReactNode } from 'react';
 import { Alert, Button, Checkbox, FormField, Input, Textarea, cn, useToast } from '@beecompete/ui';
+import { AttributesFields } from '@/components/admin/attributes-fields';
 import { NativeSelect, enumLabel, enumOptions } from '@/components/admin/native-select';
 import { createCompetition, updateCompetition } from '@/app/admin/competitions/actions';
 import {
@@ -12,6 +13,7 @@ import {
   PARTICIPATION_MODES,
   RECURRENCES,
   type Category,
+  type CategoryTemplate,
   type Competition,
   type FormState,
   type Organization,
@@ -47,10 +49,13 @@ export function CompetitionForm({
   competition,
   categories,
   organizations,
+  templates = [],
 }: {
   competition?: Competition;
   categories: Category[];
   organizations: Organization[];
+  /** Every category template — the attributes section renders the SELECTED category's schema. */
+  templates?: CategoryTemplate[];
 }) {
   const editing = competition !== undefined;
   const action = editing ? updateCompetition.bind(null, competition.id) : createCompetition;
@@ -64,12 +69,47 @@ export function CompetitionForm({
   const c = competition;
   const categoryOptions = categories.map((cat) => ({ value: cat.id, label: cat.name }));
   const orgOptions = organizations.map((o) => ({ value: o.id, label: o.name }));
-  const attributesText = c?.attributes ? JSON.stringify(c.attributes, null, 2) : '';
 
   // Team size only applies to team/both participation — gate the inputs (disabled fields aren't
   // submitted, so INDIVIDUAL never posts a stray team size).
   const [participation, setParticipation] = useState(c?.participationMode ?? 'INDIVIDUAL');
   const teamDisabled = participation === 'INDIVIDUAL';
+
+  // Attributes bag (sweep item 8 / A7): schema-driven fields for the SELECTED category's
+  // template, with a raw-JSON escape hatch. The object state is the source of truth in
+  // structured mode and serializes into the form's `attributes` field on submit; in raw mode
+  // the textarea posts directly — either way the server action + networknt schema validation
+  // path is untouched (server stays the real gate).
+  const [categoryId, setCategoryId] = useState(c?.categoryId ?? '');
+  const [attributes, setAttributes] = useState<Record<string, unknown>>(
+    (c?.attributes as Record<string, unknown>) ?? {},
+  );
+  const template = templates.find((t) => t.categoryId === categoryId);
+  const [rawMode, setRawMode] = useState(false);
+  const [rawText, setRawText] = useState('');
+  const structured = template !== undefined && !rawMode;
+
+  const enterRawMode = () => {
+    setRawText(Object.keys(attributes).length ? JSON.stringify(attributes, null, 2) : '');
+    setRawMode(true);
+  };
+  const exitRawMode = () => {
+    let parsed: unknown = {};
+    if (rawText.trim()) {
+      try {
+        parsed = JSON.parse(rawText);
+      } catch {
+        toast({ title: 'Fix the JSON first — it doesn’t parse.', tone: 'error' });
+        return;
+      }
+    }
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      toast({ title: 'Attributes must be a JSON object.', tone: 'error' });
+      return;
+    }
+    setAttributes(parsed as Record<string, unknown>);
+    setRawMode(false);
+  };
 
   return (
     <form action={formAction} className="grid gap-8">
@@ -89,11 +129,13 @@ export function CompetitionForm({
           />
         </FormField>
         <FormField label="Category" required>
+          {/* Controlled — the Category attributes section below follows the selection. */}
           <NativeSelect
             name="categoryId"
             options={categoryOptions}
             placeholder="Select category…"
-            defaultValue={c?.categoryId ?? ''}
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
             required
           />
         </FormField>
@@ -225,15 +267,66 @@ export function CompetitionForm({
         title="Category attributes"
         description="Category-specific fields — validated against the category template on save."
       >
-        <FormField label="Attributes (JSON)">
-          <Textarea
-            name="attributes"
-            defaultValue={attributesText}
-            rows={6}
-            className="font-mono text-xs"
-            placeholder='{ "topics": ["algebra"] }'
-          />
-        </FormField>
+        {structured ? (
+          <>
+            {/* The object serializes into the same `attributes` field the raw textarea posts. */}
+            <input
+              type="hidden"
+              name="attributes"
+              value={Object.keys(attributes).length ? JSON.stringify(attributes) : ''}
+            />
+            {/* Remount on category switch so per-field local state (CSV/raw text) re-seeds. */}
+            <AttributesFields
+              key={categoryId}
+              schema={template.jsonSchema}
+              uiHints={template.uiHints}
+              value={attributes}
+              onChange={setAttributes}
+            />
+            <div>
+              <Button type="button" variant="ghost" size="sm" onClick={enterRawMode}>
+                Edit raw JSON
+              </Button>
+            </div>
+          </>
+        ) : rawMode ? (
+          <>
+            <FormField label="Attributes (JSON)">
+              <Textarea
+                name="attributes"
+                value={rawText}
+                onChange={(e) => setRawText(e.target.value)}
+                rows={6}
+                className="font-mono text-xs"
+                placeholder='{ "topics": ["algebra"] }'
+              />
+            </FormField>
+            {template && (
+              <div>
+                <Button type="button" variant="ghost" size="sm" onClick={exitRawMode}>
+                  Back to fields
+                </Button>
+              </div>
+            )}
+          </>
+        ) : (
+          // No template for the selected category (or none selected yet) — raw JSON is the
+          // only editor (uncontrolled; posts directly, exactly the pre-item-8 behavior).
+          <FormField
+            label="Attributes (JSON)"
+            hint="No template for this category yet — raw JSON only (pick a category first)."
+          >
+            <Textarea
+              name="attributes"
+              defaultValue={
+                Object.keys(attributes).length ? JSON.stringify(attributes, null, 2) : ''
+              }
+              rows={6}
+              className="font-mono text-xs"
+              placeholder='{ "topics": ["algebra"] }'
+            />
+          </FormField>
+        )}
       </FormSection>
 
       {/* Dates aren't part of the competition record — they live on its Editions (D3, timeline
