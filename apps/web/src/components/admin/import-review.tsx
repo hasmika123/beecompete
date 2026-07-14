@@ -16,6 +16,7 @@ export function ImportReview({ record }: { record: ImportRecord }) {
   );
   const [rejecting, startReject] = useTransition();
   const [note, setNote] = useState('');
+  const [jsonInvalid, setJsonInvalid] = useState(false);
   const router = useRouter();
   const { confirm, dialog } = useConfirm();
   const { toast } = useToast();
@@ -58,12 +59,27 @@ export function ImportReview({ record }: { record: ImportRecord }) {
         <FormField
           label="Extracted payload (edit before approving)"
           hint="Approving validates this against the category template and creates the competition (provenance = import)."
+          error={
+            jsonInvalid ? 'Not valid JSON — approving will fail until this parses.' : undefined
+          }
         >
           <Textarea
             name="payload"
             defaultValue={payloadText}
             rows={18}
             className="font-mono text-xs"
+            onChange={(e) => {
+              const t = e.target.value.trim();
+              let bad = false;
+              if (t) {
+                try {
+                  JSON.parse(t);
+                } catch {
+                  bad = true;
+                }
+              }
+              setJsonInvalid(bad);
+            }}
           />
         </FormField>
         <div className="flex flex-wrap items-center gap-3">

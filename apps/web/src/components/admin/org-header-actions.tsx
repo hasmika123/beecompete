@@ -45,18 +45,21 @@ export function OrgHeaderActions({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {dialog}
-      <NativeSelect
-        aria-label="Trust state"
-        options={ORG_TRUST_OPTIONS}
-        value={state}
-        disabled={pending}
-        className="w-52"
-        onChange={(e) => {
-          const next = e.target.value;
-          setState(next);
-          run(() => setOrganizationVerification(id, next), 'Trust state updated');
-        }}
-      />
+      <label className="flex items-center gap-2 text-sm text-muted">
+        Trust:
+        <NativeSelect
+          aria-label="Trust state"
+          options={ORG_TRUST_OPTIONS}
+          value={state}
+          disabled={pending}
+          className="w-52"
+          onChange={(e) => {
+            const next = e.target.value;
+            setState(next);
+            run(() => setOrganizationVerification(id, next), 'Trust state updated');
+          }}
+        />
+      </label>
       {archived ? (
         <Button
           variant="secondary"

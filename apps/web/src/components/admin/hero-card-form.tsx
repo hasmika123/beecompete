@@ -21,10 +21,12 @@ export function HeroCardForm({ position, card }: { position: string; card?: Hero
   const previewSrc = /^https?:\/\//.test(imageKey) ? imageKey : null;
 
   return (
-    <form action={formAction} className="grid gap-4">
+    // flex column + h-full so the Save button (mt-auto below) bottom-aligns across the three
+    // hero columns even though MAIN has two extra fields.
+    <form action={formAction} className="flex h-full flex-col gap-4">
       {state.error && <Alert tone="danger">{state.error}</Alert>}
       <FormField
-        label="Image key (S3)"
+        label="Image (S3 key or URL)"
         required
         hint="Upload UI lands in a follow-up; enter the key (or a full image URL) for now."
       >
@@ -51,14 +53,14 @@ export function HeroCardForm({ position, card }: { position: string; card?: Hero
       {isMain && (
         <>
           <FormField label="Link URL" hint="main card only">
-            <Input name="linkUrl" defaultValue={card?.linkUrl ?? ''} maxLength={1000} />
+            <Input name="linkUrl" type="url" defaultValue={card?.linkUrl ?? ''} maxLength={1000} />
           </FormField>
           <FormField label="Hover description" hint="main card only">
             <Input name="description" defaultValue={card?.description ?? ''} maxLength={500} />
           </FormField>
         </>
       )}
-      <div>
+      <div className="mt-auto pt-1">
         <Button type="submit" size="sm" disabled={pending}>
           {pending ? 'Saving…' : 'Save'}
         </Button>

@@ -42,12 +42,24 @@ once on staging** after this branch deploys.
 
 ---
 
-## Now — Opus (mechanical; spec-complete)
+## Now — Opus (mechanical; spec-complete) — ✅ ALL BUILT 2026-07-13
 
-Suggested slicing: items 1–3 = one "form foundations" PR; item 4 = its own PR (API + new
-page); item 5 = a polish PR (or rides #1).
+Shipped in three commits (`a2454e9` items 1–3, `a24406e` item 4, `<item-5>` item 5), each
+verified live against the local stack. **One sub-item deferred** (row-click lists — see item 5).
+As-built notes inline below.
 
-### 1. Form-alignment foundations — S (kills both measured mechanisms)
+### 1. Form-alignment foundations — S — ✅ built (`a2454e9`)
+
+> **As built:** mechanism A fixed with the one-line `content-start` on FormField — verified
+> every measured pair now shares one control top (competition + edition forms, resource
+> Type/Order). Mechanism B: dropped the Parent below-control hint on category-create +
+> region-add (kept `items-end`, which already bottom-aligns) — all controls + submit button
+> share one baseline. FAQ Order+Add → `items-end`, `mt-6` deleted; resource affiliate/Add →
+> `mb-2` deleted. **Variation:** kept `items-end` (not the plan's `items-start`) and `size="sm"`
+> buttons — `items-end` bottom-aligns the shorter button onto the 40px control row cleanly, so
+> no button-height change was needed; the only real bug was the Parent hint.
+
+Original plan (kept for reference):
 
 1. **Mechanism A, one line:** add `content-start` to `FormField`'s root
    (`packages/ui/src/components/form-field.tsx` — `'grid gap-1.5'` →
@@ -64,7 +76,10 @@ page); item 5 = a polish PR (or rides #1).
 4. FAQ's Order+Add row: put Order and the button in the same grid row as proper cells
    (Order keeps `w-24`; button `self-end`), not a nested flex with offsets.
 
-### 2. Confirm hard deletes — S
+### 2. Confirm hard deletes — S — ✅ built (`a2454e9`)
+
+> **As built:** `useConfirm` on key-date, FAQ, resource Delete ("permanent — no restore",
+> danger). Verified: dialog appears, Cancel preserves, Delete removes.
 
 Key-date, FAQ, and resource Delete are instant PERMANENT deletes; wire the existing
 `useConfirm` (exactly the archive/reject pattern): `key-date-manager.tsx`,
@@ -72,14 +87,24 @@ Key-date, FAQ, and resource Delete are instant PERMANENT deletes; wire the exist
 `{ title: 'Delete this …?', message: 'This is permanent — there is no restore.',
 tone: 'danger' }`, render `{dialog}` once per manager. No API change.
 
-### 3. Table dates → `lib/dates` helpers — S
+### 3. Table dates → `lib/dates` helpers — S — ✅ built (`a2454e9`)
+
+> **As built:** all 3 sites (competitions "Updated", import + corrections "Submitted") →
+> `formatDate` (Eastern fallback). Grep confirmed no remaining `toLocale` in admin.
 
 Replace `new Date(x).toLocaleDateString()` (server-locale/zone!) with `formatDate`/
 `compactDateInZone` from `@/lib/dates` (Eastern fallback) in: competitions list "Updated",
 import queue "Submitted", corrections "Submitted". Grep for any remaining `toLocale` in
 `apps/web/src/app/admin` + `components/admin` and sweep them all.
 
-### 4. Regions: full CRUD + their own page — M (owner 2026-07-13: own nav entry)
+### 4. Regions: full CRUD + their own page — M — ✅ built (`a24406e`)
+
+> **As built:** PUT/DELETE endpoints (self-parent → 422, unknown parent → 422, child regions →
+> 409, still-tagged-on-edition → 409, else 204 — all verified). New `/admin/regions` page +
+> sidebar (MapPin); `RegionAdmin` = aligned create row + editable table (inline edit form per
+> row + confirmed delete surfacing the 409 message as a toast). Categories page decluttered;
+> `region-manager` deleted; `createRegion` moved to `regions/actions`; RegionTagger copy → "under
+> Regions". Verified live end-to-end.
 
 1. **API** (`RegionAdminController` — currently GET+POST only):
    `PUT /api/v1/admin/regions/{id}` (name, code, level, parentId — validate parent exists +
@@ -93,7 +118,20 @@ import queue "Submitted", corrections "Submitted". Grep for any remaining `toLoc
 3. Categories page drops its Regions card and the "under Categories → Regions" copy in
    `RegionTagger`'s empty state updates to "under Regions".
 
-### 5. Mechanical polish batch — S
+### 5. Mechanical polish batch — S — ✅ built (`<item-5>`), **1 sub-item deferred**
+
+> **As built (verified live):** dashboard regrouped into *Catalog* (3) + *Review queues* (2),
+> queue tiles get a danger border+bg+label when pending > 0 (verified with a seeded pending
+> row); editions Status/Scope → outline `Badge`; org header trust select wrapped in a visible
+> "Trust:" label; landing hero-card label → "Image (S3 key or URL)", `linkUrl` `type="url"`,
+> all three hero Save buttons bottom-aligned (was 814/748 → all 850); corrections "Fields" cell
+> truncated with `title`; import payload textarea shows a live invalid-JSON `error` (verified
+> `aria-invalid` + hint toggling).
+> **Deferred — row-click lists:** making the whole `AdminTable` row clickable relies on a
+> stretched-link over `<tr>`, which has unreliable `position: relative` support on table rows;
+> the alternative (client-component row with `router.push`) would convert the server-rendered
+> table just for this. Not worth the fragility/cost — the name-cell link already navigates.
+> Revisit if AdminTable becomes a client component for other reasons.
 
 - **Dashboard:** split the 4+1 orphan grid into two labeled groups — *Catalog*
   (Competitions/Organizations/Categories, 3-col) and *Review queues* (Pending imports/

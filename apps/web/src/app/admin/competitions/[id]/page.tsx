@@ -1,6 +1,15 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, buttonClasses, Plus, Tab, TabList, TabPanel, Tabs } from '@beecompete/ui';
+import {
+  ArrowLeft,
+  Badge,
+  buttonClasses,
+  Plus,
+  Tab,
+  TabList,
+  TabPanel,
+  Tabs,
+} from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
 import { AdminTable } from '@/components/admin/admin-table';
 import { enumLabel } from '@/components/admin/native-select';
@@ -111,8 +120,14 @@ export default async function EditCompetitionPage({ params }: { params: Promise<
                     </Link>
                   ),
                 },
-                { header: 'Status', cell: (ed) => enumLabel(ed.status) },
-                { header: 'Scope', cell: (ed) => enumLabel(ed.scopeLevel) },
+                {
+                  header: 'Status',
+                  cell: (ed) => <Badge variant="outline">{enumLabel(ed.status)}</Badge>,
+                },
+                {
+                  header: 'Scope',
+                  cell: (ed) => <Badge variant="outline">{enumLabel(ed.scopeLevel)}</Badge>,
+                },
                 { header: 'State', cell: (ed) => <ArchivedBadge archivedAt={ed.archivedAt} /> },
               ]}
             />

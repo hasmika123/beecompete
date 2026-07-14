@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Alert, ArrowRight, Card, CardContent } from '@beecompete/ui';
+import { Alert, ArrowRight, Card, CardContent, cn } from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
 import { AdminApiError, adminFetch } from '@/lib/admin-api';
 import type { Category, CorrectionProposal, ImportRecord, Page } from '@/lib/admin-types';
@@ -51,10 +51,12 @@ export default async function AdminDashboard() {
     error = diagnose(e);
   }
 
-  const cards = [
+  const catalog = [
     { href: '/admin/competitions', label: 'Competitions', value: data?.competitions },
     { href: '/admin/organizations', label: 'Organizations', value: data?.organizations },
     { href: '/admin/categories', label: 'Categories', value: data?.categories },
+  ];
+  const queues = [
     { href: '/admin/import-records', label: 'Pending imports', value: data?.pendingImports },
     { href: '/admin/corrections', label: 'Pending corrections', value: data?.pendingCorrections },
   ];
@@ -69,21 +71,70 @@ export default async function AdminDashboard() {
         </Alert>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {cards.map((card) => (
-          <Link key={card.href} href={card.href} className="group">
-            <Card interactive className="h-full">
-              <CardContent className="flex flex-col gap-1 p-5">
-                <span className="text-sm text-muted">{card.label}</span>
-                <span className="font-display text-3xl text-foreground">{card.value ?? '—'}</span>
-                <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-muted transition-colors group-hover:text-foreground">
-                  Manage <ArrowRight aria-hidden="true" className="size-3.5" />
-                </span>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
+      <section aria-labelledby="catalog-heading" className="mb-8">
+        <h2 id="catalog-heading" className="mb-3 text-sm font-semibold text-muted">
+          Catalog
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {catalog.map((card) => (
+            <StatCard key={card.href} {...card} cta="Manage" />
+          ))}
+        </div>
+      </section>
+
+      <section aria-labelledby="queues-heading">
+        <h2 id="queues-heading" className="mb-3 text-sm font-semibold text-muted">
+          Review queues
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {queues.map((card) => (
+            <StatCard key={card.href} {...card} cta="Review" alert />
+          ))}
+        </div>
+      </section>
     </>
+  );
+}
+
+/** One dashboard tile. Queue tiles with a pending count > 0 get a danger accent so the
+ * actionable numbers stand out from the plain catalog totals. */
+function StatCard({
+  href,
+  label,
+  value,
+  cta,
+  alert = false,
+}: {
+  href: string;
+  label: string;
+  value?: number;
+  cta: string;
+  alert?: boolean;
+}) {
+  const needsAttention = alert && typeof value === 'number' && value > 0;
+  return (
+    <Link href={href} className="group">
+      <Card
+        interactive
+        className={cn('h-full', needsAttention && 'border-danger/40 bg-danger-soft/40')}
+      >
+        <CardContent className="flex flex-col gap-1 p-5">
+          <span
+            className={cn('text-sm', needsAttention ? 'font-medium text-danger' : 'text-muted')}
+          >
+            {label}
+          </span>
+          <span className="font-display text-3xl text-foreground">{value ?? '—'}</span>
+          <span
+            className={cn(
+              'mt-2 inline-flex items-center gap-1 text-xs font-medium transition-colors',
+              needsAttention ? 'text-danger' : 'text-muted group-hover:text-foreground',
+            )}
+          >
+            {cta} <ArrowRight aria-hidden="true" className="size-3.5" />
+          </span>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }

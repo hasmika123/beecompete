@@ -68,7 +68,14 @@ export default async function CorrectionsPage({
           },
           {
             header: 'Fields',
-            cell: (r) => <span className="text-muted">{Object.keys(r.payload).join(', ')}</span>,
+            cell: (r) => {
+              const fields = Object.keys(r.payload).join(', ');
+              return (
+                <span className="block max-w-56 truncate text-muted" title={fields}>
+                  {fields}
+                </span>
+              );
+            },
           },
           { header: 'Status', cell: (r) => <ReviewStatusBadge status={r.status} /> },
           {

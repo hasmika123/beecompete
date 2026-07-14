@@ -32,7 +32,8 @@ export default async function LandingPage() {
           </CardHeader>
           <CardContent className="grid gap-6 p-5 lg:grid-cols-3">
             {HERO_POSITIONS.map((position) => (
-              <div key={position} className="grid gap-3">
+              // flex column so the form (h-full) can stretch and bottom-align its Save button.
+              <div key={position} className="flex flex-col gap-3">
                 <h3 className="text-sm font-semibold text-foreground">{enumLabel(position)}</h3>
                 <HeroCardForm position={position} card={byPosition.get(position)} />
               </div>
