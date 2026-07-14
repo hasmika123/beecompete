@@ -183,8 +183,18 @@ tooling + audit log) → Phase 2+ (dedup DQ4, conflict resolution DQ5) → Phase
 - **Web:** the `/admin` UI is **Next App Router server components + server actions**. The token
   lives server-side only — `apps/web/src/lib/admin-api.ts` is `import 'server-only'`; the browser
   calls Next, Next calls the API with the header. Public pages sit in an `app/(public)` route group
-  so `/admin` has its own shell (`app/admin/layout.tsx`, noindex). Admin forms use a native
-  `<select>` wrapper (the design-system `Select` doesn't post with FormData).
+  so `/admin` has its own shell (`app/admin/layout.tsx`, noindex).
+- **Admin form conventions (sweep round-4, 2026-07-13):** all admin dropdowns use the design-system
+  **`Select`** — the old `NativeSelect` wrapper was deleted. Uncontrolled FormData forms pass
+  `name` + `defaultValue` (`Select` posts via a hidden native-`<select>` mirror that also carries
+  `required` constraint validation); controlled sites use `value`/`onValueChange`. **Optional
+  selects must prepend an explicit `{ value: '', label: '— none —' }` option** so the field stays
+  clearable — the mirror's placeholder isn't itself a selectable option. `enumLabel`/`enumOptions`
+  live in `components/admin/enum-labels.ts`. Multi-section forms use the shared **`FormSection`**
+  (`components/admin/form-section.tsx`) plus a **sticky save bar** (`sticky bottom-0`, holds Save +
+  the server-error Alert); sectioned forms cap at `max-w-3xl`, simple ones at `max-w-xl`.
+  `FormField`'s root is `grid content-start …` so hint-less fields don't drift ~11px low in
+  multi-column grids.
 - **Error contract:** `ApiExceptionHandler` (`@RestControllerAdvice`) maps
   `ResponseStatusException` (echoing its explicit, safe reason), Bean-Validation field errors (400),
   and `DataIntegrityViolationException`/`OptimisticLockingFailureException` (409) to a JSON body with

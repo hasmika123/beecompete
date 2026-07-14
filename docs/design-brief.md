@@ -138,6 +138,13 @@ read this doc the way they read the glossary — decisions live here, not in cha
   the behavior is the durable part. All on the live `/design` showcase. Feature-specific bits
   (CompetitionCard, category tiles, hero cards, wizard stepper, date pickers, admin tables) are
   built at their task on top of these.
+- **`Select` capabilities (sweep round-4, 2026-07-13):** the design-system `Select` posts to
+  FormData when given a `name` (via a hidden native-`<select>` mirror that also carries `required`
+  constraint validation), and gains a **`searchable`** variant (auto at ≥ 12 options) — a pinned
+  filter input in the popover with case-insensitive substring filtering, arrow-key navigation,
+  Enter-to-commit, Escape-clears-then-closes, and a quiet "No matches." row. This let the admin drop
+  its native-`<select>` wrapper entirely — reach for `Select` (not a raw `<select>`) even in
+  server-action FormData forms.
 
 - **Do:** pill buttons (neutral-graphite primary / gold brand variant, §3) on a crisp near-white
   ground; **CompetitionCards taller and narrower — 4 per row on desktop (~270px wide; owner r7
