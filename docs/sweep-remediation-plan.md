@@ -44,7 +44,7 @@ once on staging** after this branch deploys.
 
 ## Now — Opus (mechanical; spec-complete) — ✅ ALL BUILT 2026-07-13
 
-Shipped in three commits (`a2454e9` items 1–3, `a24406e` item 4, `<item-5>` item 5), each
+Shipped in three commits (`a2454e9` items 1–3, `a24406e` item 4, `f8ad11a` item 5), each
 verified live against the local stack. **One sub-item deferred** (row-click lists — see item 5).
 As-built notes inline below.
 
@@ -118,7 +118,7 @@ import queue "Submitted", corrections "Submitted". Grep for any remaining `toLoc
 3. Categories page drops its Regions card and the "under Categories → Regions" copy in
    `RegionTagger`'s empty state updates to "under Regions".
 
-### 5. Mechanical polish batch — S — ✅ built (`<item-5>`), **1 sub-item deferred**
+### 5. Mechanical polish batch — S — ✅ built (`f8ad11a`), **1 sub-item deferred**
 
 > **As built (verified live):** dashboard regrouped into *Catalog* (3) + *Review queues* (2),
 > queue tiles get a danger border+bg+label when pending > 0 (verified with a seeded pending
