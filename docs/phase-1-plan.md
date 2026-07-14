@@ -118,9 +118,10 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
 **built the same day** — including the two schema items once tracked here as standalone tasks:
 **deadline "TBD" support** (migration `0008`) and the **org trust ladder + derived competition
 maintainer** (migration `0009`); as-built rules live in `domain-model.md` §3f/§8 and
-`page-blueprints.md` decisions #32–36. The **remaining backlog** (admin-queue reachability,
-the schema-driven attributes form, the owner's round-3 marketplace/card feedback, and the
-R2-batched payload items) is tracked in **`docs/sweep-remediation-plan.md`**.
+`page-blueprints.md` decisions #32–36; rounds 2–3 (queue reachability, schema-driven
+attributes form, marketplace visual pass) built the same day. The **remaining backlog**
+(the round-4 admin-UI polish pass + the R2-batched payload items) is tracked in
+**`docs/sweep-remediation-plan.md`**.
 
 ---
 
