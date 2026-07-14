@@ -153,7 +153,7 @@ import queue "Submitted", corrections "Submitted". Grep for any remaining `toLoc
 
 ## Now — Fable (design-heavy)
 
-### 6. Universal dropdowns in admin: form-postable + searchable `Select` — M — ✅ built (core `4798545`, swaps `<item-6b>`)
+### 6. Universal dropdowns in admin: form-postable + searchable `Select` — M — ✅ built (core `4798545`, swaps `15ff24d`)
 *(owner 2026-07-13: searchable variant styling = builder judgment, inherits the locked
 Select popover look; owner steers reactively)*
 
