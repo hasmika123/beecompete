@@ -64,7 +64,9 @@ export function RegionManager({ regions }: { regions: Region[] }) {
           </FormField>
         </div>
         <div className="w-44">
-          <FormField label="Parent" hint="nest under a broader region">
+          {/* Hint dropped (would float the control up in this items-end row); the placeholder
+              conveys "top level", and nesting is obvious from the region list above. */}
+          <FormField label="Parent">
             <NativeSelect
               name="parentId"
               options={regions.map((r) => ({ value: r.id, label: r.name }))}

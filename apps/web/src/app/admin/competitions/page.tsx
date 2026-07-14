@@ -5,6 +5,7 @@ import { AdminPagination } from '@/components/admin/admin-pagination';
 import { AdminTable } from '@/components/admin/admin-table';
 import { ArchivedBadge } from '@/components/admin/status-badges';
 import { adminFetch } from '@/lib/admin-api';
+import { formatDate } from '@/lib/dates';
 import type { Competition, Page } from '@/lib/admin-types';
 
 export default async function CompetitionsPage({
@@ -79,11 +80,7 @@ export default async function CompetitionsPage({
           {
             header: 'Updated',
             align: 'right',
-            cell: (c) => (
-              <span className="text-xs text-muted">
-                {new Date(c.updatedAt).toLocaleDateString()}
-              </span>
-            ),
+            cell: (c) => <span className="text-xs text-muted">{formatDate(c.updatedAt)}</span>,
           },
         ]}
       />

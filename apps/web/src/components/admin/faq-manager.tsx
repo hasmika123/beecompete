@@ -1,17 +1,28 @@
 'use client';
 
 import { useRef, useTransition } from 'react';
-import { Button, FormField, Input, Plus, Textarea, Trash, useToast } from '@beecompete/ui';
+import {
+  Button,
+  FormField,
+  Input,
+  Plus,
+  Textarea,
+  Trash,
+  useConfirm,
+  useToast,
+} from '@beecompete/ui';
 import { addFaq, deleteFaq } from '@/app/admin/competitions/[id]/child-actions';
 import type { Faq } from '@/lib/admin-types';
 
 export function FaqManager({ competitionId, faqs }: { competitionId: string; faqs: Faq[] }) {
   const [pending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
+  const { confirm, dialog } = useConfirm();
   const { toast } = useToast();
 
   return (
     <div className="grid gap-4">
+      {dialog}
       {faqs.length === 0 && <p className="text-sm text-muted">No FAQ entries yet.</p>}
       <ul className="grid gap-2">
         {faqs.map((f) => (
@@ -28,7 +39,16 @@ export function FaqManager({ competitionId, faqs }: { competitionId: string; faq
               size="sm"
               aria-label="Delete FAQ"
               disabled={pending}
-              onClick={() =>
+              onClick={async () => {
+                if (
+                  !(await confirm({
+                    title: 'Delete this FAQ?',
+                    message: 'This is permanent — there is no restore.',
+                    confirmLabel: 'Delete',
+                    tone: 'danger',
+                  }))
+                )
+                  return;
                 startTransition(async () => {
                   try {
                     await deleteFaq(competitionId, f.id);
@@ -39,8 +59,8 @@ export function FaqManager({ competitionId, faqs }: { competitionId: string; faq
                       tone: 'error',
                     });
                   }
-                })
-              }
+                });
+              }}
             >
               <Trash aria-hidden="true" className="size-4" />
             </Button>
@@ -69,13 +89,14 @@ export function FaqManager({ competitionId, faqs }: { competitionId: string; faq
         <FormField label="Answer" required>
           <Textarea name="answer" required rows={4} />
         </FormField>
-        <div className="flex items-center gap-3">
+        <div className="flex items-end gap-3">
           <div className="w-24">
             <FormField label="Order">
               <Input name="displayOrder" type="number" defaultValue={faqs.length} />
             </FormField>
           </div>
-          <Button type="submit" size="sm" disabled={pending} className="mt-6">
+          {/* items-end bottom-aligns the button with the input — no mt-6 offset guessing. */}
+          <Button type="submit" size="sm" disabled={pending}>
             <Plus aria-hidden="true" className="size-4" /> Add
           </Button>
         </div>

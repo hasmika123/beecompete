@@ -1,7 +1,16 @@
 'use client';
 
 import { useRef, useState, useTransition } from 'react';
-import { Button, Checkbox, FormField, Input, Plus, Trash, useToast } from '@beecompete/ui';
+import {
+  Button,
+  Checkbox,
+  FormField,
+  Input,
+  Plus,
+  Trash,
+  useConfirm,
+  useToast,
+} from '@beecompete/ui';
 import { NativeSelect, enumLabel, enumOptions } from '@/components/admin/native-select';
 import { addKeyDate, deleteKeyDate } from '@/app/admin/competitions/[id]/editions/actions';
 import { formatInZone } from '@/lib/dates';
@@ -31,10 +40,12 @@ export function KeyDateManager({
   const [pending, startTransition] = useTransition();
   const [tbd, setTbd] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const { confirm, dialog } = useConfirm();
   const { toast } = useToast();
 
   return (
     <div className="grid gap-4">
+      {dialog}
       <ul className="grid gap-2">
         {keyDates.map((k) => (
           <li
@@ -56,7 +67,16 @@ export function KeyDateManager({
               size="sm"
               aria-label="Delete key date"
               disabled={pending}
-              onClick={() =>
+              onClick={async () => {
+                if (
+                  !(await confirm({
+                    title: 'Delete this key date?',
+                    message: 'This is permanent — there is no restore.',
+                    confirmLabel: 'Delete',
+                    tone: 'danger',
+                  }))
+                )
+                  return;
                 startTransition(async () => {
                   try {
                     await deleteKeyDate(competitionId, editionId, k.id);
@@ -67,8 +87,8 @@ export function KeyDateManager({
                       tone: 'error',
                     });
                   }
-                })
-              }
+                });
+              }}
             >
               <Trash aria-hidden="true" className="size-4" />
             </Button>

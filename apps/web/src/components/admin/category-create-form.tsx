@@ -41,7 +41,10 @@ export function CategoryCreateForm({ allCategories }: { allCategories: Category[
         </FormField>
       </div>
       <div className="min-w-40 flex-1">
-        <FormField label="Parent" hint="optional — for subcategories">
+        {/* No below-control hint in a single-row form — it makes this field taller than its
+            siblings and floats the control up under items-end; the placeholder conveys
+            "optional / top level" instead. */}
+        <FormField label="Parent">
           <NativeSelect
             name="parentId"
             options={allCategories.map((c) => ({ value: c.id, label: c.name }))}

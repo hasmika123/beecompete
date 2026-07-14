@@ -9,6 +9,7 @@ import {
   Input,
   Plus,
   Trash,
+  useConfirm,
   useToast,
 } from '@beecompete/ui';
 import { NativeSelect, enumOptions } from '@/components/admin/native-select';
@@ -24,10 +25,12 @@ export function ResourceManager({
 }) {
   const [pending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
+  const { confirm, dialog } = useConfirm();
   const { toast } = useToast();
 
   return (
     <div className="grid gap-4">
+      {dialog}
       {resources.length === 0 && <p className="text-sm text-muted">No resources yet.</p>}
       <ul className="grid gap-2">
         {resources.map((r) => (
@@ -54,7 +57,16 @@ export function ResourceManager({
               size="sm"
               aria-label="Delete resource"
               disabled={pending}
-              onClick={() =>
+              onClick={async () => {
+                if (
+                  !(await confirm({
+                    title: 'Delete this resource?',
+                    message: 'This is permanent — there is no restore.',
+                    confirmLabel: 'Delete',
+                    tone: 'danger',
+                  }))
+                )
+                  return;
                 startTransition(async () => {
                   try {
                     await deleteResource(competitionId, r.id);
@@ -65,8 +77,8 @@ export function ResourceManager({
                       tone: 'error',
                     });
                   }
-                })
-              }
+                });
+              }}
             >
               <Trash aria-hidden="true" className="size-4" />
             </Button>
@@ -101,12 +113,10 @@ export function ResourceManager({
         <FormField label="Order" hint="lower shows first">
           <Input name="displayOrder" type="number" min={0} defaultValue={resources.length} />
         </FormField>
-        <div className="flex items-end">
-          <div className="mb-2">
-            <Checkbox name="isAffiliate" label="Affiliate link" />
-          </div>
+        <div className="flex items-center">
+          <Checkbox name="isAffiliate" label="Affiliate link" />
         </div>
-        <div>
+        <div className="flex items-center">
           <Button type="submit" size="sm" disabled={pending}>
             <Plus aria-hidden="true" className="size-4" /> Add resource
           </Button>

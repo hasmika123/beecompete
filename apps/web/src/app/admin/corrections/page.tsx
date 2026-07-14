@@ -5,6 +5,7 @@ import { AdminPagination } from '@/components/admin/admin-pagination';
 import { AdminTable } from '@/components/admin/admin-table';
 import { ReviewStatusBadge } from '@/components/admin/status-badges';
 import { adminFetch } from '@/lib/admin-api';
+import { formatDate } from '@/lib/dates';
 import type { CorrectionProposal, Page } from '@/lib/admin-types';
 
 const STATUSES = ['PENDING', 'APPROVED', 'REJECTED'] as const;
@@ -73,11 +74,7 @@ export default async function CorrectionsPage({
           {
             header: 'Submitted',
             align: 'right',
-            cell: (r) => (
-              <span className="text-xs text-muted">
-                {new Date(r.createdAt).toLocaleDateString()}
-              </span>
-            ),
+            cell: (r) => <span className="text-xs text-muted">{formatDate(r.createdAt)}</span>,
           },
         ]}
       />
