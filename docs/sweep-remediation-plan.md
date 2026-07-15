@@ -135,13 +135,16 @@ The edition Regions card is a flat checkbox list — fine at a handful of region
 States expandable), add a filter input, show selected-count. UI-only; do it when the data
 actually makes the flat list hurt.
 
-### 13. Per-round deadlines / costs / delivery — Round entity (Phase 3, H24)
+### 13. Competition structure — Edition → Stage → Round (Phase 3, H24/H25)
 
 Logged 2026-07-14. An R1 `Edition` carries a **single** date/fee set and `delivery` is
 competition-level, so a tiered competition (local → regional → national) can't vary deadlines,
-costs, or delivery **per level**. Canonical model (glossary): those levels are **Rounds** of one
-Edition — built by registry **H24** (with H23 divisions + H25 advancement) at **Phase 3**, informed
-by Gate-A fair research (don't harden early). **R1 workaround:** one Edition per running + per-round
-milestones as `KeyDate`s (typed/custom-labeled); describe the tier structure in the description/FAQ.
-**Do not** model tiers as separate Editions (muddies "Edition" and still can't vary delivery). Full
-context in `domain-model.md` §8a + feature-registry H24.
+costs, or delivery **per level**. **Target model** (domain-model **§8b** + glossary): the *annual
+cycle* is the **Edition** (one per year); each per-place level-instance is a **Stage** (Texas
+Regional, National Tournament — owns its own dates/cost/registration/region, linked by `advances_to`);
+a **Round** is a sequential phase *within* a Stage. Built by registry **H24/H25** at **Phase 3**,
+designed at Gate A (don't harden early). **R1 interim:** one running = one `Edition` record +
+per-level milestones as `KeyDate`s; describe the tier structure + a "find your regional" link in the
+description/FAQ; show the Edition's default cost/deadline with a "select your region for specifics"
+disclaimer. **Do not** hand-model tiers as separate Editions at R1. Full context: `domain-model.md`
+§8b (+ §8a lifecycle).

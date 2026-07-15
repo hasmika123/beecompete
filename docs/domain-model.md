@@ -60,7 +60,7 @@ no separate versioning/history tables. User-submitted corrections (DQ6) are rows
 |---|---|---|
 | Q1 | **Category set** for launch | A two-level taxonomy (Category → Subcategory), seeded with ~10 top K-12 categories: Math · Science & Engineering · Computer Science/Coding · Robotics · Debate & Speech · Business/Entrepreneurship (CTSO) · Writing & Essay · Arts & Music · Academic Bowl/Quiz · History/Geography/Civics · (+ "Other"). This is **seed config, not schema** — the taxonomy table grows freely. |
 | Q2 | **Grade/age** representation | Store **both**: a normalized **grade range** (`min_grade`/`max_grade`) as the *primary* eligibility/filter axis, and an optional **age range** (`min_age`/`max_age`) for age-gated or international competitions. A Participant has a grade + DOB (→ age). **Encoding locked (2026-07-07):** `smallint` — **Pre-K = −1, K = 0, grades 1–12 = 1–12; 13 = post-high-school (reserved, unused at launch — keeps collegiate expansion migration-free)**. Homeschool/ungraded map to the age-equivalent grade. Age-gated comps filter on age (from DOB); grade-gated on grade. **Profile storage (locked 2026-07-07):** participants store **`grad_year`** as canonical; grade is *derived* (UI asks grade, converts on save) — so profiles never go stale at school-year rollover. |
-| Q3 | **Region** granularity | Structured geo, not free text: **Country → State → County/District → City**, plus a special **"Virtual/Online"**. Each Edition has a `scope_level` (national/state/regional/local/virtual) + associated region(s). US-first ⇒ **State** is the primary filter granularity; District enables chapter scoping. **Multi-region rule locked (2026-07-07):** the region join is **Edition-level** (`EditionRegion`). Test: **one registration = one Edition** — same dates + same registration + same results ⇒ **one** Edition tagged with many regions (e.g., AMC 10 2026 nationwide); operationally distinct regional runnings (own dates/registration/results) ⇒ **separate** Editions (e.g., Dallas vs. Houston regional fairs), linked upward via `advances_to_edition_id` — exactly the advancement chain. A Competition's region facet in search is *derived* from its Editions. |
+| Q3 | **Region** granularity | Structured geo, not free text: **Country → State → County/District → City**, plus a special **"Virtual/Online"**. Each Edition has a `scope_level` (national/state/regional/local/virtual) + associated region(s). US-first ⇒ **State** is the primary filter granularity; District enables chapter scoping. **Multi-region rule locked (2026-07-07):** the region join is **Edition-level** (`EditionRegion`). Test: **one registration = one Edition** — same dates + same registration + same results ⇒ **one** Edition tagged with many regions (e.g., AMC 10 2026 nationwide); operationally distinct regional runnings (own dates/registration/results) ⇒ **separate** Editions (e.g., Dallas vs. Houston regional fairs), linked upward via `advances_to_edition_id` — exactly the advancement chain. A Competition's region facet in search is *derived* from its Editions. **Phase-3 target (§8b):** these per-place runnings are renamed **Stages** under a single annual Edition (not separate Editions); R1 keeps this interim separate-record form. |
 | Q4 | **Division** representation | A generic `Division` per Competition with a name + flexible criteria (grade range and/or skill label). Not hard-coded — each Competition defines its own (Junior/Senior, Novice/Varsity, etc.). A participant maps to a Division at registration. **Placement locked (2026-07-07): `Division` lives on `Competition`** (stable identity across years — needed for history/analytics) with an **`active` flag**; restructures add new rows + deactivate old ones, never edit existing rows. `Registration` **snapshots the resolved division** at registration time, so later definition changes never rewrite past records. No per-Edition division copies. |
 | Q5 | **Round / advancement** | Two mechanisms: **`Round`** = a sequential phase *within* an Edition; **Edition linkage** (`advances_to_edition_id`) = multi-level advancement *across* Editions (school→regional→state→national). `AdvancementRule` (top-N / threshold / judge-selected) attaches to a Round or linkage. Structure is represented at launch; *enforcement* lands with the Phase-3 host tools (H25/HC5 — moved 4→3 by registry Rev 5; designed at Gates A/B). Rules are data, not code. |
 | Q6 | **Team composition** | A `Team` is Edition-scoped (name, division) with `TeamMember` rows. A `Registration` is polymorphic — registrant is **either** a Participant **or** a Team. Teams form via a Group (coordinator) or self-organize (team-finder). Size bounds come from the Competition's Format. |
@@ -433,9 +433,55 @@ constraint (enum-as-varchar house rule, §8).
 - **`visibility`** (H48, Phase 3), renamed **link-only / invite-only** (glossary 2026-07-14) so
   *unlisted* is only the lifecycle toggle; `public` gated by host verification + `public_listing`.
 - **`list_at`** scheduled listing (R2+): publish now, auto-list at a future instant.
-- **Per-round** deadlines/costs/delivery: a **Round** is a phase *within* one Edition (glossary), so
-  R1's single date/fee set per Edition + competition-level `delivery` can't vary per tier — waits for
-  the Round entity (registry **H24**, Phase 3).
+- **Per-level / per-round** variation (deadlines/costs/delivery): the target **Edition → Stage →
+  Round** model (§8b) puts these on the **Stage**; R1's single running carries one date/fee set +
+  competition-level `delivery`, so per-tier variation waits for Phase 3 (registry **H24/H25**).
 
 The participant **Journey** (X23: saved→…→result) is a separate axis and **never** gates listing
 visibility.
+
+## 8b. Competition structure: Edition → Stage → Round *(Phase-3 target model, owner-approved 2026-07-14)*
+
+Records the target hierarchy that supersedes Q3's interim "regional runnings = separate Editions"
+framing. **R1 keeps the simple form** (below); the split builds at Phase 3 with multi-level
+advancement (HC5 / registry H24–H25), designed at Gate A — not hardened early.
+
+**Three tiers — one per structural axis** (the old `Edition` conflated the first two):
+
+- **Edition** = the *annual cycle* ("2026") — **one per year**. Owns default/representative info
+  (typical cost, deadline window, description) + the structure summary.
+- **Stage** = a *level-instance* a participant registers for ("Texas Regional", "National
+  Tournament"). Owns real dates, cost, registration URL, `scope_level`, and region(s)
+  (`StageRegion`); linked upward by `advances_to`. Category display label: Tournament / Fair / Event.
+- **Round** = a *sequential phase within a Stage* (written → oral). Optional.
+
+**Worked example — Science Bowl 2026 (10 regionals → national):** 1 Competition → **1 Edition (2026)**
+→ **11 Stages** (10 `scope=REGIONAL` + `StageRegion`, each `advances_to` → 1 `scope=NATIONAL`) →
+Rounds within a Stage if any. **One listing; many Stages active in parallel** — no longer "many
+editions at once." Next year = a new Edition with its own Stages (Stages share no uniqueness across
+years — the Q3 non-unique-cycle rule moves to Stage).
+
+**Rename map from the R1 schema (additive/rename evolution, Phase 3):**
+- today's `Edition` (a per-place running) → **Stage**; `advances_to_edition_id` → `advances_to_stage_id`;
+  `EditionRegion` → `StageRegion`; `scope_level` + key dates + fees + prize move to **Stage**.
+- a new **Edition** (annual cycle) grouping is added *above* Stage, holding the defaults.
+- the `Round` glossary synonym "a.k.a. Stage" is dropped — Round = phase only.
+
+**R1 interim (what we build now):** one running = one `Edition` record (today's schema). A
+multi-regional competition is captured with the Edition's **default info + prose + a link to the
+host's official "find your regional" page** — we do **not** hand-model 11 records at R1. Discovery
+stays one listing; per-region deadlines/costs, the **"select your region" Stage selector**, and the
+advancement graph are Phase 2/3.
+
+**Display defaults + region selector:** the listing shows the Edition's representative cost/deadline
+with a disclaimer ("varies by regional — select your region for specifics"); selecting a region swaps
+in that Stage's exact values. Ties to the headline/current-edition pick + `current_edition_id` (§8a).
+
+**Host manageability:** a local regional host manages **their Stage** (registration, roster, dates,
+fee); the program owner manages the **Edition** (all Stages + the advancement chain). A **federated**
+program (different org per regional, ISEF-style) gives each Stage its own owning org — separation
+without fragmenting discovery into many listings. (A grouping *above* Competition — a Program/Series
+entity — is a separate future consideration, only if we onboard federated networks.)
+
+Cross-ref: Q3 (region granularity) · §8a (lifecycle) · registry H24 (stages/rounds) / HC5
+(advancement) · glossary (Edition / Stage / Round / Advancement).
