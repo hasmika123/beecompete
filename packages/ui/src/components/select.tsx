@@ -237,15 +237,19 @@ export function Select({
         )}
         {...aria}
       >
-        <span className="truncate">{selected?.label ?? placeholder}</span>
+        {/* min-w-0 lets the label truncate INSIDE the fixed-width trigger — without it a long
+            selection (e.g. "Grade Pre-K (5)") overflows and overlaps the neighbouring field. */}
+        <span className="min-w-0 flex-1 truncate text-left">{selected?.label ?? placeholder}</span>
         <CaretDown
           aria-hidden="true"
           className={cn('size-4 shrink-0 text-muted transition-transform', open && 'rotate-180')}
         />
       </button>
 
+      {/* Popover: at least the trigger width, but grows to fit the longest option so values
+          aren't clipped (capped so it never runs off-screen). */}
       {open && (
-        <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-[var(--radius-panel)] border border-border bg-surface-raised shadow-[var(--shadow-popover)]">
+        <div className="absolute z-50 mt-2 w-max min-w-full max-w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-[var(--radius-panel)] border border-border bg-surface-raised shadow-[var(--shadow-popover)]">
           {withSearch && (
             <div className="flex items-center gap-2 border-b border-border px-3">
               <MagnifyingGlass aria-hidden="true" className="size-4 shrink-0 text-muted" />
@@ -276,7 +280,7 @@ export function Select({
               !withSearch && activeIndex >= 0 ? optionId(activeIndex) : undefined
             }
             onKeyDown={withSearch ? undefined : onNavKeyDown}
-            className="max-h-64 overflow-auto p-1.5 focus-visible:outline-none"
+            className="scrollbar-sleek max-h-64 overflow-auto p-1.5 focus-visible:outline-none"
           >
             {visible.length === 0 && (
               <li className="px-3 py-2 text-sm text-muted" aria-disabled="true">
@@ -298,7 +302,7 @@ export function Select({
                   opt.disabled && 'pointer-events-none opacity-45',
                 )}
               >
-                <span className="truncate">{opt.label}</span>
+                <span className="min-w-0 flex-1 truncate">{opt.label}</span>
                 {opt.value === value && <Check aria-hidden="true" className="size-4 shrink-0" />}
               </li>
             ))}

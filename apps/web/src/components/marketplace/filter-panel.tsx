@@ -101,8 +101,11 @@ export function FilterPanel({
         {/* Plain <div> wrappers, not <label>: the Select trigger is a button, so it takes an
             explicit aria-label instead (a wrapping label isn't a reliable accessible name for
             a combobox in Chromium anyway). */}
+        {/* flex-col + min-w-0 so each cell is constrained to its half-track — a `grid gap-1`
+            wrapper's implicit auto column sizes to the Select's max-content and overflows,
+            growing the field past its cell and over the neighbour when a long grade is picked. */}
         <div className="grid grid-cols-2 gap-2">
-          <div className="grid gap-1 text-xs text-muted">
+          <div className="flex min-w-0 flex-col gap-1 text-xs text-muted">
             From
             <Select
               aria-label="Minimum grade"
@@ -111,7 +114,7 @@ export function FilterPanel({
               onValueChange={(v) => set({ minGrade: v || undefined })}
             />
           </div>
-          <div className="grid gap-1 text-xs text-muted">
+          <div className="flex min-w-0 flex-col gap-1 text-xs text-muted">
             To
             <Select
               aria-label="Maximum grade"

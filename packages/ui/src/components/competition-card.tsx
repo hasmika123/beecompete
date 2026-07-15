@@ -84,7 +84,7 @@ export function CompetitionCard({
 
       <CategoryCover slug={data.categorySlug} className="h-36" />
 
-      <div className="flex flex-col gap-1 p-4 pb-0">
+      <div className="flex flex-col gap-1 p-4 pb-3">
         {/* Slot 1 — tags, exactly one fixed-height line: the category tag truncates if needed,
             the grade badge never shrinks (and its absence can't change the row height). */}
         <div className="flex h-6 items-center gap-1.5 overflow-hidden">
