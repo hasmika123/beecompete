@@ -45,7 +45,7 @@ tools, bulk/cohort purchases, promotion, and renewals are all rows in that model
 |---|---|
 | **Claim/manage a curated listing** + edition, **audience analytics** (views, saves, # tracking, interest by grade/region) | **Public marketplace listing for self-created competitions** (included in every paid tier) |
 | Respond to Q&A, basic announcements | Custom forms, team/hierarchical registration, fee collection |
-| **Private competitions** (invite-only/unlisted): registration, roster, announcements, **submission collection** — with a hard **participant cap** 🔬 and volume limits | Judging suite, advanced analytics, multi-staff, approvals, exports; uncapped volumes |
+| **Private competitions** (invite-only / link-only): registration, roster, announcements, **submission collection** — with a hard **participant cap** 🔬 and volume limits | Judging suite, advanced analytics, multi-staff, approvals, exports; uncapped volumes |
 
 Two distinct free hooks: (1) hosts of competitions *we* curated see the demand we send them
 (audience analytics) — which sells the tools; (2) any host can run a **private** competition free

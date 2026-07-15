@@ -11,8 +11,8 @@ bodies were removed here:
 - `design-brief.md` §3 — **`Select` form-participation (`name`) + `searchable` variant**.
 - `domain-model.md` §3f/§8 and `page-blueprints.md` #32–36 — earlier-round data/layout decisions.
 
-This doc now carries **only the Phase-R2-batched items** (deferred until the R2 schema/payload work)
-plus a couple of open carry-over notes.
+This doc now carries the **R1 listing-lifecycle foundation** (owner-approved 2026-07-14, not yet
+built) and the **Phase-R2/R3-batched items**, plus a couple of open carry-over notes.
 
 Ground rules still apply: additive-only migrations; server is the source of truth; all shared UI
 from `packages/ui`; Conventional Commits.
@@ -42,6 +42,55 @@ Items 6–7 — the universal form-postable + searchable `Select` (rolled out ac
 dropdowns) and the admin form architecture pass — shipped in `4798545` / `15ff24d` / `dc6eb99` /
 `c10374f`, verified live. The durable capabilities were migrated to `design-brief.md` §3 and
 `architecture.md` §13a.
+
+---
+
+## Now — listing lifecycle foundation (R1) — 🔒 schema · owner-approved 2026-07-14, not yet built
+
+Full design + rationale: **`domain-model.md` §8a** and the 3-era diagram (design artifact). Untangles
+the four axes (approval · listing-status · visibility · run-status); **R1 builds the first two + the
+readiness gate.** Everything visibility- or host-facing (IN_REVIEW/DQ12, `visibility`, `list_at`,
+edit-re-review) is a **Phase-3 seam — designed, not built.** This is 🔒 full-loop work (plan → 🧑 →
+build); it also anticipates RBAC (R2-7) filling `approved_by`.
+
+### L1. Lifecycle columns — migration `0010` (additive) + entity
+- `competition`: `approved_at timestamptz NULL`, `approved_by uuid NULL` (FK-less), `listing_status
+  varchar NOT NULL DEFAULT 'PUBLISHED'` (enum `DRAFT|PUBLISHED|UNLISTED`; no DB CHECK — §8 house rule).
+- **Backfill** existing rows: `listing_status='PUBLISHED'`, `approved_at=created_at` (already live +
+  vetted → nothing de-lists). `archived_at` stays the archive signal (ARCHIVED = `archived_at` set).
+- JPA: add fields + `ListingStatus` enum (`@Enumerated(STRING)`); `ddl-auto: validate` stays green.
+
+### L2. Set + transition on the write paths
+- Admin **create** and import **approve** stamp `approved_at=now()` (auto-approved). `approved_by`
+  null at R1 (no admin user identity until RBAC R2-7).
+- New **Publish / Unlist / Re-list** admin actions move `listing_status`. **Publish gate:** refuse
+  unless the competition has ≥ 1 non-archived edition (server mirror of the read gate; **409** +
+  explicit reason via `ApiExceptionHandler`).
+- **Archive auto-unlists for free** — the read gate already requires `archived_at IS NULL`, so an
+  archived listing is never public regardless of `listing_status`.
+
+### L3. Public read gate (catalog.web + search + sitemap + landing)
+- Replace the bare `c.archived_at IS NULL` base filter with
+  `archived_at IS NULL AND listing_status='PUBLISHED' AND EXISTS(non-archived edition)` across the
+  browse feed, `CompetitionSearchService`, detail, sitemap, landing featured/hero. **Kills zombie
+  listings** (live with no edition/deadline). Facet counts use the same predicate.
+
+### L4. Combined create-competition + first-edition form
+- The create page captures the competition shell **+ a "First edition"** (= the year's running, per
+  glossary): cycle label, status, scope, headline deadline (a `REG_CLOSE` `KeyDate`), registration
+  URL, entry fee. One server action creates the competition **then** its first edition + key date
+  (single transaction preferred), landing `listing_status=PUBLISHED` — or `DRAFT` via "Save as draft."
+  No schema change beyond L1. Future editions use the existing Editions tab.
+- **Admin UI:** status badge (Draft / Published / Unlisted) on the list + detail header; Publish /
+  Unlist / Re-list buttons (header actions, `useConfirm` where destructive); "Save as draft" on
+  create. `listing-health` stays the *soft* nudge; the **publish gate** is the hard one.
+
+### L5. Docs
+- `domain-model.md` §8a ✅, `glossary.md` lifecycle terms ✅; add a `page-blueprints.md` note for the
+  combined create form (structure change to the admin create surface).
+
+**Sequencing:** L1→L2→L3 are one 🔒 schema PR (full loop). L4 rides on top (form + actions) and should
+land **with** L3 so "publishable by default" and "can't publish a shell" arrive together.
 
 ---
 
@@ -85,3 +134,14 @@ The edition Regions card is a flat checkbox list — fine at a handful of region
 50 states + counties. Once the geo seed lands: group checkboxes by level/parent (Country →
 States expandable), add a filter input, show selected-count. UI-only; do it when the data
 actually makes the flat list hurt.
+
+### 13. Per-round deadlines / costs / delivery — Round entity (Phase 3, H24)
+
+Logged 2026-07-14. An R1 `Edition` carries a **single** date/fee set and `delivery` is
+competition-level, so a tiered competition (local → regional → national) can't vary deadlines,
+costs, or delivery **per level**. Canonical model (glossary): those levels are **Rounds** of one
+Edition — built by registry **H24** (with H23 divisions + H25 advancement) at **Phase 3**, informed
+by Gate-A fair research (don't harden early). **R1 workaround:** one Edition per running + per-round
+milestones as `KeyDate`s (typed/custom-labeled); describe the tier structure in the description/FAQ.
+**Do not** model tiers as separate Editions (muddies "Edition" and still can't vary delivery). Full
+context in `domain-model.md` §8a + feature-registry H24.

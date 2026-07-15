@@ -216,7 +216,7 @@ judging deep-dive** (`development-process.md` §6a) — the model is shaped by w
 | ID | Feature | Phase | Cx | Notes |
 |---|---|---|---|---|
 | H1 | Claim existing (seeded) listing | 3 | M | **Always free** (Rev 8) — presence on curated listings is the audience hook; gate = Host Verification (DQ11) |
-| H2 | Self-serve create / manage listing | 3 | L | Reuses X9 schema. **Public publishing requires the `public_listing` entitlement** (every paid tier includes it; Rev 8, `monetization.md` §4). Private/unlisted creation is free within the free-tier caps |
+| H2 | Self-serve create / manage listing | 3 | L | Reuses X9 schema. **Public publishing requires the `public_listing` entitlement** (every paid tier includes it; Rev 8, `monetization.md` §4). Link-only/invite-only creation is free within the free-tier caps |
 | H3 | Edition management (yearly instances) | 3 | M | |
 | H4 | Registration management (open/close/capacity + **waitlist** with auto-promote on withdrawal) | 3 | M | Waitlist added Rev 7. 🔒 **Consent-upgrade:** registering a child with a host discloses child data to a third party → requires stronger parental consent than R2 email-plus (see `rfc-p1-auth-consent.md` §5) |
 | H5 | Custom registration forms | 3 | L | |
@@ -238,7 +238,7 @@ judging deep-dive** (`development-process.md` §6a) — the model is shaped by w
 | H21 | Data export (CSV) | 3 | S | |
 | H22 | Sponsor management | Backlog | M | Park |
 | H23 | Tracks / divisions management | 3 | M | 🪝 Schema modeled in P1 (see hooks) |
-| H24 | Stages / rounds management | 3 | M | 🪝 Schema modeled in P1 |
+| H24 | Stages / rounds management | 3 | M | 🪝 Schema modeled in P1. **R1 limitation (logged 2026-07-14):** an R1 `Edition` carries a single date/fee set and `delivery` is competition-level, so a tiered competition (local→regional→national) can't vary deadlines/costs/delivery per level — those levels are **Rounds** of one Edition (glossary), delivered by this hook at Phase 3 (with H23 divisions + H25 advancement). R1 workaround: one Edition per running + per-round milestones as `KeyDate`s; tier structure in description/FAQ. **Do not** model tiers as separate Editions |
 | H25 | Qualification / advancement rules | 3 | L | 🪝 Schema modeled in P1; regional→state→national chains. Moved 4→3 (Rev 5): core to the fair wedge |
 | H26 | Blind judging | 4 | M | Anonymized submissions |
 | H27 | Conflict-of-interest / recusal management | 4 | M | Judge COI |
@@ -262,7 +262,7 @@ judging deep-dive** (`development-process.md` §6a) — the model is shaped by w
 | H45 | AI / automation (auto-score, rules & triggers, AI summaries, fraud detection) | Backlog | L | Submittable; later differentiator |
 | H46 | **"Are you the organizer?" claim-interest CTA + host waitlist** on listing pages | 1 | S | Supply-side pipeline from day one; builds the warm R4 launch list (`go-to-market.md` §3–4). Actual claiming stays H1 (Phase 3) |
 | H47 | **Award structures** — per-Edition award list (place, monetary/non-monetary/travel-grant, value + currency, display order) managed by hosts; assignment to winners lands with judging (Gate B) | 3 | M | 🪝 `Award` entity reserved in P1 (domain-model, Rev 7); typed prize summary on Edition ships R1 for display |
-| H48 | **Listing visibility control** — public / unlisted-by-link / private-invite-only for self-managed competitions (school-internal contests etc.) | 3 | M | Rev 7; monetization flipped Rev 8: **public requires the `public_listing` entitlement** (included in all paid tiers; free tier = private/unlisted with participant cap 🔬). Public also always requires verification (DQ11–DQ14). Claimed curated listings are unaffected (free, already public) |
+| H48 | **Listing visibility control** — public / link-only / invite-only for self-managed competitions (school-internal contests etc.) | 3 | M | Rev 7; **values renamed 2026-07-14** (was "unlisted-by-link / private-invite-only") so *unlisted* means only the lifecycle take-down toggle — glossary + domain-model §8a. monetization flipped Rev 8: **public requires the `public_listing` entitlement** (included in all paid tiers; free tier = link-only/invite-only with participant cap 🔬). Public also always requires verification (DQ11–DQ14). Claimed curated listings are unaffected (free, already public) |
 
 ## HC · Host — Compliance, Consent & Advancement *(the K-12 science-fair moat)*
 

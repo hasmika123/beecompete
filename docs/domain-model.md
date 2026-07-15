@@ -201,7 +201,7 @@ Entitlement with a broader `scope_type`. Nothing special-cased.)*
 - **`Registration`** [reserve] — participant **or** team ↔ Edition (polymorphic registrant).
 - **`Submission`** [reserve] — entry to an Edition, belongs to a Registration.
 - **`JudgingAssignment` / `Score` / `Rubric`** [deferred-design] — 🛑 **no shape committed**; designed at **Gate B** (judging deep-dive, `development-process.md` §6a), driven by what Gate-A fairs actually need. Basic judging builds in Phase 3, advanced modes Phase 4.
-- **`Listing` state** is not a separate table — it's the `Competition` + `Edition` + `verification_state`/provenance a Host manages. *(Phase 3, → H48: self-created competitions gain a `visibility` field (public|unlisted|private); setting it to `public` requires host verification (DQ11–DQ14) **and** a `public_listing` entitlement (2026-07-08). Free tier enforces a participant cap 🔬 + volume limits on private competitions. Curated listings are public by definition and unaffected.)*
+- **`Listing` state** is not a separate table — it's the `Competition`'s `listing_status` + `approved_at` (**R1 lifecycle, see §8a**) + its `Edition`s + provenance a Host/Admin manages. *(Phase 3, → H48: self-created competitions gain a `visibility` field (public|link-only|invite-only — renamed 2026-07-14, §8a); setting it to `public` requires host verification (DQ11–DQ14) **and** a `public_listing` entitlement (2026-07-08). Free tier enforces a participant cap 🔬 + volume limits. Curated listings are public by definition and unaffected.)*
 - **`ComplianceForm` / `ReviewCommittee`** [deferred-design] — 🛑 **no shape committed**; designed at **Gate A** (science-fair wedge deep-dive, `development-process.md` §6a) from fair-director research. Consent is partly P1 via `GuardianLink`/`consent_state`.
 
 **Community articles (Phase 2 — M19/M34/M35; Rev 9, 2026-07-08).** Additive-by-design (Hook #15);
@@ -390,4 +390,52 @@ The R1-1 catalog schema shipped (12 tables: the §5 catalog set + `CompetitionFa
   instead), and `organizer_org_id` + deadlines are never required (imports start unattributed;
   dates live on Edition key dates, D3). Completeness is surfaced by the admin **listing-health
   checklist** instead (web `lib/listing-health.ts` — derived, informational, never blocks
-  saves; the natural home for an explicit draft/publish gate if R2+ adds one).
+  saves. The explicit draft/publish gate anticipated here is now specced — see **§8a · Listing
+  lifecycle & approval** below).
+
+## 8a. Listing lifecycle & approval *(owner-approved 2026-07-14; R1 foundation, additive)*
+
+Untangles four **independent axes** that were previously collapsed into `archived_at` alone. The
+public read composes them; each is set/queried on its own. (3-era rationale diagram archived with
+the design discussion.)
+
+| Axis | Column(s) | R1 behavior |
+|---|---|---|
+| **Approval** — vetted? | `approved_at`, `approved_by` | Auto-stamped on admin create (admin = trusted). The DQ12 pre-publication review outcome for self-submissions (Phase 3). |
+| **Listing status** — lifecycle | `listing_status` | `DRAFT → PUBLISHED ⇄ UNLISTED`; `ARCHIVED` via `archived_at`. |
+| **Visibility** — audience | `visibility` | **Not in R1** (curated = public by definition). H48, Phase 3: `public / link-only / invite-only`. |
+| **Run status** — per running | `edition.status` + `EffectiveStatus` | Already built (§8 effective-status rule). |
+
+**State machine (`listing_status`):** `DRAFT (optional) → [IN_REVIEW]* → PUBLISHED ⇄ UNLISTED`, and
+`→ ARCHIVED` from any state (via `archived_at`).
+- **DRAFT** — optional save-and-resume; **not** a mandatory gate (admins may publish directly).
+- **IN_REVIEW\*** — entered only when an *unverified* host publishes (DQ12); admin/curated skip it. **Phase 3.**
+- **PUBLISHED** — approved + live + **auto-listed** publicly. `approved_at` stamped on first entry.
+- **UNLISTED** — a published listing temporarily pulled from public view; reversible (**re-list**). The "pause."
+- **ARCHIVED** — retired (`archived_at`). **Archiving auto-unlists** — an archived listing is never public.
+
+**Public-visibility gate (binding for read paths):**
+`archived_at IS NULL AND listing_status = 'PUBLISHED' AND EXISTS(non-archived edition)` — the
+`EXISTS(edition)` clause is the **readiness gate** that ends "zombie" listings (live with no
+edition/deadline). Phase 3 appends: `AND approved AND visibility = 'public' AND (list_at IS NULL OR
+now() >= list_at)`.
+
+**Columns (migration `0010`, additive):** `competition.approved_at timestamptz NULL`,
+`approved_by uuid NULL` (FK-less, like `organizer_org_id`), `listing_status varchar NOT NULL DEFAULT
+'PUBLISHED'` (enum `DRAFT|PUBLISHED|UNLISTED`). **Backfill** existing rows `listing_status='PUBLISHED'`,
+`approved_at=created_at` (already live + vetted). `archived_at` stays the archive signal; no CHECK
+constraint (enum-as-varchar house rule, §8).
+
+**Deferred seams — design now, build later:**
+- **IN_REVIEW + DQ12** pre-publication review (Phase 3): `approved` becomes the review outcome, and an
+  **edit keeps the current version public** while the edited version is re-reviewed (never dark a live
+  listing for a typo).
+- **`visibility`** (H48, Phase 3), renamed **link-only / invite-only** (glossary 2026-07-14) so
+  *unlisted* is only the lifecycle toggle; `public` gated by host verification + `public_listing`.
+- **`list_at`** scheduled listing (R2+): publish now, auto-list at a future instant.
+- **Per-round** deadlines/costs/delivery: a **Round** is a phase *within* one Edition (glossary), so
+  R1's single date/fee set per Edition + competition-level `delivery` can't vary per tier — waits for
+  the Round entity (registry **H24**, Phase 3).
+
+The participant **Journey** (X23: saved→…→result) is a separate axis and **never** gates listing
+visibility.
