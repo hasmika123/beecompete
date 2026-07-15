@@ -11,8 +11,9 @@ bodies were removed here:
 - `design-brief.md` §3 — **`Select` form-participation (`name`) + `searchable` variant**.
 - `domain-model.md` §3f/§8 and `page-blueprints.md` #32–36 — earlier-round data/layout decisions.
 
-This doc now carries the **R1 listing-lifecycle foundation** (owner-approved 2026-07-14, not yet
-built) and the **Phase-R2/R3-batched items**, plus a couple of open carry-over notes.
+This doc now carries the current **Now — Opus** build (the R1 listing-lifecycle essentials), the
+**Phase 2** and **Phase 3** batched items, plus prior-rounds history and a couple of open carry-over
+notes.
 
 Ground rules still apply: additive-only migrations; server is the source of truth; all shared UI
 from `packages/ui`; Conventional Commits.
@@ -29,14 +30,14 @@ from `packages/ui`; Conventional Commits.
 
 ---
 
-## Now — Opus (mechanical; spec-complete) — ✅ ALL BUILT & VERIFIED (2026-07-13)
+## Prior rounds — Opus (mechanical) · ✅ built & verified (2026-07-13)
 
 Items 1–5 — form-alignment foundations, confirm hard deletes, table dates → `lib/dates`, regions
 full CRUD + their own `/admin/regions` page, and the mechanical polish batch — shipped in `a2454e9`
 / `a24406e` / `f8ad11a`, each verified live. As-built detail is in the git history; the durable
 conventions were migrated to `architecture.md` §13a.
 
-## Now — Fable (design-heavy) — ✅ ALL BUILT & VERIFIED (2026-07-13/14)
+## Prior rounds — Fable (design-heavy) · ✅ built & verified (2026-07-13/14)
 
 Items 6–7 — the universal form-postable + searchable `Select` (rolled out across all 16 admin
 dropdowns) and the admin form architecture pass — shipped in `4798545` / `15ff24d` / `dc6eb99` /
@@ -45,56 +46,37 @@ dropdowns) and the admin form architecture pass — shipped in `4798545` / `15ff
 
 ---
 
-## Now — listing lifecycle foundation (R1) — 🔒 schema · owner-approved 2026-07-14, not yet built
+## Now — Opus · R1 listing-lifecycle build (to build)
 
-Full design + rationale: **`domain-model.md` §8a** and the 3-era diagram (design artifact). Untangles
-the four axes (approval · listing-status · visibility · run-status); **R1 builds the first two + the
-readiness gate.** Everything visibility- or host-facing (IN_REVIEW/DQ12, `visibility`, `list_at`,
-edit-re-review) is a **Phase-3 seam — designed, not built.** This is 🔒 full-loop work (plan → 🧑 →
-build); it also anticipates RBAC (R2-7) filling `approved_by`.
+Triaged 2026-07-14 (owner): of the full §8a lifecycle, only two pieces are **Phase-1 essential, and
+neither needs schema** — a light-loop build, safe to land before R1-12. The `listing_status` state
+machine + host publish controls are **deferred to Phase 3** (item 14); at R1, archive + restore + the
+readiness gate already cover "take it down" and "not ready." Full design: `domain-model.md` §8a.
 
-### L1. Lifecycle columns — migration `0010` (additive) + entity
-- `competition`: `approved_at timestamptz NULL`, `approved_by uuid NULL` (FK-less), `listing_status
-  varchar NOT NULL DEFAULT 'PUBLISHED'` (enum `DRAFT|PUBLISHED|UNLISTED`; no DB CHECK — §8 house rule).
-- **Backfill** existing rows: `listing_status='PUBLISHED'`, `approved_at=created_at` (already live +
-  vetted → nothing de-lists). `archived_at` stays the archive signal (ARCHIVED = `archived_at` set).
-- JPA: add fields + `ListingStatus` enum (`@Enumerated(STRING)`); `ddl-auto: validate` stays green.
+### Readiness gate — public reads require a live edition · no schema · **essential**
+Replace the bare `c.archived_at IS NULL` base filter with `archived_at IS NULL AND
+EXISTS(non-archived edition)` across the browse feed, `CompetitionSearchService`, detail (`/c/<slug>`
+→ 404 when none), sitemap, and landing featured/hero; facet counts use the same predicate. **Kills
+zombie listings** — a competition with no edition (from admin-create *or* import-approve) is invisible
+until it has one. The one launch-quality fix.
 
-### L2. Set + transition on the write paths
-- Admin **create** and import **approve** stamp `approved_at=now()` (auto-approved). `approved_by`
-  null at R1 (no admin user identity until RBAC R2-7).
-- New **Publish / Unlist / Re-list** admin actions move `listing_status`. **Publish gate:** refuse
-  unless the competition has ≥ 1 non-archived edition (server mirror of the read gate; **409** +
-  explicit reason via `ApiExceptionHandler`).
-- **Archive auto-unlists for free** — the read gate already requires `archived_at IS NULL`, so an
-  archived listing is never public regardless of `listing_status`.
+### Combined create-competition + first-edition form · no schema · **recommended**
+The create page captures the competition shell **+ a "First edition"** (= the year's running, per
+glossary): cycle label, status, scope, headline deadline (a `REG_CLOSE` `KeyDate`), registration URL,
+entry fee. One server action creates the competition **then** its first edition + key date (single
+transaction preferred). Makes admin listings complete-by-default (source fix for the gate above +
+fewer steps). No "Save as draft" button yet (that needs `listing_status` — Phase 3). Future editions
+use the existing Editions tab.
 
-### L3. Public read gate (catalog.web + search + sitemap + landing)
-- Replace the bare `c.archived_at IS NULL` base filter with
-  `archived_at IS NULL AND listing_status='PUBLISHED' AND EXISTS(non-archived edition)` across the
-  browse feed, `CompetitionSearchService`, detail, sitemap, landing featured/hero. **Kills zombie
-  listings** (live with no edition/deadline). Facet counts use the same predicate.
-
-### L4. Combined create-competition + first-edition form
-- The create page captures the competition shell **+ a "First edition"** (= the year's running, per
-  glossary): cycle label, status, scope, headline deadline (a `REG_CLOSE` `KeyDate`), registration
-  URL, entry fee. One server action creates the competition **then** its first edition + key date
-  (single transaction preferred), landing `listing_status=PUBLISHED` — or `DRAFT` via "Save as draft."
-  No schema change beyond L1. Future editions use the existing Editions tab.
-- **Admin UI:** status badge (Draft / Published / Unlisted) on the list + detail header; Publish /
-  Unlist / Re-list buttons (header actions, `useConfirm` where destructive); "Save as draft" on
-  create. `listing-health` stays the *soft* nudge; the **publish gate** is the hard one.
-
-### L5. Docs
-- `domain-model.md` §8a ✅, `glossary.md` lifecycle terms ✅; add a `page-blueprints.md` note for the
-  combined create form (structure change to the admin create surface).
-
-**Sequencing:** L1→L2→L3 are one 🔒 schema PR (full loop). L4 rides on top (form + actions) and should
-land **with** L3 so "publishable by default" and "can't publish a shell" arrive together.
+### Approval stamp — `approved_at` / `approved_by` · 1 additive column pair · *optional now*
+The foundation you asked for: auto-stamped on admin create + import approve (`approved_by` null until
+RBAC R2-7). Does nothing observable at R1 (always auto-true; no review exists) and is **additive**, so
+it lands equally cheaply in Phase 3 item 14. **Owner's call:** include the small migration now for the
+visible seam, or defer at zero cost.
 
 ---
 
-## Phase R2 — batch with the R2 schema/payload work (don't build now)
+## Phase 2 — R2 schema/payload batch (don't build now)
 
 ### 8. Import → created-competition link — schema (additive)
 
@@ -135,7 +117,11 @@ The edition Regions card is a flat checkbox list — fine at a handful of region
 States expandable), add a filter input, show selected-count. UI-only; do it when the data
 actually makes the flat list hurt.
 
-### 13. Competition structure — Edition → Stage → Round (Phase 3, H24/H25)
+---
+
+## Phase 3 — Host Tools, lifecycle machine & structure (don't build now)
+
+### 13. Competition structure — Edition → Stage → Round (H24/H25)
 
 Logged 2026-07-14. An R1 `Edition` carries a **single** date/fee set and `delivery` is
 competition-level, so a tiered competition (local → regional → national) can't vary deadlines,
@@ -148,3 +134,15 @@ per-level milestones as `KeyDate`s; describe the tier structure + a "find your r
 description/FAQ; show the Edition's default cost/deadline with a "select your region for specifics"
 disclaimer. **Do not** hand-model tiers as separate Editions at R1. Full context: `domain-model.md`
 §8b (+ §8a lifecycle).
+
+### 14. Listing-status state machine + host publish controls — deferred from §8a
+
+The rest of the R1 lifecycle design, deferred 2026-07-14 because its real driver — self-serve hosts —
+is Phase 3, and R1 is already covered by archive/restore + the readiness gate (Now — Opus). Adds
+migration `0010` `listing_status` (`DRAFT|PUBLISHED|UNLISTED`, plus `IN_REVIEW`), the Publish / Unlist
+/ Re-list admin actions + status badges + "Save as draft," and the §8a Phase-3 seams: **IN_REVIEW /
+DQ12** pre-publication review (an edit keeps the live version public while the change is re-reviewed),
+**`visibility`** (public / link-only / invite-only, H48), **`list_at`** scheduled listing. If
+`approved_at`/`approved_by` weren't pulled into Now — Opus (optional there), they land here too.
+Additive — re-composes cleanly onto the readiness gate; nothing built now needs rework. Full design:
+`domain-model.md` §8a.
