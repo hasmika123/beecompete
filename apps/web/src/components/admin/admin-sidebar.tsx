@@ -2,7 +2,7 @@
 
 import { useCallback, useSyncExternalStore } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Logo, ThemeToggle, cn } from '@beecompete/ui';
+import { ChevronLeft, ChevronRight, Logo, LogoMark, ThemeToggle, cn } from '@beecompete/ui';
 import { AdminNav } from './admin-nav';
 
 const STORAGE_KEY = 'admin:sidebar-collapsed';
@@ -65,12 +65,13 @@ export function AdminSidebar() {
           aria-label="BeeCompete Admin"
           className={cn('flex items-center gap-2', collapsed && 'lg:justify-center')}
         >
-          {/* Collapsed: the wordmark won't fit the rail, so show just the gold brand mark. */}
+          {/* Collapsed: the wordmark won't fit the rail, so show just the icon-only brand mark.
+              The lg-gating lives on the wrapper so it doesn't collide with LogoMark's own
+              dark/light display swap. */}
           {collapsed ? (
-            <span
-              aria-hidden="true"
-              className="hidden size-3 rounded-full bg-brand-gold lg:inline-block"
-            />
+            <span className="hidden lg:inline-flex">
+              <LogoMark className="h-8" />
+            </span>
           ) : null}
           <span className={cn('flex items-center gap-2', collapsed && 'lg:hidden')}>
             <Logo />

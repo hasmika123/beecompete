@@ -50,7 +50,7 @@ Replaceable (app containers) live on the VPS; **irreplaceable data (Postgres) is
 | **Persistence** | Spring Data JPA + Hibernate · **Liquibase** (additive migrations) · MapStruct (DTOs) · Bean Validation | |
 | **Database** | **PostgreSQL (managed)** | JSONB flexible attributes, FTS, pgvector for AI. Neon (free) → paid tier (~$20/mo) before real users. |
 | **Cache** | **Redis** | Hot-query cache + per-IP rate-limit counters **only** — nothing durable lives in Redis (ADR 10). Jobs & sessions live in Postgres. |
-| **Files** | **AWS S3 (private bucket)** | Access via **pre-signed URLs** (not proxied through the API). |
+| **Files** | **AWS S3** | Two asset classes on **separate buckets**: **public display assets** (cover images) on a public-read bucket; **private user files** (minors' submissions, R2) on a private bucket via short-TTL **pre-signed GETs**. Both upload via pre-signed **PUT** — never proxied through the API. |
 | **Payments** | **Stripe** (+ Connect later for host fee collection / creator payouts) | |
 | **Email** | **Brevo SMTP** (transactional/no-reply) + **Cloudflare Email Routing** (inbound support@ → Gmail) | SPF/DKIM/DMARC configured. |
 | **AI** | Provider-agnostic proxy in the API; key server-side only | **Never send minors' PII to a free tier** (no DPA/no-training). |
@@ -103,7 +103,7 @@ Spring and forwards the httpOnly session cookie — the session ID never touches
   - **HikariCP for autosuspend:** modest `maximum-pool-size`; `max-lifetime`/`idle-timeout` **shorter than Neon's idle window**; connection validation on; `connection-timeout` generous enough to absorb cold-start wake latency (or retry the first request).
   - **Kill cold starts on prod:** on the paid tier, **disable autosuspend** (always-on compute) — cold starts become a dev/staging-only concern.
   - **Region proximity:** put the **VPS and Neon in the same region** (as built: IONOS US East ↔ Neon `us-east-1`). Cross-region latency compounds badly for chatty ORM queries.
-- **Files (S3):** private bucket; downloads via **pre-signed URLs** with short TTL (scales better than proxying, keeps access control — important for minors' submissions).
+- **Files (S3):** two asset classes on **separate buckets**. **Public display assets** (cover images, R1-19) live on a **public-read** bucket (`covers/` prefix) — cards/detail/OG/ISR need stable, cacheable, indexable URLs, so pre-signed *GETs* don't fit; upload is a pre-signed **PUT** (`POST /admin/uploads/cover`), browser → S3 direct, public URL stored in `competition.logo`. **Private user files** (minors' submissions, R2) stay on a **private** bucket, downloaded via short-TTL **pre-signed GETs** (access control for minors). Neither is proxied through the API.
 - **Backups:** managed Postgres automated backups + **PITR**, with a **tested restore** (a backup you haven't restored isn't a backup).
 
 ## 7. Async & background jobs
@@ -121,7 +121,15 @@ job types; revisit only at thousands of jobs/second.
 - **Rendering:** SSG/ISR for public marketplace pages (SEO — the acquisition channel); client/SSR for authed dashboards.
 - **Responsiveness:** **mobile-first, fully responsive** — non-negotiable (many students are mobile-only). Tested at mobile/tablet/desktop breakpoints.
 - **Design system (`packages/ui`):** the single home for **shared components** — buttons, dropdowns, inputs, icons, tokens — so everything is styled uniformly. **Rule: never inline SVGs or hand-roll styles**; if it's shared, it lives here. Consumed as source via `transpilePackages`.
-- **Theming:** light **and dark mode** via design tokens. Logo/icon assets (favicon, wordmark, light/dark variants) live in `packages/ui`; **use placeholder assets until the owner provides the finals**, then swap in place (no code change beyond the asset).
+- **Theming:** light **and dark mode** via design tokens. **Brand art (finals in, 2026-07-16):** the
+  `Logo` (wordmark) + `LogoMark` (icon-only) **components** live in `packages/ui`; the raster PNG art
+  they render is served from **`apps/web/public/brand/`** (`{logo,mark}-{light,dark}.png`). Both theme
+  variants sit in the DOM and CSS swaps them via the class-based `.dark` selector — SSR-safe and
+  flash-free (no `useTheme`). The favicon (`apps/web/src/app/icon.svg`) is a self-contained SVG that
+  embeds both icon marks and swaps on `prefers-color-scheme`; the OG share cards embed the wordmark as
+  a base64 data URI (`lib/og-wordmark.ts`) since `next/og` can't fetch app assets at render time. The
+  owner-supplied art is **raster PNG** (not true vector) — adequate for every current surface; a large
+  (≥512px) app/PWA icon would need a higher-res or vector source.
 - **Client validation:** field checks mirror server rules for UX; **server-side Bean Validation is the real enforcement.**
 - **SEO:** semantic markup, metadata/OpenGraph, sitemaps, per-competition/-category landing pages, clean URLs. Submit sitemap to **Google Search Console + Bing Webmaster Tools** at launch.
 
@@ -174,6 +182,38 @@ tooling + audit log) → Phase 2+ (dedup DQ4, conflict resolution DQ5) → Phase
   (HeroCard upsert-by-position + FeaturedSlot carousel, ≤10, archived-competition guard), and
   verification/provenance controls. Every attributes write validates through
   `CategoryAttributeValidator`; every write stamps provenance.
+- **Complete-by-default create (sweep, 2026-07-15/16):** `POST /api/v1/admin/competitions/with-edition`
+  creates a Competition + its first Edition + the edition's **typed key dates** (a
+  `List<FirstEditionKeyDate>` — reg opens/closes, submission due, results; each dated or TBD) + its
+  **regions**, in **one transaction** (`ListingCurationService`, composing the per-record curation
+  write paths, so all invariants — attributes template, provenance — still apply). A partial create
+  can't leave the "zombie" listing the **readiness gate** (§13b) hides. An **admin-form completeness
+  policy** lives on `CompetitionWithEditionRequest` (`@AssertTrue`s: organizer, summary, description,
+  official + registration URL, prize, ≥ 1 region, and ≥ 1 `REG_CLOSE`/`SUBMISSION_DUE` key date
+  dated-or-TBD; plus a **cost-aware fee** rule — PAID ⇒ fee > 0 + currency, FREE ⇒ no fee) so a
+  manual listing is complete by default — kept HERE, not on the shared `CompetitionRequest`/
+  `EditionRequest`, so imports + corrections stay lenient. Plain `POST /competitions` stays for edge
+  cases; future editions use `POST /competitions/{id}/editions`.
+- **Create-competition form (sweep stepper build, 2026-07-15/16):** a **vertical stepper**
+  (`packages/ui` `Stepper`) over five steps — Basics / About / Format & eligibility / Media & links /
+  First edition — with a form-wide required-fields **completion ring** (`packages/ui` `ProgressRing`)
+  that gates the Create button (server re-validates regardless). Field UX worth keeping: **auto-slug**
+  (`slugify(name)` until the slug is hand-edited; create-only — slugs are permanent), grade/age as
+  **dropdowns** sharing the marketplace grade ladder (`GRADE_VALUES`, an "Any" default, age to "99+")
+  with min ≤ max validation, an **Organizer "+ Add organization…"** option, a repeatable **typed
+  key-date** row editor (indexed `keydate_N_*` fields; wall-clock via `zonedWallClockToInstant`), and
+  **`region-picker.tsx`** — a grouped/searchable region tree used by BOTH the create form and the
+  edition `RegionTagger`, with soft scope assist (NATIONAL → suggest US, VIRTUAL → suggest
+  Virtual/Online). Regions are pre-seeded (Liquibase `0010`: US + 50 states + DC + ~25 cities +
+  Virtual/Online) so admins pick, not hand-create. Edit mode renders the same `stepDefs` as stacked
+  `FormSection`s (no stepper).
+- **Cover-image upload (R1-19, 2026-07-16):** `POST /api/v1/admin/uploads/cover` returns a short-TTL
+  **pre-signed S3 PUT URL** (validates PNG/JPEG/WebP + ≤ 5 MB) so the browser uploads the cover
+  **directly to S3** — never proxied through the API. The returned public URL is stored in
+  `competition.logo` and renders on the card + detail header (else generated category art). Covers are
+  **public display assets** (see the Files note, §2). Env-gated (`S3Config`'s `S3Presigner` bean is
+  created only when `aws.s3.bucket` is set; endpoint 503s otherwise), so the paste-a-URL fallback
+  always works. Credentials come from the AWS SDK's default env chain — never in config.
 - **Admin auth (R1 stopgap, → RBAC at R2-7):** `AdminTokenFilter` requires a shared-secret
   `X-Admin-Token` header on every `/api/v1/admin/**` call. Fail-closed (blank `ADMIN_API_TOKEN`
   rejects all); constant-time compare; **scoped by a servlet URL-pattern** (matched on the decoded/
@@ -194,15 +234,40 @@ tooling + audit log) → Phase 2+ (dedup DQ4, conflict resolution DQ5) → Phase
   (`components/admin/form-section.tsx`) plus a **sticky save bar** (`sticky bottom-0`, holds Save +
   the server-error Alert); sectioned forms cap at `max-w-3xl`, simple ones at `max-w-xl`.
   `FormField`'s root is `grid content-start …` so hint-less fields don't drift ~11px low in
-  multi-column grids.
+  multi-column grids. **Admin list tables** (`AdminTable`, `components/admin/admin-table.tsx`) stay
+  **display-only server components** — row navigation is the **name-cell link only**. Whole-row-click
+  was evaluated and **intentionally not built** (2026-07-16): a stretched-link over `<tr>` is
+  unreliable (`position: relative` is inconsistent on table rows) and converting the table to a client
+  component isn't worth the client JS for one nicety. Revisit only if `AdminTable` goes client for
+  another reason.
 - **Error contract:** `ApiExceptionHandler` (`@RestControllerAdvice`) maps
   `ResponseStatusException` (echoing its explicit, safe reason), Bean-Validation field errors (400),
   and `DataIntegrityViolationException`/`OptimisticLockingFailureException` (409) to a JSON body with
   a `message`. Needed because Spring Boot's default `server.error.include-message=never` hid reasons,
   leaving the admin UI showing a bare "admin API 422".
-- **Deferred (PR C):** S3 pre-signed hero-image upload; inline row-edit for FAQ/Resource (add+delete
-  today). **`@Version` is not sent** on admin PUTs yet, so concurrent edits last-write-win rather
-  than 409 — acceptable for a single curator at R1; revisit with RBAC (R2-7).
+- **Hero cards (M36, rebuilt 2026-07-16):** the `/admin/landing` hero editor is **one form, one save**
+  (`HeroCardsForm` + `saveHeroCards`, which upserts each position through `PUT /hero-cards/{position}`)
+  — replaced three separate per-position forms/buttons in a misaligned grid. Layout mirrors the landing
+  hero: a full-width **Main** panel (image + link + hover description) over two identical **satellite**
+  panels (so they align); satellites are optional (a position with no image is skipped), and a card
+  with an image requires alt text (client + server `@NotBlank`). Images use the shared `ImageUpload`
+  (drag/browse → S3) via `uploadCoverImage` — hero images ride the **R1-19 cover endpoint** and its
+  public `covers/` prefix (the only prefix the bucket policy exposes for read), with a paste-a-URL
+  fallback; no new endpoint or bucket-policy change. (`ImageUpload` gained `onChange`/`setLabel` and a
+  `min-w-0` fix so a long image URL can't blow out a grid column.)
+- **Value-prop section (M36, 2026-07-16):** the Landing "Competing changes what's possible" block is
+  admin-managed — two `ValuePropCard`s (image + link + label) and two `LandingStat`s (value + label +
+  source), each a position-keyed upsert like `HeroCard` (`GET`/`PUT /value-prop-cards/{slot}` +
+  `/landing-stats/{slot}`; slot = `PRIMARY|SECONDARY`). The `/admin/landing` editor is **one form, one
+  save** (`ValuePropForm` + `saveValueProp`); card images are optional (S3 upload via the cover
+  endpoint), and a null image renders the code-defined gradient+icon fallback so the approved look is
+  unchanged by default. Public payload: `GET /api/v1/landing` gained `valuePropCards` + `stats`
+  (additive). **Cache note:** the public landing fetch caches for an hour, so every landing-content
+  save action (`saveValueProp`, `saveHeroCards`, `setFeaturedSlots`) now `revalidatePath('/')` (via
+  `revalidateLanding()`) so edits show on the live page immediately, not up to an hour later.
+- **Deferred (PR C):** inline row-edit for FAQ/Resource (add+delete today). **`@Version` is not sent**
+  on admin PUTs yet, so concurrent edits last-write-win rather than 409 — acceptable for a single
+  curator at R1; revisit with RBAC (R2-7).
 
 ### 13b. Corrections + public catalog read — as built (R1-3b/R1-4, 2026-07-12)
 
@@ -225,7 +290,13 @@ tooling + audit log) → Phase 2+ (dedup DQ4, conflict resolution DQ5) → Phase
 - **Public catalog read (R1-4, M5/M6/DQ1):** `catalog.web` exposes `GET /api/v1/competitions`
   (paged, name-sorted browse feed) and `GET /api/v1/competitions/{slug}` (detail: editions +
   key dates + regions + resources + FAQs + organizer). Archived records are invisible (list and
-  detail 404) per D7. `verification_state` + provenance are exposed (DQ13 badges); enums render
+  detail 404) per D7. **Readiness gate (sweep, 2026-07-15, domain-model §8a):** a public listing
+  also needs a non-archived Edition — `archived_at IS NULL AND EXISTS(live edition)` gates the
+  browse feed, search + grade/category facet counts (one shared `where()` predicate in
+  `CompetitionSearchService`, plus `categoryOptions`/`itemsByIds`), detail (**404 when none**),
+  sitemap (`findSitemapViews`), category tile counts, and the landing live-count
+  (`countPublicListings`), killing "zombie" listings created with no edition. `verification_state`
+  + provenance are exposed (DQ13 badges); enums render
   as **lowercase public tokens**; public DTOs omit version/audit columns and affiliate meta.
   **Effective status (binding rule, domain-model §8)** is computed by
   `catalog.service.EffectiveStatus` and returned as `effectiveStatus` beside the curated token —
@@ -312,7 +383,7 @@ Operational tasks (from the product checklist) to complete before public launch 
 - [ ] Legal pages live: Privacy, T&C, Cookie Policy, affiliate disclosure
 - [ ] Cookie-consent banner — **not needed at launch**: analytics are cookieless by decision (§10) and essential auth cookies are exempt. Revisit *only* if a tracking/marketing tool is ever added.
 - [ ] Privacy-first analytics installed (not standard GA)
-- [ ] Logo/icon/favicon, light + dark variants (in `packages/ui`)
+- [x] Logo/icon/favicon, light + dark variants — **finals in (2026-07-16)**: components in `packages/ui`, art in `apps/web/public/brand/`, adaptive `icon.svg` favicon (see §8)
 - [ ] **Beta tag + disclaimer** (product is beta; data may be incomplete; not official affiliation)
 - [ ] Email subscription/newsletter list (Brevo, opt-in)
 - [ ] Password reset + email verification flows

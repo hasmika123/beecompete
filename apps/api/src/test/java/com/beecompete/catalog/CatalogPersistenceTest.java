@@ -153,8 +153,10 @@ class CatalogPersistenceTest {
 				Instant.parse("2026-10-15T23:59:00Z")));
 		regClose.setTimezone("America/New_York");
 
-		Region usa = new Region(RegionLevel.COUNTRY, "United States");
-		usa.setCode("US");
+		// A name that can't collide with the 0010 geo seed's natural key (parent, level, name) —
+		// the seed already holds COUNTRY "United States".
+		Region usa = new Region(RegionLevel.COUNTRY, "Testlandia");
+		usa.setCode("TL");
 		usa = regions.save(usa);
 		editionRegions.save(new EditionRegion(amc2026, usa));
 
@@ -187,7 +189,7 @@ class CatalogPersistenceTest {
 				.satisfies(t -> assertThat(t.getJsonSchema()).containsEntry("type", "object")); // jsonb
 		assertThat(reloaded.getParticipationMode()).isEqualTo(ParticipationMode.INDIVIDUAL);
 		assertThat(reloaded.getEntryPathway()).isEqualTo(EntryPathway.SCHOOL_OR_CHAPTER);
-		assertThat(reloaded.getVerificationState()).isEqualTo(VerificationState.UNVERIFIED); // default
+		assertThat(reloaded.getVerificationState()).isEqualTo(VerificationState.CURATED); // default (R1-19: UNVERIFIED retired)
 		assertThat(reloaded.getMinGrade()).isEqualTo((short) 9);
 		assertThat(reloaded.getTags()).containsExactly("math", "olympiad"); // text[]
 		assertThat(reloaded.getEvaluationType()).containsExactly("exam"); // text[]
@@ -219,7 +221,7 @@ class CatalogPersistenceTest {
 
 		assertThat(editionRegions.findByEditionId(e.getId()))
 				.singleElement()
-				.satisfies(er -> assertThat(er.getRegion().getCode()).isEqualTo("US"));
+				.satisfies(er -> assertThat(er.getRegion().getCode()).isEqualTo("TL"));
 
 		assertThat(resources.findByCompetitionIdOrderByDisplayOrder(reloaded.getId()))
 				.singleElement()

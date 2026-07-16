@@ -5,19 +5,23 @@ import {
   Alert,
   Avatar,
   Button,
+  Check,
   Checkbox,
   Chip,
   CircleHelp,
   EmptyState,
   FormField,
+  ImageUpload,
   Input,
   Modal,
+  ProgressRing,
   Radio,
   RadioGroup,
   Search,
   ShareMenu,
   Skeleton,
   Spinner,
+  Stepper,
   Tab,
   TabList,
   TabPanel,
@@ -68,6 +72,7 @@ export function NewComponentsShowcase() {
   const [modalOpen, setModalOpen] = useState(false);
   const [audience, setAudience] = useState('student');
   const [emailError, setEmailError] = useState(true);
+  const [demoStep, setDemoStep] = useState('cover');
 
   return (
     <ToastProvider>
@@ -89,6 +94,48 @@ export function NewComponentsShowcase() {
           links, clean URL — collects nothing.
         </p>
         <ShareMenu title="AMC 10" path="/c/amc-10" />
+      </Section>
+
+      <Section title="Stepper, completion ring & cover upload (admin create form)">
+        <p className="mb-4 text-sm text-muted">
+          Primitives for the multi-step admin “Add competition” form: a vertical Stepper, a
+          form-wide required-fields ProgressRing, and an ImageUpload dropzone (URL entry works now;
+          direct S3 upload is a deferred seam). Click a step to move the rail.
+        </p>
+        <div className="grid gap-8 md:grid-cols-[240px_1fr] md:items-start">
+          <Stepper
+            steps={[
+              {
+                id: 'basics',
+                label: 'Basics',
+                description: 'Name · slug · category',
+                complete: true,
+              },
+              { id: 'format', label: 'Format', description: 'Participation · cost' },
+              { id: 'cover', label: 'Cover & links', description: 'Image · URL · tags' },
+              {
+                id: 'edition',
+                label: 'First edition',
+                description: 'The year’s running',
+                incompleteRequired: true,
+              },
+            ]}
+            activeId={demoStep}
+            onSelect={setDemoStep}
+          />
+          <div className="grid gap-6">
+            <div className="flex items-center gap-4">
+              <ProgressRing value={3} max={4} label="3 of 4 required fields complete">
+                <span className="text-base font-semibold tabular-nums text-foreground">3/4</span>
+              </ProgressRing>
+              <ProgressRing value={4} max={4} label="all required fields complete">
+                <Check weight="bold" className="size-6 text-success" />
+              </ProgressRing>
+              <span className="text-sm text-muted">In progress · complete</span>
+            </div>
+            <ImageUpload name="demo_cover" />
+          </div>
+        </div>
       </Section>
 
       <Section title="Chips">

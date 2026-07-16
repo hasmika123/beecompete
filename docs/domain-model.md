@@ -115,7 +115,10 @@ never before.)*
 
 **`Region`** [P1] — `id, parent_id?, level (country|state|county|city|virtual), name, code`
 *(`virtual` level added at R1-1 build, 2026-07-12 — the Q3 special "Virtual/Online" region needs a
-level so virtual Editions can carry a region row.)*
+level so virtual Editions can carry a region row. **Seeded** at sweep item 15, 2026-07-16, Liquibase
+`0010`: US + 50 states + DC + ~25 major cities + `Virtual / Online` — so admins pick, not
+hand-create; more (Canada, counties) via admin CRUD. The grouped/searchable admin picker is
+`region-picker.tsx`.)*
 **`EditionRegion`** [P1] — join: which regions an **Edition** covers *(locked 2026-07-07; renamed from `CompetitionRegion` — the join is Edition-level, never Competition-level)*. One registration = one Edition (Q3); the Competition's region filter is derived from its Editions.
 
 **`Resource`** [P1] — curated prep/reference link on a Competition.
@@ -230,6 +233,15 @@ sketches, not contracts:
 - **`FeaturedSlot`** [P1] — admin-picked Landing carousel entries. `id, competition_id, position,
   updated_by, updated_at` — ordered, 6–10 max (blueprint carousel rules). Editorial, not paid
   (M28 Promotion arrives later, labeled, as its own thing).
+- **`ValuePropCard`** [P1] — the 2 admin-managed promo cards in the Landing "Competing changes
+  what's possible" section. `id, position (LandingSlot: primary|secondary), image_key? (S3 —
+  null → the code-defined gradient+icon fallback keeps the approved look), link_url, label
+  (hover text), updated_by, updated_at, version` — one active row per slot (migration `0011`).
+- **`LandingStat`** [P1] — the 2 admin-managed admissions stats beside those cards. `id, position
+  (LandingSlot), value (the figure), label (the line), source? (attribution — the §3 credibility
+  rule wants sourced, non-causal numbers before launch), updated_by, updated_at, version` — one
+  active row per slot (migration `0011`). Seeded with the pre-R1 hardcoded copy so the page is
+  unchanged until an admin edits it.
 
 ### 3f. Provenance & trust (embedded)
 Provenance is a reusable embedded structure on Competition/Edition/Organization:
@@ -288,7 +300,7 @@ To avoid over-building, Phase 1 implements only:
 - `User`, `ParticipantProfile`, `GuardianLink`, `Organization`, `Membership`, `Role`/`Permission`
 - `ParticipantCompetition` (Tracker), `ActivityEvent`
 - `provenance`/`verification_state` fields; `CorrectionProposal` (DQ6 corrections queue); minimal `Product` stub
-- `HeroCard`, `FeaturedSlot` (M36 admin-managed Landing content — §3e-bis)
+- `HeroCard`, `FeaturedSlot`, `ValuePropCard`, `LandingStat` (M36 admin-managed Landing content — §3e-bis)
 
 Everything else (`Division`, `Round`, `Team`, `Entitlement`, `Registration`, `Submission`, prep,
 judging, compliance, **Article + its joins** — Hook #15) is **reserved** — the columns/relations
@@ -419,6 +431,15 @@ the design discussion.)
 `EXISTS(edition)` clause is the **readiness gate** that ends "zombie" listings (live with no
 edition/deadline). Phase 3 appends: `AND approved AND visibility = 'public' AND (list_at IS NULL OR
 now() >= list_at)`.
+
+**As-built (2026-07-15, no schema):** the `EXISTS(non-archived edition)` clause is now enforced on
+every public read — browse/search/count + grade & category facet counts (`CompetitionSearchService`),
+detail (404 when none), sitemap, category tile counts, landing featured + the live-catalog count
+(`countPublicListings`). `listing_status` is **not** in the predicate yet (that column is Phase-3
+item 14); at R1 the gate + `archived_at` are the whole rule. The source-side fix — combined
+create-competition-with-first-edition (`POST /admin/competitions/with-edition`,
+`ListingCurationService`, one transaction) — makes admin-created listings complete-by-default.
+`approved_at`/`approved_by` deferred to item 14 (owner, 2026-07-15).
 
 **Columns (migration `0010`, additive):** `competition.approved_at timestamptz NULL`,
 `approved_by uuid NULL` (FK-less, like `organizer_org_id`), `listing_status varchar NOT NULL DEFAULT

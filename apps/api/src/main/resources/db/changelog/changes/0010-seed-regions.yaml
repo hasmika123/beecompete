@@ -1,0 +1,86 @@
+# Sweep item 15 — geo seed so the region registry isn't empty (admins pick, never hand-create).
+# Regions stay a curated registry (canonical filter axis + multi-tag join + hierarchy + the
+# virtual case), per the 2026-07-15 rationale; this just pre-loads the common US geography.
+#
+# Idempotency: gen_random_uuid() ids + `ON CONFLICT ON CONSTRAINT uq_region_natural DO NOTHING`
+# (natural key = parent_id, level, name — NULLS NOT DISTINCT, from 0004). So the seed is safe
+# against a DB that already has some regions (e.g. dev rows created via the admin API), and
+# states/cities resolve their parent by lookup rather than a hardcoded id — no orphan FKs even
+# when the country/state row pre-existed. `code` is NOT unique, so California(CA) never clashes
+# with a separately-added Canada(CA).
+#
+# Public visibility: `/api/v1/regions` only lists regions carrying a live listing, so these seeded
+# rows don't appear in the marketplace filter until an edition is actually tagged with them.
+databaseChangeLog:
+  - changeSet:
+      id: 0010-seed-regions-country
+      author: beecompete
+      comment: United States (country).
+      changes:
+        - sql:
+            sql: >-
+              INSERT INTO region (id, level, name, code)
+              VALUES (gen_random_uuid(), 'COUNTRY', 'United States', 'US')
+              ON CONFLICT ON CONSTRAINT uq_region_natural DO NOTHING
+
+  - changeSet:
+      id: 0010-seed-regions-states
+      author: beecompete
+      comment: 50 states + DC (USPS codes), parent = United States.
+      changes:
+        - sql:
+            sql: >-
+              INSERT INTO region (id, parent_id, level, name, code)
+              SELECT gen_random_uuid(), us.id, 'STATE', v.name, v.code
+              FROM (SELECT id FROM region WHERE parent_id IS NULL AND level = 'COUNTRY'
+                    AND name = 'United States') us,
+                   (VALUES
+                     ('Alabama','AL'),('Alaska','AK'),('Arizona','AZ'),('Arkansas','AR'),
+                     ('California','CA'),('Colorado','CO'),('Connecticut','CT'),('Delaware','DE'),
+                     ('Florida','FL'),('Georgia','GA'),('Hawaii','HI'),('Idaho','ID'),
+                     ('Illinois','IL'),('Indiana','IN'),('Iowa','IA'),('Kansas','KS'),
+                     ('Kentucky','KY'),('Louisiana','LA'),('Maine','ME'),('Maryland','MD'),
+                     ('Massachusetts','MA'),('Michigan','MI'),('Minnesota','MN'),('Mississippi','MS'),
+                     ('Missouri','MO'),('Montana','MT'),('Nebraska','NE'),('Nevada','NV'),
+                     ('New Hampshire','NH'),('New Jersey','NJ'),('New Mexico','NM'),('New York','NY'),
+                     ('North Carolina','NC'),('North Dakota','ND'),('Ohio','OH'),('Oklahoma','OK'),
+                     ('Oregon','OR'),('Pennsylvania','PA'),('Rhode Island','RI'),('South Carolina','SC'),
+                     ('South Dakota','SD'),('Tennessee','TN'),('Texas','TX'),('Utah','UT'),
+                     ('Vermont','VT'),('Virginia','VA'),('Washington','WA'),('West Virginia','WV'),
+                     ('Wisconsin','WI'),('Wyoming','WY'),('District of Columbia','DC')
+                   ) AS v(name, code)
+              ON CONFLICT ON CONSTRAINT uq_region_natural DO NOTHING
+
+  - changeSet:
+      id: 0010-seed-regions-cities
+      author: beecompete
+      comment: ~25 major cities, parent = their state (resolved by name).
+      changes:
+        - sql:
+            sql: >-
+              INSERT INTO region (id, parent_id, level, name)
+              SELECT gen_random_uuid(), s.id, 'CITY', v.city
+              FROM (VALUES
+                     ('New York City','New York'),('Los Angeles','California'),('Chicago','Illinois'),
+                     ('Houston','Texas'),('Phoenix','Arizona'),('Philadelphia','Pennsylvania'),
+                     ('San Antonio','Texas'),('San Diego','California'),('Dallas','Texas'),
+                     ('Austin','Texas'),('San Jose','California'),('Jacksonville','Florida'),
+                     ('Columbus','Ohio'),('Charlotte','North Carolina'),('San Francisco','California'),
+                     ('Indianapolis','Indiana'),('Seattle','Washington'),('Denver','Colorado'),
+                     ('Boston','Massachusetts'),('Nashville','Tennessee'),('Atlanta','Georgia'),
+                     ('Miami','Florida'),('Portland','Oregon'),('Las Vegas','Nevada'),
+                     ('Minneapolis','Minnesota')
+                   ) AS v(city, state)
+              JOIN region s ON s.level = 'STATE' AND s.name = v.state
+              ON CONFLICT ON CONSTRAINT uq_region_natural DO NOTHING
+
+  - changeSet:
+      id: 0010-seed-regions-virtual
+      author: beecompete
+      comment: The Q3 special "Virtual / Online" region (level VIRTUAL, no parent).
+      changes:
+        - sql:
+            sql: >-
+              INSERT INTO region (id, level, name)
+              VALUES (gen_random_uuid(), 'VIRTUAL', 'Virtual / Online')
+              ON CONFLICT ON CONSTRAINT uq_region_natural DO NOTHING

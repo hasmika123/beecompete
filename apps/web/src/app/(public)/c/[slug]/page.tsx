@@ -205,7 +205,11 @@ export default async function CompetitionDetailPage({
           <div className="grid gap-5">
             {/* Cover + Register */}
             <div className="overflow-hidden rounded-[var(--radius-panel)] border border-border bg-surface-raised">
-              <CategoryCover slug={competition.category.slug} className="h-40" />
+              <CategoryCover
+                slug={competition.category.slug}
+                src={competition.logo}
+                className="h-40 w-full"
+              />
               <div className="grid gap-2 p-4">
                 {registerUrl ? (
                   <>

@@ -2,7 +2,7 @@
 
 import { useId, useState } from 'react';
 import { ChevronDown, Radio, RadioGroup, Select, cn } from '@beecompete/ui';
-import { gradeName } from '@/lib/catalog-display';
+import { GRADE_VALUES, gradeName } from '@/lib/catalog-display';
 import type { SearchFacets, RegionOption } from '@/lib/catalog-types';
 import {
   DEADLINE_WINDOWS,
@@ -23,8 +23,6 @@ import {
 // popup is OS-rendered and can't match the universal dropdown styling (owner 2026-07-13).
 // Instant-apply means no FormData plumbing is lost, and each options list leads with an
 // explicit clear entry ("Any …") since a custom listbox has no blank state to re-pick.
-
-const GRADES = Array.from({ length: 14 }, (_, i) => i - 1); // Pre-K(-1) … 12
 
 interface FilterPanelProps {
   path: string;
@@ -87,7 +85,7 @@ export function FilterPanel({
     onNavigate(marketplaceHref(path, params, patch));
 
   const gradeCount = (grade: number) => facets?.grades.find((g) => g.grade === grade)?.count;
-  const gradeOptions = GRADES.map((grade) => {
+  const gradeOptions = GRADE_VALUES.map((grade) => {
     const count = gradeCount(grade);
     return {
       value: String(grade),

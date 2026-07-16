@@ -5,8 +5,8 @@ import type { HeroCardView } from '@/lib/catalog-types';
 // Hero right half (decision #25): one main HeroCard (a link — hover/focus shows a translucent
 // WCAG-AA scrim with a short destination description) + two image-only satellites hovering
 // top-right and bottom-left, entering with a staggered rise (blueprint motion note). All three
-// are admin-managed (M36); gradient placeholders render until the owner supplies images
-// (image upload itself is deferred to PR C — an imageKey that's a full URL renders as-is).
+// are admin-managed (M36) via the /admin/landing hero editor (S3 upload); gradient placeholders
+// render until images are set (imageKey holds a full URL and renders as-is).
 
 function heroSrc(card: HeroCardView | undefined): string | null {
   return card && /^https?:\/\//.test(card.imageKey) ? card.imageKey : null;

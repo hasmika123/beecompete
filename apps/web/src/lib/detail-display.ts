@@ -224,7 +224,11 @@ export function costLabel(competition: CompetitionDetail, edition?: EditionView)
   return 'Paid';
 }
 
-/** Prize value for the at-a-glance strip — the edition's summary, else nothing. */
-export function prizeLabel(edition?: EditionView): string | undefined {
-  return edition?.prizeSummary ?? undefined;
+/**
+ * Prize value for the at-a-glance strip — the edition's summary, or a friendly "Bragging rights"
+ * fallback (sweep item 16, owner-picked). Note: a null summary means the prize is *uncurated*, not
+ * necessarily that there's none — so a curator who's confirmed a real prize should still fill it in.
+ */
+export function prizeLabel(edition?: EditionView): string {
+  return edition?.prizeSummary ?? 'Bragging rights';
 }

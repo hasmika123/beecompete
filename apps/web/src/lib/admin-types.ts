@@ -49,6 +49,19 @@ export const REGION_LEVELS = ['COUNTRY', 'STATE', 'COUNTY', 'CITY', 'VIRTUAL'] a
 export const ORG_TYPES = ['HOST', 'SCHOOL', 'SPONSOR', 'OTHER'] as const;
 export const HERO_POSITIONS = ['MAIN', 'TOP_RIGHT', 'BOTTOM_LEFT'] as const;
 
+// The wall-clock an admin types is interpreted in THIS zone (default Eastern), never the
+// server's — the display + the stored instant both use it (lib/dates.zonedWallClockToInstant).
+// Shared by the key-date manager and the combined create form.
+export const ADMIN_TIMEZONES = [
+  { value: 'America/New_York', label: 'Eastern (New York)' },
+  { value: 'America/Chicago', label: 'Central (Chicago)' },
+  { value: 'America/Denver', label: 'Mountain (Denver)' },
+  { value: 'America/Los_Angeles', label: 'Pacific (Los Angeles)' },
+  { value: 'America/Anchorage', label: 'Alaska (Anchorage)' },
+  { value: 'Pacific/Honolulu', label: 'Hawaii (Honolulu)' },
+  { value: 'UTC', label: 'UTC' },
+];
+
 export interface Competition {
   id: string;
   slug: string;
@@ -195,6 +208,27 @@ export interface HeroCard {
   altText: string;
   linkUrl: string | null;
   description: string | null;
+  updatedAt: string;
+}
+
+/** The two slots in the landing "Competing changes what's possible" value-prop section. */
+export const LANDING_SLOTS = ['PRIMARY', 'SECONDARY'] as const;
+
+export interface ValuePropCard {
+  id: string;
+  position: string;
+  imageKey: string | null;
+  linkUrl: string;
+  label: string;
+  updatedAt: string;
+}
+
+export interface LandingStat {
+  id: string;
+  position: string;
+  value: string;
+  label: string;
+  source: string | null;
   updatedAt: string;
 }
 

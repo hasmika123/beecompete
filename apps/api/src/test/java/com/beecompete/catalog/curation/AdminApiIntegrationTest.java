@@ -76,7 +76,7 @@ class AdminApiIntegrationTest {
 								{"name": "Mathematical Association of America", "type": "HOST", "domain": "maa.org"}
 								"""))
 				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.verificationState", is("UNVERIFIED")))
+				.andExpect(jsonPath("$.verificationState", is("CURATED"))) // R1-19 default (UNVERIFIED retired)
 				.andReturn().getResponse().getContentAsString();
 		String orgId = mapper.readTree(orgJson).get("id").asText();
 
@@ -132,9 +132,11 @@ class AdminApiIntegrationTest {
 								"""))
 				.andExpect(status().isCreated());
 
+		// A name that can't collide with the 0010 geo seed's natural key (parent, level, name) —
+		// the seed already holds COUNTRY "United States".
 		String regionJson = mvc.perform(withToken(post("/api/v1/admin/regions"))
 						.contentType("application/json")
-						.content("{\"level\": \"COUNTRY\", \"name\": \"United States\", \"code\": \"US\"}"))
+						.content("{\"level\": \"COUNTRY\", \"name\": \"Curationland\", \"code\": \"CU\"}"))
 				.andExpect(status().isCreated())
 				.andReturn().getResponse().getContentAsString();
 		String regionId = mapper.readTree(regionJson).get("id").asText();
@@ -192,6 +194,25 @@ class AdminApiIntegrationTest {
 		mvc.perform(withToken(put("/api/v1/admin/featured-slots")).contentType("application/json")
 						.content("{\"competitionIds\": [\"00000000-0000-4000-8000-000000000000\"]}"))
 				.andExpect(status().isUnprocessableEntity());
+
+		// Value-prop cards (M36): the two slots are seeded (migration 0011); upsert one, and the
+		// label is required. Count stays two — position-keyed upsert, never a duplicate.
+		mvc.perform(withToken(put("/api/v1/admin/value-prop-cards/PRIMARY")).contentType("application/json")
+						.content("{\"imageKey\": null, \"linkUrl\": \"/competitions\", \"label\": \"Explore all\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.position", is("PRIMARY")))
+				.andExpect(jsonPath("$.label", is("Explore all")));
+		mvc.perform(withToken(get("/api/v1/admin/value-prop-cards"))).andExpect(jsonPath("$", hasSize(2)));
+		mvc.perform(withToken(put("/api/v1/admin/value-prop-cards/PRIMARY")).contentType("application/json")
+						.content("{\"linkUrl\": \"/x\", \"label\": \"\"}"))
+				.andExpect(status().isBadRequest());
+
+		// Landing stats (M36): value + label required, source optional.
+		mvc.perform(withToken(put("/api/v1/admin/landing-stats/PRIMARY")).contentType("application/json")
+						.content("{\"value\": \"72%\", \"label\": \"of officers say so\", \"source\": \"NACAC\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.value", is("72%")));
+		mvc.perform(withToken(get("/api/v1/admin/landing-stats"))).andExpect(jsonPath("$", hasSize(2)));
 	}
 
 	@Test
@@ -273,6 +294,103 @@ class AdminApiIntegrationTest {
 		// Deleting an in-use category → 409 (FK), not a 500.
 		mvc.perform(withToken(delete("/api/v1/admin/categories/" + mathId)))
 				.andExpect(status().isConflict());
+	}
+
+	@Test
+	@Order(6)
+	void combinedCreateMakesAListingLiveInOneCall() throws Exception {
+		String categories = mvc.perform(withToken(get("/api/v1/admin/categories")))
+				.andReturn().getResponse().getContentAsString();
+		String mathId = findBySlug(categories, "math");
+
+		// Fixtures the completeness gates require: an organizer + a region to tag.
+		String orgJson = mvc.perform(withToken(post("/api/v1/admin/organizations"))
+						.contentType("application/json")
+						.content("{\"name\": \"Combined Org\", \"type\": \"HOST\"}"))
+				.andExpect(status().isCreated())
+				.andReturn().getResponse().getContentAsString();
+		String orgId = mapper.readTree(orgJson).get("id").asText();
+		String regionJson = mvc.perform(withToken(post("/api/v1/admin/regions"))
+						.contentType("application/json")
+						.content("{\"level\": \"COUNTRY\", \"name\": \"Combinedland\", \"code\": \"CL\"}"))
+				.andExpect(status().isCreated())
+				.andReturn().getResponse().getContentAsString();
+		String regionId = mapper.readTree(regionJson).get("id").asText();
+
+		// Happy path: competition + first edition + typed key dates (item 21) + region, one POST.
+		// The RESULTS row is TBD (startsAt null, R1-18) and carries a label.
+		String body = """
+				{"competition": {"slug": "combined-open", "name": "Combined Open",
+				  "categoryId": "%s", "organizerOrgId": "%s", "summary": "One-call create.",
+				  "description": "A complete-by-default listing created in one call.",
+				  "officialUrl": "https://combined.example.org", "participationMode": "INDIVIDUAL",
+				  "delivery": "VIRTUAL", "entryPathway": "INDIVIDUAL", "costType": "FREE",
+				  "recurrence": "ANNUAL"},
+				 "edition": {"cycleLabel": "2026", "status": "OPEN", "scopeLevel": "NATIONAL",
+				  "registrationUrl": "https://combined.example.org/register", "prizeSummary": "Medals"},
+				 "keyDates": [
+				  {"type": "REG_CLOSE", "startsAt": "2026-11-01T04:59:00Z", "timezone": "America/New_York"},
+				  {"type": "RESULTS", "label": "Winners announced", "timezone": "America/New_York"}],
+				 "regionIds": ["%s"]}
+				""".formatted(mathId, orgId, regionId);
+		String created = mvc.perform(withToken(post("/api/v1/admin/competitions/with-edition"))
+						.contentType("application/json").content(body))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.slug", is("combined-open")))
+				.andExpect(jsonPath("$.provenanceSource", is("CURATED")))
+				.andReturn().getResponse().getContentAsString();
+		String compId = mapper.readTree(created).get("id").asText();
+
+		// The edition, both typed key dates, and the region tag were created alongside.
+		String editions = mvc.perform(withToken(get("/api/v1/admin/competitions/" + compId + "/editions")))
+				.andExpect(jsonPath("$", hasSize(1)))
+				.andReturn().getResponse().getContentAsString();
+		String editionId = mapper.readTree(editions).get(0).get("id").asText();
+		mvc.perform(withToken(get("/api/v1/admin/editions/" + editionId + "/key-dates")))
+				.andExpect(jsonPath("$", hasSize(2)))
+				.andExpect(jsonPath("$[0].type", is("REG_CLOSE")))
+				.andExpect(jsonPath("$[1].type", is("RESULTS"))) // TBD rows (null startsAt) sort last
+				.andExpect(jsonPath("$[1].label", is("Winners announced")))
+				.andExpect(jsonPath("$[1].startsAt", nullValue()));
+		mvc.perform(withToken(get("/api/v1/admin/editions/" + editionId + "/regions")))
+				.andExpect(jsonPath("$", hasSize(1)));
+
+		// And the listing is immediately public — it clears the readiness gate (§8a) because it
+		// has a live edition. (A bare admin-create would have been an invisible zombie.)
+		mvc.perform(get("/api/v1/competitions/combined-open"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.editions", hasSize(1)));
+
+		// Completeness gate (item 21): without a REG_CLOSE/SUBMISSION_DUE row the create is a 400 —
+		// the card/search deadline (blueprint #31) would have nothing to read.
+		String noDeadline = body.replace("\"combined-open\"", "\"combined-no-deadline\"")
+				.replace("\"Combined Open\"", "\"Combined No Deadline\"")
+				.replace("\"REG_CLOSE\"", "\"ROUND_START\"");
+		mvc.perform(withToken(post("/api/v1/admin/competitions/with-edition"))
+						.contentType("application/json").content(noDeadline))
+				.andExpect(status().isBadRequest());
+
+		// Atomicity: a failure while creating the edition rolls back the whole thing — the
+		// competition must NOT persist (no zombie). Bad advances-to id fails inside the edition
+		// write (a 422 AFTER bean validation passed), after the competition would have been saved.
+		String rollback = """
+				{"competition": {"slug": "combined-rollback", "name": "Combined Rollback",
+				  "categoryId": "%s", "organizerOrgId": "%s", "summary": "Rollback probe.",
+				  "description": "Must not survive the failed edition write.",
+				  "officialUrl": "https://combined.example.org", "participationMode": "INDIVIDUAL",
+				  "delivery": "VIRTUAL", "entryPathway": "INDIVIDUAL", "costType": "FREE",
+				  "recurrence": "ANNUAL"},
+				 "edition": {"cycleLabel": "2026", "status": "OPEN", "scopeLevel": "NATIONAL",
+				  "registrationUrl": "https://combined.example.org/register", "prizeSummary": "Medals",
+				  "advancesToEditionId": "00000000-0000-4000-8000-000000000000"},
+				 "keyDates": [{"type": "REG_CLOSE", "timezone": "America/New_York"}],
+				 "regionIds": ["%s"]}
+				""".formatted(mathId, orgId, regionId);
+		mvc.perform(withToken(post("/api/v1/admin/competitions/with-edition"))
+						.contentType("application/json").content(rollback))
+				.andExpect(status().isUnprocessableEntity());
+		mvc.perform(withToken(get("/api/v1/admin/competitions").param("query", "Combined Rollback")))
+				.andExpect(jsonPath("$.content", hasSize(0)));
 	}
 
 	private String findBySlug(String categoriesJson, String slug) throws Exception {

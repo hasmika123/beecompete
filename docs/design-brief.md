@@ -46,6 +46,14 @@ read this doc the way they read the glossary — decisions live here, not in cha
 
 ### Supplied reference photos *(record each here — element type asked once)*
 
+- **Official logo art (owner-supplied final, 2026-07-16):** the owner delivered the finished brand
+  logo in 4 variants — full **wordmark** (bee mark + "BeeCompete" lettering) and **icon-only mark**,
+  each in a light-mode (dark-inked art) and dark-mode (light art) version, all transparent-background.
+  This **supersedes the placeholder wordmark** (the display-serif "BeeCompete" + gold accent dot). The
+  files are **raster PNG** (delivered as PNG-in-SVG wrappers, no true vector paths; wordmarks ~821×150,
+  marks ~170×145) — fine for every current surface; a large ≥512px app/PWA icon would want a
+  higher-res or vector source later. Wired into the `Logo`/`LogoMark` components, the favicon, and the
+  OG share cards (see §6 + architecture §8).
 - **Tabs → "attached" variant (owner 2026-07-08):** reference photo of a trading site (101Investing)
   showing **connected tabs** — the active tab is a filled rounded-top riser that merges seamlessly
   into a filled content card below it (a "folder tab" look), inactive tabs are plain muted text.
@@ -194,7 +202,10 @@ The hero design pass is therefore two checkpoints: 🧑 approve the **blueprint*
 
 ## 6. Assets *(inventory — placeholders until finals, swapped in place)*
 
-- Logo/icon/favicon (light + dark variants) — live in `packages/ui` (architecture §8).
+- Logo/icon/favicon (light + dark variants) — ✅ **finals in (owner-supplied 2026-07-16)**: `Logo` +
+  `LogoMark` components in `packages/ui`; raster art served from `apps/web/public/brand/`; adaptive
+  `icon.svg` favicon; OG cards embed the wordmark. Supersedes the placeholder wordmark (§1 references,
+  architecture §8).
 - **Category cover-art system** (owner-approved 2026-07-07): generated category-based default
   covers for CompetitionCards — built alongside F7; real per-competition art overrides when available.
 - **Landing hero image cards** *(supersedes the hero SVG plan, 2026-07-08 — blueprints #25)*:

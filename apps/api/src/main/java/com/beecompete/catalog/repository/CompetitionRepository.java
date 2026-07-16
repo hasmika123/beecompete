@@ -19,8 +19,17 @@ public interface CompetitionRepository extends JpaRepository<Competition, UUID> 
 	/** Admin list search (R1-3) — a plain contains match; the public FTS search is CompetitionSearchService. */
 	Page<Competition> findByNameContainingIgnoreCase(String name, Pageable pageable);
 
-	/** Live catalog size (landing "N more competitions" label, How-It-Works stats). */
-	long countByArchivedAtIsNull();
+	/**
+	 * Live catalog size for public labels (landing "N more competitions", How-It-Works stats) —
+	 * readiness-gated: only listings with a non-archived edition, matching the browse/search
+	 * predicate (domain-model §8a). A competition with no edition is a zombie, never counted.
+	 */
+	@Query(value = """
+			SELECT count(*) FROM competition c
+			WHERE c.archived_at IS NULL
+			  AND EXISTS (SELECT 1 FROM edition e WHERE e.competition_id = c.id AND e.archived_at IS NULL)
+			""", nativeQuery = true)
+	long countPublicListings();
 
 	/**
 	 * Lean projection for the XML sitemap (R1-10): slug, category slug, and an HONEST last-modified
@@ -43,6 +52,8 @@ public interface CompetitionRepository extends JpaRepository<Competition, UUID> 
 			  LEFT JOIN resource r ON r.competition_id = c.id
 			  LEFT JOIN competition_faq f ON f.competition_id = c.id
 			WHERE c.archived_at IS NULL
+			  AND EXISTS (SELECT 1 FROM edition le
+			    WHERE le.competition_id = c.id AND le.archived_at IS NULL)
 			GROUP BY c.id, c.slug, cat.slug, c.updated_at
 			""", nativeQuery = true)
 	List<SitemapView> findSitemapViews();

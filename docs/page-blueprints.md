@@ -91,6 +91,11 @@ disclaimer (→ R1-13) · contact/support · social links (→ R1-12) · Request
   causal claims** — prefer "X% of admissions officers say…" over "competing makes you 3× more
   likely…". Placeholder numbers clearly marked `TODO(owner)`; owner supplies final sourced stats
   before the R1 gate.
+- **Admin-managed (2026-07-16):** both image cards (image + link + label) and both stats (value +
+  text + source) are now editable from `/admin/landing` (`ValuePropCard`/`LandingStat`, M36) — the
+  owner supplies the final images, links, and sourced numbers through the panel rather than in code.
+  A card with no uploaded image keeps the code-defined gradient+icon fallback, so the approved look
+  is the default. Kept at exactly **two** cards + **two** stats to match this layout.
 
 **4. Audience cards** (→ H46)
 - **Layout:** three cards in one row — **"For Parents" · "For Educators" · "For Organizers"** — each
@@ -398,6 +403,12 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
     rest). Height is measured (ResizeObserver + resize fallback) into a `--panel-h` var
     feeding the sticky `top` calc. Panel dropdowns are the design-system `Select` custom
     listbox — native `<select>` popups can't match the universal dropdown styling.)*
+37. **Prize fallback (sweep item 16, 2026-07-16):** when a competition has no `prize_summary` on
+    record, the card footer's bold prize slot and the detail "At a glance" Prize slot render
+    **"Bragging rights"** instead of sitting empty (`prizeSummary ?? 'Bragging rights'` in
+    `lib/catalog-display.ts` + `lib/detail-display.ts`), so the bold slot always renders. Note
+    a null summary means *uncurated*, not guaranteed no-prize — curators fill in a real prize
+    where one exists.
 
 ## Status
 | Page | Blueprint | Style prototype | Built |

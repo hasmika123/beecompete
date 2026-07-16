@@ -63,6 +63,7 @@ export default async function EditEditionPage({
               editionId={editionId}
               allRegions={allRegions}
               selectedIds={selectedRegionIds}
+              scopeLevel={edition.scopeLevel}
             />
           </CardContent>
         </Card>

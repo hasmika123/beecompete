@@ -15,19 +15,7 @@ import {
 import { enumLabel, enumOptions } from '@/components/admin/enum-labels';
 import { addKeyDate, deleteKeyDate } from '@/app/admin/competitions/[id]/editions/actions';
 import { formatInZone } from '@/lib/dates';
-import { KEY_DATE_TYPES, type KeyDate } from '@/lib/admin-types';
-
-// The wall-clock an admin types is interpreted in THIS zone (default Eastern), never the
-// server's — the display + the stored instant both use it (see lib/dates.zonedWallClockToInstant).
-const TIMEZONES = [
-  { value: 'America/New_York', label: 'Eastern (New York)' },
-  { value: 'America/Chicago', label: 'Central (Chicago)' },
-  { value: 'America/Denver', label: 'Mountain (Denver)' },
-  { value: 'America/Los_Angeles', label: 'Pacific (Los Angeles)' },
-  { value: 'America/Anchorage', label: 'Alaska (Anchorage)' },
-  { value: 'Pacific/Honolulu', label: 'Hawaii (Honolulu)' },
-  { value: 'UTC', label: 'UTC' },
-];
+import { ADMIN_TIMEZONES, KEY_DATE_TYPES, type KeyDate } from '@/lib/admin-types';
 
 export function KeyDateManager({
   competitionId,
@@ -120,7 +108,7 @@ export function KeyDateManager({
           <Input name="startsAt" type="datetime-local" required={!tbd} disabled={tbd} />
         </FormField>
         <FormField label="Timezone">
-          <Select name="timezone" options={TIMEZONES} defaultValue="America/New_York" />
+          <Select name="timezone" options={ADMIN_TIMEZONES} defaultValue="America/New_York" />
         </FormField>
         <FormField label="Ends" hint="optional — for windows">
           <Input name="endsAt" type="datetime-local" disabled={tbd} />

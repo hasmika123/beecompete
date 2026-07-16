@@ -206,7 +206,8 @@ class CorrectionsIntegrationTest {
 
 		String editionJson = mvc.perform(withToken(post("/api/v1/admin/competitions/" + competitionId + "/editions"))
 						.contentType("application/json").content("""
-								{"cycleLabel": "2026", "status": "UPCOMING", "scopeLevel": "NATIONAL", "entryFee": 25.00}
+								{"cycleLabel": "2026", "status": "UPCOMING", "scopeLevel": "NATIONAL",
+								 "entryFee": 25.00, "currency": "USD"}
 								"""))
 				.andExpect(status().isCreated())
 				.andReturn().getResponse().getContentAsString();

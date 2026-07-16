@@ -205,11 +205,36 @@ Staging is a **second Docker Compose stack on the same VPS**, *not* a separate s
 - **Outputs:** `DATABASE_URL` (pooled) + `DIRECT_URL` (direct), for staging + prod.
 - **Gotcha:** enforce SSL (`sslmode=require`); don't run migrations through the pooler.
 
-## 6. AWS S3 (private files)  *(R1/R2)*
-1. Create an AWS account; create a **private S3 bucket** (block all public access).
-2. Create an **IAM user/role** with least-privilege access to just that bucket; generate keys.
-3. App uses the SDK to issue **pre-signed URLs** (short TTL) — never make the bucket public.
-- **Outputs:** `S3_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, region.
+## 6. AWS S3  *(two asset classes, two buckets — architecture §2 Files)*
+
+### 6a. Public display-assets bucket — cover images  *(R1-19, ✅ provisioned 2026-07-16)*
+
+Covers need stable, cacheable, indexable URLs (cards/detail/OG/ISR), so they live on a **public-read**
+bucket — NOT the private user-files bucket. Upload is a pre-signed PUT; the browser uploads directly.
+
+1. **Bucket:** create e.g. `beecompete-public-assets` (name globally unique), region near the VPS,
+   Object Ownership = ACLs disabled. **Uncheck "Block all public access"** (this bucket holds only
+   public display images).
+2. **Bucket policy** — public read on the `covers/` prefix only:
+   `Allow s3:GetObject, Principal "*", Resource arn:aws:s3:::<bucket>/covers/*`.
+3. **CORS** — methods `PUT, GET, HEAD`; `AllowedOrigins` = the app origins
+   (`https://beecompete.com`, `https://staging.beecompete.com`, `http://localhost:3000`); headers `*`.
+4. **IAM user + least-privilege key:** user `beecompete-api-s3`, inline policy `Allow s3:PutObject on
+   arn:aws:s3:::<bucket>/covers/*` only; create an access key (secret shown once). Enable root MFA.
+5. **Env** (API — both VPS `.env` files + local `apps/api/.env.s3.local`, never committed):
+   `S3_BUCKET`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_PUBLIC_BASE_URL`
+   (`https://<bucket>.s3.<region>.amazonaws.com`, or a CDN origin). The API's `env_file: [.env]` picks
+   them up (§2); the deploy workflow does NOT inject app env from GitHub secrets. Blank bucket =
+   feature off (endpoint 503s, paste-a-URL fallback stays).
+- **Verified E2E 2026-07-16:** presign → PUT 200 → public GET 200; CORS preflight 200 for the app
+  origin. A CDN in front of the bucket is a later optimization, not required.
+
+### 6b. Private user-files bucket — submissions  *(R2, not yet built)*
+
+1. Separate **private** bucket, **block all public access** ON.
+2. IAM least-privilege (Put + Get on that bucket); the app issues short-TTL **pre-signed GETs** for
+   downloads — never public (minors' submissions). Reuses the SDK/presigner pattern from 6a.
+- **Outputs:** its own `*_BUCKET` + reuses the AWS key (or a separate least-privilege key).
 
 ## 7. Email: Brevo + Cloudflare Routing  *(R1 basic; R2 critical)*
 1. **Brevo** account → get **SMTP** credentials (for `no-reply@` transactional mail).

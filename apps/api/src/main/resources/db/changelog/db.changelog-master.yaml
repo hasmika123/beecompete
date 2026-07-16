@@ -20,3 +20,7 @@ databaseChangeLog:
       file: db/changelog/changes/0008-keydate-tbd.yaml
   - include:
       file: db/changelog/changes/0009-verification-realign.yaml
+  - include:
+      file: db/changelog/changes/0010-seed-regions.yaml
+  - include:
+      file: db/changelog/changes/0011-landing-value-prop.yaml

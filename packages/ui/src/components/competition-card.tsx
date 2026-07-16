@@ -27,6 +27,8 @@ export interface CompetitionCardData {
   href: string;
   categorySlug: string;
   categoryName: string;
+  /** Uploaded cover image URL; falls back to the generated category art when absent. */
+  coverUrl?: string;
   /** e.g. "Grades 8–10" · "All grades" — derived by the caller (Q2 encoding lives there). */
   gradeLabel?: string;
   organizerName?: string;
@@ -82,7 +84,7 @@ export function CompetitionCard({
         </div>
       )}
 
-      <CategoryCover slug={data.categorySlug} className="h-36" />
+      <CategoryCover slug={data.categorySlug} src={data.coverUrl} className="h-36 w-full" />
 
       <div className="flex flex-col gap-1 p-4 pb-3">
         {/* Slot 1 — tags, exactly one fixed-height line: the category tag truncates if needed,

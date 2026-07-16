@@ -2,7 +2,9 @@ package com.beecompete.catalog.curation.web;
 
 import com.beecompete.catalog.curation.CompetitionCurationService;
 import com.beecompete.catalog.curation.CompetitionRequest;
+import com.beecompete.catalog.curation.CompetitionWithEditionRequest;
 import com.beecompete.catalog.curation.CurationStamps;
+import com.beecompete.catalog.curation.ListingCurationService;
 import com.beecompete.catalog.curation.ResourceCurationService;
 import com.beecompete.catalog.curation.ResourceRequest;
 import com.beecompete.catalog.domain.Competition;
@@ -60,16 +62,19 @@ public class CompetitionAdminController {
 	private final ResourceRepository resources;
 	private final FeaturedSlotRepository featuredSlots;
 	private final CompetitionCurationService curation;
+	private final ListingCurationService listingCuration;
 	private final ResourceCurationService resourceCuration;
 
 	public CompetitionAdminController(CompetitionRepository competitions, CompetitionFaqRepository faqs,
 			ResourceRepository resources, FeaturedSlotRepository featuredSlots,
-			CompetitionCurationService curation, ResourceCurationService resourceCuration) {
+			CompetitionCurationService curation, ListingCurationService listingCuration,
+			ResourceCurationService resourceCuration) {
 		this.competitions = competitions;
 		this.faqs = faqs;
 		this.resources = resources;
 		this.featuredSlots = featuredSlots;
 		this.curation = curation;
+		this.listingCuration = listingCuration;
 		this.resourceCuration = resourceCuration;
 	}
 
@@ -91,6 +96,19 @@ public class CompetitionAdminController {
 	@ResponseStatus(HttpStatus.CREATED)
 	public CompetitionResponse create(@Valid @RequestBody CompetitionRequest request) {
 		return CompetitionResponse.from(curation.create(request, CurationStamps.curated()));
+	}
+
+	/**
+	 * Combined create (sweep Now-Opus): competition shell + its first edition (+ optional headline
+	 * REG_CLOSE date) in one transaction, so admin listings are complete-by-default and never land
+	 * as a zombie (competition with no edition). Future editions use {@code POST
+	 * /competitions/{id}/editions}.
+	 */
+	@PostMapping("/competitions/with-edition")
+	@ResponseStatus(HttpStatus.CREATED)
+	public CompetitionResponse createWithEdition(@Valid @RequestBody CompetitionWithEditionRequest request) {
+		return CompetitionResponse.from(
+				listingCuration.createWithFirstEdition(request, CurationStamps.curated()));
 	}
 
 	@PutMapping("/competitions/{id}")

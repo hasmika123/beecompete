@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -40,6 +41,26 @@ export function generateMetadata(): Metadata {
   });
 }
 
+// Value-prop promo cards are admin-managed (M36). When a card has no uploaded image we keep the
+// approved gradient+icon look — defined here per slot (matches the pre-R1 hardcoded design), so a
+// blank card never renders empty.
+const VALUE_PROP_FALLBACK: Record<string, { gradient: string; icon: ReactNode }> = {
+  primary: {
+    gradient:
+      'from-blue-100 via-violet-100 to-fuchsia-200/70 dark:from-blue-950 dark:via-violet-950 dark:to-fuchsia-900/50',
+    icon: <Medal aria-hidden="true" weight="duotone" className="size-12 text-violet-500" />,
+  },
+  secondary: {
+    gradient:
+      'from-amber-100 via-brand-gold-soft to-orange-200/70 dark:from-stone-800 dark:via-amber-900/40 dark:to-orange-900/50',
+    icon: <GraduationCap aria-hidden="true" weight="duotone" className="size-12 text-brand-gold" />,
+  },
+};
+
+function isHttpUrl(v: string | null): v is string {
+  return !!v && /^https?:\/\//.test(v);
+}
+
 // Page 1: Landing (approved blueprint, rev 2026-07-09; section order per decision #5:
 // Hero → Featured carousel → Value-prop split → Audience cards → Digest band → Footer).
 export default async function LandingPage() {
@@ -47,12 +68,13 @@ export default async function LandingPage() {
   const countBySlug = new Map(categories.map((c) => [c.slug, c.count]));
   const orderedCategories = CATEGORY_CONTENT.filter((c) => c.slug !== 'other');
   const moreCount = Math.max(0, landing.totalCompetitions - landing.featured.length);
-  // The value-prop split's right half is 2–4 admissions stats (blueprint §3). The numbers are
-  // still placeholders ("—%") clearly marked TODO(owner) with a source line + non-causal,
-  // survey framing (the §3 credibility rule) until the owner supplies sourced figures before
-  // the R1 gate (R1-17). Shown by default so the section keeps its quarters layout; set
-  // SHOW_LANDING_STATS=false to hide the right half until the real figures land.
-  const showStats = process.env.SHOW_LANDING_STATS !== 'false';
+  // Value-prop promo cards + admissions stats are admin-managed (M36). `?? []` guards a stale API
+  // shape (fields absent) so the page still renders.
+  const valuePropCards = landing.valuePropCards ?? [];
+  const stats = landing.stats ?? [];
+  // The right-half stats keep their §3 credibility framing (sourced, non-causal). Shown when the
+  // section has stats; set SHOW_LANDING_STATS=false to hide the right half regardless.
+  const showStats = process.env.SHOW_LANDING_STATS !== 'false' && stats.length > 0;
 
   return (
     // grid-cols-1 (minmax(0,1fr)) — a bare `grid` auto track grows to the ScrollRows'
@@ -152,76 +174,54 @@ export default async function LandingPage() {
         </h2>
         <div className={cn('grid gap-6', showStats && 'lg:grid-cols-2')}>
           <div className="grid grid-cols-2 gap-4">
-            {[
-              {
-                href: '/competitions',
-                label: 'Explore the catalog',
-                className:
-                  'from-blue-100 via-violet-100 to-fuchsia-200/70 dark:from-blue-950 dark:via-violet-950 dark:to-fuchsia-900/50',
-                icon: (
-                  <Medal aria-hidden="true" weight="duotone" className="size-12 text-violet-500" />
-                ),
-              },
-              {
-                href: '/how-it-works',
-                label: 'See how BeeCompete works',
-                className:
-                  'from-amber-100 via-brand-gold-soft to-orange-200/70 dark:from-stone-800 dark:via-amber-900/40 dark:to-orange-900/50',
-                icon: (
-                  <GraduationCap
-                    aria-hidden="true"
-                    weight="duotone"
-                    className="size-12 text-brand-gold"
-                  />
-                ),
-              },
-            ].map((card) => (
-              <Link
-                key={card.href}
-                href={card.href}
-                className={cn(
-                  'group relative flex aspect-[3/4] items-center justify-center overflow-hidden',
-                  'rounded-[var(--radius-panel)] border border-border bg-linear-to-br',
-                  card.className,
-                )}
-              >
-                {card.icon}
-                {/* Hover/focus overlay: an opaque tint with the link text (blueprint §3).
-                    bg-black/70 is the darkening scrim the §4 rule requires for white text
-                    over imagery (well above WCAG AA); the arrow reads it as a link. */}
-                <span className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/70 p-4 text-center text-sm font-semibold text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
-                  {card.label}
-                  <ArrowRight aria-hidden="true" className="size-4 shrink-0" />
-                </span>
-              </Link>
-            ))}
+            {valuePropCards.map((card) => {
+              const fallback = VALUE_PROP_FALLBACK[card.position];
+              const imageSrc = isHttpUrl(card.imageKey) ? card.imageKey : null;
+              return (
+                <Link
+                  key={card.position}
+                  href={card.linkUrl}
+                  className={cn(
+                    'group relative flex aspect-[3/4] items-center justify-center overflow-hidden',
+                    'rounded-[var(--radius-panel)] border border-border',
+                    !imageSrc && cn('bg-linear-to-br', fallback?.gradient),
+                  )}
+                >
+                  {imageSrc ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- admin-supplied remote image; next/image needs a known host list (R1-10)
+                    <img
+                      src={imageSrc}
+                      alt=""
+                      className="absolute inset-0 size-full object-cover"
+                    />
+                  ) : (
+                    fallback?.icon
+                  )}
+                  {/* Hover/focus overlay: an opaque tint with the link text (blueprint §3).
+                      bg-black/70 is the darkening scrim the §4 rule requires for white text
+                      over imagery (well above WCAG AA); the arrow reads it as a link. */}
+                  <span className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/70 p-4 text-center text-sm font-semibold text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+                    {card.label}
+                    <ArrowRight aria-hidden="true" className="size-4 shrink-0" />
+                  </span>
+                </Link>
+              );
+            })}
           </div>
-          {/* Right half: 2–4 admissions stats (numbers prominent, labels smaller). Values are
-              placeholders — TODO(owner): replace with real, attributed, survey-framed numbers
-              before the R1 gate (R1-17). Each keeps a source line and non-causal phrasing per
-              the §3 credibility rule. Set SHOW_LANDING_STATS=false to hide until sourced. */}
+          {/* Right half: admissions stats (numbers prominent, labels smaller), admin-managed.
+              Each keeps a source line and non-causal phrasing per the §3 credibility rule; the
+              seeded values are placeholders until the owner supplies sourced figures (R1-17). */}
           {showStats && (
             <div className="grid content-center gap-4">
-              {[
-                {
-                  value: '—%',
-                  label:
-                    'of admissions officers weigh sustained commitment to an activity in their review',
-                },
-                {
-                  value: '—%',
-                  label:
-                    'of students who compete report stronger study habits, per national survey data',
-                },
-              ].map((stat) => (
-                <Card key={stat.label} className="p-5">
+              {stats.map((stat) => (
+                <Card key={stat.position} className="p-5">
                   <p className="font-display text-4xl leading-none text-foreground sm:text-5xl">
                     {stat.value}
                   </p>
                   <p className="mt-2 text-sm text-muted">{stat.label}</p>
-                  <p className="mt-2 text-xs text-muted italic">
-                    — Source: TODO(owner), before launch
-                  </p>
+                  {stat.source && (
+                    <p className="mt-2 text-xs text-muted italic">— Source: {stat.source}</p>
+                  )}
                 </Card>
               ))}
             </div>

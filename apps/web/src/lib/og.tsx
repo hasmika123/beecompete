@@ -1,13 +1,14 @@
 import { frauncesDisplay } from '@/lib/fonts/fraunces-display';
 import { interText } from '@/lib/fonts/inter-text';
+import { OG_WORDMARK } from '@/lib/og-wordmark';
 
-// Shared bits for the next/og share-card routes (R1-10). The brand mark is an inline SVG
-// honeycomb hexagon — NOT an emoji: next/og resolves emoji by fetching twemoji SVGs from a CDN
-// at render time (the bundled Geist font has no emoji glyphs), which would make the OG route
-// depend on outbound network at runtime. Inline SVG keeps the cards genuinely self-contained.
+// Shared bits for the next/og share-card routes (R1-10). The brand lockup is the official
+// wordmark, embedded as a base64 PNG data URI (see og-wordmark.ts) — next/og renders in a
+// standalone context and can't fetch app assets (or twemoji) at render time, so everything the
+// card needs is inlined and the route depends on no outbound network.
 //
 // Fonts (review L12): the cards render in the BRAND faces, not next/og's bundled Geist — Fraunces
-// for display headlines + the wordmark, Inter for UI text (design-brief typography lock). satori
+// for display headlines, Inter for UI text (design-brief typography lock). satori
 // can't consume our variable woff2s, so these are static TTF instances (Fraunces 700 @ opsz 144,
 // Inter 500 @ opsz 16) derived from the same OFL fonts, embedded as base64 (see the .ts files) so
 // they need no fs/tracing in the standalone image.
@@ -24,36 +25,20 @@ export const INK = '#26251f';
 export const GROUND = '#faf9f5';
 export const MUTED = '#6c6a61';
 
-/** Gold rounded badge with an ink honeycomb hexagon — the emoji-free brand mark. */
-export function BeeHex({ badge = 44 }: { badge?: number }) {
-  const hex = Math.round(badge * 0.58);
-  return (
-    <div
-      style={{
-        width: badge,
-        height: badge,
-        borderRadius: Math.round(badge * 0.27),
-        background: GOLD,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <svg width={hex} height={hex} viewBox="0 0 24 24">
-        <polygon points="12,2.5 20.4,7.25 20.4,16.75 12,21.5 3.6,16.75 3.6,7.25" fill={INK} />
-      </svg>
-    </div>
-  );
-}
+// Wordmark intrinsic size (apps/web/public/brand/logo-light.png) → aspect ratio for width calc.
+const WORDMARK_W = 821;
+const WORDMARK_H = 150;
 
-/** Brand row: hex badge + "BeeCompete" wordmark (Fraunces, matching the site logo). */
-export function BrandRow({ badge = 44, font = 30 }: { badge?: number; font?: number }) {
+/** Brand lockup: the official wordmark logo at the given height (light-mode art on the light card). */
+export function BrandRow({ height = 48 }: { height?: number }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: Math.round(badge * 0.32) }}>
-      <BeeHex badge={badge} />
-      <div style={{ fontFamily: 'Fraunces', fontSize: font, fontWeight: 700, color: INK }}>
-        BeeCompete
-      </div>
-    </div>
+    // eslint-disable-next-line @next/next/no-img-element -- next/og (satori) renders a plain <img>; next/image can't run in an ImageResponse
+    <img
+      src={OG_WORDMARK}
+      alt="BeeCompete"
+      height={height}
+      width={Math.round((height * WORDMARK_W) / WORDMARK_H)}
+      style={{ display: 'block' }}
+    />
   );
 }

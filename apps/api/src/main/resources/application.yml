@@ -61,6 +61,19 @@ server:
 admin:
   api-token: ${ADMIN_API_TOKEN:}
 
+# R1-19 cover-image upload (sweep item 19). Covers are PUBLIC display assets served from a
+# public-read bucket (cards/detail/OG/ISR need stable cacheable URLs) — SEPARATE from the future
+# private user-files bucket. Blank bucket = feature OFF: the presigner bean isn't created and the
+# upload endpoint 503s, so the paste-an-image-URL fallback keeps working. Credentials are NOT here —
+# the SDK's default chain reads AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY from the environment.
+aws:
+  region: ${AWS_REGION:}
+  s3:
+    bucket: ${S3_BUCKET:}
+    # Base for the stored public object URL, e.g. https://<bucket>.s3.<region>.amazonaws.com
+    # (or a CDN origin). No trailing slash.
+    public-base-url: ${S3_PUBLIC_BASE_URL:}
+
 management:
   endpoints:
     web:
