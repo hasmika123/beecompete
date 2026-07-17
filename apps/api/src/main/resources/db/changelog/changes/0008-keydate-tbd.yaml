@@ -1,0 +1,13 @@
+# R1-18 — "TBD" deadlines. A key date whose starts_at IS NULL means the milestone exists but
+# its date is not yet known (shown as "TBD"). Relaxing a NOT NULL is non-destructive (no data
+# loss, existing rows still valid), so it's allowed under the additive-only rule.
+databaseChangeLog:
+  - changeSet:
+      id: 0008-keydate-tbd
+      author: beecompete
+      comment: Allow key_date.starts_at to be NULL (date TBD) — R1-18.
+      changes:
+        - dropNotNullConstraint:
+            tableName: key_date
+            columnName: starts_at
+            columnDataType: "TIMESTAMP WITH TIME ZONE"

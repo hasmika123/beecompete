@@ -188,7 +188,12 @@ class CatalogSearchIntegrationTest {
 				.andExpect(jsonPath("$.featured[0].slug", is("r15-algebra-open")))
 				.andExpect(jsonPath("$.featured[0].prizeSummary", is("Champion trophy")))
 				.andExpect(jsonPath("$.totalCompetitions",
-						org.hamcrest.Matchers.greaterThanOrEqualTo(3)));
+						org.hamcrest.Matchers.greaterThanOrEqualTo(3)))
+				// M36 value-prop section — the two seeded promo cards + two stats are exposed (0011).
+				.andExpect(jsonPath("$.valuePropCards", hasSize(2)))
+				.andExpect(jsonPath("$.valuePropCards[0].position", is("primary")))
+				.andExpect(jsonPath("$.stats", hasSize(2)))
+				.andExpect(jsonPath("$.stats[0].position", is("primary")));
 	}
 
 	@Test
@@ -200,13 +205,32 @@ class CatalogSearchIntegrationTest {
 		mvc.perform(get("/api/v1/competitions?sort=popularity")).andExpect(status().isBadRequest());
 
 		// The write boundary rejects non-canonical evaluation tokens (422, naming the allowed set).
+		// An organizer is stamped in so bean validation passes and the eval-token check is reached.
 		String body = competitionJson("r15-bad-eval", "Bad Eval r15", categoryId("math"))
 				.replace("\"evaluationType\": []", "\"evaluationType\": [\"quiz\"]");
 		mvc.perform(withToken(post("/api/v1/admin/competitions")).contentType("application/json")
-						.content(body))
+						.content(withDefaultOrganizer(body)))
 				.andExpect(status().isUnprocessableEntity())
 				.andExpect(jsonPath("$.message",
 						org.hamcrest.Matchers.containsString("unknown evaluation type")));
+	}
+
+	@Test
+	@Order(7)
+	void readinessGateHidesEditionlessListings() throws Exception {
+		// The shell seed carries the marker, so it would match search on its own — the readiness
+		// gate (§8a) is the ONLY thing keeping it out of every public read.
+		org.junit.jupiter.api.Assertions.assertFalse(
+				slugs("/api/v1/competitions?q=" + MARK + "&size=50").contains("r15-shell-no-edition"),
+				"editionless listing must not appear in the browse/search feed");
+
+		// Detail 404s, same as an archived listing.
+		mvc.perform(get("/api/v1/competitions/r15-shell-no-edition")).andExpect(status().isNotFound());
+
+		// Absent from the sitemap too (no orphan URL for crawlers).
+		mvc.perform(get("/api/v1/sitemap"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[?(@.slug=='r15-shell-no-edition')]", hasSize(0)));
 	}
 
 	// --- helpers ---
@@ -289,12 +313,15 @@ class CatalogSearchIntegrationTest {
 						.contentType("application/json").content("{\"regionIds\": [\"" + texas + "\"]}"))
 				.andExpect(status().isOk());
 
-		createCompetition("""
+		// A bare edition (no prize, no dates, no regions) clears the readiness gate (§8a) while
+		// keeping this seed's "no card facts" shape — it stays the no-deadline/no-prize fixture.
+		String essay = createCompetition("""
 				{"slug": "r15-essay-prize", "name": "Essay Prize r15", "categoryId": "%s",
 				 "summary": "Open essay prize — %s", "participationMode": "BOTH", "delivery": "HYBRID",
 				 "entryPathway": "EITHER", "costType": "FREE", "recurrence": "ANNUAL",
 				 "evaluationType": ["submission", "portfolio"]}
 				""".formatted(compSci, MARK));
+		createBareEdition(essay);
 
 		// Submission-only (no registration step at all) — its SUBMISSION_DUE is the deadline.
 		String writing = createCompetition("""
@@ -314,14 +341,37 @@ class CatalogSearchIntegrationTest {
 		mvc.perform(withToken(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 						.delete("/api/v1/admin/competitions/" + archived)))
 				.andExpect(status().isOk());
+
+		// Readiness-gate fixture: a competition with NO edition (the "zombie" an admin-create or
+		// import-approve leaves behind). Carries the marker so it WOULD match search — the gate
+		// alone must keep it invisible. Asserted by readinessGateHidesEditionlessListings().
+		createCompetition("""
+				{"slug": "r15-shell-no-edition", "name": "Shell No Edition r15", "categoryId": "%s",
+				 "summary": "Editionless zombie — %s", "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL",
+				 "entryPathway": "INDIVIDUAL", "costType": "FREE", "recurrence": "ANNUAL"}
+				""".formatted(math, MARK));
 	}
 
 	private String createCompetition(String body) throws Exception {
 		String json = mvc.perform(withToken(post("/api/v1/admin/competitions"))
-						.contentType("application/json").content(body))
+						.contentType("application/json").content(withDefaultOrganizer(body)))
 				.andExpect(status().isCreated())
 				.andReturn().getResponse().getContentAsString();
 		return mapper.readTree(json).get("id").asText();
+	}
+
+	/**
+	 * Organizer is mandatory now (resolve-or-create): stamp a single shared organizerName onto every
+	 * seed body that doesn't already carry one. The first create makes the org; the rest reuse it on
+	 * the exact-name match, so this seed still lands one organizer for all the fixtures.
+	 */
+	private String withDefaultOrganizer(String body) throws Exception {
+		com.fasterxml.jackson.databind.node.ObjectNode node =
+				(com.fasterxml.jackson.databind.node.ObjectNode) mapper.readTree(body);
+		if (!node.hasNonNull("organizerOrgId") && !node.hasNonNull("organizerName")) {
+			node.put("organizerName", "Search Fixtures Org r15");
+		}
+		return mapper.writeValueAsString(node);
 	}
 
 	private String createEdition(String competitionId) throws Exception {
@@ -330,6 +380,18 @@ class CatalogSearchIntegrationTest {
 						.content("""
 								{"cycleLabel": "2026", "status": "OPEN", "scopeLevel": "NATIONAL",
 								 "prizeSummary": "Champion trophy"}
+								"""))
+				.andExpect(status().isCreated())
+				.andReturn().getResponse().getContentAsString();
+		return mapper.readTree(json).get("id").asText();
+	}
+
+	/** An edition with no prize/dates/regions — just enough to clear the readiness gate (§8a). */
+	private String createBareEdition(String competitionId) throws Exception {
+		String json = mvc.perform(withToken(post("/api/v1/admin/competitions/" + competitionId + "/editions"))
+						.contentType("application/json")
+						.content("""
+								{"cycleLabel": "2026", "status": "OPEN", "scopeLevel": "NATIONAL"}
 								"""))
 				.andExpect(status().isCreated())
 				.andReturn().getResponse().getContentAsString();

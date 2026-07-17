@@ -4,9 +4,14 @@ import com.beecompete.catalog.domain.Competition;
 import com.beecompete.catalog.domain.FeaturedSlot;
 import com.beecompete.catalog.domain.HeroCard;
 import com.beecompete.catalog.domain.HeroCardPosition;
+import com.beecompete.catalog.domain.LandingSlot;
+import com.beecompete.catalog.domain.LandingStat;
+import com.beecompete.catalog.domain.ValuePropCard;
 import com.beecompete.catalog.repository.CompetitionRepository;
 import com.beecompete.catalog.repository.FeaturedSlotRepository;
 import com.beecompete.catalog.repository.HeroCardRepository;
+import com.beecompete.catalog.repository.LandingStatRepository;
+import com.beecompete.catalog.repository.ValuePropCardRepository;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -27,8 +32,9 @@ import org.springframework.web.server.ResponseStatusException;
 /**
  * R1-3 landing-content panel (M36): the 3 admin-managed HeroCards (upsert per position — exactly
  * one active row each) and the FeaturedSlot carousel (replace-the-list, ordered, ≤10 per the
- * blueprint's 6–10 cap). Image upload (S3 pre-signed) lands in PR C — until then imageKey is the
- * S3 object key set directly.
+ * blueprint's 6–10 cap). {@code imageKey} holds the image's public URL (or a legacy S3 key); the
+ * admin UI uploads via the R1-19 cover-presign endpoint (public {@code covers/} prefix) and stores
+ * the returned URL here — no change to this contract.
  */
 @RestController
 @RequestMapping("/api/v1/admin")
@@ -40,12 +46,17 @@ public class LandingAdminController {
 	private final HeroCardRepository heroCards;
 	private final FeaturedSlotRepository featuredSlots;
 	private final CompetitionRepository competitions;
+	private final ValuePropCardRepository valuePropCards;
+	private final LandingStatRepository landingStats;
 
 	public LandingAdminController(HeroCardRepository heroCards, FeaturedSlotRepository featuredSlots,
-			CompetitionRepository competitions) {
+			CompetitionRepository competitions, ValuePropCardRepository valuePropCards,
+			LandingStatRepository landingStats) {
 		this.heroCards = heroCards;
 		this.featuredSlots = featuredSlots;
 		this.competitions = competitions;
+		this.valuePropCards = valuePropCards;
+		this.landingStats = landingStats;
 	}
 
 	@GetMapping("/hero-cards")
@@ -94,6 +105,66 @@ public class LandingAdminController {
 			featuredSlots.save(new FeaturedSlot(competition, position++));
 		}
 		return featuredSlots.findAllByOrderByPosition().stream().map(FeaturedSlotResponse::from).toList();
+	}
+
+	// --- Value-prop section ("Competing changes what's possible"): 2 promo cards + 2 stats. ---
+
+	@GetMapping("/value-prop-cards")
+	@Transactional(readOnly = true)
+	public List<ValuePropCardResponse> listValuePropCards() {
+		return valuePropCards.findAll().stream().map(ValuePropCardResponse::from).toList();
+	}
+
+	/** Upsert by slot — the unique constraint guarantees one active row per slot. */
+	@PutMapping("/value-prop-cards/{position}")
+	public ValuePropCardResponse putValuePropCard(@PathVariable LandingSlot position,
+			@Valid @RequestBody ValuePropCardRequest request) {
+		ValuePropCard card = valuePropCards.findByPosition(position)
+				.orElseGet(() -> new ValuePropCard(position, request.linkUrl(), request.label()));
+		card.setLinkUrl(request.linkUrl());
+		card.setLabel(request.label());
+		card.setImageKey(request.imageKey()); // null = keep the code-defined gradient+icon fallback
+		return ValuePropCardResponse.from(valuePropCards.save(card));
+	}
+
+	@GetMapping("/landing-stats")
+	@Transactional(readOnly = true)
+	public List<LandingStatResponse> listLandingStats() {
+		return landingStats.findAll().stream().map(LandingStatResponse::from).toList();
+	}
+
+	/** Upsert by slot — the unique constraint guarantees one active row per slot. */
+	@PutMapping("/landing-stats/{position}")
+	public LandingStatResponse putLandingStat(@PathVariable LandingSlot position,
+			@Valid @RequestBody LandingStatRequest request) {
+		LandingStat stat = landingStats.findByPosition(position)
+				.orElseGet(() -> new LandingStat(position, request.value(), request.label()));
+		stat.setValue(request.value());
+		stat.setLabel(request.label());
+		stat.setSource(request.source());
+		return LandingStatResponse.from(landingStats.save(stat));
+	}
+
+	public record ValuePropCardRequest(@Size(max = 500) String imageKey,
+			@NotBlank @Size(max = 1000) String linkUrl, @NotBlank @Size(max = 200) String label) {}
+
+	public record ValuePropCardResponse(UUID id, String position, String imageKey, String linkUrl,
+			String label, Instant updatedAt) {
+		static ValuePropCardResponse from(ValuePropCard c) {
+			return new ValuePropCardResponse(c.getId(), c.getPosition().name(), c.getImageKey(),
+					c.getLinkUrl(), c.getLabel(), c.getUpdatedAt());
+		}
+	}
+
+	public record LandingStatRequest(@NotBlank @Size(max = 60) String value,
+			@NotBlank @Size(max = 300) String label, @Size(max = 300) String source) {}
+
+	public record LandingStatResponse(UUID id, String position, String value, String label,
+			String source, Instant updatedAt) {
+		static LandingStatResponse from(LandingStat s) {
+			return new LandingStatResponse(s.getId(), s.getPosition().name(), s.getValue(), s.getLabel(),
+					s.getSource(), s.getUpdatedAt());
+		}
 	}
 
 	public record HeroCardRequest(@NotBlank @Size(max = 500) String imageKey,

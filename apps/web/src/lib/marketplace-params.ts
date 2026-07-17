@@ -170,14 +170,15 @@ export function activeChips(
       href: marketplaceHref(path, params, { category: undefined }),
     });
   }
-  if (params.minGrade !== undefined || params.maxGrade !== undefined) {
-    const band = GRADE_BANDS.find(
-      (b) => b.minGrade === params.minGrade && b.maxGrade === params.maxGrade,
-    );
-    const label = band ? band.label : `Grades ${params.minGrade ?? '…'}–${params.maxGrade ?? '…'}`;
+  // Grade: a band-exact range is represented by the highlighted quick-chip, NOT a removable
+  // tag (A10 — value-canonical: depends only on the URL). Only custom ranges get a tag.
+  if (
+    (params.minGrade !== undefined || params.maxGrade !== undefined) &&
+    activeBand(params) === undefined
+  ) {
     chips.push({
       key: 'grade',
-      label,
+      label: `Grades ${params.minGrade ?? '…'}–${params.maxGrade ?? '…'}`,
       href: marketplaceHref(path, params, { minGrade: undefined, maxGrade: undefined }),
     });
   }

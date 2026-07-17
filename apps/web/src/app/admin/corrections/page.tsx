@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { buttonClasses } from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
+import { AdminPagination } from '@/components/admin/admin-pagination';
 import { AdminTable } from '@/components/admin/admin-table';
 import { ReviewStatusBadge } from '@/components/admin/status-badges';
 import { adminFetch } from '@/lib/admin-api';
+import { formatDate } from '@/lib/dates';
 import type { CorrectionProposal, Page } from '@/lib/admin-types';
 
 const STATUSES = ['PENDING', 'APPROVED', 'REJECTED'] as const;
@@ -11,14 +13,15 @@ const STATUSES = ['PENDING', 'APPROVED', 'REJECTED'] as const;
 export default async function CorrectionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; page?: string }>;
 }) {
-  const { status: rawStatus } = await searchParams;
-  const status = STATUSES.includes(rawStatus as (typeof STATUSES)[number])
-    ? (rawStatus as string)
+  const params = await searchParams;
+  const status = STATUSES.includes(params.status as (typeof STATUSES)[number])
+    ? (params.status as string)
     : 'PENDING';
+  const page = Math.max(0, Number(params.page ?? '0') || 0);
   const result = await adminFetch<Page<CorrectionProposal>>(
-    `/corrections?status=${status}&size=50`,
+    `/corrections?status=${status}&page=${page}&size=50`,
   );
 
   return (
@@ -50,32 +53,43 @@ export default async function CorrectionsPage({
         columns={[
           {
             header: 'Subject',
-            cell: (r) =>
-              status === 'PENDING' ? (
+            // Name first (server-side join); the UUID demoted to the secondary line. Every
+            // status links — reviewed proposals open the read-only outcome view.
+            cell: (r) => (
+              <span className="grid">
                 <Link href={`/admin/corrections/${r.id}`} className="font-medium hover:underline">
-                  {r.subjectType.toLowerCase()} · {r.subjectId.slice(0, 8)}…
+                  {r.subjectName ?? '(subject removed)'}
                 </Link>
-              ) : (
-                <span className="font-medium">
+                <span className="text-xs text-muted">
                   {r.subjectType.toLowerCase()} · {r.subjectId.slice(0, 8)}…
                 </span>
-              ),
+              </span>
+            ),
           },
           {
             header: 'Fields',
-            cell: (r) => <span className="text-muted">{Object.keys(r.payload).join(', ')}</span>,
+            cell: (r) => {
+              const fields = Object.keys(r.payload).join(', ');
+              return (
+                <span className="block max-w-56 truncate text-muted" title={fields}>
+                  {fields}
+                </span>
+              );
+            },
           },
           { header: 'Status', cell: (r) => <ReviewStatusBadge status={r.status} /> },
           {
             header: 'Submitted',
             align: 'right',
-            cell: (r) => (
-              <span className="text-xs text-muted">
-                {new Date(r.createdAt).toLocaleDateString()}
-              </span>
-            ),
+            cell: (r) => <span className="text-xs text-muted">{formatDate(r.createdAt)}</span>,
           },
         ]}
+      />
+
+      <AdminPagination
+        page={result.number}
+        totalPages={result.totalPages}
+        hrefFor={(p) => `/admin/corrections?status=${status}&page=${p}`}
       />
     </>
   );

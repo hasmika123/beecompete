@@ -40,7 +40,7 @@ All motion respects `prefers-reduced-motion`.
 - **Interaction:** whole card clicks through to the Details page; hover = slight lift/scale.
 
 **Footer** — all pages: Privacy · Terms · Cookie Policy · **affiliate disclosure** (→ DQ10) · beta
-disclaimer (→ R1-13) · contact/support · social links (→ R1-12) · Suggest a Competition (Page 6).
+disclaimer (→ R1-13) · contact/support · social links (→ R1-12) · Request a Competition (Page 6).
 
 ---
 
@@ -91,6 +91,11 @@ disclaimer (→ R1-13) · contact/support · social links (→ R1-12) · Suggest
   causal claims** — prefer "X% of admissions officers say…" over "competing makes you 3× more
   likely…". Placeholder numbers clearly marked `TODO(owner)`; owner supplies final sourced stats
   before the R1 gate.
+- **Admin-managed (2026-07-16):** both image cards (image + link + label) and both stats (value +
+  text + source) are now editable from `/admin/landing` (`ValuePropCard`/`LandingStat`, M36) — the
+  owner supplies the final images, links, and sourced numbers through the panel rather than in code.
+  A card with no uploaded image keeps the code-defined gradient+icon fallback, so the approved look
+  is the default. Kept at exactly **two** cards + **two** stats to match this layout.
 
 **4. Audience cards** (→ H46)
 - **Layout:** three cards in one row — **"For Parents" · "For Educators" · "For Organizers"** — each
@@ -140,7 +145,7 @@ carousel & related rows become swipe; audience cards stack.
 - **Scroll:** **"Load more" button** — loads the next page inline (never auto-loads on scroll),
   with crawlable `?page=N` pagination URLs behind it (owner 2026-07-08 — refines the 2026-07-07
   continuous-scroll decision; keeps the footer reachable and back-button position stable).
-- **Zero-results state:** friendly message + **"Suggest a competition"** CTA (→ DQ15, links to
+- **Zero-results state:** friendly message + **"Request a competition"** CTA (→ DQ15, links to
   Page 6) + **2–3 near-miss cards** — relax the least-important active filter and explain the
   relaxation ("Nothing for Grade 3 in Debate — these accept Grade 4"); the grid is never literally
   empty (owner 2026-07-08). Query logged (→ X20).
@@ -258,7 +263,7 @@ deadline-filtered view.
 
 ---
 
-## Page 6: Suggest a Competition *(→ DQ15 — owner-approved 2026-07-08; linked from zero-results + footer)*
+## Page 6: Request a Competition *(→ DQ15 — owner-approved 2026-07-08; canonical label "Request a Competition" per owner 2026-07-13, supersedes "Suggest a Competition"; route slug stays `/suggest-a-competition` until R1-15b; linked from zero-results + footer)*
 
 - **Multi-step wizard form** — one question per step, click/selection advances to the next step,
   with a progress indicator (owner 2026-07-08: designed to feel effortless, not like a form):
@@ -319,7 +324,7 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
 16. **Category URLs:** hybrid — canonical `/competitions/<slug>` = filtered listing + category header + indexable SEO text block.
 17. **Details:** visible breadcrumb **replaces the back button** (supersedes 2026-07-07); "At a glance" strip (Grades · Deadline · Cost · Location · Prize); Register microcopy ("on the organizer's official site ↗"); **FAQ third tab at R1** with FAQPage schema; **sticky sidebar** on desktop; **add-to-calendar** (ics + Google) on the timeline at R1; mobile **sticky bottom bar** (Follow + Register).
 18. **[R2] social-proof counter** with a ~25 cold-start threshold (hidden below it).
-19. **New pages approved:** How It Works (Page 4) · Categories index (Page 5) · Suggest a Competition wizard (Page 6). **Deferred:** For Parents / For Educators (audience cards → digest anchor meanwhile; educators nav link reserved).
+19. **New pages approved:** How It Works (Page 4) · Categories index (Page 5) · Request a Competition wizard (Page 6, labeled "Suggest a Competition" at approval; canonical "Request a Competition" per owner 2026-07-13). **Deferred:** For Parents / For Educators (audience cards → digest anchor meanwhile; educators nav link reserved).
 20. **Cross-cutting style rules** recorded in `design-brief.md` §3/§4: ~~Inter Display + heavy-weight headline scale~~ *(typography superseded by #28)* · gold = fills/accents only (never text/strokes on white) · scrim required behind text over imagery.
 21. **Student Privacy Pledge:** investigate during R1, target signing ~R2 — tracked in `go-to-market.md` §5.
 
@@ -359,6 +364,52 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
 27. **Community pages approved as a Phase-2 surface** (public label "Community", entity Article — M19/M34/M35): admin-published articles with linked-competition cards, like/love + share, and comments that are **adult-visible-only, read and write** (hidden from minors and logged-out visitors; amended same day). Blueprint before build; added to Deferred pages meanwhile.
 28. **Typography revised from owner reference images** (supersedes #20's Inter-Display clause; details `design-brief.md` §3): **display serif for headlines** — *similar* to the reference; **exact face/size/weight delegated to builder judgment at F7** (owner, same day — no blocking specimen approval; hero prototype approvals stay the checkpoint). **Inter stays for body/UI**. Self-hosted, no font CDN, as before. Hero/section headings across all blueprints render in the display serif.
 
+**2026-07-13 (owner — marketplace/card sweep; built same day):**
+32. **Filter panel is instant-apply** (amends the Page-2 interaction; the URL model is
+    unchanged): every panel change navigates immediately — the Apply/Reset bar is gone; a quiet
+    **"Clear all"** link on the active-tags row clears refinements but **keeps `q` + sort**.
+    Every filter state remains a canonical, shareable GET-param URL (chips/quick-chips stay real
+    links — crawlability unchanged). Pending navigation dims the results (`aria-busy`); the
+    mobile sheet applies instantly too and closes via a primary **"Show {total} competitions"**
+    button (the live count is the feedback loop that replaced Apply).
+33. **Grade band ↔ quick-chip canonicalization:** a grade range that exactly matches a
+    quick-chip band (Elementary −1–5 / Middle 6–8 / High 9–12) renders ONLY as the highlighted
+    quick-chip — never as a removable tag; custom ranges still get a "Grades X–Y" tag. The rule
+    is **value-canonical** (derived from the URL alone), so shared/reloaded URLs render
+    identically. Clicking the already-active chip does nothing — "All" is the deselect.
+34. **Card width is invariant** to the filter-panel toggle: fixed grid tracks from `sm:` up,
+    and the desktop panel is exactly one track wide, so opening it drops exactly one column at
+    identical card width. Mobile stays a fluid single column. *(Amended at build, same day:
+    the track is the shared **`--card-w` token = 258px** — shell-derived so 4 tracks + gaps
+    EXACTLY fill the `max-w-6xl` content width (4 ↔ 3 per row; the original 270px only fit
+    3 ↔ 2). Every card row — marketplace grid, landing featured, categories closing-soon,
+    detail related — consumes the same token.)*
+35. **Card refinements:** the title is **one line, truncated** (supersedes the two-line clamp);
+    the Cost/Region facts row pins to the card bottom above the prize/deadline footer; the
+    top-right corner ships **Share-only at R1** (ShareMenu icon variant, popover rendered
+    through a portal; hover/focus-revealed, always visible on touch devices) — the corner is
+    the R2 slot for Save (M7) and the social-proof pill (M31, #18), added without relayout.
+    *(Extended at build, same day — **fixed-slot anatomy**: every card renders the same rows at
+    the same heights — 1 line tags · 1 line title · 1 line organizer · exactly 2 lines
+    description · facts · footer. Missing data leaves BLANK reserved space (owner: an
+    unattributed card never implies an organizer), so mixed sparse/full rows stay
+    pixel-aligned.)*
+36. **Panel facets are collapsed by default** (the first facet plus any facet with an active
+    filter open); the desktop panel has no internal scroll — the page grows instead (the mobile
+    bottom sheet keeps its own scroll). *(Amended at build, same day — **panel stickiness is
+    bottom-edge, never top** (owner): a panel taller than the viewport scrolls with the page
+    and pins only when its bottom touches the viewport bottom (−24px margin); a shorter panel
+    stays in normal flow and scrolls away (a bottom-pin offset would displace it downward at
+    rest). Height is measured (ResizeObserver + resize fallback) into a `--panel-h` var
+    feeding the sticky `top` calc. Panel dropdowns are the design-system `Select` custom
+    listbox — native `<select>` popups can't match the universal dropdown styling.)*
+37. **Prize fallback (sweep item 16, 2026-07-16):** when a competition has no `prize_summary` on
+    record, the card footer's bold prize slot and the detail "At a glance" Prize slot render
+    **"Bragging rights"** instead of sitting empty (`prizeSummary ?? 'Bragging rights'` in
+    `lib/catalog-display.ts` + `lib/detail-display.ts`), so the bold slot always renders. Note
+    a null summary means *uncurated*, not guaranteed no-prize — curators fill in a real prize
+    where one exists.
+
 ## Status
 | Page | Blueprint | Style prototype | Built |
 |---|---|---|---|
@@ -367,7 +418,7 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
 | Competition details | ✅ approved (2026-07-07 · rev 2026-07-08) | delegated (#29) | ✅ R1-7 (2026-07-12; at-a-glance · tabs+FAQ · key-dates timeline w/ add-to-calendar · trust panel · Event/BreadcrumbList/FAQPage JSON-LD · mobile sticky bar · **resources row + affiliate disclosure = R1-8**. Follow/Claim capture = R1-15b) |
 | How It Works | ✅ approved (2026-07-08) | delegated (#29) | ✅ R1-6b (2026-07-12; demo video placeholder) |
 | Categories (index) | ✅ approved (2026-07-08, may be tuned) | delegated (#29) | ✅ R1-6b (2026-07-12) |
-| Suggest a Competition | ✅ approved (2026-07-08) | — | interim stub only (R1-6; wizard = R1-15b) |
+| Request a Competition | ✅ approved (2026-07-08) | — | interim stub only (R1-6; wizard = R1-15b) |
 | For Parents / For Educators | ⛔ deferred (2026-07-08) | — | — |
 | Community (article index + detail) [Phase 2] | ⛔ deferred (2026-07-08, #27) — blueprint before build | — | — |
 | Tracker | ⛔ deferred — do not design yet | — | — |

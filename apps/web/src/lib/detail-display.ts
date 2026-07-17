@@ -94,7 +94,10 @@ export function currentEdition(editions: EditionView[]): EditionView | undefined
   if (editions.length === 0) return undefined;
   const byStatus = (status: string) => editions.find((e) => e.effectiveStatus === status);
   const latestKeyDate = (e: EditionView) =>
-    e.keyDates.reduce((max, d) => Math.max(max, new Date(d.startsAt).getTime()), 0);
+    e.keyDates.reduce(
+      (max, d) => Math.max(max, d.startsAt ? new Date(d.startsAt).getTime() : 0),
+      0,
+    );
   const latestByDate = [...editions].sort((a, b) => latestKeyDate(b) - latestKeyDate(a))[0];
   return (
     byStatus('open') ??
@@ -123,17 +126,31 @@ export function nextDeadline(
   editions: EditionView[],
   now: Date = new Date(),
 ): NextDeadline | undefined {
+  // TBD key dates (null startsAt, R1-18) are not concrete deadlines — excluded here.
   const future = editions
     .flatMap((e) => e.keyDates)
-    .filter((d) => new Date(d.startsAt).getTime() >= now.getTime());
+    .filter((d) => d.startsAt != null && new Date(d.startsAt).getTime() >= now.getTime());
   const pick = (type: string) =>
     future
       .filter((d) => d.type === type)
-      .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())[0];
+      .sort((a, b) => new Date(a.startsAt!).getTime() - new Date(b.startsAt!).getTime())[0];
   const chosen = pick('reg_close') ?? pick('submission_due');
-  return chosen
+  return chosen && chosen.startsAt
     ? { iso: chosen.startsAt, kind: chosen.type, timezone: chosen.timezone }
     : undefined;
+}
+
+/**
+ * True when a deadline milestone (reg_close / submission_due) exists but its date is TBD
+ * (null startsAt, R1-18). Used only as a fallback when {@link nextDeadline} is undefined, to
+ * show "Deadline · TBD" instead of omitting the row entirely.
+ */
+export function hasTbdDeadline(editions: EditionView[]): boolean {
+  return editions.some((e) =>
+    e.keyDates.some(
+      (d) => d.startsAt == null && (d.type === 'reg_close' || d.type === 'submission_due'),
+    ),
+  );
 }
 
 export interface TimelineDate {
@@ -141,24 +158,39 @@ export interface TimelineDate {
   label: string;
   past: boolean;
   isNext: boolean;
+  /** TBD (null startsAt, R1-18): renders "Date TBD", never past/next, sorted last. */
+  isTbd: boolean;
 }
 
 /**
- * The edition's key dates sorted for the timeline, each tagged past/next. The first date at or
- * after `now` is the "next" one (it carries the add-to-calendar link). Kept here so the
- * component stays pure — the `new Date()` default lives in this lib fn, not in render.
+ * The edition's key dates sorted for the timeline, each tagged past/next. The first DATED date
+ * at or after `now` is the "next" one (it carries the add-to-calendar link). TBD dates (null
+ * startsAt) sort last and are never past/next. Kept here so the component stays pure — the
+ * `new Date()` default lives in this lib fn, not in render.
  */
 export function timelineDates(edition: EditionView, now: Date = new Date()): TimelineDate[] {
-  const sorted = [...edition.keyDates].sort(
-    (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+  const dated = edition.keyDates.filter((d) => d.startsAt != null);
+  const tbd = edition.keyDates.filter((d) => d.startsAt == null);
+  const sorted = [...dated].sort(
+    (a, b) => new Date(a.startsAt!).getTime() - new Date(b.startsAt!).getTime(),
   );
-  const nextIndex = sorted.findIndex((d) => new Date(d.startsAt).getTime() >= now.getTime());
-  return sorted.map((date, i) => ({
-    date,
-    label: keyDateLabel(date),
-    past: new Date(date.startsAt).getTime() < now.getTime(),
-    isNext: i === nextIndex,
-  }));
+  const nextIndex = sorted.findIndex((d) => new Date(d.startsAt!).getTime() >= now.getTime());
+  return [
+    ...sorted.map((date, i) => ({
+      date,
+      label: keyDateLabel(date),
+      past: new Date(date.startsAt!).getTime() < now.getTime(),
+      isNext: i === nextIndex,
+      isTbd: false,
+    })),
+    ...tbd.map((date) => ({
+      date,
+      label: keyDateLabel(date),
+      past: false,
+      isNext: false,
+      isTbd: true,
+    })),
+  ];
 }
 
 /** "Location/Online" for the at-a-glance strip: delivery drives it, regions add specificity. */
@@ -192,7 +224,11 @@ export function costLabel(competition: CompetitionDetail, edition?: EditionView)
   return 'Paid';
 }
 
-/** Prize value for the at-a-glance strip — the edition's summary, else nothing. */
-export function prizeLabel(edition?: EditionView): string | undefined {
-  return edition?.prizeSummary ?? undefined;
+/**
+ * Prize value for the at-a-glance strip — the edition's summary, or a friendly "Bragging rights"
+ * fallback (sweep item 16, owner-picked). Note: a null summary means the prize is *uncurated*, not
+ * necessarily that there's none — so a curator who's confirmed a real prize should still fill it in.
+ */
+export function prizeLabel(edition?: EditionView): string {
+  return edition?.prizeSummary ?? 'Bragging rights';
 }

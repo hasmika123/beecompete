@@ -1,26 +1,15 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { Button, Restore, Trash, useToast } from '@beecompete/ui';
-import { NativeSelect, enumOptions } from '@/components/admin/native-select';
-import { VERIFICATION_STATES } from '@/lib/admin-types';
-import {
-  archiveCompetition,
-  restoreCompetition,
-  setCompetitionVerification,
-} from '@/app/admin/competitions/actions';
+import { useTransition } from 'react';
+import { Button, Restore, Trash, useConfirm, useToast } from '@beecompete/ui';
+import { archiveCompetition, restoreCompetition } from '@/app/admin/competitions/actions';
 
-export function CompetitionHeaderActions({
-  id,
-  verificationState,
-  archived,
-}: {
-  id: string;
-  verificationState: string;
-  archived: boolean;
-}) {
+// R1-19: a competition has no verification/maintainer control of its own — that's derived from
+// the organizer org (claim the org → all its competitions become host-maintained). Only
+// archive/restore lives here now.
+export function CompetitionHeaderActions({ id, archived }: { id: string; archived: boolean }) {
   const [pending, startTransition] = useTransition();
-  const [state, setState] = useState(verificationState);
+  const { confirm, dialog } = useConfirm();
   const { toast } = useToast();
 
   const run = (fn: () => Promise<void>, ok: string) =>
@@ -35,18 +24,7 @@ export function CompetitionHeaderActions({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <NativeSelect
-        aria-label="Verification state"
-        options={enumOptions(VERIFICATION_STATES)}
-        value={state}
-        disabled={pending}
-        className="w-40"
-        onChange={(e) => {
-          const next = e.target.value;
-          setState(next);
-          run(() => setCompetitionVerification(id, next), 'Verification updated');
-        }}
-      />
+      {dialog}
       {archived ? (
         <Button
           variant="secondary"
@@ -61,7 +39,18 @@ export function CompetitionHeaderActions({
           variant="secondary"
           size="sm"
           disabled={pending}
-          onClick={() => run(() => archiveCompetition(id), 'Archived')}
+          onClick={async () => {
+            if (
+              await confirm({
+                title: 'Archive this competition?',
+                message: 'It will be hidden from the public catalog. You can restore it later.',
+                confirmLabel: 'Archive',
+                tone: 'danger',
+              })
+            ) {
+              run(() => archiveCompetition(id), 'Archived');
+            }
+          }}
         >
           <Trash aria-hidden="true" className="size-4" /> Archive
         </Button>

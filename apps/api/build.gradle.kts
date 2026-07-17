@@ -37,6 +37,13 @@ dependencies {
 	// JSON Schema (draft 2020-12; meta-schemas bundled — no network at runtime).
 	implementation("com.networknt:json-schema-validator:1.5.6")
 
+	// R1-19 cover-image upload: AWS SDK v2 S3 presigner. The API only PRESIGNS PUT URLs (local
+	// crypto, no S3 network call) so the browser uploads covers straight to the public-assets
+	// bucket — never proxied through the API (architecture Files rule). Credentials come from the
+	// SDK's default chain (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY env), so no secret in config.
+	implementation(platform("software.amazon.awssdk:bom:2.28.16"))
+	implementation("software.amazon.awssdk:s3")
+
 	// Observability (F8): Sentry error capture + Logback breadcrumbs (disabled when
 	// SENTRY_DSN is blank), and JSON structured logs via the logstash encoder
 	// (activated by the prod logging profile — logback-spring.xml). Architecture §Observability.

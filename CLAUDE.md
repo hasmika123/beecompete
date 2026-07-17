@@ -55,7 +55,7 @@ Start context: `docs/README.md` → `docs/vision-prd.md`, `docs/glossary.md`.
   gold = "brand" variant** (builder-delegated 2026-07-08); cards/dropdowns + expanded panels/
   inputs ≥12–16px radius; **no glow/colored shadows**; owner steers reactively with reference
   photos (design-brief §1).
-- Hero pages (Landing, Competitions, Details, How It Works, Categories index, Suggest a Competition)
+- Hero pages (Landing, Competitions, Details, How It Works, Categories index, Request a Competition)
   follow the approved blueprints; changing their structure means updating `docs/page-blueprints.md` first.
 
 ## How we work (`docs/development-process.md`)
@@ -205,14 +205,67 @@ per-tier icon/variant/blurb, used on the CompetitionCard (elevated + `unverified
 the tier blurb as visible text, replacing the R1-7 first-pass tier map). The **organizer**
 verified seal (org-level) stays separate on the card + header. Locked "maintained by … Curation
 Team → host org after claim" wording preserved. Frontend-only (verificationState + provenance
-already exposed since R1-4). **R1-11 done (2026-07-13) — share a competition (M21):** shared
+already exposed since R1-4). *(Superseded same day by the sweep: trust is **org-only** now —
+see the sweep note below.)* **R1-11 done (2026-07-13) — share a competition (M21):** shared
 `packages/ui` **ShareMenu** on the detail header (supersedes the R1-7 light share button) — a
 popover of explicit channels (Copy link, Email, X, Facebook, WhatsApp, LinkedIn) + the OS share
 sheet where available. **Privacy (M21/M34 rule): plain intent links, clean page URL with NO
 tracking/UTM params, no login, collects nothing.** A11y: Escape/click-outside close + focus
-return. Next per `docs/phase-1-plan.md`: **R1-12 legal pages** (launch surface).
-**Deferred (PR C):** S3 pre-signed
-hero-image upload + inline FAQ/
+return. **Sweep remediation done (2026-07-13,** branch `fix/filter-panel-ux-and-landing-stats`,
+local**):** the full admin/marketplace audit fix pass — instant-apply filter panel + "Clear all"
+(no Apply bar), share-on-card corner, invariant 270px card tracks + one-line titles
+(page-blueprints decisions #32–36), key-date timezone correctness (`zonedWallClockToInstant` —
+never server-local) + endsAt/label inputs, server validation bounds (grades −1..12, fees⇒
+currency, cross-field ranges — 400s), **TBD deadlines** (migration `0008`: nullable
+`key_date.starts_at`), **org-only trust ladder** (migration `0009`: CURATED→CLAIMED→VERIFIED,
+UNVERIFIED retired; competition maintainer **derived** from the organizer org — supersedes the
+R1-9 listing tier; TrustBadge re-scoped, `isElevatedTier`/`unverified` removed), listing-health
+checklist, `useConfirm` ConfirmDialog (packages/ui), org restore, uiHints wipe fix. As-built
+rules: `docs/domain-model.md` §3f + §8; **remaining backlog** (model-assigned):
+`docs/sweep-remediation-plan.md`. **Now-Opus listing-lifecycle build done (2026-07-15, no schema,
+local):** the **readiness gate** — every public read requires a non-archived edition
+(`archived_at IS NULL AND EXISTS(live edition)`) across browse/search/facet counts, detail (404),
+sitemap, category counts, and the landing count (`countPublicListings`) — kills zombie listings; and
+the **combined create-competition + first-edition form** (`POST /admin/competitions/with-edition` →
+`ListingCurationService`, one transaction) makes admin listings complete-by-default. `listing_status`
++ `approved_at`/`approved_by` deferred to Phase-3 item 14 (owner). As-built: `domain-model.md` §8a.
+**Now-Claude create-form build done (2026-07-15, no schema, local):** sweep items **20** (final
+five-step grouping: Basics / About / Format & eligibility / Media & links / First edition),
+**21** (typed key dates on create — `CompetitionWithEditionRequest.keyDates` list replaces the
+single `HeadlineDeadline`, repeatable row editor with per-row TBD, server + ring both require a
+REG_CLOSE|SUBMISSION_DUE row), and **22** (`region-picker.tsx` — grouped/searchable, scope-aware
+soft suggestions; used by the create form AND the edition `RegionTagger`). As-built:
+`architecture.md` §13a — the plan doc now carries **only** the Phase-2/3 backlog + open carry-overs.
+**The full API test suite is green again (46/46)** — the
+migration-0009 `UNVERIFIED` assertions were already fixed earlier on this branch, and this pass
+fixed the rest: the item-15 geo-seed natural-key collisions ("United States" fixtures in
+`CatalogPersistenceTest` + `AdminApiIntegrationTest`) and the stale combined-create happy path
+(it predated the item-17 completeness asserts). **Fable sweep build done (2026-07-16, local):**
+the remaining Now-bucket items **15–19** + create-form polish — **15** geo seed (Liquibase `0010`:
+US + 50 states + DC + ~25 cities + Virtual/Online — admins pick regions, never hand-create),
+**16** card/detail prize fallback (`prizeSummary ?? 'Bragging rights'`), **17** conditional fee
+fields (cost-aware rule: PAID ⇒ fee > 0 + currency, FREE ⇒ none — server `@AssertTrue` + form),
+**18** auto-slug (`slugify(name)` until hand-edited; create-only, slugs are permanent),
+**19 cover-image upload** — `POST /api/v1/admin/uploads/cover` returns a pre-signed S3 PUT
+(browser→S3 direct, never proxied; env-gated `S3Config`, paste-a-URL fallback) on the new
+**two-bucket S3 model** (public display-assets bucket ✅ provisioned + verified E2E; private
+user-files bucket waits for R2) — plus the create form's **vertical stepper + required-fields
+completion ring** (5 steps, ring gates Create; server re-validates). As-built:
+`architecture.md` §13a + §2 (Files), `setup-runbook.md` §6a, `domain-model.md` (Region seed).
+**Org-mandatory + resolve-or-create build done (2026-07-16, schema, local):** organizer is now
+**mandatory** on every competition (Liquibase `0012`: precondition-guarded `NOT NULL` on
+`competition.organizer_org_id`; entity `@ManyToOne(optional=false)`). `CompetitionRequest` gains
+`organizerName` + `confirmNewOrganizer`; `CompetitionCurationService.resolveOrganizer` (shared by
+admin CRUD, import-approve, combined create) **resolves-or-creates** — exact normalized name →
+reuse, similar names → 422 listing candidates unless `confirmNewOrganizer`, archived exact → 422,
+no match → create a **CURATED/HOST** org (domain from the official URL). The S4 seeding pipeline
+sends `organizerName` (never a placeholder; a null-organizer row is flagged for manual assignment).
+The import-review UI gains an **Organizer panel** (reuse/pick/create-new + live org search); the
+competition edit form drops its "— none —" organizer option. API suite green (49/49). As-built:
+`domain-model.md` §3b, `architecture.md` §13a, `tools/seeding/README.md`. Next per
+`docs/phase-1-plan.md`: **R1-12 legal pages** (launch surface).
+**Deferred (PR C):** hero-card image upload (reuses the
+R1-19 cover endpoint with a `hero/` key prefix) + inline FAQ/
 Resource row-edit. **Before prod users:** set `ADMIN_API_TOKEN` in both VPS `.env` + `/admin`
 behind Cloudflare Access (setup-runbook §5).
 Remaining F8 operational steps (uptime monitor + confirming Sentry receives events) are done after

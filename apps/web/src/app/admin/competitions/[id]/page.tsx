@@ -1,16 +1,30 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, buttonClasses, Plus, Tab, TabList, TabPanel, Tabs } from '@beecompete/ui';
+import {
+  Alert,
+  ArrowLeft,
+  Badge,
+  buttonClasses,
+  Plus,
+  Tab,
+  TabList,
+  TabPanel,
+  Tabs,
+} from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
 import { AdminTable } from '@/components/admin/admin-table';
-import { ArchivedBadge, VerificationBadge } from '@/components/admin/status-badges';
+import { enumLabel } from '@/components/admin/enum-labels';
+import { ArchivedBadge } from '@/components/admin/status-badges';
 import { CompetitionForm } from '@/components/admin/competition-form';
 import { CompetitionHeaderActions } from '@/components/admin/competition-header-actions';
 import { FaqManager } from '@/components/admin/faq-manager';
 import { ResourceManager } from '@/components/admin/resource-manager';
+import { ListingHealth } from '@/components/admin/listing-health';
 import { adminFetch, AdminApiError } from '@/lib/admin-api';
+import { listingHealth } from '@/lib/listing-health';
 import type {
   Category,
+  CategoryTemplate,
   Competition,
   Edition,
   Faq,
@@ -30,8 +44,9 @@ export default async function EditCompetitionPage({ params }: { params: Promise<
     throw e;
   }
 
-  const [categories, organizations, editions, faqs, resources] = await Promise.all([
+  const [categories, templates, organizations, editions, faqs, resources] = await Promise.all([
     adminFetch<Category[]>('/categories'),
+    adminFetch<CategoryTemplate[]>('/categories/templates'),
     adminFetch<Page<Organization>>('/organizations?size=100'),
     adminFetch<Edition[]>(`/competitions/${id}/editions`),
     adminFetch<Faq[]>(`/competitions/${id}/faqs`),
@@ -49,18 +64,15 @@ export default async function EditCompetitionPage({ params }: { params: Promise<
 
       <PageHeader
         title={competition.name}
-        actions={
-          <CompetitionHeaderActions
-            id={id}
-            verificationState={competition.verificationState}
-            archived={competition.archivedAt !== null}
-          />
-        }
+        actions={<CompetitionHeaderActions id={id} archived={competition.archivedAt !== null} />}
       />
+      {/* R1-19: no competition-level verification badge — maintainer derives from the org. */}
       <div className="mb-6 flex items-center gap-2 text-sm text-muted">
-        <VerificationBadge state={competition.verificationState} />
         <ArchivedBadge archivedAt={competition.archivedAt} />
-        <span>· provenance: {competition.provenanceSource?.toLowerCase() ?? 'none'}</span>
+        <span>
+          · provenance:{' '}
+          {competition.provenanceSource ? enumLabel(competition.provenanceSource) : 'none'}
+        </span>
       </div>
 
       <Tabs defaultValue="details">
@@ -73,16 +85,24 @@ export default async function EditCompetitionPage({ params }: { params: Promise<
 
         <TabPanel value="details">
           <div className="pt-6">
+            <ListingHealth checks={listingHealth(competition, editions, faqs, resources)} />
             <CompetitionForm
               competition={competition}
               categories={categories}
               organizations={organizations.content}
+              templates={templates}
             />
           </div>
         </TabPanel>
 
         <TabPanel value="editions">
           <div className="pt-6">
+            {/* Moved from the bottom of the competition form (item 7) — this is where the
+                pointer is actionable. */}
+            <Alert tone="info" className="mb-4">
+              Dates &amp; deadlines live here — add an Edition, then set its key dates (registration
+              close, submission due, results) on the edition page.
+            </Alert>
             <div className="mb-3 flex justify-end">
               <Link
                 href={`/admin/competitions/${id}/editions/new`}
@@ -107,8 +127,14 @@ export default async function EditCompetitionPage({ params }: { params: Promise<
                     </Link>
                   ),
                 },
-                { header: 'Status', cell: (ed) => ed.status.toLowerCase() },
-                { header: 'Scope', cell: (ed) => ed.scopeLevel.toLowerCase() },
+                {
+                  header: 'Status',
+                  cell: (ed) => <Badge variant="outline">{enumLabel(ed.status)}</Badge>,
+                },
+                {
+                  header: 'Scope',
+                  cell: (ed) => <Badge variant="outline">{enumLabel(ed.scopeLevel)}</Badge>,
+                },
                 { header: 'State', cell: (ed) => <ArchivedBadge archivedAt={ed.archivedAt} /> },
               ]}
             />

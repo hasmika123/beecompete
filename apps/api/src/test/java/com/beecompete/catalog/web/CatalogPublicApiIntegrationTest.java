@@ -72,7 +72,7 @@ class CatalogPublicApiIntegrationTest {
 				liveSeen = true;
 				// Lowercase public tokens + trust fields (DQ13).
 				if (!"individual".equals(item.get("participationMode").asText())
-						|| !"unverified".equals(item.get("verificationState").asText())
+						|| !"curated".equals(item.get("verificationState").asText()) // R1-19: flattened to CURATED
 						|| !"curated".equals(item.get("provenance").get("source").asText())) {
 					throw new AssertionError("public tokens/trust fields wrong: " + item);
 				}

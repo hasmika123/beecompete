@@ -77,6 +77,7 @@ export {
   TrashSimple as Trash,
   Tray,
   Trophy,
+  UploadSimple as Upload,
   User,
   UsersThree as Users,
   Warning,

@@ -137,18 +137,37 @@ export function categoryHue(slug: string): string {
   return HUE[slug] ?? OTHER_HUE;
 }
 
-/** The generated default cover (decision #6/#15): tint gradient + centered duotone icon. */
+/**
+ * The competition cover: the uploaded image when a listing has one (decision #6/#15 anticipated
+ * this — "real per-competition cover art overrides the generated cover"), otherwise the generated
+ * default (tint gradient + centered duotone icon). Only a full http(s) URL is treated as an image
+ * (same guard as the hero cards); an S3-key form is ignored until the upload pipeline resolves it.
+ */
 export function CategoryCover({
   slug,
+  src,
   className,
   iconClassName,
 }: {
   slug: string;
+  /** Uploaded cover image URL — overrides the generated art when it's a full http(s) URL. */
+  src?: string | null;
   className?: string;
   iconClassName?: string;
 }) {
   const art = categoryArt(slug);
   const Icon = art.icon;
+  if (src && /^https?:\/\//.test(src)) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- admin-supplied remote image; no fixed host list
+      <img
+        src={src}
+        alt=""
+        aria-hidden="true"
+        className={cn('object-cover transition-transform group-hover:scale-105', className)}
+      />
+    );
+  }
   return (
     <div
       aria-hidden="true"
@@ -185,13 +204,13 @@ export function CategoryTag({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium',
+        'inline-flex min-w-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium',
         art.tag,
         className,
       )}
     >
-      <Icon aria-hidden="true" className="size-3.5" />
-      {name}
+      <Icon aria-hidden="true" className="size-3.5 shrink-0" />
+      <span className="truncate">{name}</span>
     </span>
   );
 }

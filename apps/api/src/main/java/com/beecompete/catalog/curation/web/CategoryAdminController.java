@@ -76,6 +76,17 @@ public class CategoryAdminController {
 
 	// --- Category Template (the JSON Schema behind attributes validation — D1) ---
 
+	/**
+	 * Every template in one call — the admin competition form renders schema-driven attributes
+	 * fields for whichever category is SELECTED (switchable client-side), so it needs the full
+	 * set up front rather than a fetch per switch. Literal path; never shadowed by {id}/template.
+	 */
+	@GetMapping("/templates")
+	@Transactional(readOnly = true)
+	public List<TemplateResponse> listTemplates() {
+		return templates.findAll().stream().map(TemplateResponse::from).toList();
+	}
+
 	@GetMapping("/{id}/template")
 	@Transactional(readOnly = true)
 	public TemplateResponse getTemplate(@PathVariable UUID id) {

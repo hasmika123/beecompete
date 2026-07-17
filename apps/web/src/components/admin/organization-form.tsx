@@ -1,8 +1,8 @@
 'use client';
 
 import { useActionState, useEffect } from 'react';
-import { Alert, Button, FormField, Input, useToast } from '@beecompete/ui';
-import { NativeSelect, enumOptions } from '@/components/admin/native-select';
+import { Alert, Button, FormField, Input, Select, useToast } from '@beecompete/ui';
+import { enumOptions } from '@/components/admin/enum-labels';
 import { createOrganization, updateOrganization } from '@/app/admin/organizations/actions';
 import { ORG_TYPES, type FormState, type Organization } from '@/lib/admin-types';
 
@@ -25,7 +25,7 @@ export function OrganizationForm({ organization }: { organization?: Organization
         <Input name="name" defaultValue={organization?.name} required maxLength={300} />
       </FormField>
       <FormField label="Type">
-        <NativeSelect
+        <Select
           name="type"
           options={enumOptions(ORG_TYPES)}
           defaultValue={organization?.type ?? 'HOST'}

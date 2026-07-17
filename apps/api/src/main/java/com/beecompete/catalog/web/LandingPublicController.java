@@ -1,9 +1,13 @@
 package com.beecompete.catalog.web;
 
 import com.beecompete.catalog.domain.HeroCard;
+import com.beecompete.catalog.domain.LandingStat;
+import com.beecompete.catalog.domain.ValuePropCard;
 import com.beecompete.catalog.repository.CompetitionRepository;
 import com.beecompete.catalog.repository.FeaturedSlotRepository;
 import com.beecompete.catalog.repository.HeroCardRepository;
+import com.beecompete.catalog.repository.LandingStatRepository;
+import com.beecompete.catalog.repository.ValuePropCardRepository;
 import com.beecompete.catalog.service.CompetitionSearchService;
 import java.util.Comparator;
 import java.util.List;
@@ -28,13 +32,18 @@ public class LandingPublicController {
 	private final FeaturedSlotRepository featuredSlots;
 	private final CompetitionRepository competitions;
 	private final CompetitionSearchService search;
+	private final ValuePropCardRepository valuePropCards;
+	private final LandingStatRepository landingStats;
 
 	public LandingPublicController(HeroCardRepository heroCards, FeaturedSlotRepository featuredSlots,
-			CompetitionRepository competitions, CompetitionSearchService search) {
+			CompetitionRepository competitions, CompetitionSearchService search,
+			ValuePropCardRepository valuePropCards, LandingStatRepository landingStats) {
 		this.heroCards = heroCards;
 		this.featuredSlots = featuredSlots;
 		this.competitions = competitions;
 		this.search = search;
+		this.valuePropCards = valuePropCards;
+		this.landingStats = landingStats;
 	}
 
 	@GetMapping
@@ -49,7 +58,15 @@ public class LandingPublicController {
 		List<CatalogPublicController.CompetitionSummary> featured = search.itemsByIds(featuredIds).stream()
 				.map(CatalogPublicController.CompetitionSummary::from)
 				.toList();
-		return new LandingView(cards, featured, competitions.countByArchivedAtIsNull());
+		List<ValuePropCardView> valueProp = valuePropCards.findAll().stream()
+				.sorted(Comparator.comparing(c -> c.getPosition().name()))
+				.map(ValuePropCardView::from)
+				.toList();
+		List<StatView> stats = landingStats.findAll().stream()
+				.sorted(Comparator.comparing(s -> s.getPosition().name()))
+				.map(StatView::from)
+				.toList();
+		return new LandingView(cards, featured, competitions.countPublicListings(), valueProp, stats);
 	}
 
 	public record HeroCardView(String position, String imageKey, String altText, String linkUrl,
@@ -60,6 +77,21 @@ public class LandingPublicController {
 		}
 	}
 
+	public record ValuePropCardView(String position, String imageKey, String linkUrl, String label) {
+		static ValuePropCardView from(ValuePropCard c) {
+			return new ValuePropCardView(c.getPosition().name().toLowerCase(Locale.ROOT), c.getImageKey(),
+					c.getLinkUrl(), c.getLabel());
+		}
+	}
+
+	public record StatView(String position, String value, String label, String source) {
+		static StatView from(LandingStat s) {
+			return new StatView(s.getPosition().name().toLowerCase(Locale.ROOT), s.getValue(), s.getLabel(),
+					s.getSource());
+		}
+	}
+
 	public record LandingView(List<HeroCardView> heroCards,
-			List<CatalogPublicController.CompetitionSummary> featured, long totalCompetitions) {}
+			List<CatalogPublicController.CompetitionSummary> featured, long totalCompetitions,
+			List<ValuePropCardView> valuePropCards, List<StatView> stats) {}
 }

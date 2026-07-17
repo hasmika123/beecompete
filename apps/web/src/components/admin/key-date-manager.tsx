@@ -1,10 +1,21 @@
 'use client';
 
-import { useRef, useTransition } from 'react';
-import { Button, FormField, Input, Plus, Trash, useToast } from '@beecompete/ui';
-import { NativeSelect, enumOptions } from '@/components/admin/native-select';
+import { useRef, useState, useTransition } from 'react';
+import {
+  Button,
+  Checkbox,
+  FormField,
+  Input,
+  Plus,
+  Select,
+  Trash,
+  useConfirm,
+  useToast,
+} from '@beecompete/ui';
+import { enumLabel, enumOptions } from '@/components/admin/enum-labels';
 import { addKeyDate, deleteKeyDate } from '@/app/admin/competitions/[id]/editions/actions';
-import { KEY_DATE_TYPES, type KeyDate } from '@/lib/admin-types';
+import { formatInZone } from '@/lib/dates';
+import { ADMIN_TIMEZONES, KEY_DATE_TYPES, type KeyDate } from '@/lib/admin-types';
 
 export function KeyDateManager({
   competitionId,
@@ -16,30 +27,45 @@ export function KeyDateManager({
   keyDates: KeyDate[];
 }) {
   const [pending, startTransition] = useTransition();
+  const [tbd, setTbd] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const { confirm, dialog } = useConfirm();
   const { toast } = useToast();
 
   return (
     <div className="grid gap-4">
+      {dialog}
       <ul className="grid gap-2">
         {keyDates.map((k) => (
           <li
             key={k.id}
             className="flex items-center justify-between gap-3 rounded-[var(--radius-panel)] border border-border p-3 text-sm"
           >
-            <span>
-              <span className="font-medium text-foreground">
-                {k.type.toLowerCase().replace(/_/g, ' ')}
+            <span className="min-w-0">
+              <span className="font-medium text-foreground">{enumLabel(k.type)}</span>
+              {k.label && <span className="ml-2 text-foreground">— {k.label}</span>}
+              <span className="ml-2 text-muted">
+                {k.startsAt ? formatInZone(k.startsAt, k.timezone) : 'Date TBD'}
               </span>
-              <span className="ml-2 text-muted">{new Date(k.startsAt).toLocaleString()}</span>
-              {k.timezone && <span className="ml-2 text-xs text-muted">({k.timezone})</span>}
+              {k.endsAt && (
+                <span className="ml-1 text-muted">→ {formatInZone(k.endsAt, k.timezone)}</span>
+              )}
             </span>
             <Button
               variant="ghost"
               size="sm"
               aria-label="Delete key date"
               disabled={pending}
-              onClick={() =>
+              onClick={async () => {
+                if (
+                  !(await confirm({
+                    title: 'Delete this key date?',
+                    message: 'This is permanent — there is no restore.',
+                    confirmLabel: 'Delete',
+                    tone: 'danger',
+                  }))
+                )
+                  return;
                 startTransition(async () => {
                   try {
                     await deleteKeyDate(competitionId, editionId, k.id);
@@ -50,8 +76,8 @@ export function KeyDateManager({
                       tone: 'error',
                     });
                   }
-                })
-              }
+                });
+              }}
             >
               <Trash aria-hidden="true" className="size-4" />
             </Button>
@@ -66,6 +92,7 @@ export function KeyDateManager({
             try {
               await addKeyDate(competitionId, editionId, form);
               formRef.current?.reset();
+              setTbd(false);
               toast({ title: 'Key date added', tone: 'success' });
             } catch (err) {
               toast({ title: err instanceof Error ? err.message : 'Add failed', tone: 'error' });
@@ -75,18 +102,30 @@ export function KeyDateManager({
         className="grid gap-3 rounded-[var(--radius-panel)] border border-dashed border-border p-4 sm:grid-cols-3"
       >
         <FormField label="Type">
-          <NativeSelect
-            name="type"
-            options={enumOptions(KEY_DATE_TYPES)}
-            defaultValue="REG_CLOSE"
+          <Select name="type" options={enumOptions(KEY_DATE_TYPES)} defaultValue="REG_CLOSE" />
+        </FormField>
+        <FormField label="Starts">
+          <Input name="startsAt" type="datetime-local" required={!tbd} disabled={tbd} />
+        </FormField>
+        <FormField label="Timezone">
+          <Select name="timezone" options={ADMIN_TIMEZONES} defaultValue="America/New_York" />
+        </FormField>
+        <FormField label="Ends" hint="optional — for windows">
+          <Input name="endsAt" type="datetime-local" disabled={tbd} />
+        </FormField>
+        <FormField label="Label" hint="optional — shown for Custom dates">
+          <Input name="label" maxLength={200} />
+        </FormField>
+        {/* TBD (R1-18): the milestone exists but its date is unknown — submit without a date.
+            mt-[26px] + h-10 centers the checkbox on the neighbors' control band (label 20px +
+            gap 6px above a 40px control). */}
+        <div className="mt-[26px] flex h-10 items-center">
+          <Checkbox
+            label="Date TBD (to be determined)"
+            checked={tbd}
+            onChange={(e) => setTbd(e.target.checked)}
           />
-        </FormField>
-        <FormField label="When">
-          <Input name="startsAt" type="datetime-local" required />
-        </FormField>
-        <FormField label="Timezone" hint="IANA, e.g. America/New_York">
-          <Input name="timezone" placeholder="America/New_York" />
-        </FormField>
+        </div>
         <div className="sm:col-span-3">
           <Button type="submit" size="sm" disabled={pending}>
             <Plus aria-hidden="true" className="size-4" /> Add key date

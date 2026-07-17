@@ -3,7 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { CATEGORY_IDS, isCategorySlug } from './categories.ts';
 import type { Config } from './config.ts';
 import { buildSystemPrompt, buildUserPrompt } from './prompt.ts';
-import type { Extraction } from './types.ts';
+import type { Extraction, SeedHints } from './types.ts';
 
 export type ExtractBackend = 'anthropic' | 'stub';
 
@@ -12,6 +12,8 @@ export interface ExtractInput {
   pageText: string;
   /** Path of the input HTML file, if any — used to locate a sibling `.expected.json` for the stub. */
   inputPath?: string;
+  /** Known facts from the S2 master index, fed to the model as trusted guidance (#2). */
+  hints?: SeedHints;
 }
 
 /**
@@ -40,7 +42,9 @@ async function anthropicExtract(input: ExtractInput, config: Config): Promise<Ex
       model: config.anthropicModel,
       max_tokens: 2048,
       system: buildSystemPrompt(),
-      messages: [{ role: 'user', content: buildUserPrompt(input.sourceUrl, input.pageText) }],
+      messages: [
+        { role: 'user', content: buildUserPrompt(input.sourceUrl, input.pageText, input.hints) },
+      ],
     });
   } catch (err) {
     // H1: a retired/unknown model id 404s — surface an actionable message, not a bare API error.
@@ -111,9 +115,13 @@ export function normalize(raw: unknown, sourceUrl: string): Extraction {
   const payload = {
     ...rest,
     name: sanitizeIfString(rest.name),
+    // The organizer the page states, verbatim (resolve-or-create by name on approve). We never
+    // substitute the S2 index hint here — an unverified hint must not become catalog data; a page
+    // that doesn't name its organizer stays null and is flagged for manual assignment (decision b).
+    organizerName: sanitizeIfString(rest.organizerName),
     summary: sanitizeIfString(rest.summary),
     tags: Array.isArray(rest.tags) ? rest.tags.map((t) => sanitizeIfString(t)) : rest.tags,
-    attributes: sanitizeDeep(rest.attributes),
+    attributes: pruneNullProps(sanitizeDeep(rest.attributes)),
     categoryId,
     description: null, // never carry model prose — S4 writes our own
     officialUrl: (payloadRaw.officialUrl as string | undefined) ?? sourceUrl,
@@ -152,6 +160,26 @@ function sanitizeDeep<T>(value: T): T {
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
       out[k] = sanitizeDeep(v);
+    }
+    return out as T;
+  }
+  return value;
+}
+
+/**
+ * Drops `null`/`undefined`-valued PROPERTIES from the attributes bag (recursively through nested
+ * objects; array elements are left intact). The LLM sometimes emits an unknown optional attribute
+ * as an explicit `null` (e.g. `"eligible_countries": null`), which fails the Category Template's
+ * `type: array` and sends an otherwise-good record to INVALID. An absent key is the correct
+ * encoding for "unknown", so we omit it — spine fields are untouched (their nulls are meaningful).
+ */
+export function pruneNullProps<T>(value: T): T {
+  if (Array.isArray(value)) return value.map((v) => pruneNullProps(v)) as T;
+  if (value !== null && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (v === null || v === undefined) continue;
+      out[k] = pruneNullProps(v);
     }
     return out as T;
   }

@@ -1,0 +1,28 @@
+# Organizer becomes mandatory (org-mandatory-autocreate plan). Every competition write path now
+# resolves-or-creates an Organization, so organizer_org_id is guaranteed non-null. Additive:
+# adding a NOT NULL constraint to a column that holds no NULLs is non-destructive.
+#
+# The precondition HALTS the migration if any competition still has a NULL organizer — the catalog
+# has no live listings, but staging/prod may hold a few hand-made test rows. The owner assigns an
+# organizer to (or deletes) those rows BEFORE deploying; we never backfill with a placeholder org
+# (plan decision b). No unique index on organization.name — R2 will legitimately hold same-named
+# schools, and the single-curator R1 accepts the create race (documented in the plan).
+databaseChangeLog:
+  - changeSet:
+      id: 0012-organizer-not-null
+      author: beecompete
+      comment: Make competition.organizer_org_id NOT NULL (organizer is now mandatory).
+      preConditions:
+        - onFail: HALT
+        - onFailMessage: >-
+            Some competitions have a NULL organizer_org_id. Assign an organizer to (or delete)
+            those rows before this migration — never backfill with a placeholder org.
+            Find them with: SELECT id, name FROM competition WHERE organizer_org_id IS NULL;
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM competition WHERE organizer_org_id IS NULL
+      changes:
+        - addNotNullConstraint:
+            tableName: competition
+            columnName: organizer_org_id
+            columnDataType: UUID

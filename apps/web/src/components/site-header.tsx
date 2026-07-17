@@ -48,14 +48,17 @@ export function SiteHeader() {
         scrolled && 'shadow-[var(--shadow-lift)]',
       )}
     >
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+      {/* 3-column grid (1fr auto 1fr) so the center nav is centered on the header itself, not
+          just wedged between the left/right groups. On mobile the nav column is empty (nav is
+          hidden) and the two 1fr tracks split — logo left, menu button right. */}
+      <div className="mx-auto grid h-16 max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 sm:px-6">
         <div className="flex items-center gap-2.5">
           <Link
             href="/"
             aria-label="BeeCompete home"
-            className="rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="flex items-center rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            <Logo />
+            <Logo className="h-8" />
           </Link>
           {/* Beta tag (→ R1-13) */}
           <Badge variant="gold">Beta</Badge>
@@ -82,7 +85,7 @@ export function SiteHeader() {
           })}
         </nav>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center justify-self-end gap-1">
           {/* Sign In / Sign Up slot reserved — hidden until accounts exist (R2). */}
           <ThemeToggle />
           <button

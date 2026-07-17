@@ -51,4 +51,11 @@ export async function setOrganizationVerification(id: string, state: string): Pr
 export async function archiveOrganization(id: string): Promise<void> {
   await adminFetch(`/organizations/${id}`, { method: 'DELETE' });
   revalidatePath('/admin/organizations');
+  revalidatePath(`/admin/organizations/${id}`);
+}
+
+export async function restoreOrganization(id: string): Promise<void> {
+  await adminFetch(`/organizations/${id}/restore`, { method: 'POST' });
+  revalidatePath('/admin/organizations');
+  revalidatePath(`/admin/organizations/${id}`);
 }

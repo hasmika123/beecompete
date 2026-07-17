@@ -6,6 +6,7 @@ import {
   EVALUATION_TOKENS,
   PARTICIPATION_MODES,
   RECURRENCES,
+  type SeedHints,
 } from './types.ts';
 
 /**
@@ -35,6 +36,8 @@ Return ONLY a JSON object with this exact top-level shape (no markdown, no comme
 ## payload fields (the "Spine")
 - slug (string, REQUIRED): lowercase kebab-case, derived from the competition name, e.g. "math-olympiad".
 - name (string, REQUIRED): the official competition name, verbatim proper noun.
+- organizerName (string|null): the organization that RUNS the competition, verbatim proper noun
+  from the page (e.g. "Mathematical Association of America"); null if the page doesn't state it.
 - officialUrl (string|null): the canonical official URL for the competition.
 - logo (string|null): absolute URL of the logo image if clearly present, else null.
 - description (MUST be null): do NOT write a description. Human curators write our own prose later.
@@ -69,8 +72,36 @@ Return ONLY a JSON object with this exact top-level shape (no markdown, no comme
 - modelConfidence reflects how well the page supported a complete, unambiguous extraction.`;
 }
 
-export function buildUserPrompt(sourceUrl: string, pageText: string): string {
+export function buildUserPrompt(sourceUrl: string, pageText: string, hints?: SeedHints): string {
   const clipped =
     pageText.length > 24000 ? `${pageText.slice(0, 24000)}\n...[truncated]` : pageText;
-  return `Source URL: ${sourceUrl}\n\nOFFICIAL PAGE TEXT:\n"""\n${clipped}\n"""`;
+  return `Source URL: ${sourceUrl}\n${renderHints(hints)}\nOFFICIAL PAGE TEXT:\n"""\n${clipped}\n"""`;
+}
+
+/**
+ * Renders the S2 master-index hints (#2) as TRUSTED internal guidance — distinct from the untrusted
+ * page text. They help the model when the page is silent, but the page wins on any conflict and the
+ * model must flag the disagreement in reviewerNotes. Empty when we have no hints (single-URL runs).
+ */
+function renderHints(hints?: SeedHints): string {
+  if (!hints) return '';
+  const lines: string[] = [];
+  const add = (label: string, value?: string) => {
+    if (value && value.toLowerCase() !== 'unknown') lines.push(`- ${label}: ${value}`);
+  };
+  add('name', hints.name);
+  add('organizer', hints.organizer);
+  add('category', hints.categorySlug);
+  add('grade band', hints.gradeBand);
+  add('cost', hints.cost);
+  add('participation', hints.participation);
+  add('entry pathway', hints.entryPathway);
+  add('region scope', hints.regionScope);
+  if (lines.length === 0) return '';
+  return (
+    '\nKNOWN FACTS from our internal index (TRUSTED, but unverified — use as guidance to disambiguate ' +
+    'when the page is unclear). If the OFFICIAL PAGE TEXT clearly contradicts a fact below, FOLLOW ' +
+    'THE PAGE and note the disagreement in reviewerNotes:\n' +
+    `${lines.join('\n')}\n`
+  );
 }

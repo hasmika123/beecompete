@@ -197,6 +197,7 @@ class CorrectionsIntegrationTest {
 		String compJson = mvc.perform(withToken(post("/api/v1/admin/competitions"))
 						.contentType("application/json").content("""
 								{"slug": "science-bowl", "name": "Science Bowl", "categoryId": "%s",
+								 "organizerName": "Science Bowl Org",
 								 "maxGrade": 12, "participationMode": "TEAM", "delivery": "IN_PERSON",
 								 "entryPathway": "SCHOOL_OR_CHAPTER", "costType": "FREE", "recurrence": "ANNUAL"}
 								""".formatted(scienceId)))
@@ -206,7 +207,8 @@ class CorrectionsIntegrationTest {
 
 		String editionJson = mvc.perform(withToken(post("/api/v1/admin/competitions/" + competitionId + "/editions"))
 						.contentType("application/json").content("""
-								{"cycleLabel": "2026", "status": "UPCOMING", "scopeLevel": "NATIONAL", "entryFee": 25.00}
+								{"cycleLabel": "2026", "status": "UPCOMING", "scopeLevel": "NATIONAL",
+								 "entryFee": 25.00, "currency": "USD"}
 								"""))
 				.andExpect(status().isCreated())
 				.andReturn().getResponse().getContentAsString();

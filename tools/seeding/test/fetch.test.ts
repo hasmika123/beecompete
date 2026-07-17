@@ -75,3 +75,24 @@ test('parseCsvUrls reads a URL column regardless of position', () => {
 test('parseCsvUrls throws when no URL column is present', () => {
   assert.throws(() => parseCsvUrls('name,category\nNova,math'));
 });
+
+test('parseCsvUrls captures hint columns and drops "unknown" placeholders', () => {
+  const csv =
+    'name,organizer,category_slug,official_url,cost,participation\n' +
+    'AMC 10,Mathematical Association of America,math,https://maa.org/amc,paid,individual\n' +
+    'Mystery,unknown,science-engineering,https://x.example.org,unknown,team';
+  const items = parseCsvUrls(csv);
+  assert.deepEqual(items[0]!.hints, {
+    name: 'AMC 10',
+    organizer: 'Mathematical Association of America',
+    categorySlug: 'math',
+    cost: 'paid',
+    participation: 'individual',
+  });
+  // "unknown" cells are treated as absent, not as facts.
+  assert.deepEqual(items[1]!.hints, {
+    name: 'Mystery',
+    categorySlug: 'science-engineering',
+    participation: 'team',
+  });
+});

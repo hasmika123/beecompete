@@ -7,7 +7,6 @@ import {
   buttonClasses,
   cn,
 } from '@beecompete/ui';
-import { FilterPanel } from '@/components/marketplace/filter-panel';
 import { MarketplaceFrame } from '@/components/marketplace/marketplace-frame';
 import { fetchRegions, searchCompetitions, type SearchParams } from '@/lib/catalog-api';
 import { toCardData } from '@/lib/catalog-display';
@@ -77,8 +76,13 @@ async function nearMiss(params: MarketplaceParams, categorySlug: string | undefi
 }
 
 function CardGrid({ items }: { items: CompetitionSummary[] }) {
+  // Fixed --card-w tracks (auto-fill) — card width is 258px by construction (the token is
+  // derived to fill the shell EXACTLY: 4 tracks + 3 gaps = the 1104px content width; see
+  // tokens.css), so it stays IDENTICAL whether the filter panel is open or closed: the panel
+  // is one track wide, so opening it drops exactly one column (4 ↔ 3 per row, blueprints #34).
+  // Single full-width column on phones.
   return (
-    <ul className="grid list-none grid-cols-1 gap-5 @xl:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-4">
+    <ul className="grid list-none grid-cols-1 gap-6 sm:grid-cols-[repeat(auto-fill,var(--card-w))]">
       {items.map((item) => (
         <li key={item.id}>
           <CompetitionCard data={toCardData(item)} linkComponent={Link} className="h-full" />
@@ -172,15 +176,9 @@ export async function MarketplacePage({ rawSearchParams, hub }: MarketplacePageP
         path={path}
         params={params}
         total={total}
-        panel={
-          <FilterPanel
-            path={path}
-            params={params}
-            facets={facets}
-            regions={regions}
-            categoryFilter={hub ? undefined : { active: params.category }}
-          />
-        }
+        facets={facets}
+        regions={regions}
+        categoryFilter={hub ? undefined : { active: params.category }}
         chips={
           chips.length > 0 ? (
             <ul className="flex list-none flex-wrap items-center gap-2" aria-label="Active filters">
@@ -199,6 +197,25 @@ export async function MarketplacePage({ rawSearchParams, hub }: MarketplacePageP
                   </Link>
                 </li>
               ))}
+              {/* Clear all refinements but KEEP the search text + sort (A10). */}
+              <li>
+                <Link
+                  href={marketplaceHref(path, params, {
+                    category: undefined,
+                    minGrade: undefined,
+                    maxGrade: undefined,
+                    region: undefined,
+                    cost: undefined,
+                    delivery: undefined,
+                    participation: undefined,
+                    pathway: undefined,
+                    deadlineWithinDays: undefined,
+                  })}
+                  className="px-1 text-xs font-medium text-muted underline-offset-2 hover:text-foreground hover:underline"
+                >
+                  Clear all
+                </Link>
+              </li>
             </ul>
           ) : undefined
         }
@@ -263,7 +280,7 @@ export async function MarketplacePage({ rawSearchParams, hub }: MarketplacePageP
               }
               action={
                 <Link href="/suggest-a-competition" className={buttonClasses({ variant: 'brand' })}>
-                  Suggest a competition
+                  Request a competition
                 </Link>
               }
             />

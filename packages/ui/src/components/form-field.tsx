@@ -58,7 +58,12 @@ export function FormField({
   const LabelTag = labelAsText ? 'span' : 'label';
 
   return (
-    <div className={cn('grid gap-1.5', className)}>
+    // content-start: in a multi-column parent grid, CSS stretches every field in a row to the
+    // tallest sibling's height; without this the hint-less fields absorb that extra height into
+    // their rows and their control drifts ~11px below a hinted neighbor's. Packing rows to the
+    // top keeps the control at a predictable offset so a row of mixed hinted/unhinted fields
+    // aligns. No effect on single-column stacks (nothing stretches them).
+    <div className={cn('grid content-start gap-1.5', className)}>
       <LabelTag
         {...(labelAsText ? {} : { htmlFor: controlId })}
         className="text-sm font-medium text-foreground"

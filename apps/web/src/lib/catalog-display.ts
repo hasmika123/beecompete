@@ -13,6 +13,12 @@ export function gradeName(grade: number): string {
   return String(grade);
 }
 
+/**
+ * The full grade ladder Pre-K(-1) … 12 (Q2 encoding). Single source shared by the marketplace
+ * grade filter and the admin eligibility dropdowns, so both offer the identical grade choices.
+ */
+export const GRADE_VALUES: readonly number[] = Array.from({ length: 14 }, (_, i) => i - 1);
+
 /** "Grades 8–10" · "Grades K–5" · "Up to grade 8" · "Grade 9+" · undefined when open. */
 export function gradeLabel(min: number | null, max: number | null): string | undefined {
   if (min == null && max == null) return undefined;
@@ -69,15 +75,30 @@ export function toCardData(item: CompetitionSummary): CompetitionCardData {
     href: `/c/${item.slug}`,
     categorySlug: item.category.slug,
     categoryName: item.category.name,
+    coverUrl: item.logo ?? undefined,
     gradeLabel: gradeLabel(item.minGrade, item.maxGrade),
     organizerName: item.organizer?.name,
     organizerVerified: item.organizer?.verificationState === 'verified',
-    trustTier: item.verificationState,
     summary: item.summary ?? undefined,
     free: item.costType === 'free',
     regionLabel: regionLabel(item.regions),
-    prizeLabel: item.prizeSummary ?? undefined,
+    // "Bragging rights" when no prize is on record (sweep item 16) — the footer's bold prize slot
+    // then always renders. A null summary is uncurated, not a guaranteed no-prize; curators fill in
+    // a real prize where one exists.
+    prizeLabel: item.prizeSummary ?? 'Bragging rights',
     deadlineLabel: deadline?.label,
     deadlineUrgent: deadline?.urgent,
   };
+}
+
+/**
+ * Derived listing maintainer (R1-19): a competition is host-maintained when its organizer ORG
+ * is claimed or verified; otherwise BeeCompete curates it. Competitions carry no trust state of
+ * their own — this is the single source of that fact for cards + the detail trust panel.
+ */
+export function isHostMaintained(item: {
+  organizer?: { verificationState: string } | null;
+}): boolean {
+  const s = item.organizer?.verificationState;
+  return s === 'claimed' || s === 'verified';
 }

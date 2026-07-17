@@ -22,14 +22,13 @@ export function AdminTable<T>({
   columns: Column<T>[];
   rows: T[];
   rowKey: (row: T) => string;
-  empty?: string;
+  /** A bare title, or a full empty state with optional description + action. */
+  empty?: string | { title: ReactNode; description?: ReactNode; action?: ReactNode };
 }) {
   if (rows.length === 0) {
-    return (
-      <div className="rounded-[var(--radius-panel)] border border-border">
-        <EmptyState title={empty} />
-      </div>
-    );
+    // EmptyState draws its own dashed border — render it directly (no double border).
+    const e = typeof empty === 'string' ? { title: empty } : empty;
+    return <EmptyState title={e.title} description={e.description} action={e.action} />;
   }
 
   return (

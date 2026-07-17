@@ -99,16 +99,33 @@ export interface HeroCardView {
   description: string | null;
 }
 
+export interface ValuePropCardView {
+  position: string; // primary | secondary
+  imageKey: string | null;
+  linkUrl: string;
+  label: string;
+}
+
+export interface StatView {
+  position: string; // primary | secondary
+  value: string;
+  label: string;
+  source: string | null;
+}
+
 export interface LandingView {
   heroCards: HeroCardView[];
   featured: CompetitionSummary[];
   totalCompetitions: number;
+  valuePropCards: ValuePropCardView[];
+  stats: StatView[];
 }
 
 export interface KeyDateView {
   type: string;
   label: string | null;
-  startsAt: string;
+  /** null = TBD (R1-18): the milestone exists but its date isn't known yet. */
+  startsAt: string | null;
   endsAt: string | null;
   timezone: string | null;
 }

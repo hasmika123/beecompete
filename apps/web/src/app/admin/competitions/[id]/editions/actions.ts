@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { adminFetch } from '@/lib/admin-api';
+import { DEFAULT_TIMEZONE, zonedWallClockToInstant } from '@/lib/dates';
 import type { Edition, FormState } from '@/lib/admin-types';
 
 function str(form: FormData, key: string): string | undefined {
@@ -14,6 +15,10 @@ function str(form: FormData, key: string): string | undefined {
 function num(form: FormData, key: string): number | undefined {
   const v = str(form, key);
   return v === undefined ? undefined : Number(v);
+}
+/** ISO currency codes are uppercase — normalise so "usd" clears the server's [A-Z]{3} rule. */
+function currency(form: FormData, key: string): string | null {
+  return str(form, key)?.toUpperCase() ?? null;
 }
 
 function buildEdition(form: FormData): Record<string, unknown> {
@@ -31,11 +36,11 @@ function buildEdition(form: FormData): Record<string, unknown> {
     status: str(form, 'status'),
     registrationUrl: str(form, 'registrationUrl') ?? null,
     entryFee: num(form, 'entryFee') ?? null,
-    currency: str(form, 'currency') ?? null,
+    currency: currency(form, 'currency'),
     ageCutoffDate: str(form, 'ageCutoffDate') ?? null,
     prizeSummary: str(form, 'prizeSummary') ?? null,
     prizeValue: num(form, 'prizeValue') ?? null,
-    prizeCurrency: str(form, 'prizeCurrency') ?? null,
+    prizeCurrency: currency(form, 'prizeCurrency'),
     scopeLevel: str(form, 'scopeLevel'),
     advancesToEditionId: str(form, 'advancesToEditionId') ?? null,
     attributes: attributes ?? null,
@@ -82,15 +87,19 @@ export async function addKeyDate(
   editionId: string,
   form: FormData,
 ): Promise<void> {
-  const startsAtLocal = String(form.get('startsAt') ?? '');
+  const startsAtLocal = String(form.get('startsAt') ?? '').trim();
+  const endsAtLocal = String(form.get('endsAt') ?? '').trim();
+  // The admin's chosen IANA zone (never the server's) determines the instant for the wall-clock
+  // they typed — the old `new Date(local).toISOString()` used the server zone (UTC in prod).
+  const timezone = String(form.get('timezone') || DEFAULT_TIMEZONE);
   await adminFetch(`/editions/${editionId}/key-dates`, {
     method: 'POST',
     body: {
       type: form.get('type'),
-      label: (form.get('label') as string) || null,
-      // datetime-local yields "YYYY-MM-DDTHH:mm" (no zone) — send as UTC instant.
-      startsAt: startsAtLocal ? new Date(startsAtLocal).toISOString() : null,
-      timezone: (form.get('timezone') as string) || null,
+      label: String(form.get('label') ?? '').trim() || null,
+      startsAt: startsAtLocal ? zonedWallClockToInstant(startsAtLocal, timezone) : null,
+      endsAt: endsAtLocal ? zonedWallClockToInstant(endsAtLocal, timezone) : null,
+      timezone,
     },
   });
   revalidatePath(`/admin/competitions/${competitionId}/editions/${editionId}`);

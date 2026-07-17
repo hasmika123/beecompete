@@ -12,7 +12,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -102,6 +104,45 @@ public class CorrectionApplyService {
 		return current;
 	}
 
+	/**
+	 * Human-readable subject names for a page of proposals, keyed by PROPOSAL id — the queue
+	 * list's "Subject" column. Batched: subject ids grouped per type, at most one query each
+	 * (editions join-fetch their competition), never N+1 from the web. A vanished subject
+	 * (hard-deleted resource) simply has no entry — callers render the raw id as the fallback.
+	 */
+	@Transactional(readOnly = true)
+	public Map<UUID, String> subjectNames(List<CorrectionProposal> proposals) {
+		Map<UUID, String> bySubject = new HashMap<>();
+		Set<UUID> competitionIds = subjectIds(proposals, CorrectionSubjectType.COMPETITION);
+		Set<UUID> editionIds = subjectIds(proposals, CorrectionSubjectType.EDITION);
+		Set<UUID> resourceIds = subjectIds(proposals, CorrectionSubjectType.RESOURCE);
+		if (!competitionIds.isEmpty()) {
+			competitions.findAllById(competitionIds).forEach(c -> bySubject.put(c.getId(), c.getName()));
+		}
+		if (!editionIds.isEmpty()) {
+			editions.findAllWithCompetitionByIdIn(editionIds).forEach(
+					e -> bySubject.put(e.getId(), e.getCompetition().getName() + " · " + e.getCycleLabel()));
+		}
+		if (!resourceIds.isEmpty()) {
+			resources.findAllById(resourceIds).forEach(r -> bySubject.put(r.getId(), r.getTitle()));
+		}
+		Map<UUID, String> byProposal = new HashMap<>();
+		proposals.forEach(p -> {
+			String name = bySubject.get(p.getSubjectId());
+			if (name != null) {
+				byProposal.put(p.getId(), name);
+			}
+		});
+		return byProposal;
+	}
+
+	private static Set<UUID> subjectIds(List<CorrectionProposal> proposals, CorrectionSubjectType type) {
+		return proposals.stream()
+				.filter(p -> p.getSubjectType() == type)
+				.map(CorrectionProposal::getSubjectId)
+				.collect(Collectors.toSet());
+	}
+
 	/** Merge the diff into the current record and write it. Returns a short summary for the review note. */
 	@Transactional
 	public String apply(CorrectionProposal proposal, Map<String, Object> payload) {
@@ -126,11 +167,12 @@ public class CorrectionApplyService {
 			case COMPETITION -> {
 				Competition c = competitions.findById(subjectId).orElseThrow(this::subjectGone);
 				yield new CompetitionRequest(c.getSlug(), c.getName(),
-						c.getOrganizer() != null ? c.getOrganizer().getId() : null, c.getOfficialUrl(),
-						c.getLogo(), c.getDescription(), c.getSummary(), c.getCategory().getId(), c.getTags(),
-						c.getParticipationMode(), c.getTeamSizeMin(), c.getTeamSizeMax(), c.getDelivery(),
-						c.getEntryPathway(), c.getEvaluationType(), c.getMinGrade(), c.getMaxGrade(),
-						c.getMinAge(), c.getMaxAge(), c.getCostType(), c.getRecurrence(), c.getAttributes());
+						c.getOrganizer() != null ? c.getOrganizer().getId() : null, null, null,
+						c.getOfficialUrl(), c.getLogo(), c.getDescription(), c.getSummary(),
+						c.getCategory().getId(), c.getTags(), c.getParticipationMode(), c.getTeamSizeMin(),
+						c.getTeamSizeMax(), c.getDelivery(), c.getEntryPathway(), c.getEvaluationType(),
+						c.getMinGrade(), c.getMaxGrade(), c.getMinAge(), c.getMaxAge(), c.getCostType(),
+						c.getRecurrence(), c.getAttributes());
 			}
 			case EDITION -> {
 				Edition e = editions.findById(subjectId).orElseThrow(this::subjectGone);

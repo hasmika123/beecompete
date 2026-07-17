@@ -1,13 +1,22 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Button, Trash, useToast } from '@beecompete/ui';
-import { NativeSelect, enumOptions } from '@/components/admin/native-select';
-import { VERIFICATION_STATES } from '@/lib/admin-types';
+import { Button, Restore, Trash, useConfirm, useToast } from '@beecompete/ui';
+import { Select } from '@beecompete/ui';
 import {
   archiveOrganization,
+  restoreOrganization,
   setOrganizationVerification,
 } from '@/app/admin/organizations/actions';
+
+// The org trust ladder (R1-19): CURATED (unclaimed — verification N/A) → CLAIMED (host claimed,
+// unverified) → VERIFIED. Claiming/verifying the org is what makes its competitions
+// host-maintained (derived, no per-competition control). UNVERIFIED is retired.
+const ORG_TRUST_OPTIONS = [
+  { value: 'CURATED', label: 'Curated (unclaimed)' },
+  { value: 'CLAIMED', label: 'Claimed (unverified)' },
+  { value: 'VERIFIED', label: 'Verified' },
+];
 
 export function OrgHeaderActions({
   id,
@@ -20,6 +29,7 @@ export function OrgHeaderActions({
 }) {
   const [pending, startTransition] = useTransition();
   const [state, setState] = useState(verificationState);
+  const { confirm, dialog } = useConfirm();
   const { toast } = useToast();
 
   const run = (fn: () => Promise<void>, ok: string) =>
@@ -34,24 +44,47 @@ export function OrgHeaderActions({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <NativeSelect
-        aria-label="Verification state"
-        options={enumOptions(VERIFICATION_STATES)}
-        value={state}
-        disabled={pending}
-        className="w-40"
-        onChange={(e) => {
-          const next = e.target.value;
-          setState(next);
-          run(() => setOrganizationVerification(id, next), 'Verification updated');
-        }}
-      />
-      {!archived && (
+      {dialog}
+      <label className="flex items-center gap-2 text-sm text-muted">
+        Trust:
+        <Select
+          aria-label="Trust state"
+          options={ORG_TRUST_OPTIONS}
+          value={state}
+          disabled={pending}
+          className="w-52"
+          onValueChange={(next) => {
+            setState(next);
+            run(() => setOrganizationVerification(id, next), 'Trust state updated');
+          }}
+        />
+      </label>
+      {archived ? (
         <Button
           variant="secondary"
           size="sm"
           disabled={pending}
-          onClick={() => run(() => archiveOrganization(id), 'Archived')}
+          onClick={() => run(() => restoreOrganization(id), 'Restored')}
+        >
+          <Restore aria-hidden="true" className="size-4" /> Restore
+        </Button>
+      ) : (
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={pending}
+          onClick={async () => {
+            if (
+              await confirm({
+                title: 'Archive this organization?',
+                message: 'You can restore it later.',
+                confirmLabel: 'Archive',
+                tone: 'danger',
+              })
+            ) {
+              run(() => archiveOrganization(id), 'Archived');
+            }
+          }}
         >
           <Trash aria-hidden="true" className="size-4" /> Archive
         </Button>

@@ -185,7 +185,7 @@ export default async function HowItWorksPage() {
           </p>
         </div>
         <Link href="/suggest-a-competition" className={buttonClasses({ variant: 'secondary' })}>
-          <Tag aria-hidden="true" className="size-4" /> Suggest a competition
+          <Tag aria-hidden="true" className="size-4" /> Request a competition
         </Link>
       </section>
 

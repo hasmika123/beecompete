@@ -27,6 +27,13 @@ describe('CompetitionCard', () => {
     expect(screen.getByText('Paid')).toBeTruthy();
     expect(screen.getByText('Medals + AIME invite')).toBeTruthy();
     expect(screen.getByText('9 days to go')).toBeTruthy();
+    // Share corner is present + labeled; the card link is still the primary action (A8).
+    expect(screen.getByRole('button', { name: 'Share AMC 10' })).toBeTruthy();
+  });
+
+  it('omits the share corner when shareable is false', () => {
+    render(<CompetitionCard data={DATA} shareable={false} />);
+    expect(screen.queryByRole('button', { name: 'Share AMC 10' })).toBeNull();
   });
 
   it('keeps the footer slot and cost positivity for free competitions without a prize', () => {
@@ -38,5 +45,29 @@ describe('CompetitionCard', () => {
     const free = screen.getByText('Free');
     expect(free.className).toContain('text-success');
     expect(screen.getByText('—')).toBeTruthy();
+  });
+
+  it('reserves the organizer + description slots on a sparse card (fixed-slot anatomy)', () => {
+    // Owner 2026-07-13 (blueprints #35): every card renders the same rows at the same heights.
+    // An unattributed, summary-less card keeps BLANK reserved space — the slots exist, empty.
+    render(
+      <CompetitionCard
+        data={{
+          ...DATA,
+          organizerName: undefined,
+          organizerVerified: undefined,
+          summary: undefined,
+          gradeLabel: undefined,
+        }}
+      />,
+    );
+    const orgSlot = screen.getByTestId('organizer-slot');
+    expect(orgSlot).toBeTruthy();
+    expect(orgSlot.textContent).toBe(''); // blank, never placeholder text
+    expect(orgSlot.className).toContain('h-6'); // fixed height even when empty
+    const summarySlot = screen.getByTestId('summary-slot');
+    expect(summarySlot.textContent).toBe('');
+    expect(summarySlot.className).toContain('min-h-[2lh]'); // two lines reserved
+    expect(screen.queryByRole('img', { name: 'Verified organizer' })).toBeNull();
   });
 });

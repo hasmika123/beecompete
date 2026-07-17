@@ -24,7 +24,7 @@ export default function Image() {
         fontFamily: 'Inter',
       }}
     >
-      <BrandRow badge={56} font={34} />
+      <BrandRow height={56} />
 
       <div style={{ display: 'flex', flexDirection: 'column', fontFamily: 'Fraunces' }}>
         <div style={{ fontSize: '82px', fontWeight: 700, color: INK, lineHeight: 1.05 }}>

@@ -179,8 +179,14 @@ public class CatalogPublicController {
 				.filter(c -> c.getArchivedAt() == null)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "competition not found"));
 		Instant now = Instant.now();
-		List<EditionView> editionViews = editions
-				.findByCompetitionIdAndArchivedAtIsNullOrderByCreatedAt(competition.getId()).stream()
+		List<Edition> liveEditions =
+				editions.findByCompetitionIdAndArchivedAtIsNullOrderByCreatedAt(competition.getId());
+		// Readiness gate (§8a): a listing with no live edition is not yet public — 404, same as
+		// archived. Keeps the detail page consistent with the browse/search/sitemap predicate.
+		if (liveEditions.isEmpty()) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "competition not found");
+		}
+		List<EditionView> editionViews = liveEditions.stream()
 				.map(edition -> EditionView.from(edition,
 						keyDates.findByEditionIdOrderByStartsAt(edition.getId()),
 						editionRegions.findByEditionId(edition.getId()).stream()

@@ -126,7 +126,7 @@ though we build them later. Those feed directly into the Domain & Data Model doc
 | DQ12 | **Pre-publication moderation gate** — self-submitted listings reviewed (or auto-approved for verified-domain hosts) before going public | 3 | M | "Public posting" = submit for review, never instant anonymous publish |
 | DQ13 | **Verified-organizer badges + host trust tiers** (curated / claimed / verified / unverified) | 1 | M | User-facing; extends DQ1 provenance. Public **maintainer attribution** (locked 2026-07-07): "Listing **maintained by** BeeCompete Curation Team" while curated (team-level, never individual staff names) → flips to the host org after claim. Wording rule: **"maintained by," never "managed by"** — no implied operation of/affiliation with the competition (compliance §8) |
 | DQ14 | Scam/abuse heuristics (off-platform-payment flags, minor-safety review, progressive host reputation) | 3 | M | Extra scrutiny because users are minors |
-| DQ15 | **"Suggest a competition"** — user-submitted new-listing requests → curation queue | 1 | S | Complements DQ6 (which covers corrections to *existing* listings only); demand signal feeds seeding priorities (S2) |
+| DQ15 | **"Request a Competition"** — user-submitted new-listing requests → curation queue (canonical label, owner 2026-07-13; supersedes "Suggest a competition"). Route slug stays `/suggest-a-competition` until the R1-15b wizard build. | 1 | S | Complements DQ6 (which covers corrections to *existing* listings only); demand signal feeds seeding priorities (S2) |
 
 ## M · Facet 1 — Marketplace / Discovery *(acquisition engine, not primary revenue)*
 
@@ -163,7 +163,7 @@ though we build them later. Those feed directly into the Domain & Data Model doc
 | M29 | Follow a competition **by email, no account** ("notify me about this competition") | 1 | S | R1 bridge: converts SEO traffic into per-competition audiences before accounts exist; follows convert to accounts at R2 |
 | M30 | **Edition-cycle re-engagement** — alert followers/trackers when a followed Competition announces a new Edition/dates | 1 | M | The annual "it's back" resurrection loop — key retention mechanic for annual competitions. Extends M14/X11; keyed off Edition creation |
 | M31 | Social proof on listings ("N students tracking", shown above a minimum threshold) | 1 | S | Trust/urgency for users + demand teaser that motivates hosts to claim; uses tracker counts |
-| M32 | Organization directory + public org profile pages | 3 | M | Deferred from R1 nav (owner, 2026-07-07); ships with host claiming/profiles. Persistent **nav search** also revisited in Phase 3 (extends M2) |
+| M32 | Organization directory + public org profile pages | 3 | M | Deferred from R1 nav (owner, 2026-07-07); ships with host claiming/profiles. Persistent **nav search** also revisited in Phase 3 (extends M2). Also includes a **"By organization" browse section on the Categories index page** (owner 2026-07-13 — deferred from R1): org chips w/ listing counts + verified seals → org-filtered marketplace; needs a public org list endpoint + an `org` facet on the search API (no schema) |
 | M33 | **Past winners / results history on curated listings** | 2 | M | SEO + credibility asset for *external* competitions (H16/H35 only cover platform-hosted results); curation-fed, top competitions first (Rev 7) |
 | M34 | Article reactions (like/love) + share | 2 | S | On M19 articles. **Reactions: logged-in users only, disabled for minors** (age from DOB/grade signal, R2-5 age gate). **Share = plain link action, no login** (matches M21; collects nothing). Reaction counts public; reactors never listed (Rev 9) |
 | M35 | Article comments | 2 | M | 🔒 On M19 articles. **Adult-visible-only, read AND write** (owner 2026-07-08, amends Rev 9): the comment section is **hidden from minors and logged-out visitors** — only logged-in non-minor users see or write comments. Removes the child-directed standard from comment content (a moderation miss can't reach a kid) and makes **post-moderation** (publish + act on reports) defensible. Still moderated via DQ8 + DQ7 reporting (adult spaces still get spam/harassment; infra ships anyway). No child UGC. Builds only after R2 accounts + DQ8 exist |
@@ -216,7 +216,7 @@ judging deep-dive** (`development-process.md` §6a) — the model is shaped by w
 | ID | Feature | Phase | Cx | Notes |
 |---|---|---|---|---|
 | H1 | Claim existing (seeded) listing | 3 | M | **Always free** (Rev 8) — presence on curated listings is the audience hook; gate = Host Verification (DQ11) |
-| H2 | Self-serve create / manage listing | 3 | L | Reuses X9 schema. **Public publishing requires the `public_listing` entitlement** (every paid tier includes it; Rev 8, `monetization.md` §4). Private/unlisted creation is free within the free-tier caps |
+| H2 | Self-serve create / manage listing | 3 | L | Reuses X9 schema. **Public publishing requires the `public_listing` entitlement** (every paid tier includes it; Rev 8, `monetization.md` §4). Link-only/invite-only creation is free within the free-tier caps |
 | H3 | Edition management (yearly instances) | 3 | M | |
 | H4 | Registration management (open/close/capacity + **waitlist** with auto-promote on withdrawal) | 3 | M | Waitlist added Rev 7. 🔒 **Consent-upgrade:** registering a child with a host discloses child data to a third party → requires stronger parental consent than R2 email-plus (see `rfc-p1-auth-consent.md` §5) |
 | H5 | Custom registration forms | 3 | L | |
@@ -238,7 +238,7 @@ judging deep-dive** (`development-process.md` §6a) — the model is shaped by w
 | H21 | Data export (CSV) | 3 | S | |
 | H22 | Sponsor management | Backlog | M | Park |
 | H23 | Tracks / divisions management | 3 | M | 🪝 Schema modeled in P1 (see hooks) |
-| H24 | Stages / rounds management | 3 | M | 🪝 Schema modeled in P1 |
+| H24 | Stages / rounds management | 3 | M | 🪝 Schema modeled in P1. **R1 limitation (logged 2026-07-14):** an R1 `Edition` carries a single date/fee set and `delivery` is competition-level, so a tiered competition (local→regional→national) can't vary deadlines/costs/delivery per level — those levels are **Stages** under one annual **Edition** (target model, domain-model §8b + glossary), delivered by this hook at Phase 3 (with H23 divisions + H25 advancement). R1 interim: one running = one Edition record + per-level milestones as `KeyDate`s; tier structure in description/FAQ. **Do not** hand-model tiers as separate Editions at R1 |
 | H25 | Qualification / advancement rules | 3 | L | 🪝 Schema modeled in P1; regional→state→national chains. Moved 4→3 (Rev 5): core to the fair wedge |
 | H26 | Blind judging | 4 | M | Anonymized submissions |
 | H27 | Conflict-of-interest / recusal management | 4 | M | Judge COI |
@@ -262,7 +262,7 @@ judging deep-dive** (`development-process.md` §6a) — the model is shaped by w
 | H45 | AI / automation (auto-score, rules & triggers, AI summaries, fraud detection) | Backlog | L | Submittable; later differentiator |
 | H46 | **"Are you the organizer?" claim-interest CTA + host waitlist** on listing pages | 1 | S | Supply-side pipeline from day one; builds the warm R4 launch list (`go-to-market.md` §3–4). Actual claiming stays H1 (Phase 3) |
 | H47 | **Award structures** — per-Edition award list (place, monetary/non-monetary/travel-grant, value + currency, display order) managed by hosts; assignment to winners lands with judging (Gate B) | 3 | M | 🪝 `Award` entity reserved in P1 (domain-model, Rev 7); typed prize summary on Edition ships R1 for display |
-| H48 | **Listing visibility control** — public / unlisted-by-link / private-invite-only for self-managed competitions (school-internal contests etc.) | 3 | M | Rev 7; monetization flipped Rev 8: **public requires the `public_listing` entitlement** (included in all paid tiers; free tier = private/unlisted with participant cap 🔬). Public also always requires verification (DQ11–DQ14). Claimed curated listings are unaffected (free, already public) |
+| H48 | **Listing visibility control** — public / link-only / invite-only for self-managed competitions (school-internal contests etc.) | 3 | M | Rev 7; **values renamed 2026-07-14** (was "unlisted-by-link / private-invite-only") so *unlisted* means only the lifecycle take-down toggle — glossary + domain-model §8a. monetization flipped Rev 8: **public requires the `public_listing` entitlement** (included in all paid tiers; free tier = link-only/invite-only with participant cap 🔬). Public also always requires verification (DQ11–DQ14). Claimed curated listings are unaffected (free, already public) |
 
 ## HC · Host — Compliance, Consent & Advancement *(the K-12 science-fair moat)*
 

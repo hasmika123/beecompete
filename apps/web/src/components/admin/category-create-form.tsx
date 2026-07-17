@@ -2,14 +2,15 @@
 
 import { useActionState, useEffect, useRef } from 'react';
 import { Alert, Button, FormField, Input, Plus, useToast } from '@beecompete/ui';
+import { Select } from '@beecompete/ui';
 import { createCategory } from '@/app/admin/categories/actions';
-import type { FormState } from '@/lib/admin-types';
+import type { Category, FormState } from '@/lib/admin-types';
 
 const INITIAL: FormState = { ok: false };
 
 // createCategory redirects to the new category's edit page on success, so this form only shows
 // the error path; the redirect handles the happy path.
-export function CategoryCreateForm() {
+export function CategoryCreateForm({ allCategories }: { allCategories: Category[] }) {
   const [state, formAction, pending] = useActionState(createCategory, INITIAL);
   const ref = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
@@ -36,7 +37,23 @@ export function CategoryCreateForm() {
       </div>
       <div className="min-w-40 flex-1">
         <FormField label="Slug" required>
-          <Input name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" />
+          <Input name="slug" required maxLength={140} pattern="[a-z0-9]+(-[a-z0-9]+)*" />
+        </FormField>
+      </div>
+      <div className="min-w-40 flex-1">
+        {/* No below-control hint in a single-row form — it makes this field taller than its
+            siblings and floats the control up under items-end; the placeholder conveys
+            "optional / top level" instead. */}
+        <FormField label="Parent">
+          <Select
+            name="parentId"
+            options={[
+              { value: '', label: '— none (top level) —' },
+              ...allCategories.map((c) => ({ value: c.id, label: c.name })),
+            ]}
+            placeholder="— none (top level) —"
+            searchable
+          />
         </FormField>
       </div>
       <Button type="submit" size="sm" disabled={pending}>

@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { buttonClasses } from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
+import { AdminPagination } from '@/components/admin/admin-pagination';
 import { AdminTable } from '@/components/admin/admin-table';
 import { ReviewStatusBadge } from '@/components/admin/status-badges';
 import { adminFetch } from '@/lib/admin-api';
+import { formatDate } from '@/lib/dates';
 import type { ImportRecord, Page } from '@/lib/admin-types';
 
 const STATUSES = ['PENDING', 'APPROVED', 'REJECTED'] as const;
@@ -11,13 +13,16 @@ const STATUSES = ['PENDING', 'APPROVED', 'REJECTED'] as const;
 export default async function ImportRecordsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; page?: string }>;
 }) {
-  const { status: rawStatus } = await searchParams;
-  const status = STATUSES.includes(rawStatus as (typeof STATUSES)[number])
-    ? (rawStatus as string)
+  const params = await searchParams;
+  const status = STATUSES.includes(params.status as (typeof STATUSES)[number])
+    ? (params.status as string)
     : 'PENDING';
-  const result = await adminFetch<Page<ImportRecord>>(`/import-records?status=${status}&size=50`);
+  const page = Math.max(0, Number(params.page ?? '0') || 0);
+  const result = await adminFetch<Page<ImportRecord>>(
+    `/import-records?status=${status}&page=${page}&size=50`,
+  );
 
   const title = (payload: Record<string, unknown>) =>
     (typeof payload.name === 'string' && payload.name) ||
@@ -53,17 +58,12 @@ export default async function ImportRecordsPage({
         columns={[
           {
             header: 'Record',
-            cell: (r) =>
-              status === 'PENDING' ? (
-                <Link
-                  href={`/admin/import-records/${r.id}`}
-                  className="font-medium hover:underline"
-                >
-                  {title(r.payload)}
-                </Link>
-              ) : (
-                <span className="font-medium">{title(r.payload)}</span>
-              ),
+            // Every status links — reviewed records open the read-only outcome view.
+            cell: (r) => (
+              <Link href={`/admin/import-records/${r.id}`} className="font-medium hover:underline">
+                {title(r.payload)}
+              </Link>
+            ),
           },
           {
             header: 'Confidence',
@@ -73,13 +73,15 @@ export default async function ImportRecordsPage({
           {
             header: 'Submitted',
             align: 'right',
-            cell: (r) => (
-              <span className="text-xs text-muted">
-                {new Date(r.createdAt).toLocaleDateString()}
-              </span>
-            ),
+            cell: (r) => <span className="text-xs text-muted">{formatDate(r.createdAt)}</span>,
           },
         ]}
+      />
+
+      <AdminPagination
+        page={result.number}
+        totalPages={result.totalPages}
+        hrefFor={(p) => `/admin/import-records?status=${status}&page=${p}`}
       />
     </>
   );

@@ -1,26 +1,23 @@
-import Link from 'next/link';
-import { ArrowLeft } from '@beecompete/ui';
-import { PageHeader } from '@/components/admin/page-header';
 import { CompetitionForm } from '@/components/admin/competition-form';
 import { adminFetch } from '@/lib/admin-api';
-import type { Category, Organization, Page } from '@/lib/admin-types';
+import type { Category, CategoryTemplate, Organization, Page, Region } from '@/lib/admin-types';
 
 export default async function NewCompetitionPage() {
-  const [categories, organizations] = await Promise.all([
+  const [categories, templates, organizations, regions] = await Promise.all([
     adminFetch<Category[]>('/categories'),
+    adminFetch<CategoryTemplate[]>('/categories/templates'),
     adminFetch<Page<Organization>>('/organizations?size=100'),
+    adminFetch<Region[]>('/regions'),
   ]);
 
+  // The back link + page title live in the create form's own header (so the completion ring can
+  // align to the back-link line); this page just supplies the data.
   return (
-    <>
-      <Link
-        href="/admin/competitions"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
-      >
-        <ArrowLeft aria-hidden="true" className="size-4" /> Competitions
-      </Link>
-      <PageHeader title="New competition" />
-      <CompetitionForm categories={categories} organizations={organizations.content} />
-    </>
+    <CompetitionForm
+      categories={categories}
+      organizations={organizations.content}
+      templates={templates}
+      regions={regions}
+    />
   );
 }

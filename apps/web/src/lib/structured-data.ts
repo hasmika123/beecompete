@@ -22,9 +22,10 @@ type JsonLd = Record<string, unknown>;
 const EVENT_DATE_TYPES = new Set(['round_start', 'submission_due', 'results', 'custom']);
 
 function eventDates(edition: EditionView): KeyDateView[] {
+  // TBD dates (null startsAt, R1-18) can't anchor an Event's startDate — excluded.
   return edition.keyDates
-    .filter((d) => EVENT_DATE_TYPES.has(d.type))
-    .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
+    .filter((d) => EVENT_DATE_TYPES.has(d.type) && d.startsAt != null)
+    .sort((a, b) => new Date(a.startsAt!).getTime() - new Date(b.startsAt!).getTime());
 }
 
 /**
@@ -42,8 +43,9 @@ export function eventJsonLd(competition: CompetitionDetail): JsonLd | undefined 
   const first = dates[0];
   if (!first) return undefined; // no event-phase dates → not a valid Event
   const last = dates[dates.length - 1] ?? first;
-  const start = isoDateInZone(first.startsAt, first.timezone);
-  const end = isoDateInZone(last.endsAt ?? last.startsAt, last.timezone);
+  // Non-null asserted: eventDates() filtered out null startsAt above.
+  const start = isoDateInZone(first.startsAt!, first.timezone);
+  const end = isoDateInZone(last.endsAt ?? last.startsAt!, last.timezone);
 
   // Paid Offer only with a real fee — price 0 on a paid competition reads as "free" (L1).
   const fee = edition.entryFee != null ? Number(edition.entryFee) : null;

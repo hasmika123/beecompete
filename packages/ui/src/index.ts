@@ -55,6 +55,15 @@ export type { EmptyStateProps } from './components/empty-state';
 export { FormField } from './components/form-field';
 export type { FormFieldProps } from './components/form-field';
 
+export { ProgressRing } from './components/progress-ring';
+export type { ProgressRingProps } from './components/progress-ring';
+
+export { Stepper } from './components/stepper';
+export type { StepperProps, StepperStep } from './components/stepper';
+
+export { ImageUpload } from './components/image-upload';
+export type { ImageUploadProps } from './components/image-upload';
+
 export { Tabs, TabList, Tab, TabPanel } from './components/tabs';
 export type { TabsProps, TabProps, TabPanelProps, TabsVariant } from './components/tabs';
 
@@ -63,11 +72,13 @@ export type { TooltipProps } from './components/tooltip';
 
 export { Modal } from './components/modal';
 export type { ModalProps } from './components/modal';
+export { useConfirm } from './components/confirm-dialog';
+export type { ConfirmOptions } from './components/confirm-dialog';
 
 export { ToastProvider, useToast } from './components/toast';
 export type { ToastOptions, ToastTone } from './components/toast';
 
-export { Logo } from './components/logo';
+export { Logo, LogoMark } from './components/logo';
 export { ThemeToggle } from './components/theme-toggle';
 
 export { categoryArt, categoryHue, CategoryCover, CategoryTag } from './components/category-art';

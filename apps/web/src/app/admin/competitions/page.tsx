@@ -1,9 +1,11 @@
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, buttonClasses, Input, Plus, Search } from '@beecompete/ui';
+import { buttonClasses, Input, Plus, Search } from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
+import { AdminPagination } from '@/components/admin/admin-pagination';
 import { AdminTable } from '@/components/admin/admin-table';
-import { ArchivedBadge, VerificationBadge } from '@/components/admin/status-badges';
+import { ArchivedBadge } from '@/components/admin/status-badges';
 import { adminFetch } from '@/lib/admin-api';
+import { formatDate } from '@/lib/dates';
 import type { Competition, Page } from '@/lib/admin-types';
 
 export default async function CompetitionsPage({
@@ -33,7 +35,7 @@ export default async function CompetitionsPage({
         }
       />
 
-      <form className="mb-4 flex max-w-sm items-center gap-2" role="search">
+      <form className="mb-4 flex max-w-md items-center gap-2" role="search">
         <div className="relative flex-1">
           <Search
             aria-hidden="true"
@@ -47,6 +49,17 @@ export default async function CompetitionsPage({
             className="pl-9"
           />
         </div>
+        <button type="submit" className={buttonClasses({ size: 'sm' })}>
+          Search
+        </button>
+        {query && (
+          <Link
+            href="/admin/competitions"
+            className={buttonClasses({ variant: 'ghost', size: 'sm' })}
+          >
+            Clear
+          </Link>
+        )}
       </form>
 
       <AdminTable
@@ -63,48 +76,16 @@ export default async function CompetitionsPage({
             ),
           },
           { header: 'Slug', cell: (c) => <span className="text-muted">{c.slug}</span> },
-          {
-            header: 'Verification',
-            cell: (c) => <VerificationBadge state={c.verificationState} />,
-          },
           { header: 'State', cell: (c) => <ArchivedBadge archivedAt={c.archivedAt} /> },
           {
             header: 'Updated',
             align: 'right',
-            cell: (c) => (
-              <span className="text-xs text-muted">
-                {new Date(c.updatedAt).toLocaleDateString()}
-              </span>
-            ),
+            cell: (c) => <span className="text-xs text-muted">{formatDate(c.updatedAt)}</span>,
           },
         ]}
       />
 
-      {result.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <span className="text-muted">
-            Page {result.number + 1} of {result.totalPages}
-          </span>
-          <div className="flex gap-2">
-            {result.number > 0 && (
-              <Link
-                href={buildHref(result.number - 1)}
-                className={buttonClasses({ variant: 'secondary', size: 'sm' })}
-              >
-                <ArrowLeft aria-hidden="true" className="size-4" /> Prev
-              </Link>
-            )}
-            {result.number < result.totalPages - 1 && (
-              <Link
-                href={buildHref(result.number + 1)}
-                className={buttonClasses({ variant: 'secondary', size: 'sm' })}
-              >
-                Next <ArrowRight aria-hidden="true" className="size-4" />
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
+      <AdminPagination page={result.number} totalPages={result.totalPages} hrefFor={buildHref} />
     </>
   );
 }

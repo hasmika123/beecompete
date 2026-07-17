@@ -45,6 +45,7 @@ public final class EffectiveStatus {
 		return keyDates.stream()
 				.filter(k -> k.getType() == type)
 				.map(KeyDate::getStartsAt)
+				.filter(java.util.Objects::nonNull) // TBD key dates (null starts_at, R1-18) don't gate status
 				.min(Comparator.naturalOrder());
 	}
 }

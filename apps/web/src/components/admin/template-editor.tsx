@@ -25,6 +25,7 @@ export function TemplateEditor({
   }, [state.ok, toast]);
 
   const schemaText = template ? JSON.stringify(template.jsonSchema, null, 2) : '';
+  const hintsText = template?.uiHints ? JSON.stringify(template.uiHints, null, 2) : '';
 
   return (
     <form action={formAction} className="grid gap-4">
@@ -40,6 +41,18 @@ export function TemplateEditor({
           required
           className="font-mono text-xs"
           placeholder='{ "type": "object", "additionalProperties": true, "properties": {} }'
+        />
+      </FormField>
+      <FormField
+        label="UI hints (JSON, optional)"
+        hint='Drives the competition form’s attributes fields. Shape: { "order": [keys…], "labels": { key: text }, "placeholders": { key: text }, "widgets": { key: "textarea" } }.'
+      >
+        <Textarea
+          name="uiHints"
+          defaultValue={hintsText}
+          rows={5}
+          className="font-mono text-xs"
+          placeholder='{ "order": ["topics"], "labels": { "topics": "Covered topics" }, "placeholders": { "topics": "algebra, geometry" }, "widgets": { "syllabus": "textarea" } }'
         />
       </FormField>
       <div>

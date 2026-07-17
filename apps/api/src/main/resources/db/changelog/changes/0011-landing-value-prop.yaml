@@ -1,0 +1,74 @@
+# Landing "Competing changes what's possible" section made admin-managed (M36): the two
+# image/link promo cards + the two admissions stats. Mirrors hero_card — one active row per
+# LandingSlot (PRIMARY, SECONDARY), position-unique, upserted from the admin panel. Additive.
+#
+# The seed reproduces the previously-hardcoded content so the public landing looks identical
+# after migration; image_key stays NULL so the code-defined gradient+icon fallback keeps
+# rendering until an admin uploads an image. Idempotent via ON CONFLICT on the position uq.
+databaseChangeLog:
+  - changeSet:
+      id: 0011-value-prop-card
+      author: beecompete
+      comment: Two admin-managed value-prop promo cards (image optional, link + label). updated_by → User (R2-1), no FK yet.
+      changes:
+        - createTable:
+            tableName: value_prop_card
+            columns:
+              - column: { name: id, type: UUID, defaultValueComputed: gen_random_uuid(), constraints: { primaryKey: true, primaryKeyName: pk_value_prop_card } }
+              - column: { name: position, type: "VARCHAR(20)", constraints: { nullable: false } }
+              # image_key nullable — NULL keeps the code-defined gradient+icon fallback (blueprint look).
+              - column: { name: image_key, type: "VARCHAR(500)" }
+              - column: { name: link_url, type: "VARCHAR(1000)", constraints: { nullable: false } }
+              - column: { name: label, type: "VARCHAR(200)", constraints: { nullable: false } }
+              - column: { name: updated_by, type: UUID }
+              - column: { name: updated_at, type: "TIMESTAMP WITH TIME ZONE", defaultValueComputed: now(), constraints: { nullable: false } }
+              - column: { name: version, type: INTEGER, defaultValueNumeric: 0, constraints: { nullable: false } }
+        - addUniqueConstraint: { tableName: value_prop_card, columnNames: position, constraintName: uq_value_prop_card_position }
+
+  - changeSet:
+      id: 0011-landing-stat
+      author: beecompete
+      comment: Two admin-managed landing admissions stats (value + label + optional source). updated_by → User (R2-1), no FK yet.
+      changes:
+        - createTable:
+            tableName: landing_stat
+            columns:
+              - column: { name: id, type: UUID, defaultValueComputed: gen_random_uuid(), constraints: { primaryKey: true, primaryKeyName: pk_landing_stat } }
+              - column: { name: position, type: "VARCHAR(20)", constraints: { nullable: false } }
+              - column: { name: value, type: "VARCHAR(60)", constraints: { nullable: false } }
+              - column: { name: label, type: "VARCHAR(300)", constraints: { nullable: false } }
+              - column: { name: source, type: "VARCHAR(300)" }
+              - column: { name: updated_by, type: UUID }
+              - column: { name: updated_at, type: "TIMESTAMP WITH TIME ZONE", defaultValueComputed: now(), constraints: { nullable: false } }
+              - column: { name: version, type: INTEGER, defaultValueNumeric: 0, constraints: { nullable: false } }
+        - addUniqueConstraint: { tableName: landing_stat, columnNames: position, constraintName: uq_landing_stat_position }
+
+  - changeSet:
+      id: 0011-seed-value-prop-cards
+      author: beecompete
+      comment: Seed the two promo cards with the previously-hardcoded links + labels (no image → gradient fallback).
+      changes:
+        - sql:
+            sql: >-
+              INSERT INTO value_prop_card (id, position, link_url, label)
+              VALUES
+                (gen_random_uuid(), 'PRIMARY', '/competitions', 'Explore the catalog'),
+                (gen_random_uuid(), 'SECONDARY', '/how-it-works', 'See how BeeCompete works')
+              ON CONFLICT ON CONSTRAINT uq_value_prop_card_position DO NOTHING
+
+  - changeSet:
+      id: 0011-seed-landing-stats
+      author: beecompete
+      comment: Seed the two admissions stats with the previously-hardcoded placeholder copy (TODO owner numbers).
+      changes:
+        - sql:
+            sql: >-
+              INSERT INTO landing_stat (id, position, value, label, source)
+              VALUES
+                (gen_random_uuid(), 'PRIMARY', '—%',
+                 'of admissions officers weigh sustained commitment to an activity in their review',
+                 'TODO(owner), before launch'),
+                (gen_random_uuid(), 'SECONDARY', '—%',
+                 'of students who compete report stronger study habits, per national survey data',
+                 'TODO(owner), before launch')
+              ON CONFLICT ON CONSTRAINT uq_landing_stat_position DO NOTHING

@@ -63,4 +63,17 @@ class EffectiveStatusTest {
 		assertEquals(EditionStatus.OPEN, EffectiveStatus.compute(EditionStatus.OPEN, List.of(), NOW));
 		assertEquals(EditionStatus.UPCOMING, EffectiveStatus.compute(EditionStatus.UPCOMING, List.of(), NOW));
 	}
+
+	@Test
+	void tbdDeadlineIsIgnoredAndDoesNotThrow() {
+		// R1-18: a TBD key date has a null starts_at. compute() must FILTER it (the pre-R1-18 code
+		// NPE'd on the min()), so an OPEN edition with only a date-less REG_CLOSE stays OPEN.
+		List<KeyDate> tbdClose = List.of(date(KeyDateType.REG_CLOSE, null));
+		assertEquals(EditionStatus.OPEN, EffectiveStatus.compute(EditionStatus.OPEN, tbdClose, NOW));
+
+		// A real passed deadline still closes even when a TBD milestone is also present.
+		List<KeyDate> mixed = List.of(date(KeyDateType.REG_CLOSE, null),
+				date(KeyDateType.SUBMISSION_DUE, NOW.minus(1, ChronoUnit.HOURS)));
+		assertEquals(EditionStatus.CLOSED, EffectiveStatus.compute(EditionStatus.OPEN, mixed, NOW));
+	}
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { ToastProvider } from '@beecompete/ui';
+import { ThemeToggle, ToastProvider } from '@beecompete/ui';
 import { AdminSidebar } from '@/components/admin/admin-sidebar';
 
 // Admin is never indexed and gated by Cloudflare Access in production (email allow-list).
@@ -20,6 +20,12 @@ export default function AdminLayout({ children }: Readonly<{ children: React.Rea
         <main className="min-w-0 flex-1 px-4 py-8 sm:px-8">
           <div className="mx-auto w-full max-w-5xl">{children}</div>
         </main>
+        {/* Theme toggle floats at the screen's top-right (icon only), out of the sidebar — on
+            DESKTOP only. On mobile the sidebar is a top bar and hosts its own toggle inline
+            (this fixed one would collide with it). */}
+        <div className="fixed top-3 right-3 z-40 hidden rounded-full border border-border bg-surface-raised shadow-sm lg:block">
+          <ThemeToggle />
+        </div>
       </div>
     </ToastProvider>
   );

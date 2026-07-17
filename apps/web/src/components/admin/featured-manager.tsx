@@ -2,12 +2,13 @@
 
 import { useState, useTransition } from 'react';
 import { Button, ChevronDown, ChevronUp, Trash, useToast } from '@beecompete/ui';
-import { NativeSelect } from '@/components/admin/native-select';
+import { Select } from '@beecompete/ui';
 import { setFeaturedSlots } from '@/app/admin/landing/actions';
 
 interface Option {
   id: string;
   name: string;
+  archived?: boolean;
 }
 
 /** Manage the Landing carousel: add/remove/reorder competitions, then save the ordered list (≤10). */
@@ -23,7 +24,9 @@ export function FeaturedManager({
   const { toast } = useToast();
 
   const nameOf = new Map(allCompetitions.map((c) => [c.id, c.name]));
-  const available = allCompetitions.filter((c) => !ids.includes(c.id));
+  // Keep the full map for resolving names of already-featured picks, but never offer an ARCHIVED
+  // competition in the add list — a hidden listing shouldn't reach the public carousel.
+  const available = allCompetitions.filter((c) => !ids.includes(c.id) && !c.archived);
 
   const move = (i: number, dir: -1 | 1) => {
     const j = i + dir;
@@ -37,6 +40,11 @@ export function FeaturedManager({
 
   return (
     <div className="grid gap-4">
+      {ids.length === 0 && (
+        <p className="text-sm text-muted">
+          No featured competitions yet — add up to 10 below to fill the Landing carousel.
+        </p>
+      )}
       <ol className="grid gap-2">
         {ids.map((id, i) => (
           <li
@@ -79,23 +87,28 @@ export function FeaturedManager({
         ))}
       </ol>
 
-      {ids.length < 10 && available.length > 0 && (
-        <NativeSelect
-          aria-label="Add competition to carousel"
-          options={available.map((c) => ({ value: c.id, label: c.name }))}
-          placeholder="Add a competition…"
-          value=""
-          onChange={(e) => {
-            if (e.target.value) setIds([...ids, e.target.value]);
-          }}
-          className="max-w-sm"
-        />
+      {ids.length >= 10 ? (
+        <p className="text-sm text-muted">Maximum of 10 featured picks reached.</p>
+      ) : (
+        available.length > 0 && (
+          <Select
+            aria-label="Add competition to carousel"
+            options={available.map((c) => ({ value: c.id, label: c.name }))}
+            placeholder="Add a competition…"
+            value=""
+            onValueChange={(v) => {
+              if (v) setIds([...ids, v]);
+            }}
+            className="max-w-sm"
+            searchable
+          />
+        )
       )}
 
       <div>
         <Button
           size="sm"
-          disabled={pending}
+          disabled={pending || ids.length === 0}
           onClick={() =>
             startTransition(async () => {
               try {

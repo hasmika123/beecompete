@@ -4,7 +4,9 @@ import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { scoreConfidence } from '../src/confidence.ts';
 import { normalize, sanitizeText } from '../src/extract.ts';
-import type { CompetitionPayload, Extraction } from '../src/types.ts';
+import { compareHints } from '../src/hints.ts';
+import { dedupeByUrl } from '../src/input.ts';
+import type { CompetitionPayload, Extraction, SeedHints } from '../src/types.ts';
 import { validatePayload } from '../src/validate.ts';
 
 const fixtureUrl = new URL('../fixtures/sample-competition.expected.json', import.meta.url);
@@ -38,6 +40,40 @@ test('confidence score for the good record is high and in [0,1]', async () => {
   );
   const score = scoreConfidence(extraction);
   assert.ok(score > 0.8 && score <= 1, `expected high confidence, got ${score}`);
+});
+
+test('dedupeByUrl collapses shared URLs (AMC family) but keeps distinct URLs and local files', () => {
+  const items = dedupeByUrl([
+    { source: 'https://maa.org/student-programs/amc' }, // AMC 10
+    { source: 'https://maa.org/student-programs/amc/' }, // AMC 12 — trailing slash, same page
+    { source: 'https://MAA.org/student-programs/amc' }, // AMC 8 — case-different host
+    { source: 'https://www.mathcounts.org' }, // distinct
+    { source: 'fixtures/sample-competition.html' }, // local path — never deduped
+  ]);
+  assert.deepEqual(
+    items.map((i) => i.source),
+    [
+      'https://maa.org/student-programs/amc',
+      'https://www.mathcounts.org',
+      'fixtures/sample-competition.html',
+    ],
+  );
+});
+
+test('normalize prunes null-valued attribute props so a null optional key stays valid', async () => {
+  // The LLM sometimes emits an unknown optional attribute as an explicit null (e.g.
+  // "eligible_countries": null), which would fail the template's `type: array`. It must be dropped.
+  const raw = JSON.parse(await readFile(fileURLToPath(fixtureUrl), 'utf8'));
+  raw.payload.attributes = {
+    ...raw.payload.attributes,
+    eligible_countries: null,
+    nested: { a: null, b: 1 },
+  };
+  const { payload } = normalize(raw, 'https://novamath.example.org');
+  const attrs = payload.attributes as Record<string, unknown>;
+  assert.equal('eligible_countries' in attrs, false);
+  assert.deepEqual(attrs.nested, { b: 1 });
+  assert.equal(validatePayload(payload).ok, true);
 });
 
 test('bad grade encoding fails validation (grade 13 is out of range)', async () => {
@@ -230,4 +266,41 @@ test('model self-reported confidence can only lower the score, never raise it', 
     'an inflated self-report must not raise the score above completeness',
   );
   assert.ok(scoreConfidence(modelLow) < baseline, 'a low self-report must lower the score');
+});
+
+// --- #1 flagging: extraction vs. S2 master-index hints ---
+
+test('compareHints flags cost/participation/category disagreements for the curator', async () => {
+  const payload = await loadGoodPayload(); // FREE, INDIVIDUAL, math (categoryId ...001)
+  const hints: SeedHints = { cost: 'paid', participation: 'team', categorySlug: 'robotics' };
+  const warnings = compareHints(payload, hints);
+  assert.ok(warnings.some((w) => w.includes('cost mismatch')));
+  assert.ok(warnings.some((w) => w.includes('participation mismatch')));
+  assert.ok(warnings.some((w) => w.includes('category mismatch')));
+});
+
+test('compareHints stays silent when hints agree or are absent/unknown', async () => {
+  const payload = await loadGoodPayload();
+  assert.deepEqual(compareHints(payload, {}), []);
+  // Agreeing hints (fixture is FREE / INDIVIDUAL / math, organizer "Nova Math Foundation") + an
+  // "unknown" placeholder → no flags. Organizer compare is case- and whitespace-insensitive.
+  assert.deepEqual(
+    compareHints(payload, {
+      cost: 'free',
+      participation: 'individual',
+      categorySlug: 'math',
+      organizer: 'nova   math   foundation',
+      entryPathway: 'unknown',
+    }),
+    [],
+  );
+});
+
+test('compareHints flags an organizer disagreement for the curator', async () => {
+  const payload = await loadGoodPayload(); // organizerName "Nova Math Foundation"
+  const warnings = compareHints(payload, { organizer: 'Rival Math Society' });
+  assert.ok(
+    warnings.some((w) => w.includes('organizer mismatch')),
+    `expected an organizer mismatch, got: ${warnings.join(' | ')}`,
+  );
 });

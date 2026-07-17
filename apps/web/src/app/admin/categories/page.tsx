@@ -1,17 +1,12 @@
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
 import { AdminTable } from '@/components/admin/admin-table';
 import { CategoryCreateForm } from '@/components/admin/category-create-form';
-import { RegionManager } from '@/components/admin/region-manager';
 import { adminFetch } from '@/lib/admin-api';
-import type { Category, Region } from '@/lib/admin-types';
+import type { Category } from '@/lib/admin-types';
 
 export default async function CategoriesPage() {
-  const [categories, regions] = await Promise.all([
-    adminFetch<Category[]>('/categories'),
-    adminFetch<Region[]>('/regions'),
-  ]);
+  const categories = await adminFetch<Category[]>('/categories');
   const byId = new Map(categories.map((c) => [c.id, c]));
 
   return (
@@ -22,7 +17,7 @@ export default async function CategoriesPage() {
       />
 
       <div className="mb-4">
-        <CategoryCreateForm />
+        <CategoryCreateForm allCategories={categories} />
       </div>
 
       <AdminTable
@@ -49,15 +44,6 @@ export default async function CategoriesPage() {
           },
         ]}
       />
-
-      <Card className="mt-8">
-        <CardHeader className="p-5 pb-0">
-          <CardTitle>Regions</CardTitle>
-        </CardHeader>
-        <CardContent className="p-5">
-          <RegionManager regions={regions} />
-        </CardContent>
-      </Card>
     </>
   );
 }

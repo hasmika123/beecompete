@@ -17,8 +17,10 @@ import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import org.springframework.stereotype.Service;
@@ -95,6 +97,14 @@ public class CompetitionSearchService {
 			 ) d ON true
 			""";
 
+	// Readiness gate (domain-model §8a): a competition is publicly visible only when it has at
+	// least one non-archived edition. Kills "zombie" listings (live with no edition/deadline,
+	// from admin-create OR import-approve) — invisible until an edition exists. Appended to every
+	// public read predicate, so browse/search/count and both facet counts share one rule.
+	private static final String LIVE_EDITION_EXISTS =
+			" AND EXISTS (SELECT 1 FROM edition led WHERE led.competition_id = c.id"
+					+ " AND led.archived_at IS NULL)";
+
 	private final EntityManager em;
 	private final CompetitionRepository competitions;
 	private final CategoryRepository categories;
@@ -143,7 +153,7 @@ public class CompetitionSearchService {
 
 	/** Builds the WHERE clause; {@code exclude} drops one facet dimension (standard facet counting). */
 	private Where where(Criteria c, UUID categoryId, List<UUID> regionIds, Instant now, String exclude) {
-		StringBuilder sql = new StringBuilder("c.archived_at IS NULL");
+		StringBuilder sql = new StringBuilder("c.archived_at IS NULL").append(LIVE_EDITION_EXISTS);
 		Map<String, Object> params = new HashMap<>();
 		boolean needsLateral = false;
 
@@ -321,6 +331,7 @@ public class CompetitionSearchService {
 	public List<CategoryOption> categoryOptions() {
 		String sql = "SELECT cat.slug, cat.name, count(c.id) FROM category cat"
 				+ " LEFT JOIN competition c ON c.category_id = cat.id AND c.archived_at IS NULL"
+				+ LIVE_EDITION_EXISTS // readiness gate: only listings that are actually browsable count
 				+ " GROUP BY cat.slug, cat.name ORDER BY cat.name";
 		return mapRows(sql, Map.of(), row -> new CategoryOption((String) row[0], (String) row[1],
 				((Number) row[2]).longValue()));
@@ -335,9 +346,10 @@ public class CompetitionSearchService {
 		if (ids.isEmpty()) {
 			return List.of();
 		}
+		Set<UUID> live = idsWithLiveEdition(ids); // readiness gate (§8a) — same rule as search
 		Map<UUID, Competition> byId = new HashMap<>();
 		competitions.findAllById(ids).forEach(comp -> {
-			if (comp.getArchivedAt() == null) {
+			if (comp.getArchivedAt() == null && live.contains(comp.getId())) {
 				byId.put(comp.getId(), comp);
 			}
 		});
@@ -353,6 +365,24 @@ public class CompetitionSearchService {
 			}
 		}
 		return items;
+	}
+
+	/** Of the given ids, those with at least one non-archived edition (readiness gate, §8a). */
+	private Set<UUID> idsWithLiveEdition(List<UUID> ids) {
+		if (ids.isEmpty()) {
+			return Set.of();
+		}
+		// Single-column native selects return each row as the raw value (not an Object[]), so this
+		// can't reuse mapRows — bind directly and read the scalar.
+		String sql = "SELECT DISTINCT e.competition_id FROM edition e"
+				+ " WHERE e.competition_id IN (:ids) AND e.archived_at IS NULL";
+		@SuppressWarnings("unchecked")
+		List<Object> rows = bind(sql, Map.of("ids", ids)).getResultList();
+		Set<UUID> result = new HashSet<>();
+		for (Object row : rows) {
+			result.add(asUuid(row));
+		}
+		return result;
 	}
 
 	/**

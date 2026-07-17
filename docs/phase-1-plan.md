@@ -90,7 +90,7 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
 - **R1-1** — Core schema migration: `Category`, `CategoryTemplate`, `Region`, `Competition`, `Edition`, `EditionRegion`, `KeyDate`, `Resource`, `CorrectionProposal` + provenance/verification/`archived_at` fields — per the locked modeling decisions (domain-model §7: grade encoding, Division placement, Edition-level regions, soft-delete D7). Include storage for **curated per-competition FAQ entries** (details-page FAQ tab, page-blueprints §3a — exact shape decided at build per domain-model rules). **2026-07-08 additions (domain model, legacy review):** `entry_pathway` on Competition; `age_cutoff_date` + `prize_summary`/`prize_value`/`prize_currency` on Edition; reserved `member_id` on User. **2026-07-08 additions (registry Rev 9):** `HeroCard` + `FeaturedSlot` (admin-managed Landing content, M36 — domain-model §3e-bis). *Article entities are NOT in R1-1 — Phase 2, additive (Hook #15).* (X9, catalog)
 - **R1-2** — Category taxonomy + templates seeded (~10 K-12 categories) with JSON-Schema validation of `attributes`. (X9)
 - **R1-3** — **Admin curation tooling v0** (X16, DQ13): minimal internal web admin — CRUD for `Competition`/`Edition`/`KeyDate`/`Resource`/`Category`(+templates), **import-review queue** (approve/edit/reject records from the S3 extraction pipeline — S4's 20–30 approvals/day throughput depends on this UI, so scripts alone don't cut it), and verification-state + provenance controls. **Landing-content panel (M36, Rev 9):** update the 3 `HeroCard`s (image upload, alt text; main card: link + hover description) and manage `FeaturedSlot` carousel picks (add/remove/reorder, 6–10 cap). Every admin write stamps provenance. **Access: behind Cloudflare Access (email allow-list) on the admin route — no app auth exists at R1; migrates to real RBAC at R2-7.**
-- **R1-3b** — **Corrections intake + review** (DQ6): public "Suggest a correction" form on detail pages → `CorrectionProposal` rows (domain-model D7); admin review queue — approve applies the diff and writes an audit record, reject discards. DQ15 "suggest a competition" submissions (R1-15b) land in this same queue.
+- **R1-3b** — **Corrections intake + review** (DQ6): public "Suggest a correction" form on detail pages → `CorrectionProposal` rows (domain-model D7); admin review queue — approve applies the diff and writes an audit record, reject discards. DQ15 "request a competition" submissions (R1-15b) land in this same queue.
 
 **Backend**
 - **R1-4** — Catalog API: list/detail competitions + editions; `verification_state`/provenance exposed. (M5, M6, DQ1)
@@ -110,9 +110,18 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
 - **R1-13** — **Beta tag + disclaimer** across the app. (registry)
 - **R1-14** — Privacy-first analytics (Cloudflare Web Analytics + PostHog). (X20)
 - **R1-15** — **Weekly Digest signup** (Brevo): email capture + 2–3 preference questions (grade, category/interests, region) per `page-blueprints.md` Landing §5. ⚠ Scope note: R1 ships the *capture + segmentation*; early digest sends are manual/curated via Brevo — the **automated personalized matching send is M26 (Phase 2)**. (M26 precursor)
-- **R1-15b** — Listing-page captures (Brevo/queue-backed, no accounts needed): **per-competition follow-by-email** (M29), **"Suggest a competition"** multi-step wizard form (page-blueprints Page 6) → curation queue (DQ15), **"Are you the organizer?" host-interest CTA** → host waitlist (H46).
+- **R1-15b** — Listing-page captures (Brevo/queue-backed, no accounts needed): **per-competition follow-by-email** (M29), **"Request a Competition"** multi-step wizard form (page-blueprints Page 6) → curation queue (DQ15), **"Are you the organizer?" host-interest CTA** → host waitlist (H46).
 - **R1-16** — In-app **bug/feedback report**. (DQ7 precursor)
 - **R1-17** — **R1 release gate** (dev-process §8): a11y (WCAG AA) on public pages, WAF/rate-limit on, backups tested, legal pages live, **legal foundation done** (entity + insurance + trademark search — setup-runbook §1b), **content gate met** (see "Data seeding & catalog readiness" below), **search indexing flipped ON** (R1-10 gate — the site is invisible to Google until this): (1) set `SEARCH_INDEXING=on` in `~/beecompete-prod/.env` + `docker compose -f docker-compose.prod.yml up -d web`, (2) verify `https://beecompete.com/robots.txt` serves the allow ruleset + a spot-checked page emits `index, follow`, (3) submit `sitemap.xml` in Google Search Console + Bing Webmaster Tools, (4) confirm staging still serves `Disallow: /` → **tag R1, deploy to prod.**
+
+**R1 UI/data follow-ups (surfaced 2026-07-13 during the admin/marketplace UI review)** were
+**built the same day** — including the two schema items once tracked here as standalone tasks:
+**deadline "TBD" support** (migration `0008`) and the **org trust ladder + derived competition
+maintainer** (migration `0009`); as-built rules live in `domain-model.md` §3f/§8 and
+`page-blueprints.md` decisions #32–36; rounds 2–3 (queue reachability, schema-driven
+attributes form, marketplace visual pass) built the same day. The **remaining backlog**
+(the round-4 admin-UI polish pass + the R2-batched payload items) is tracked in
+**`docs/sweep-remediation-plan.md`**.
 
 ---
 
