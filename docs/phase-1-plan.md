@@ -158,6 +158,24 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
        "legal foundation done" item above (setup-runbook §1b).
     3. **Flip `LEGAL_REVIEW_PENDING` → `false`** in `apps/web/src/lib/legal.ts` after #1–#2 are done —
        this removes the on-page "Draft — under review" banner from all four legal pages.
+  - **📊 R1-14 analytics activation (code shipped; these are the prod switch-on steps — deferred to
+    this gate per owner, 2026-07-17):** the analytics is inert until tokens exist in the prod env.
+    1. **Create the accounts:** Cloudflare → Web Analytics → add `beecompete.com` → copy the **beacon
+       token**; PostHog → **EU** region → new project → copy the **Project API Key** (`phc_…`), and
+       confirm Session Replay + Autocapture are OFF in project settings.
+    2. **Set them in `~/beecompete-prod/.env`:** `POSTHOG_KEY`, `CF_WEB_ANALYTICS_TOKEN`
+       (+ `POSTHOG_HOST=https://eu.i.posthog.com` if EU). Leave staging's blank (stays analytics-free)
+       unless you deliberately want a separate staging project. Full steps: setup-runbook §11.
+    3. **Get the updated compose onto the box:** confirm the deploy-prod workflow copies
+       `docker-compose.prod.yml` to `~/beecompete-prod/` (it now passes the analytics vars to the web
+       service); if the pipeline only does `pull && up -d` against the file already there, `scp`/`git
+       pull` the updated compose onto the box once (same as the Caddyfile pattern).
+    4. **Recreate web** (the release deploy sets `IMAGE_TAG` automatically; for a manual env-only
+       recreate: `IMAGE_TAG=<current-tag> docker compose -f docker-compose.prod.yml up -d web`).
+    5. **Verify:** load a public page → DevTools Network shows `static.cloudflareinsights.com` +
+       `*.i.posthog.com` requests, and Application → Cookies shows **no** `ph_*` cookie.
+  - **✉️ R1-15 digest activation:** Brevo owner setup (account + API key + list/attributes) — recorded
+    with R1-15 when built; the capture code is inert until the Brevo key is in the prod env.
 
 **R1 UI/data follow-ups (surfaced 2026-07-13 during the admin/marketplace UI review)** were
 **built the same day** — including the two schema items once tracked here as standalone tasks:
