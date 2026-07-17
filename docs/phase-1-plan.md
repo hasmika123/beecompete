@@ -83,7 +83,12 @@
 > configured), parent/educator/16+ framing + consent microcopy + honeypot, **inert without Brevo
 > env**. R1 = capture + segmentation only (M26 send is Phase 2). Owner setup: setup-runbook §7a;
 > activation deferred to the R1-17 gate.
-> **Next:** R1-15b listing-page captures (follow-by-email, request-a-competition wizard, host CTA).
+> **R1-15b done (2026-07-17) — listing-page captures (code):** per-competition **follow-by-email**
+> + host-interest **"claim"** now do real Brevo capture (owner-chosen: Brevo lists + parent/16+ DOI),
+> replacing the R1-7 detail stubs; the **Request-a-Competition wizard** (`/suggest-a-competition`)
+> posts to a new **public** `/api/v1/competition-requests` → the import/curation queue (no schema).
+> Owner setup: setup-runbook §7a; activation deferred to the R1-17 gate.
+> **Next:** R1-16 in-app bug/feedback report, then the R1-17 release gate.
 > Deferred: PR C (S3 hero-image upload + inline FAQ/Resource edit).
 
 The ordered, buildable task list for Phase 1. **Every task below becomes a GitHub Issue** (titled with its
@@ -158,6 +163,15 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
   would trigger consent); honeypot; **inert without Brevo env** (friendly "opening soon"). Single
   interest for R1 (multi is a later enhancement). Owner setup: setup-runbook §7a.
 - **R1-15b** — Listing-page captures (Brevo/queue-backed, no accounts needed): **per-competition follow-by-email** (M29), **"Request a Competition"** multi-step wizard form (page-blueprints Page 6) → curation queue (DQ15), **"Are you the organizer?" host-interest CTA** → host waitlist (H46).
+  ✅ **Code done 2026-07-17.** Owner decisions (2026-07-17): follow + host captures use **Brevo lists**
+  (no schema), and follow ships now with **parent/16+ framing + double opt-in** (COPPA-safe). Built:
+  (1) **Follow** + (2) **host-interest** replace the R1-7 detail-page stubs with real `EmailCaptureCta`
+  → Brevo follow/host lists (competition stored as the `COMPETITION` attribute), inert without env;
+  (3) the **Request-a-Competition wizard** (`/suggest-a-competition`, 5-step, progress, `?q=` prefill)
+  → a **public** `POST /api/v1/competition-requests` (outside the admin filter) that queues an
+  `ImportRecord` (no schema — reuses the R1-3 import/curation queue; null confidence + note flag it
+  as a user request) for curator review. No submitter PII on the request path (COPPA-clear). Owner
+  setup: setup-runbook §7a.
 - **R1-16** — In-app **bug/feedback report**. (DQ7 precursor)
 - **R1-17** — **R1 release gate** (dev-process §8): a11y (WCAG AA) on public pages, WAF/rate-limit on, backups tested, legal pages live, **legal foundation done** (entity + insurance + trademark search — setup-runbook §1b), **content gate met** (see "Data seeding & catalog readiness" below), **search indexing flipped ON** (R1-10 gate — the site is invisible to Google until this): (1) set `SEARCH_INDEXING=on` in `~/beecompete-prod/.env` + `docker compose -f docker-compose.prod.yml up -d web`, (2) verify `https://beecompete.com/robots.txt` serves the allow ruleset + a spot-checked page emits `index, follow`, (3) submit `sitemap.xml` in Google Search Console + Bing Webmaster Tools, (4) confirm staging still serves `Disallow: /` → **tag R1, deploy to prod.**
   - **🛑 R1-12 legal follow-ups (must ALL clear before this gate — the pages are drafts until then):**
@@ -185,14 +199,16 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
        recreate: `IMAGE_TAG=<current-tag> docker compose -f docker-compose.prod.yml up -d web`).
     5. **Verify:** load a public page → DevTools Network shows `static.cloudflareinsights.com` +
        `*.i.posthog.com` requests, and Application → Cookies shows **no** `ph_*` cookie.
-  - **✉️ R1-15 digest activation (code shipped; prod switch-on — deferred to this gate):** the
-    signup is inert until Brevo is wired. Steps (full version: setup-runbook §7a):
-    1. Brevo → create an **API key**, a **contacts list**, the text attributes **GRADE/INTEREST/STATE**,
-       and a **double-opt-in template**.
-    2. Set `BREVO_API_KEY`, `BREVO_DIGEST_LIST_ID`, `BREVO_DIGEST_DOI_TEMPLATE_ID`
-       (+ optional `BREVO_DOI_REDIRECT_URL`) in `~/beecompete-prod/.env`; recreate web.
-    3. Verify: submit the Landing digest band → confirm email → contact lands in the Brevo list with
-       the preference attributes set.
+  - **✉️ R1-15 / R1-15b Brevo activation (code shipped; prod switch-on — deferred to this gate):**
+    the digest + follow + host captures are inert until Brevo is wired. Steps (full: setup-runbook §7a):
+    1. Brevo → create an **API key**, up to three **lists** (digest / follow / host), the text
+       attributes **GRADE/INTEREST/STATE** + **COMPETITION**, and one shared **double-opt-in template**.
+    2. Set `BREVO_API_KEY`, `BREVO_DIGEST_LIST_ID`, `BREVO_FOLLOW_LIST_ID`, `BREVO_HOST_LIST_ID`,
+       `BREVO_DOI_TEMPLATE_ID` (+ optional `BREVO_DOI_REDIRECT_URL`) in `~/beecompete-prod/.env`;
+       recreate web. (Wire only the captures you want live — each is independently inert.)
+    3. Verify: submit the digest band + a detail page's Follow + Claim → confirm email → contacts land
+       in the right lists with their attributes. (Request-a-Competition needs no Brevo — it queues to
+       the import queue; check `/admin/import-records` for a test submission.)
 
 **R1 UI/data follow-ups (surfaced 2026-07-13 during the admin/marketplace UI review)** were
 **built the same day** — including the two schema items once tracked here as standalone tasks:

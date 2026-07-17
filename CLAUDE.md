@@ -302,9 +302,19 @@ attributes, **double opt-in** when a DOI template is set (`lib/brevo.ts`, server
 child would trigger consent), honeypot, and **inert without Brevo env** (friendly "opening soon").
 R1 = capture + segmentation only (the automated matching send is M26, Phase 2). Env
 (`BREVO_API_KEY`, `BREVO_DIGEST_LIST_ID`, `BREVO_DIGEST_DOI_TEMPLATE_ID`, `BREVO_DOI_REDIRECT_URL`)
-passed to the web service by both compose stacks; owner setup in setup-runbook §7a. Next per
-`docs/phase-1-plan.md`: **R1-15b listing-page captures** (follow-by-email, request-a-competition
-wizard, host-interest CTA).
+passed to the web service by both compose stacks; owner setup in setup-runbook §7a.
+**R1-15b done (2026-07-17) — listing-page captures (code):** the R1-7 detail-page Follow/Claim
+stubs are now real `EmailCaptureCta`s — **per-competition follow-by-email** (M29) → a Brevo follow
+list and **host-interest "claim this competition"** (H46) → a Brevo host list, each storing the
+listing as the `COMPETITION` attribute, parent/16+ (host = organizer) framing + double opt-in,
+inert without env (owner chose Brevo lists + DOI, 2026-07-17). The **Request-a-Competition wizard**
+(`/suggest-a-competition`, 5-step + progress + `?q=` prefill) posts to a new **public**
+`POST /api/v1/competition-requests` (`CompetitionRequestPublicController`, outside the admin filter)
+that queues an `ImportRecord` — **no schema**, reuses the R1-3 import/curation queue (null confidence
++ note flag it a user request); no submitter PII on the request path (COPPA-clear). `lib/brevo.ts`
+generalized to `subscribeToBrevoList` (digest/follow/host list ids + shared `BREVO_DOI_TEMPLATE_ID`);
+env passed by both compose stacks. Next per `docs/phase-1-plan.md`: **R1-16 in-app bug/feedback
+report**, then the **R1-17 release gate**.
 **Deferred (PR C):** hero-card image upload (reuses the
 R1-19 cover endpoint with a `hero/` key prefix) + inline FAQ/
 Resource row-edit. **Before prod users:** set `ADMIN_API_TOKEN` in both VPS `.env` + `/admin`

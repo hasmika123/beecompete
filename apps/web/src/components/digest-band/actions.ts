@@ -1,6 +1,6 @@
 'use server';
 
-import { brevoEnabled, getBrevoConfig, subscribeToDigest } from '@/lib/brevo';
+import { brevoListEnabled, getBrevoConfig, subscribeToBrevoList } from '@/lib/brevo';
 import type { FormState } from '@/lib/admin-types';
 
 /**
@@ -23,7 +23,7 @@ export async function subscribeDigest(_prev: FormState, form: FormData): Promise
   }
 
   const cfg = getBrevoConfig();
-  if (!brevoEnabled(cfg)) {
+  if (!brevoListEnabled(cfg, cfg.digestListId)) {
     return {
       ok: false,
       error: 'Signups open soon — the weekly digest is almost ready. Check back shortly!',
@@ -40,7 +40,7 @@ export async function subscribeDigest(_prev: FormState, form: FormData): Promise
   if (state) attributes.STATE = state;
 
   try {
-    const result = await subscribeToDigest(cfg, { email, attributes });
+    const result = await subscribeToBrevoList(cfg, { email, listId: cfg.digestListId, attributes });
     return {
       ok: true,
       error:

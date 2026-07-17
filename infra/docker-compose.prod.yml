@@ -42,9 +42,13 @@ services:
       POSTHOG_KEY: ${POSTHOG_KEY:-}
       POSTHOG_HOST: ${POSTHOG_HOST:-}
       CF_WEB_ANALYTICS_TOKEN: ${CF_WEB_ANALYTICS_TOKEN:-}
-      # Weekly-digest signup via Brevo (R1-15). Server-only; blank = signup is inert.
+      # Listing-page email captures via Brevo (R1-15 digest · R1-15b follow + host). Server-only;
+      # each capture is inert unless its list id is set.
       BREVO_API_KEY: ${BREVO_API_KEY:-}
       BREVO_DIGEST_LIST_ID: ${BREVO_DIGEST_LIST_ID:-}
+      BREVO_FOLLOW_LIST_ID: ${BREVO_FOLLOW_LIST_ID:-}
+      BREVO_HOST_LIST_ID: ${BREVO_HOST_LIST_ID:-}
+      BREVO_DOI_TEMPLATE_ID: ${BREVO_DOI_TEMPLATE_ID:-}
       BREVO_DIGEST_DOI_TEMPLATE_ID: ${BREVO_DIGEST_DOI_TEMPLATE_ID:-}
       BREVO_DOI_REDIRECT_URL: ${BREVO_DOI_REDIRECT_URL:-}
     depends_on:

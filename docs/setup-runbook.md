@@ -244,28 +244,34 @@ bucket — NOT the private user-files bucket. Upload is a pre-signed PUT; the br
 - **Outputs:** `SMTP_HOST/PORT/USER/PASS`; verified sending domain.
 - **Gotcha:** deliverability is **critical for the COPPA consent email** — don't skip DKIM/DMARC.
 
-### 7a. Weekly-digest signup — Brevo API  *(R1-15 — code is DONE; this is the owner setup to switch it on)*
-The digest form is **inert until these are set** (shows "opening soon"); it's pitched to
-parents/educators/16+ and uses **double opt-in** when a template is configured. Same Brevo account
-as §7, but the digest uses the **API + a contacts list**, not SMTP.
-1. **API key:** Brevo → **SMTP & API → API keys** → create a key. This is a server-only secret →
+### 7a. Listing-page email captures — Brevo API  *(R1-15 digest · R1-15b follow + host — code is DONE; this is the owner setup to switch them on)*
+Three captures share one Brevo account (the API + contact lists, not SMTP): the weekly **digest**
+(R1-15), per-competition **follow** (R1-15b, M29), and host-interest **"claim this competition"**
+(R1-15b, H46). **Each is inert until its list id is set** (the form shows "opening soon"); all are
+pitched to parents/educators/16+ (host = organizers) and use **double opt-in** when the template is
+configured. Wire only the captures you want live.
+1. **API key:** Brevo → **SMTP & API → API keys** → create a key. Server-only secret →
    `BREVO_API_KEY` (never `NEXT_PUBLIC_`).
-2. **List:** Brevo → **Contacts → Lists** → create e.g. "Weekly digest" → copy its numeric id →
-   `BREVO_DIGEST_LIST_ID`.
+2. **Lists:** Brevo → **Contacts → Lists** → create up to three (e.g. "Weekly digest", "Competition
+   follows", "Host waitlist") → copy each numeric id → `BREVO_DIGEST_LIST_ID`,
+   `BREVO_FOLLOW_LIST_ID`, `BREVO_HOST_LIST_ID`.
 3. **Contact attributes:** Brevo → **Contacts → Settings → Contact attributes** → create text
-   attributes **`GRADE`, `INTEREST`, `STATE`** (Brevo rejects contacts with undefined attributes,
-   so this step is required for the preference questions to save).
-4. **Double opt-in (recommended):** create a transactional **"confirm your subscription" template**
-   (Brevo → Campaigns → Templates) → copy its id → `BREVO_DIGEST_DOI_TEMPLATE_ID`; optionally set
-   `BREVO_DOI_REDIRECT_URL` (post-confirm landing). Without a template id it falls back to single
-   opt-in.
+   attributes **`GRADE`, `INTEREST`, `STATE`** (digest preferences) and **`COMPETITION`** (which
+   listing a follow/host visitor acted on). Brevo rejects contacts with undefined attributes, so
+   create the ones your enabled captures use.
+4. **Double opt-in (recommended):** create one transactional **"confirm your subscription" template**
+   (Brevo → Campaigns → Templates) → copy its id → `BREVO_DOI_TEMPLATE_ID` (shared across all three
+   captures); optionally set `BREVO_DOI_REDIRECT_URL` (post-confirm landing). Without it, single
+   opt-in. *(`BREVO_DIGEST_DOI_TEMPLATE_ID` still works as an alias for a digest-only setup.)*
 5. **Set them in `~/beecompete-prod/.env`** and recreate web (the compose passes them through):
-   `BREVO_API_KEY`, `BREVO_DIGEST_LIST_ID`, `BREVO_DIGEST_DOI_TEMPLATE_ID`, `BREVO_DOI_REDIRECT_URL`.
-6. **Verify:** submit the Landing digest band → success message ("check your inbox to confirm" for
-   DOI) → the contact appears in the Brevo list (after confirming) with GRADE/INTEREST/STATE set.
-- **Outputs:** `BREVO_API_KEY`, `BREVO_DIGEST_LIST_ID` (+ DOI template id) in the prod `.env`.
-- **Note:** R1 ships **capture + segmentation only**; the weekly send is manual/curated in Brevo —
-  the automated personalized matching send is **M26 (Phase 2)**.
+   `BREVO_API_KEY`, `BREVO_DIGEST_LIST_ID`, `BREVO_FOLLOW_LIST_ID`, `BREVO_HOST_LIST_ID`,
+   `BREVO_DOI_TEMPLATE_ID`, `BREVO_DOI_REDIRECT_URL`.
+6. **Verify:** submit the Landing digest band + a detail page's **Follow** + **Claim** → each shows
+   the confirm message → contacts land in the right list (after confirming) with their attributes.
+- **Outputs:** `BREVO_API_KEY` + the list ids you enabled (+ shared DOI template) in the prod `.env`.
+- **Note:** R1 ships **capture + segmentation only** — the weekly send is manual/curated in Brevo
+  (automated matching send = **M26, Phase 2**); email-followers convert to accounts at **R2-16**.
+- **Request-a-Competition** (Page 6) needs **no Brevo** — it posts to the import/curation queue.
 
 ## 8. Deployment pipeline  *(R1)*
 1. Enable **GHCR** (GitHub Container Registry) for the repo's images.

@@ -1,9 +1,10 @@
-// Brevo (email) integration for the weekly-digest signup (R1-15). Server-only — the API key is a
-// secret and must never reach the browser (so these are plain env vars, never NEXT_PUBLIC_*).
-// Inert without config: the digest server action falls back to a friendly "opening soon" message
-// when Brevo isn't wired, so local/CI/pre-launch stay side-effect-free (same posture as analytics).
+// Brevo (email) integration for the listing-page captures (R1-15 digest, R1-15b follow +
+// host-interest). Server-only — the API key is a secret and must never reach the browser (so
+// these are plain env vars, never NEXT_PUBLIC_*). Inert without config: each capture's server
+// action falls back to a friendly "opening soon" when its list isn't wired, so local/CI/pre-launch
+// stay side-effect-free (same posture as analytics).
 //
-// COMPLIANCE: the digest is pitched to parents/educators/16+ (a K-12-directed newsletter to a child
+// COMPLIANCE: every capture is pitched to parents/educators/16+ (a K-12-directed email to a child
 // would trigger COPPA). We default to Brevo DOUBLE OPT-IN when a DOI template is configured — the
 // subscriber must click a confirmation email before anything is stored on the list, which is both
 // the consent record (CAN-SPAM / prudent COPPA posture) and good deliverability hygiene.
@@ -12,44 +13,62 @@ const BREVO_BASE = 'https://api.brevo.com/v3';
 
 export interface BrevoConfig {
   apiKey?: string;
+  /** Weekly digest list (R1-15). */
   digestListId?: number;
-  /** When set, subscribe via double opt-in using this Brevo DOI template. */
+  /** Per-competition follow list (R1-15b, M29). */
+  followListId?: number;
+  /** Host-interest / "claim your competition" waitlist (R1-15b, H46). */
+  hostListId?: number;
+  /** When set, subscribe via double opt-in using this shared Brevo DOI template. */
   doiTemplateId?: number;
   /** Where Brevo sends the subscriber after they confirm (defaults to the site root). */
   doiRedirectUrl?: string;
 }
 
+function positiveInt(raw: string | undefined): number | undefined {
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
 export function getBrevoConfig(): BrevoConfig {
-  const listId = Number(process.env.BREVO_DIGEST_LIST_ID);
-  const templateId = Number(process.env.BREVO_DIGEST_DOI_TEMPLATE_ID);
   return {
     apiKey: process.env.BREVO_API_KEY || undefined,
-    digestListId: Number.isFinite(listId) && listId > 0 ? listId : undefined,
-    doiTemplateId: Number.isFinite(templateId) && templateId > 0 ? templateId : undefined,
+    digestListId: positiveInt(process.env.BREVO_DIGEST_LIST_ID),
+    followListId: positiveInt(process.env.BREVO_FOLLOW_LIST_ID),
+    hostListId: positiveInt(process.env.BREVO_HOST_LIST_ID),
+    // BREVO_DOI_TEMPLATE_ID is the shared confirmation template; the older BREVO_DIGEST_DOI_TEMPLATE_ID
+    // is still honored as an alias so an early digest-only setup keeps working.
+    doiTemplateId:
+      positiveInt(process.env.BREVO_DOI_TEMPLATE_ID) ??
+      positiveInt(process.env.BREVO_DIGEST_DOI_TEMPLATE_ID),
     doiRedirectUrl: process.env.BREVO_DOI_REDIRECT_URL || undefined,
   };
 }
 
-/** Wired enough to subscribe (needs a key + a target list). */
-export function brevoEnabled(cfg: BrevoConfig): boolean {
-  return Boolean(cfg.apiKey && cfg.digestListId);
+/** Wired enough to subscribe to a specific list (needs a key + that list id). */
+export function brevoListEnabled(cfg: BrevoConfig, listId: number | undefined): listId is number {
+  return Boolean(cfg.apiKey && listId);
 }
 
 export type SubscribeResult = 'confirm' | 'subscribed';
 
 /**
- * Add a contact to the digest list. Returns 'confirm' when a double-opt-in email was sent (the
+ * Add a contact to a Brevo list. Returns 'confirm' when a double-opt-in email was sent (the
  * contact isn't on the list until they click) or 'subscribed' for single opt-in. Throws on a
  * non-2xx Brevo response so the caller can show a generic error.
  *
- * `attributes` must be pre-created in the Brevo account (e.g. GRADE, INTEREST, STATE) — Brevo
- * rejects unknown attributes. Callers should omit empty values.
+ * `attributes` must be pre-created in the Brevo account (e.g. GRADE, INTEREST, STATE, COMPETITION)
+ * — Brevo rejects unknown attributes. Callers should omit empty values.
  */
-export async function subscribeToDigest(
+export async function subscribeToBrevoList(
   cfg: BrevoConfig,
-  { email, attributes }: { email: string; attributes: Record<string, string> },
+  {
+    email,
+    listId,
+    attributes = {},
+  }: { email: string; listId: number; attributes?: Record<string, string> },
 ): Promise<SubscribeResult> {
-  if (!cfg.apiKey || !cfg.digestListId) throw new Error('Brevo is not configured');
+  if (!cfg.apiKey) throw new Error('Brevo is not configured');
 
   const headers = {
     'api-key': cfg.apiKey,
@@ -58,14 +77,14 @@ export async function subscribeToDigest(
   };
   const hasAttributes = Object.keys(attributes).length > 0;
 
-  // Double opt-in when a template is configured — preferred for a minors-adjacent newsletter.
+  // Double opt-in when a template is configured — preferred for a minors-adjacent audience.
   if (cfg.doiTemplateId) {
     const res = await fetch(`${BREVO_BASE}/contacts/doubleOptinConfirmation`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
         email,
-        includeListIds: [cfg.digestListId],
+        includeListIds: [listId],
         templateId: cfg.doiTemplateId,
         redirectionUrl: cfg.doiRedirectUrl ?? 'https://beecompete.com/',
         ...(hasAttributes ? { attributes } : {}),
@@ -81,7 +100,7 @@ export async function subscribeToDigest(
     headers,
     body: JSON.stringify({
       email,
-      listIds: [cfg.digestListId],
+      listIds: [listId],
       updateEnabled: true,
       ...(hasAttributes ? { attributes } : {}),
     }),

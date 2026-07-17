@@ -1,39 +1,38 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { buttonClasses } from '@beecompete/ui';
+import { RequestWizard } from './request-wizard';
 import { pageMetadata } from '@/lib/seo';
 
+// Dynamic (reads searchParams for the zero-results prefill) — inherits the site-wide indexing
+// gate via pageMetadata (interim noindex stub dropped now that the real wizard ships).
 export function generateMetadata(): Metadata {
-  // noindex: interim stub page — the wizard form ships at R1-15b.
   return pageMetadata({
     title: 'Request a Competition',
-    description: 'Know a great K-12 competition we should list? Tell our curators.',
+    description:
+      'Know a great K-12 competition we haven’t listed yet? Tell our curation team and we’ll review it for the catalog.',
     path: '/suggest-a-competition',
-    noindex: true,
   });
 }
 
-// INTERIM page: Page 6 (the multi-step suggestion wizard → DQ15) ships at R1-15b. This stub
-// exists so zero-results CTAs and the footer link never dead-end.
-export default function SuggestCompetitionPage() {
+// Page 6 (DQ15): the multi-step Request-a-Competition wizard → import/curation queue (R1-15b).
+// Zero-results referrals prefill step 1 from the logged query (?q=, → X20).
+export default async function SuggestCompetitionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
+
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="font-display text-3xl text-foreground sm:text-4xl">Request a competition</h1>
-      <p className="mt-3 text-muted">
-        Know a great K-12 competition we haven&apos;t listed? Our request form is almost ready —
-        check back soon. Every request is reviewed by our curation team before it goes live.
-      </p>
-      <p className="mt-3 text-sm text-muted">
-        {/* Literal “”’ (not &ldquo;-style entities) — an HTML entity anywhere in this text
-            block makes SWC drop the space after the inline element ("existinglisting"). */}
-        Spotted something wrong in an <em>existing</em> listing? Use the “Suggest a correction” link
-        on that competition’s page instead.
-      </p>
-      <div className="mt-6">
-        <Link href="/competitions" className={buttonClasses()}>
-          Browse competitions
-        </Link>
-      </div>
+      <header className="mb-8">
+        <h1 className="font-display text-3xl text-foreground sm:text-4xl">Request a competition</h1>
+        <p className="mt-3 text-muted">
+          Know a great K-12 competition we haven&apos;t listed? Tell us about it — a few quick
+          questions and our curation team takes it from there. Every request is reviewed by a human
+          before anything goes live.
+        </p>
+      </header>
+      <RequestWizard initialName={q?.slice(0, 200) ?? ''} />
     </div>
   );
 }
