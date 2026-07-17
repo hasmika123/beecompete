@@ -335,8 +335,10 @@ Next.js SSR behind Caddy — verified the beacon never lands in the prod HTML �
 3. Create a PostHog account, choose the **EU** region (data residency; architecture §10).
 4. Create **one** project — **shared by prod + local dev** (owner decision 2026-07-17) → copy the
    **Project API Key** (starts `phc_…`; write-only, safe in the browser).
-5. In the project settings, confirm **Session Replay is OFF** and **Autocapture is OFF** (our code
-   already disables both client-side, but belt-and-suspenders for a minors' site).
+5. In the project settings, turn **OFF**: **Session Replay**, **Autocapture**, **Dead clicks**
+   autocapture, and **Web vitals / performance**. Our code disables all of these client-side too,
+   but the dead-clicks script still *downloads* off the project's remote config unless you also flip
+   it here — belt-and-suspenders for a minors' site.
 
 **Wire it up** — set these in the **prod** stack env (`~/beecompete-prod/.env`), then
 `docker compose -f docker-compose.prod.yml up -d web`:

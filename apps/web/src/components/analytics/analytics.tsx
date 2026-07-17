@@ -13,7 +13,7 @@ import posthog from 'posthog-js';
 // the visitor signals Do-Not-Track / Global Privacy Control:
 //   • persistence 'memory'    → no cookies, no localStorage (truly cookieless; nothing survives the tab)
 //   • person_profiles 'never' → never creates a person profile; events are anonymous
-//   • autocapture off + session recording + surveys off → no silent DOM/PII capture
+//   • autocapture + dead-clicks + performance + session recording + surveys OFF → no silent DOM capture
 //   • capture_pageview off     → we send explicit pageviews on route change (this is an SPA)
 //   • respect_dnt true         → belt-and-suspenders with the DNT/GPC gate below
 // Cloudflare Web Analytics is a cookieless, aggregate traffic beacon with no per-visitor data, so
@@ -41,6 +41,10 @@ function startPostHog(key: string, apiHost: string) {
     capture_pageleave: true,
     disable_session_recording: true,
     disable_surveys: true,
+    // These load their own scripts and capture behavioral/DOM signals even with autocapture off,
+    // so turn them off too — we want aggregate pageviews + explicit events only (minors/COPPA).
+    capture_dead_clicks: false,
+    capture_performance: false,
     respect_dnt: true,
   });
 }
@@ -59,11 +63,6 @@ function privacyOptOut(): boolean {
 }
 
 export function Analytics({ posthogKey, posthogHost, cfBeaconToken }: AnalyticsProps) {
-  // Start PostHog after mount (needs the browser), and only when the visitor hasn't opted out.
-  useEffect(() => {
-    if (posthogKey && !privacyOptOut()) startPostHog(posthogKey, posthogHost);
-  }, [posthogKey, posthogHost]);
-
   return (
     <>
       {cfBeaconToken && (
@@ -75,23 +74,28 @@ export function Analytics({ posthogKey, posthogHost, cfBeaconToken }: AnalyticsP
       )}
       {posthogKey && (
         <Suspense fallback={null}>
-          <PageviewTracker />
+          <PageviewTracker posthogKey={posthogKey} posthogHost={posthogHost} />
         </Suspense>
       )}
     </>
   );
 }
 
-// Manual SPA pageview capture. useSearchParams() requires a Suspense boundary in the App Router.
-function PageviewTracker() {
+// Starts PostHog (idempotent — module-level guard) and captures a $pageview on the initial load
+// AND every client-side navigation. Init lives here rather than a parent effect so the first
+// pageview can't be dropped to an effect-ordering race (child effects run before parent effects,
+// and the Suspense boundary can reorder them further). Honors DNT/GPC. useSearchParams() requires
+// the Suspense boundary in the App Router.
+function PageviewTracker({ posthogKey, posthogHost }: { posthogKey: string; posthogHost: string }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   useEffect(() => {
-    if (!posthogStarted) return; // not started (env unset or DNT/GPC opt-out) → no-op
+    if (privacyOptOut()) return; // DNT / GPC opt-out → never start or capture
+    startPostHog(posthogKey, posthogHost);
     // posthog derives $current_url from window.location itself; pathname/searchParams in the deps
-    // just make client-side navigations re-fire this effect.
+    // just re-fire this on client-side navigations.
     posthog.capture('$pageview');
-  }, [pathname, searchParams]);
+  }, [pathname, searchParams, posthogKey, posthogHost]);
   return null;
 }
 
