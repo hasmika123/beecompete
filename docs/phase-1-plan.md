@@ -56,7 +56,19 @@
 > **R1-11 done (2026-07-13) — share a competition (M21):** shared `packages/ui` `ShareMenu` on
 > the detail header (channels + copy-link + native sheet). Privacy: plain intent links, clean
 > URL, no tracking, collects nothing (M21/M34 rule).
-> **Next:** R1-12 legal pages. Deferred: PR C (S3 hero-image upload + inline
+> **R1-12 done (2026-07-17) 🔒 — legal pages** (branch `feat/R1-12-17-launch-surface`, covering
+> the whole R1-12→R1-17 launch surface): four public policy pages — `/privacy` (COPPA-aware),
+> `/terms`, `/cookies`, `/affiliate-disclosure` (DQ10/FTC) — scoped honestly to the R1 browse-only
+> reality (no accounts, no PII, no payments; account/consent/payments language deferred to R2).
+> Shared `components/legal/legal-page.tsx` layout + prose primitives + TOC; cross-page constants
+> in `lib/legal.ts` (contact email, `OPERATING_ENTITY` + governing-law placeholders pending entity
+> formation, `LEGAL_REVIEW_PENDING` flag driving an on-page "under review" notice). Wired into the
+> footer (new Legal column + bottom-bar links), `sitemap.ts`, and the R1-8 resources-row inline
+> disclosure ("Learn more" → `/affiliate-disclosure`). ⚠️ **These are DRAFTS — the R1-17 gate
+> still requires a privacy attorney to review them (compliance.md §Launch gate #1/#6), the
+> operating entity's legal name + governing-law state filled in, and `LEGAL_REVIEW_PENDING`
+> flipped false.** Frontend-only, no schema/API change.
+> **Next:** R1-13 beta tag + disclaimer. Deferred: PR C (S3 hero-image upload + inline
 > FAQ/Resource edit).
 
 The ordered, buildable task list for Phase 1. **Every task below becomes a GitHub Issue** (titled with its
@@ -107,12 +119,24 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
 
 **Launch surface**
 - **R1-12** — Legal pages: Privacy, Terms, Cookie Policy, affiliate disclosure. 🔒 (compliance)
+  ✅ **Pages built 2026-07-17** (`/privacy`, `/terms`, `/cookies`, `/affiliate-disclosure`), but
+  they ship as **drafts** — three owner/counsel items below must clear before R1-17 flips the site
+  public.
 - **R1-13** — **Beta tag + disclaimer** across the app. (registry)
 - **R1-14** — Privacy-first analytics (Cloudflare Web Analytics + PostHog). (X20)
 - **R1-15** — **Weekly Digest signup** (Brevo): email capture + 2–3 preference questions (grade, category/interests, region) per `page-blueprints.md` Landing §5. ⚠ Scope note: R1 ships the *capture + segmentation*; early digest sends are manual/curated via Brevo — the **automated personalized matching send is M26 (Phase 2)**. (M26 precursor)
 - **R1-15b** — Listing-page captures (Brevo/queue-backed, no accounts needed): **per-competition follow-by-email** (M29), **"Request a Competition"** multi-step wizard form (page-blueprints Page 6) → curation queue (DQ15), **"Are you the organizer?" host-interest CTA** → host waitlist (H46).
 - **R1-16** — In-app **bug/feedback report**. (DQ7 precursor)
 - **R1-17** — **R1 release gate** (dev-process §8): a11y (WCAG AA) on public pages, WAF/rate-limit on, backups tested, legal pages live, **legal foundation done** (entity + insurance + trademark search — setup-runbook §1b), **content gate met** (see "Data seeding & catalog readiness" below), **search indexing flipped ON** (R1-10 gate — the site is invisible to Google until this): (1) set `SEARCH_INDEXING=on` in `~/beecompete-prod/.env` + `docker compose -f docker-compose.prod.yml up -d web`, (2) verify `https://beecompete.com/robots.txt` serves the allow ruleset + a spot-checked page emits `index, follow`, (3) submit `sitemap.xml` in Google Search Console + Bing Webmaster Tools, (4) confirm staging still serves `Disallow: /` → **tag R1, deploy to prod.**
+  - **🛑 R1-12 legal follow-ups (must ALL clear before this gate — the pages are drafts until then):**
+    1. **Privacy-counsel review** of the four pages — especially the COPPA posture in the Privacy
+       Policy (compliance.md §Launch gate #6). This is the hard blocker; the copy is not final
+       until a qualified privacy attorney has signed off.
+    2. **Fill the operating entity's legal name + governing-law state** into `apps/web/src/lib/legal.ts`
+       (`OPERATING_ENTITY` + the Terms governing-law clause) once the LLC is formed — tied to the
+       "legal foundation done" item above (setup-runbook §1b).
+    3. **Flip `LEGAL_REVIEW_PENDING` → `false`** in `apps/web/src/lib/legal.ts` after #1–#2 are done —
+       this removes the on-page "Draft — under review" banner from all four legal pages.
 
 **R1 UI/data follow-ups (surfaced 2026-07-13 during the admin/marketplace UI review)** were
 **built the same day** — including the two schema items once tracked here as standalone tasks:

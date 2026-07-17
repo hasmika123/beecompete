@@ -262,8 +262,22 @@ no match → create a **CURATED/HOST** org (domain from the official URL). The S
 sends `organizerName` (never a placeholder; a null-organizer row is flagged for manual assignment).
 The import-review UI gains an **Organizer panel** (reuse/pick/create-new + live org search); the
 competition edit form drops its "— none —" organizer option. API suite green (49/49). As-built:
-`domain-model.md` §3b, `architecture.md` §13a, `tools/seeding/README.md`. Next per
-`docs/phase-1-plan.md`: **R1-12 legal pages** (launch surface).
+`domain-model.md` §3b, `architecture.md` §13a, `tools/seeding/README.md`.
+**R1-12 done (2026-07-17) 🔒 — legal pages** (branch `feat/R1-12-17-launch-surface`, opened for the
+whole R1-12→R1-17 launch surface): four public policy pages — `/privacy` (COPPA-aware), `/terms`,
+`/cookies`, `/affiliate-disclosure` (DQ10/FTC) — written honestly to the R1 browse-only reality
+(no accounts, no PII, no payments; account/consent/payments language deferred to R2). Shared
+`apps/web/src/components/legal/legal-page.tsx` (layout + prose primitives + on-page TOC) with
+cross-page constants in `apps/web/src/lib/legal.ts` (`LEGAL_CONTACT_EMAIL` = support@beecompete.com,
+`OPERATING_ENTITY` + governing-law placeholders pending LLC formation, `LEGAL_REVIEW_PENDING` flag
+driving an on-page "Draft — under review" notice). Wired into the footer (new Legal column +
+bottom-bar), `app/sitemap.ts`, and the R1-8 resources-row inline disclosure (→ `/affiliate-disclosure`).
+Four curated Phosphor icons added to `packages/ui` (ShieldCheck/Scales/Cookie/Handshake).
+Frontend-only, no schema/API change; typecheck + lint + prettier green, all four pages serve 200.
+⚠️ **DRAFTS — the R1-17 gate still requires:** privacy-counsel review (compliance.md §Launch gate
+#1/#6), the operating entity's legal name + governing-law state filled into `lib/legal.ts`, and
+`LEGAL_REVIEW_PENDING` flipped to `false`. Next per `docs/phase-1-plan.md`: **R1-13 beta tag +
+disclaimer** (launch surface).
 **Deferred (PR C):** hero-card image upload (reuses the
 R1-19 cover endpoint with a `hero/` key prefix) + inline FAQ/
 Resource row-edit. **Before prod users:** set `ADMIN_API_TOKEN` in both VPS `.env` + `/admin`

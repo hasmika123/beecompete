@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import Link from 'next/link';
 import {
   Article,
   BookOpen,
@@ -16,8 +17,8 @@ import type { ResourceView } from '@/lib/catalog-types';
 // Resources section (blueprints Page 3.3b, → M11) + affiliate disclosure (🔒 DQ10, R1-8). A
 // horizontally scrollable row of resource cards; affiliate links carry rel="sponsored nofollow"
 // and are marked individually with an "Affiliate" chip, and a clear, conspicuous disclosure
-// renders WITH the row whenever any affiliate link is present (FTC endorsement rule — the
-// dedicated disclosure page lands with R1-12). Non-affiliate outbound links stay nofollow too;
+// renders WITH the row whenever any affiliate link is present (FTC endorsement rule), linking to
+// the dedicated /affiliate-disclosure page (R1-12). Non-affiliate outbound links stay nofollow too;
 // we link to third parties factually and vouch for none (nominative use, compliance §8).
 
 type IconType = ComponentType<{
@@ -101,7 +102,14 @@ export function ResourcesRow({ resources }: { resources: ResourceView[] }) {
             Some links below are{' '}
             <strong className="font-medium text-foreground">affiliate links</strong>. If you buy
             through them, BeeCompete may earn a small commission at no extra cost to you — it never
-            affects what we list or recommend.
+            affects what we list or recommend.{' '}
+            <Link
+              href="/affiliate-disclosure"
+              className="font-medium text-foreground underline underline-offset-2 hover:text-brand-gold"
+            >
+              Learn more
+            </Link>
+            .
           </span>
         </p>
       )}

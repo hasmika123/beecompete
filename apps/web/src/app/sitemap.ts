@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { fetchSitemapEntries } from '@/lib/catalog-api';
 import { CATEGORY_CONTENT } from '@/lib/category-content';
+import { LEGAL_PAGES } from '@/lib/legal';
 import { absoluteUrl } from '@/lib/site';
 
 // XML sitemap (R1-10). Only CANONICAL, clean-path URLs — static pages, the 11 category hubs,
@@ -32,6 +33,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: absoluteUrl('/competitions'), changeFrequency: 'daily', priority: 0.9 },
     { url: absoluteUrl('/categories'), changeFrequency: 'weekly', priority: 0.6 },
     { url: absoluteUrl('/how-it-works'), changeFrequency: 'monthly', priority: 0.4 },
+    // Legal pages (R1-12) — low priority, rarely change; no lastmod (a perpetually-"now" value
+    // on a slow-changing page is exactly what makes Google distrust lastmod site-wide).
+    ...LEGAL_PAGES.map((p) => ({
+      url: absoluteUrl(p.href),
+      changeFrequency: 'yearly' as const,
+      priority: 0.3,
+    })),
   ];
 
   // Newest competition per category → an honest category-hub lastmod.
