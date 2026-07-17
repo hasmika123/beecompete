@@ -401,7 +401,7 @@ Operational tasks (from the product checklist) to complete before public launch 
 - [ ] Cookie-consent banner — **not needed at launch**: analytics are cookieless by decision (§10) and essential auth cookies are exempt. Revisit *only* if a tracking/marketing tool is ever added.
 - [ ] Privacy-first analytics installed (not standard GA)
 - [x] Logo/icon/favicon, light + dark variants — **finals in (2026-07-16)**: components in `packages/ui`, art in `apps/web/public/brand/`, adaptive `icon.svg` favicon (see §8)
-- [ ] **Beta tag + disclaimer** (product is beta; data may be incomplete; not official affiliation)
+- [x] **Beta tag + disclaimer** (R1-13, 2026-07-17): header "Beta" badge + keyboard-reachable tooltip, and the app-wide footer disclaimer (beta · details can change, confirm on the organizer's site · independent, not affiliated with listed organizers)
 - [ ] Email subscription/newsletter list (Brevo, opt-in)
 - [ ] Password reset + email verification flows
 - [ ] In-app bug/feedback report

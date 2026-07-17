@@ -276,8 +276,14 @@ Four curated Phosphor icons added to `packages/ui` (ShieldCheck/Scales/Cookie/Ha
 Frontend-only, no schema/API change; typecheck + lint + prettier green, all four pages serve 200.
 ⚠️ **DRAFTS — the R1-17 gate still requires:** privacy-counsel review (compliance.md §Launch gate
 #1/#6), the operating entity's legal name + governing-law state filled into `lib/legal.ts`, and
-`LEGAL_REVIEW_PENDING` flipped to `false`. Next per `docs/phase-1-plan.md`: **R1-13 beta tag +
-disclaimer** (launch surface).
+`LEGAL_REVIEW_PENDING` flipped to `false`.
+**R1-13 done (2026-07-17) — beta tag + disclaimer:** the header "Beta" badge gains a
+keyboard-reachable `Tooltip` explainer, and the shared `site-footer` carries the app-wide
+disclaimer — beta · details can change (confirm on the organizer's official site) · BeeCompete is
+independent and **not affiliated with or endorsed by** the listed competitions/organizers
+(compliance §8, nominative use). Owner chose badge + footer over a page-top banner (the `flush`
+Alert banner stays unused). Frontend-only, reuses `packages/ui` Badge + Tooltip. Next per
+`docs/phase-1-plan.md`: **R1-14 privacy-first analytics** (Cloudflare Web Analytics + PostHog).
 **Deferred (PR C):** hero-card image upload (reuses the
 R1-19 cover endpoint with a `hero/` key prefix) + inline FAQ/
 Resource row-edit. **Before prod users:** set `ADMIN_API_TOKEN` in both VPS `.env` + `/admin`

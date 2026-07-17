@@ -2,10 +2,13 @@ import Link from 'next/link';
 import { Logo } from '@beecompete/ui';
 import { LEGAL_PAGES } from '@/lib/legal';
 
-// Blueprint footer (shared component). Explore + Contribute + Legal nav columns; the beta line is
-// R1-13's surface. Legal links (Privacy · Terms · Cookie Policy · Affiliate Disclosure) land here
-// with R1-12, sourced from the single LEGAL_PAGES list so the footer and each policy page's
-// cross-links never drift.
+// Blueprint footer (shared component). Explore + Contribute + Legal nav columns. The brand column
+// carries the app-wide beta disclaimer (R1-13): product is beta · details can change (confirm on
+// the organizer's official site) · BeeCompete is independent and not affiliated with the listed
+// organizers (compliance §8, nominative use). The header "Beta" badge + tooltip is the other R1-13
+// surface. Legal links (Privacy · Terms · Cookie Policy · Affiliate Disclosure) land here with
+// R1-12, sourced from the single LEGAL_PAGES list so the footer and each policy page's cross-links
+// never drift.
 const EXPLORE = [
   { href: '/competitions', label: 'Competitions' },
   { href: '/categories', label: 'Categories' },
@@ -36,8 +39,9 @@ export function SiteFooter() {
             {/* Literal ’ (not &apos;) — an HTML entity anywhere in this text block makes SWC
                 drop the space after the inline element ("beta— the"). */}
             BeeCompete is in <strong className="font-medium text-foreground">beta</strong> — the
-            catalog is growing and details can change; always confirm dates on the organizer’s
-            official site.
+            catalog is growing and details can change, so always confirm the details on the
+            organizer’s official site. We’re an independent catalog and aren’t affiliated with or
+            endorsed by the competitions and organizers listed here.
           </p>
         </div>
         <nav aria-label="Explore" className="text-sm">
