@@ -54,7 +54,9 @@ export function DigestBand() {
               <fieldset className="grid gap-2 text-left">
                 <legend className="text-xs font-medium text-muted">
                   Personalize your digest{' '}
-                  <span className="font-normal text-muted/80">(optional)</span>
+                  {/* Full-strength muted (not /80): at 80% over the gold-soft band this small
+                      text fell to ~3.4:1, under AA 4.5:1 (WCAG 1.4.3). */}
+                  <span className="font-normal text-muted">(optional)</span>
                 </legend>
                 <div className="grid gap-2 sm:grid-cols-3">
                   <Select
@@ -83,6 +85,7 @@ export function DigestBand() {
                   type="email"
                   name="email"
                   required
+                  autoComplete="email"
                   placeholder="you@example.com"
                   aria-label="Email address"
                   className="bg-background"

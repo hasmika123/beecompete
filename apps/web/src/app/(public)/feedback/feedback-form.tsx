@@ -27,7 +27,14 @@ export function FeedbackForm() {
       <Honeypot />
 
       <FormField label="What's this about?">
-        <Select name="category" defaultValue="Bug" options={FEEDBACK_CATEGORIES} />
+        {/* Explicit aria-label: the Select trigger is a combobox button, which a wrapping
+            <label htmlFor> doesn't reliably name in Chromium (matches the app-wide pattern). */}
+        <Select
+          name="category"
+          defaultValue="Bug"
+          options={FEEDBACK_CATEGORIES}
+          aria-label="What's this about?"
+        />
       </FormField>
 
       <FormField label="Tell us more">

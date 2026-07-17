@@ -44,6 +44,19 @@ export function RequestWizard({ initialName = '' }: { initialName?: string }) {
     if (state.ok) successRef.current?.focus();
   }, [state.ok]);
 
+  // Move focus to the step heading when the step changes (but not on first render) so screen-reader
+  // users hear the new question and land just before its field — the silent setStep is otherwise
+  // undetectable to AT (WCAG 4.1.3). Skipping the initial mount avoids stealing focus on page load.
+  const stepHeadingRef = useRef<HTMLHeadingElement>(null);
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    stepHeadingRef.current?.focus();
+  }, [step]);
+
   if (state.ok) {
     return (
       <div
@@ -96,7 +109,13 @@ export function RequestWizard({ initialName = '' }: { initialName?: string }) {
         </div>
       </div>
 
-      <h2 className="font-display text-2xl text-foreground sm:text-3xl">{activeStep.title}</h2>
+      <h2
+        ref={stepHeadingRef}
+        tabIndex={-1}
+        className="font-display text-2xl text-foreground outline-none sm:text-3xl"
+      >
+        {activeStep.title}
+      </h2>
 
       {/* All fields stay mounted; only the active step is shown so the final submit has them all. */}
       <div className="grid gap-4">
@@ -107,8 +126,15 @@ export function RequestWizard({ initialName = '' }: { initialName?: string }) {
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. National Science Bee"
             aria-label="Competition name"
+            aria-required="true"
+            aria-describedby="wizard-name-hint"
             autoComplete="off"
           />
+          {/* Conveys the requirement non-visually AND explains why "Next" is disabled until it's
+              filled (the disabled button alone gives AT users no reason) — WCAG 3.3.2. */}
+          <p id="wizard-name-hint" className="mt-2 text-xs text-muted">
+            Required — everything after this is optional.
+          </p>
         </div>
         <div hidden={step !== 1}>
           <Input

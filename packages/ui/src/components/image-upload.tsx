@@ -144,7 +144,7 @@ export function ImageUpload({
             aria-label="Remove cover image"
             className="rounded-lg p-1.5 text-muted hover:bg-background hover:text-danger"
           >
-            <X className="size-4" />
+            <X aria-hidden="true" className="size-4" />
           </button>
         </div>
       ) : uploading ? (
@@ -212,6 +212,7 @@ export function ImageUpload({
           <input
             type="url"
             inputMode="url"
+            aria-label="Image URL"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {

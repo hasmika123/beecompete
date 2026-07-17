@@ -73,6 +73,7 @@ export function EmailCaptureCta({
               name="email"
               required
               autoFocus
+              autoComplete="email"
               placeholder="you@example.com"
               aria-label="Email address"
             />

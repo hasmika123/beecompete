@@ -117,8 +117,11 @@ export function SuggestCorrectionForm({
               <input type="hidden" name="field" value={row.field} />
               <input type="hidden" name="value" value={row.value} />
               <FormField label={i === 0 ? 'What needs fixing?' : `Field ${i + 1}`}>
+                {/* aria-label mirrors the visible FormField label so the accessible name
+                    contains the visible text (WCAG 2.5.3 Label in Name) and the combobox is
+                    reliably named (a wrapping label doesn't name a combobox button). */}
                 <Select
-                  aria-label="Field to correct"
+                  aria-label={i === 0 ? 'What needs fixing?' : `Field ${i + 1}`}
                   placeholder="Pick a field…"
                   options={options.map((o) => ({ value: o.key, label: o.label }))}
                   value={row.field}

@@ -104,7 +104,11 @@ export function Stepper({
                   {step.label}
                 </span>
                 {step.incompleteRequired && (
+                  // role="img" so the aria-label is exposed (AT ignores aria-label on a bare,
+                  // role-less span) — gives the amber dot a text alternative so the state isn't
+                  // conveyed by color alone (WCAG 1.1.1 / 1.4.1).
                   <span
+                    role="img"
                     aria-label="has a required field"
                     className="size-1.5 shrink-0 rounded-full bg-amber-500"
                   />

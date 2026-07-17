@@ -151,7 +151,10 @@ export async function MarketplacePage({ rawSearchParams, hub }: MarketplacePageP
             <Link href="/competitions" className="hover:text-foreground">
               Competitions
             </Link>{' '}
-            › <span className="text-foreground">{hub.name}</span>
+            <span aria-hidden="true">›</span>{' '}
+            <span aria-current="page" className="text-foreground">
+              {hub.name}
+            </span>
           </nav>
           <h1 className="font-display text-3xl text-foreground sm:text-4xl">
             {hub.name} competitions

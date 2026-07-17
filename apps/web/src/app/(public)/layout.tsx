@@ -22,7 +22,13 @@ export default function PublicLayout({ children }: Readonly<{ children: React.Re
       </a>
       <div className="flex min-h-dvh flex-col">
         <SiteHeader />
-        <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-12 sm:px-6">
+        {/* tabIndex=-1 so the skip link reliably lands keyboard focus here across browsers
+            (a bare #main fragment doesn't move focus in all engines) — WCAG 2.4.1. */}
+        <main
+          id="main"
+          tabIndex={-1}
+          className="mx-auto w-full max-w-6xl flex-1 px-4 py-12 outline-none sm:px-6"
+        >
           {children}
         </main>
         <SiteFooter />

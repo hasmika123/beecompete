@@ -127,6 +127,7 @@ export function FilterPanel({
       {categoryFilter && (
         <Facet legend="Category" defaultOpen={!!categoryFilter.active}>
           <RadioGroup
+            aria-label="Category"
             className="grid gap-1.5"
             value={categoryFilter.active ?? ''}
             onValueChange={(v) => set({ category: v || undefined })}
@@ -158,6 +159,7 @@ export function FilterPanel({
 
       <Facet legend="Deadline" defaultOpen={params.deadlineWithinDays !== undefined}>
         <RadioGroup
+          aria-label="Deadline"
           className="grid gap-1.5"
           value={params.deadlineWithinDays !== undefined ? String(params.deadlineWithinDays) : ''}
           onValueChange={(v) => set({ deadlineWithinDays: v || undefined })}
@@ -171,6 +173,7 @@ export function FilterPanel({
 
       <Facet legend="Cost" defaultOpen={!!params.cost}>
         <RadioGroup
+          aria-label="Cost"
           className="grid gap-1.5"
           value={params.cost ?? ''}
           onValueChange={(v) => set({ cost: v || undefined })}
@@ -183,6 +186,7 @@ export function FilterPanel({
 
       <Facet legend="Individual or team" defaultOpen={!!params.participation}>
         <RadioGroup
+          aria-label="Individual or team"
           className="grid gap-1.5"
           value={params.participation ?? ''}
           onValueChange={(v) => set({ participation: v || undefined })}
@@ -195,6 +199,7 @@ export function FilterPanel({
 
       <Facet legend="Entry pathway" defaultOpen={!!params.pathway}>
         <RadioGroup
+          aria-label="Entry pathway"
           className="grid gap-1.5"
           value={params.pathway ?? ''}
           onValueChange={(v) => set({ pathway: v || undefined })}
@@ -207,6 +212,7 @@ export function FilterPanel({
 
       <Facet legend="Delivery" defaultOpen={!!params.delivery}>
         <RadioGroup
+          aria-label="Delivery"
           className="grid gap-1.5"
           value={params.delivery ?? ''}
           onValueChange={(v) => set({ delivery: v || undefined })}

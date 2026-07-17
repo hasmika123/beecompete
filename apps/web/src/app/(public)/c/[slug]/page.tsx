@@ -128,11 +128,14 @@ export default async function CompetitionDetailPage({
         <Link href="/competitions" className="hover:text-foreground">
           Competitions
         </Link>{' '}
-        ›{' '}
+        <span aria-hidden="true">›</span>{' '}
         <Link href={`/competitions/${competition.category.slug}`} className="hover:text-foreground">
           {competition.category.name}
         </Link>{' '}
-        › <span className="text-foreground">{competition.name}</span>
+        <span aria-hidden="true">›</span>{' '}
+        <span aria-current="page" className="text-foreground">
+          {competition.name}
+        </span>
       </nav>
 
       <div className="mt-6 grid gap-8 lg:grid-cols-3">

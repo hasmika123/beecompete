@@ -80,6 +80,48 @@ export function MarketplaceFrame({
   // as an Apply click), and `pending` dims the results while it lands.
   const navigate = (href: string) => startTransition(() => router.push(href, { scroll: false }));
 
+  // The mobile filter sheet is a real modal (role=dialog + aria-modal), so honor that: move focus
+  // into it on open, trap Tab, close on Escape, and restore focus to the trigger on close
+  // (WCAG 2.4.3 / 4.1.2). The SAME `open` renders an inline, non-modal <aside> at lg, so this only
+  // engages at the mobile breakpoint (guarded by matchMedia) — desktop focus is left alone.
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    if (!window.matchMedia('(max-width: 1023px)').matches) return;
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const restore = document.activeElement as HTMLElement | null;
+    const FOCUSABLE =
+      'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
+    dialog.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const nodes = dialog.querySelectorAll<HTMLElement>(FOCUSABLE);
+      if (nodes.length === 0) return;
+      const first = nodes[0]!;
+      const last = nodes[nodes.length - 1]!;
+      const active = document.activeElement;
+      // `active === dialog` covers the initial focus on the container (tabIndex=-1, so it's not in
+      // `nodes`) — without it, the first Shift+Tab would escape the trap.
+      if (e.shiftKey && (active === first || active === dialog)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      restore?.focus?.();
+    };
+  }, [open]);
+
   const filterPanel = (
     <FilterPanel
       path={path}
@@ -180,7 +222,9 @@ export function MarketplaceFrame({
       {/* Mobile: the panel is a bottom sheet behind the Filter button. */}
       {open && (
         <div
-          className="fixed inset-0 z-50 lg:hidden"
+          ref={dialogRef}
+          tabIndex={-1}
+          className="fixed inset-0 z-50 outline-none lg:hidden"
           role="dialog"
           aria-modal="true"
           aria-label="Filters"

@@ -207,6 +207,11 @@ export function ShareMenu({ title, path, variant = 'button', className }: ShareM
             style={{ position: 'fixed', top: pos.top, left: pos.left, width: MENU_WIDTH }}
             className="z-50 rounded-[var(--radius-panel)] border border-border bg-surface-raised p-1 shadow-[var(--shadow-popover)]"
           >
+            {/* Announce the copy result — the button's "Copy link"→"Copied" swap is silent to AT
+                otherwise (WCAG 4.1.3 Status Messages). */}
+            <span role="status" aria-live="polite" className="sr-only">
+              {copied ? 'Link copied' : ''}
+            </span>
             <button ref={firstItemRef} type="button" onClick={copyLink} className={itemClass}>
               {copied ? (
                 <>

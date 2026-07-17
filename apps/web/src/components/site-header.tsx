@@ -119,16 +119,23 @@ export function SiteHeader() {
           aria-label="Main"
           className="border-t border-border px-4 py-2 sm:hidden"
         >
-          {NAV.map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              onClick={() => setMenuOpen(false)}
-              className="block rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-surface"
-            >
-              {label}
-            </Link>
-          ))}
+          {NAV.map(({ href, label }) => {
+            const active = pathname === href || pathname.startsWith(`${href}/`);
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? 'page' : undefined}
+                onClick={() => setMenuOpen(false)}
+                className={cn(
+                  'block rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-surface',
+                  active ? 'bg-surface text-foreground' : 'text-foreground',
+                )}
+              >
+                {label}
+              </Link>
+            );
+          })}
         </nav>
       )}
     </header>
