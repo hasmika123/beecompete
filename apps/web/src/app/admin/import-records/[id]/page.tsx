@@ -4,6 +4,7 @@ import { ArrowLeft } from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
 import { ImportReview } from '@/components/admin/import-review';
 import { ReviewOutcome } from '@/components/admin/review-outcome';
+import { ImportOriginBadge } from '@/components/admin/status-badges';
 import { AdminApiError, adminFetch } from '@/lib/admin-api';
 import type { ImportRecord, Organization, Page } from '@/lib/admin-types';
 
@@ -53,6 +54,14 @@ export default async function ReviewImportPage({ params }: { params: Promise<{ i
         <div className="grid gap-6">
           <ReviewOutcome status={record.status} note={record.note} reviewedAt={record.reviewedAt} />
           <dl className="grid gap-1 text-sm">
+            {/* Origin survives review (the approve path overwrites the note, so this is the only
+                remaining user-request-vs-pipeline signal on reviewed records). */}
+            <div className="flex items-center gap-2">
+              <dt className="text-muted">Origin:</dt>
+              <dd>
+                <ImportOriginBadge origin={record.origin} />
+              </dd>
+            </div>
             <div className="flex gap-2">
               <dt className="text-muted">Source:</dt>
               <dd>

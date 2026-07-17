@@ -1,5 +1,6 @@
 'use server';
 
+import { isHoneypotTripped } from '@/lib/honeypot';
 import { publicFetch } from '@/lib/public-api';
 import type { FormState } from '@/lib/admin-types';
 
@@ -11,7 +12,7 @@ import type { FormState } from '@/lib/admin-types';
  */
 export async function submitCorrection(_prev: FormState, form: FormData): Promise<FormState> {
   // Honeypot filled → pretend success, store nothing.
-  if (String(form.get('website') ?? '').trim()) {
+  if (isHoneypotTripped(form)) {
     return { ok: true };
   }
 

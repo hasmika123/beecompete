@@ -262,8 +262,75 @@ no match → create a **CURATED/HOST** org (domain from the official URL). The S
 sends `organizerName` (never a placeholder; a null-organizer row is flagged for manual assignment).
 The import-review UI gains an **Organizer panel** (reuse/pick/create-new + live org search); the
 competition edit form drops its "— none —" organizer option. API suite green (49/49). As-built:
-`domain-model.md` §3b, `architecture.md` §13a, `tools/seeding/README.md`. Next per
-`docs/phase-1-plan.md`: **R1-12 legal pages** (launch surface).
+`domain-model.md` §3b, `architecture.md` §13a, `tools/seeding/README.md`.
+**R1-12 done (2026-07-17) 🔒 — legal pages** (branch `feat/R1-12-17-launch-surface`, opened for the
+whole R1-12→R1-17 launch surface): four public policy pages — `/privacy` (COPPA-aware), `/terms`,
+`/cookies`, `/affiliate-disclosure` (DQ10/FTC) — written honestly to the R1 browse-only reality
+(no accounts, no PII, no payments; account/consent/payments language deferred to R2). Shared
+`apps/web/src/components/legal/legal-page.tsx` (layout + prose primitives + on-page TOC) with
+cross-page constants in `apps/web/src/lib/legal.ts` (`LEGAL_CONTACT_EMAIL` = support@beecompete.com,
+`OPERATING_ENTITY` + governing-law placeholders pending LLC formation, `LEGAL_REVIEW_PENDING` flag
+driving an on-page "Draft — under review" notice). Wired into the footer (new Legal column +
+bottom-bar), `app/sitemap.ts`, and the R1-8 resources-row inline disclosure (→ `/affiliate-disclosure`).
+Four curated Phosphor icons added to `packages/ui` (ShieldCheck/Scales/Cookie/Handshake).
+Frontend-only, no schema/API change; typecheck + lint + prettier green, all four pages serve 200.
+⚠️ **DRAFTS — the R1-17 gate still requires:** privacy-counsel review (compliance.md §Launch gate
+#1/#6), the operating entity's legal name + governing-law state filled into `lib/legal.ts`, and
+`LEGAL_REVIEW_PENDING` flipped to `false`.
+**R1-13 done (2026-07-17) — beta tag + disclaimer:** the header "Beta" badge gains a
+keyboard-reachable `Tooltip` explainer, and the shared `site-footer` carries the app-wide
+disclaimer — beta · details can change (confirm on the organizer's official site) · BeeCompete is
+independent and **not affiliated with or endorsed by** the listed competitions/organizers
+(compliance §8, nominative use). Owner chose badge + footer over a page-top banner (the `flush`
+Alert banner stays unused). Frontend-only, reuses `packages/ui` Badge + Tooltip.
+**R1-14 done (2026-07-17) — privacy-first analytics (code):** Cloudflare Web Analytics + PostHog
+(`posthog-js`), wired in `apps/web/src/components/analytics/analytics.tsx` + `lib/analytics.ts`,
+mounted in the `(public)` layout (public pages only, never `/admin`). **Cookieless + anonymous +
+COPPA-safe:** PostHog `persistence: 'memory'` (no cookies — verified), `person_profiles: 'never'`,
+autocapture/session-replay/surveys OFF, manual `$pageview` on route change, `respect_dnt`; DNT/GPC
+skip PostHog entirely (CF beacon is aggregate/cookieless so it loads regardless). Runtime env
+(`POSTHOG_KEY`, `POSTHOG_HOST` default EU, `CF_WEB_ANALYTICS_TOKEN`) read by the server layout and
+passed to the client — **NOT `NEXT_PUBLIC_*`** (build-once-promote), **inert without tokens**.
+`trackEvent()` exported for X20 zero-result search (wiring TBD). **Owner switches it on** via
+setup-runbook §11 — **CF Web Analytics via the JS-snippet beacon token** (`CF_WEB_ANALYTICS_TOKEN`;
+CF automatic edge injection was tried but doesn't reliably fire on our streamed SSR — owner
+2026-07-17) + **one EU PostHog project shared by prod + dev** (`POSTHOG_KEY` in the prod `.env`, same
+key in `apps/web/.env.local`). As-built: architecture §10a.
+**R1-15 done (2026-07-17) — weekly digest signup (code):** the `DigestBand` (Landing/How It Works/
+Categories) does real Brevo capture — email + optional Grade/Interest/State selects
+(`lib/digest-options.ts`, static) → Brevo contact on a list with `GRADE`/`INTEREST`/`STATE`
+attributes, **double opt-in** when a DOI template is set (`lib/brevo.ts`, server-only). Pitched to
+**parents/educators/16+** with consent microcopy + Privacy link (COPPA-safe — a newsletter to a
+child would trigger consent), honeypot, and **inert without Brevo env** (friendly "opening soon").
+R1 = capture + segmentation only (the automated matching send is M26, Phase 2). Env
+(`BREVO_API_KEY`, `BREVO_DIGEST_LIST_ID`, `BREVO_DIGEST_DOI_TEMPLATE_ID`, `BREVO_DOI_REDIRECT_URL`)
+passed to the web service by both compose stacks; owner setup in setup-runbook §7a.
+**R1-15b done (2026-07-17) — listing-page captures (code):** the R1-7 detail-page Follow/Claim
+stubs are now real `EmailCaptureCta`s — **per-competition follow-by-email** (M29) → a Brevo follow
+list and **host-interest "claim this competition"** (H46) → a Brevo host list, each storing the
+listing as the `COMPETITION` attribute, parent/16+ (host = organizer) framing + double opt-in,
+inert without env (owner chose Brevo lists + DOI, 2026-07-17). The **Request-a-Competition wizard**
+(`/suggest-a-competition`, 5-step + progress + `?q=` prefill) posts to a new **public**
+`POST /api/v1/competition-requests` (`CompetitionRequestPublicController`, outside the admin filter)
+that queues an `ImportRecord` into the R1-3 import/curation queue; no submitter PII on the request
+path (COPPA-clear). **Post-review fix (migration `0013`):** `import_record.origin`
+(`PIPELINE`|`USER_REQUEST`) is the first-class discriminator — the public form stamps
+`USER_REQUEST`, and the admin queue (Origin column) + review header + outcome view all badge it, so
+curators never mistake an unvetted public request for an S3 extraction (the old signals — null
+confidence + a note — were shown nowhere and the approve path overwrites the note). `lib/brevo.ts`
+generalized to `subscribeToBrevoList` (digest/follow/host list ids + shared `BREVO_DOI_TEMPLATE_ID`);
+env passed by both compose stacks. **R1-15 verified end-to-end against live Brevo (2026-07-17):**
+digest signup → DOI email → contact with `GRADE`/`INTEREST`/`STATE`; gotcha recorded — the contacts
+API needs the **REST key `xkeysib-`**, not the SMTP key `xsmtpsib-` (setup-runbook §7a).
+**R1-16 done (2026-07-17) — in-app bug/feedback report (code):** a lightweight `/feedback` page
+(noindex) + footer "Send Feedback" link — category + message + optional reply email + honeypot →
+**Brevo transactional email to support@** (`sendTransactionalEmail` in `lib/brevo.ts`, reuses
+`BREVO_API_KEY`; from = `BREVO_SENDER_EMAIL`, a verified sender). No accounts/DB at R1; inert without
+Brevo (asks the visitor to email support@ directly). **Sentry feedback widget deferred** — the web
+Sentry client isn't wired (F8 `WEB_SENTRY_DSN` build-arg TODO); "Bug" reports route through this
+form until then. **All R1-12→R1-16 build tasks done** — next per `docs/phase-1-plan.md` is the
+**R1-17 release gate** (activation + compliance: legal counsel review, prod env/tokens, WAF,
+indexing flip).
 **Deferred (PR C):** hero-card image upload (reuses the
 R1-19 cover endpoint with a `hero/` key prefix) + inline FAQ/
 Resource row-edit. **Before prod users:** set `ADMIN_API_TOKEN` in both VPS `.env` + `/admin`

@@ -56,8 +56,44 @@
 > **R1-11 done (2026-07-13) — share a competition (M21):** shared `packages/ui` `ShareMenu` on
 > the detail header (channels + copy-link + native sheet). Privacy: plain intent links, clean
 > URL, no tracking, collects nothing (M21/M34 rule).
-> **Next:** R1-12 legal pages. Deferred: PR C (S3 hero-image upload + inline
-> FAQ/Resource edit).
+> **R1-12 done (2026-07-17) 🔒 — legal pages** (branch `feat/R1-12-17-launch-surface`, covering
+> the whole R1-12→R1-17 launch surface): four public policy pages — `/privacy` (COPPA-aware),
+> `/terms`, `/cookies`, `/affiliate-disclosure` (DQ10/FTC) — scoped honestly to the R1 browse-only
+> reality (no accounts, no PII, no payments; account/consent/payments language deferred to R2).
+> Shared `components/legal/legal-page.tsx` layout + prose primitives + TOC; cross-page constants
+> in `lib/legal.ts` (contact email, `OPERATING_ENTITY` + governing-law placeholders pending entity
+> formation, `LEGAL_REVIEW_PENDING` flag driving an on-page "under review" notice). Wired into the
+> footer (new Legal column + bottom-bar links), `sitemap.ts`, and the R1-8 resources-row inline
+> disclosure ("Learn more" → `/affiliate-disclosure`). ⚠️ **These are DRAFTS — the R1-17 gate
+> still requires a privacy attorney to review them (compliance.md §Launch gate #1/#6), the
+> operating entity's legal name + governing-law state filled in, and `LEGAL_REVIEW_PENDING`
+> flipped false.** Frontend-only, no schema/API change.
+> **R1-13 done (2026-07-17) — beta tag + disclaimer:** header "Beta" badge + keyboard-reachable
+> tooltip explainer, and the app-wide footer disclaimer (beta · details can change → confirm on the
+> organizer's site · independent, **not affiliated** with listed organizers, compliance §8). Owner
+> chose badge + footer over a page-top banner; frontend-only, reuses Badge/Tooltip.
+> **R1-14 done (2026-07-17) — privacy-first analytics (code):** Cloudflare Web Analytics + PostHog,
+> cookieless, public-pages-only, DNT/GPC-honoring, anonymous (memory persistence, `person_profiles:
+> never`, autocapture/replay off, manual SPA pageviews). Runtime-env/inert-without-tokens
+> (build-once-promote safe); `trackEvent()` exposed for X20. **Owner switches it on** by setting
+> `POSTHOG_KEY` + `CF_WEB_ANALYTICS_TOKEN` in the prod `.env` (setup-runbook §11). As-built:
+> architecture §10a.
+> **R1-15 done (2026-07-17) — weekly digest signup (code):** DigestBand does real Brevo capture
+> (email + optional Grade/Interest/State → contact + list attributes, **double opt-in** when
+> configured), parent/educator/16+ framing + consent microcopy + honeypot, **inert without Brevo
+> env**. R1 = capture + segmentation only (M26 send is Phase 2). Owner setup: setup-runbook §7a;
+> activation deferred to the R1-17 gate.
+> **R1-15b done (2026-07-17) — listing-page captures (code):** per-competition **follow-by-email**
+> + host-interest **"claim"** now do real Brevo capture (owner-chosen: Brevo lists + parent/16+ DOI),
+> replacing the R1-7 detail stubs; the **Request-a-Competition wizard** (`/suggest-a-competition`)
+> posts to a new **public** `/api/v1/competition-requests` → the import/curation queue (no schema).
+> Owner setup: setup-runbook §7a; activation deferred to the R1-17 gate.
+> **R1-16 done (2026-07-17) — in-app bug/feedback report (code):** `/feedback` page + footer link →
+> Brevo transactional email to support@ (reuses `BREVO_API_KEY`, verified sender). Sentry feedback
+> widget deferred to the web-Sentry-client TODO. Owner setup: setup-runbook §7a.
+> **Next:** R1-17 release gate — all build tasks R1-12→R1-16 are done; the gate is activation +
+> compliance (legal counsel review, prod env/tokens, WAF, indexing flip). Deferred: PR C (S3
+> hero-image upload + inline FAQ/Resource edit).
 
 The ordered, buildable task list for Phase 1. **Every task below becomes a GitHub Issue** (titled with its
 task ID + registry refs) before coding — that's the required per-phase step. Build in the listed order;
@@ -107,12 +143,86 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
 
 **Launch surface**
 - **R1-12** — Legal pages: Privacy, Terms, Cookie Policy, affiliate disclosure. 🔒 (compliance)
+  ✅ **Pages built 2026-07-17** (`/privacy`, `/terms`, `/cookies`, `/affiliate-disclosure`), but
+  they ship as **drafts** — three owner/counsel items below must clear before R1-17 flips the site
+  public.
 - **R1-13** — **Beta tag + disclaimer** across the app. (registry)
+  ✅ **Done 2026-07-17** — header "Beta" badge gains a keyboard-reachable tooltip explainer; the
+  footer carries the app-wide disclaimer (beta · details can change → confirm on the organizer's
+  official site · independent, **not affiliated with or endorsed by** the listed organizers,
+  compliance §8). Owner chose badge + footer over a page-top banner. Frontend-only, reuses existing
+  `packages/ui` primitives (Badge, Tooltip).
 - **R1-14** — Privacy-first analytics (Cloudflare Web Analytics + PostHog). (X20)
+  ✅ **Code done 2026-07-17** — cookieless, public-pages-only, DNT/GPC-honoring, anonymous PostHog
+  (memory persistence, no person profiles, autocapture/replay off, manual SPA pageviews) + CF Web
+  Analytics beacon; runtime-env/inert-without-tokens (build-once-promote safe); `trackEvent()`
+  exposed for X20 zero-result search. **Owner setup to switch on:** set `POSTHOG_KEY` +
+  `CF_WEB_ANALYTICS_TOKEN` (+ optional `POSTHOG_HOST`) in the prod `.env` — exact steps in
+  setup-runbook §11. As-built: architecture §10a.
 - **R1-15** — **Weekly Digest signup** (Brevo): email capture + 2–3 preference questions (grade, category/interests, region) per `page-blueprints.md` Landing §5. ⚠ Scope note: R1 ships the *capture + segmentation*; early digest sends are manual/curated via Brevo — the **automated personalized matching send is M26 (Phase 2)**. (M26 precursor)
+  ✅ **Code done 2026-07-17** — the DigestBand (Landing/How It Works/Categories) now does real Brevo
+  capture: email + optional Grade/Interest/State selects → Brevo contact + list (attributes
+  GRADE/INTEREST/STATE), **double opt-in** when a template is configured. Pitched to
+  parents/educators/16+ with consent microcopy + Privacy link (COPPA-safe — a newsletter to a child
+  would trigger consent); honeypot; **inert without Brevo env** (friendly "opening soon"). Single
+  interest for R1 (multi is a later enhancement). Owner setup: setup-runbook §7a.
 - **R1-15b** — Listing-page captures (Brevo/queue-backed, no accounts needed): **per-competition follow-by-email** (M29), **"Request a Competition"** multi-step wizard form (page-blueprints Page 6) → curation queue (DQ15), **"Are you the organizer?" host-interest CTA** → host waitlist (H46).
+  ✅ **Code done 2026-07-17.** Owner decisions (2026-07-17): follow + host captures use **Brevo lists**
+  (no schema), and follow ships now with **parent/16+ framing + double opt-in** (COPPA-safe). Built:
+  (1) **Follow** + (2) **host-interest** replace the R1-7 detail-page stubs with real `EmailCaptureCta`
+  → Brevo follow/host lists (competition stored as the `COMPETITION` attribute), inert without env;
+  (3) the **Request-a-Competition wizard** (`/suggest-a-competition`, 5-step, progress, `?q=` prefill)
+  → a **public** `POST /api/v1/competition-requests` (outside the admin filter) that queues an
+  `ImportRecord` into the R1-3 import/curation queue for curator review. No submitter PII on the
+  request path (COPPA-clear). **Post-review fix:** migration `0013` adds `import_record.origin`
+  (`PIPELINE`|`USER_REQUEST`) so public requests are badged in the admin queue + review header —
+  curators never apply pipeline-grade trust to an unvetted submission. Owner setup: setup-runbook §7a.
 - **R1-16** — In-app **bug/feedback report**. (DQ7 precursor)
+  ✅ **Code done 2026-07-17.** A lightweight `/feedback` page (noindex) + footer "Send Feedback"
+  link (Contribute column): category (Bug/Idea/Content/Other) + message + optional reply email +
+  honeypot → **Brevo transactional email to support@** (`sendTransactionalEmail`, reuses
+  `BREVO_API_KEY`; from = `BREVO_SENDER_EMAIL`, verified sender required). No accounts/DB at R1;
+  inert without Brevo (asks the visitor to email support@ directly). **Sentry feedback widget
+  deferred** — the web Sentry client isn't wired yet (the F8 `WEB_SENTRY_DSN` build-arg TODO); bug
+  reports route through this same form (category "Bug") until then. Owner setup: setup-runbook §7a.
 - **R1-17** — **R1 release gate** (dev-process §8): a11y (WCAG AA) on public pages, WAF/rate-limit on, backups tested, legal pages live, **legal foundation done** (entity + insurance + trademark search — setup-runbook §1b), **content gate met** (see "Data seeding & catalog readiness" below), **search indexing flipped ON** (R1-10 gate — the site is invisible to Google until this): (1) set `SEARCH_INDEXING=on` in `~/beecompete-prod/.env` + `docker compose -f docker-compose.prod.yml up -d web`, (2) verify `https://beecompete.com/robots.txt` serves the allow ruleset + a spot-checked page emits `index, follow`, (3) submit `sitemap.xml` in Google Search Console + Bing Webmaster Tools, (4) confirm staging still serves `Disallow: /` → **tag R1, deploy to prod.**
+  - **🛑 R1-12 legal follow-ups (must ALL clear before this gate — the pages are drafts until then):**
+    1. **Privacy-counsel review** of the four pages — especially the COPPA posture in the Privacy
+       Policy (compliance.md §Launch gate #6). This is the hard blocker; the copy is not final
+       until a qualified privacy attorney has signed off.
+    2. **Fill the operating entity's legal name + governing-law state** into `apps/web/src/lib/legal.ts`
+       (`OPERATING_ENTITY` + the Terms governing-law clause) once the LLC is formed — tied to the
+       "legal foundation done" item above (setup-runbook §1b).
+    3. **Flip `LEGAL_REVIEW_PENDING` → `false`** in `apps/web/src/lib/legal.ts` after #1–#2 are done —
+       this removes the on-page "Draft — under review" banner from all four legal pages.
+  - **📊 R1-14 analytics activation (code shipped; these are the prod switch-on steps — deferred to
+    this gate per owner, 2026-07-17):** the analytics is inert until tokens exist in the prod env.
+    1. **Create the accounts:** Cloudflare → Web Analytics → **Enable with JS Snippet installation**
+       for `beecompete.com` → copy the **beacon token** (do NOT also enable Automatic Setup — it
+       double-counts and doesn't reliably inject on our SSR anyway); PostHog → **EU** region → **one**
+       project shared by prod + dev → copy the **Project API Key** (`phc_…`), confirm Session Replay
+       + Autocapture OFF.
+    2. **Set in `~/beecompete-prod/.env`:** `POSTHOG_KEY`, `CF_WEB_ANALYTICS_TOKEN`
+       (+ `POSTHOG_HOST=https://eu.i.posthog.com` if EU). Full steps: setup-runbook §11.
+    3. **Get the updated compose onto the box:** confirm the deploy-prod workflow copies
+       `docker-compose.prod.yml` to `~/beecompete-prod/` (it now passes the analytics vars to the web
+       service); if the pipeline only does `pull && up -d` against the file already there, `scp`/`git
+       pull` the updated compose onto the box once (same as the Caddyfile pattern).
+    4. **Recreate web** (the release deploy sets `IMAGE_TAG` automatically; for a manual env-only
+       recreate: `IMAGE_TAG=<current-tag> docker compose -f docker-compose.prod.yml up -d web`).
+    5. **Verify:** load a public page → DevTools Network shows `*.i.posthog.com` +
+       `static.cloudflareinsights.com` requests, a `$pageview` in PostHog Activity, and **no** `ph_*`
+       cookie. (CF *records* data only for the real `beecompete.com` hostname.)
+  - **✉️ R1-15 / R1-15b Brevo activation (code shipped; prod switch-on — deferred to this gate):**
+    the digest + follow + host captures are inert until Brevo is wired. Steps (full: setup-runbook §7a):
+    1. Brevo → create an **API key**, up to three **lists** (digest / follow / host), the text
+       attributes **GRADE/INTEREST/STATE** + **COMPETITION**, and one shared **double-opt-in template**.
+    2. Set `BREVO_API_KEY`, `BREVO_DIGEST_LIST_ID`, `BREVO_FOLLOW_LIST_ID`, `BREVO_HOST_LIST_ID`,
+       `BREVO_DOI_TEMPLATE_ID` (+ optional `BREVO_DOI_REDIRECT_URL`) in `~/beecompete-prod/.env`;
+       recreate web. (Wire only the captures you want live — each is independently inert.)
+    3. Verify: submit the digest band + a detail page's Follow + Claim → confirm email → contacts land
+       in the right lists with their attributes. (Request-a-Competition needs no Brevo — it queues to
+       the import queue; check `/admin/import-records` for a test submission.)
 
 **R1 UI/data follow-ups (surfaced 2026-07-13 during the admin/marketplace UI review)** were
 **built the same day** — including the two schema items once tracked here as standalone tasks:

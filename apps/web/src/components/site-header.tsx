@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Badge, ListIcon, Logo, ThemeToggle, X, cn } from '@beecompete/ui';
+import { Badge, ListIcon, Logo, ThemeToggle, Tooltip, X, cn } from '@beecompete/ui';
 
 // Blueprint NavBar (shared component): logo + Beta tag left; Competitions · Categories ·
 // How It Works center; the Sign In/Up slot is reserved for R2 (hidden at R1 — no accounts).
 // Sticky with a subtle shadow once scrolled. "For Educators" joins when that page ships.
+// The "Beta" tag is R1-13's persistent disclaimer surface — a tooltip explains what beta means
+// (the app-wide disclaimer proper lives in the footer, per the owner's R1-13 decision).
 const NAV = [
   { href: '/competitions', label: 'Competitions' },
   { href: '/categories', label: 'Categories' },
@@ -60,8 +62,13 @@ export function SiteHeader() {
           >
             <Logo className="h-8" />
           </Link>
-          {/* Beta tag (→ R1-13) */}
-          <Badge variant="gold">Beta</Badge>
+          {/* Beta tag + tooltip disclaimer (R1-13). Badge is made focusable (tabIndex) so the
+              tooltip is reachable by keyboard/AT, not just hover. */}
+          <Tooltip content="BeeCompete is in beta: the catalog is still growing and listing details can change. Always confirm on the organizer's official site.">
+            <Badge variant="gold" tabIndex={0} className="cursor-help">
+              Beta
+            </Badge>
+          </Tooltip>
         </div>
 
         <nav aria-label="Main" className="hidden items-center gap-1 sm:flex">
@@ -112,16 +119,23 @@ export function SiteHeader() {
           aria-label="Main"
           className="border-t border-border px-4 py-2 sm:hidden"
         >
-          {NAV.map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              onClick={() => setMenuOpen(false)}
-              className="block rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-surface"
-            >
-              {label}
-            </Link>
-          ))}
+          {NAV.map(({ href, label }) => {
+            const active = pathname === href || pathname.startsWith(`${href}/`);
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? 'page' : undefined}
+                onClick={() => setMenuOpen(false)}
+                className={cn(
+                  'block rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-surface',
+                  active ? 'bg-surface text-foreground' : 'text-foreground',
+                )}
+              >
+                {label}
+              </Link>
+            );
+          })}
         </nav>
       )}
     </header>

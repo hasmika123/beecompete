@@ -29,6 +29,11 @@ services:
       NODE_ENV: production
       # BFF → API over the internal network (never exposed publicly).
       API_BASE_URL: http://api:8080
+      # Admin BFF secret (R1-3): the web server injects this as the X-Admin-Token header on
+      # /api/v1/admin/** calls. MUST match the api's ADMIN_API_TOKEN (api reads it via env_file).
+      # Without this passthrough the web BFF sends an empty token → every admin write is rejected
+      # (fail closed). Blank here = admin off. Same VPS .env value feeds both web and api.
+      ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:-}
       # Canonical origin for metadata/JSON-LD absolute URLs — runtime, NOT NEXT_PUBLIC_*:
       # the image is built once and promoted, so build-time inlining can't vary per stack.
       SITE_URL: https://staging.beecompete.com
@@ -37,6 +42,23 @@ services:
       # (Browser-side uses NEXT_PUBLIC_SENTRY_DSN, baked at image build — see Dockerfile.)
       SENTRY_DSN: ${WEB_SENTRY_DSN:-}
       SENTRY_ENVIRONMENT: staging
+      # Privacy-first analytics (R1-14). Leave blank on staging (default) so it stays analytics-free;
+      # only set these (to a SEPARATE PostHog project / CF site) if you deliberately want staging data.
+      POSTHOG_KEY: ${POSTHOG_KEY:-}
+      POSTHOG_HOST: ${POSTHOG_HOST:-}
+      CF_WEB_ANALYTICS_TOKEN: ${CF_WEB_ANALYTICS_TOKEN:-}
+      # Listing-page email captures via Brevo (R1-15 digest · R1-15b follow + host). Server-only;
+      # each is inert unless its list id is set. Use separate staging lists if you enable them,
+      # so test signups don't hit the prod lists.
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      BREVO_DIGEST_LIST_ID: ${BREVO_DIGEST_LIST_ID:-}
+      BREVO_FOLLOW_LIST_ID: ${BREVO_FOLLOW_LIST_ID:-}
+      BREVO_HOST_LIST_ID: ${BREVO_HOST_LIST_ID:-}
+      BREVO_DOI_TEMPLATE_ID: ${BREVO_DOI_TEMPLATE_ID:-}
+      BREVO_DOI_REDIRECT_URL: ${BREVO_DOI_REDIRECT_URL:-}
+      # In-app feedback (R1-16) → support@ via Brevo transactional mail. Verified sender required.
+      BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL:-}
+      BREVO_SENDER_NAME: ${BREVO_SENDER_NAME:-}
     depends_on:
       api:
         condition: service_healthy

@@ -49,6 +49,12 @@ public class ImportRecord {
 	@Column(nullable = false, length = 20)
 	private ImportStatus status = ImportStatus.PENDING;
 
+	/** Pipeline extraction vs public user request (R1-15b) — surfaced to curators at review time. */
+	@NotNull
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 20)
+	private ImportOrigin origin = ImportOrigin.PIPELINE;
+
 	@Column(columnDefinition = "text")
 	private String note;
 
@@ -65,10 +71,16 @@ public class ImportRecord {
 
 	protected ImportRecord() {}
 
+	/** Pipeline/admin ingress — origin defaults to {@link ImportOrigin#PIPELINE}. */
 	public ImportRecord(Map<String, Object> payload, String sourceUrl, BigDecimal confidence) {
+		this(payload, sourceUrl, confidence, ImportOrigin.PIPELINE);
+	}
+
+	public ImportRecord(Map<String, Object> payload, String sourceUrl, BigDecimal confidence, ImportOrigin origin) {
 		this.payload = payload;
 		this.sourceUrl = sourceUrl;
 		this.confidence = confidence;
+		this.origin = origin;
 	}
 
 	public UUID getId() {
@@ -93,6 +105,10 @@ public class ImportRecord {
 
 	public ImportStatus getStatus() {
 		return status;
+	}
+
+	public ImportOrigin getOrigin() {
+		return origin;
 	}
 
 	public void setStatus(ImportStatus status) {

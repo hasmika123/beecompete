@@ -1,0 +1,24 @@
+# Import-record origin discriminator (R1-15b review fix). The public Request-a-Competition form
+# queues records into the same import_record table as the S3 pipeline; until now the only signals
+# were a null confidence + a note string — which no review surface showed, and which the approve
+# path overwrites. A first-class origin column (PIPELINE | USER_REQUEST) lets the admin queue and
+# review header tell curators an unvetted public request from a machine extraction, permanently.
+#
+# Additive + safe backfill: DEFAULT 'PIPELINE' labels all existing rows, which is factually
+# correct everywhere real — the public endpoint ships in the same release as this migration, so no
+# USER_REQUEST rows can predate it.
+databaseChangeLog:
+  - changeSet:
+      id: 0013-import-origin
+      author: beecompete
+      comment: Add import_record.origin (PIPELINE | USER_REQUEST) — DQ15 user requests become distinguishable.
+      changes:
+        - addColumn:
+            tableName: import_record
+            columns:
+              - column:
+                  name: origin
+                  type: "VARCHAR(20)"
+                  defaultValue: PIPELINE
+                  constraints:
+                    nullable: false

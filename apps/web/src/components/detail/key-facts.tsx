@@ -108,9 +108,12 @@ export function KeyFacts({ competition }: { competition: CompetitionDetail }) {
       <DefinitionGrid rows={spineRows(competition)} />
       {attributeRows.length > 0 && (
         <div className="grid gap-3">
-          <h3 className="text-sm font-semibold text-foreground">
+          {/* h2 (not h3): this is the first heading in the main column after the page h1, and its
+              sibling sections (Prep resources, Related, Key dates) are h2 — an h3 here skips a
+              level (WCAG 1.3.1). Level is independent of the small visual size. */}
+          <h2 className="text-sm font-semibold text-foreground">
             {competition.category.name} details
-          </h3>
+          </h2>
           <DefinitionGrid rows={attributeRows} />
         </div>
       )}

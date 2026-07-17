@@ -153,6 +153,28 @@ job types; revisit only at thousands of jobs/second.
 - **Legal pages:** Privacy Policy (COPPA-compliant), Terms & Conditions, Cookie Policy, **affiliate disclosure** (FTC, ships with affiliate links), community/content guidelines. Required before public launch.
 - **Data governance:** audit logging on sensitive/admin actions; retention + deletion policy; encryption at rest (managed DB) and in transit.
 
+### 10a. Analytics — as built (R1-14)
+Cloudflare Web Analytics + PostHog, wired in `apps/web` and **inert until env is set** (owner setup:
+`setup-runbook.md` §11). Design decisions, all encoded in `components/analytics/analytics.tsx` +
+`lib/analytics.ts`:
+- **Public pages only.** Mounted in the `(public)` layout, never the admin console.
+- **Runtime env, not `NEXT_PUBLIC_*`** (`POSTHOG_KEY`, `POSTHOG_HOST`, `CF_WEB_ANALYTICS_TOKEN`): the
+  server layout reads them per request and passes them to the client, so tokens vary per stack under
+  build-once-promote (same rule as `SITE_URL`). No token → nothing renders.
+- **PostHog hardened for anonymous, aggregate use:** `persistence: 'memory'` (cookieless — verified
+  no `ph_*` cookie), `person_profiles: 'never'`, autocapture / session-recording / surveys all OFF,
+  manual `$pageview` on route change (SPA), `respect_dnt`. Exposes `trackEvent()` for X20 events
+  (e.g. zero-result search — wiring TBD where the search UI lives).
+- **DNT / GPC honored:** PostHog isn't started when the visitor signals Do-Not-Track or Global
+  Privacy Control. Cloudflare Web Analytics (cookieless, no per-visitor data) loads regardless — it
+  has nothing individual to opt out of (matches the Cookie Policy copy).
+- **As activated (owner, 2026-07-17):** Cloudflare Web Analytics via the **JS-snippet beacon token**
+  (`CF_WEB_ANALYTICS_TOKEN`), injected by `analytics.tsx`. CF's *automatic* edge injection was tried
+  first but never landed the beacon in our streamed Next.js SSR HTML (behind Caddy behind CF — the
+  challenge-platform script injected fine, the analytics beacon did not), so we inject it ourselves;
+  do NOT also enable automatic, or pageviews double-count. PostHog uses **one shared project for
+  prod + local dev**.
+
 ## 11. Observability
 
 Sentry (errors, both web + API) · Spring Actuator health/metrics · uptime monitoring (e.g., UptimeRobot/BetterStack) · structured JSON logs aggregated centrally. **In-app bug/feedback report** (ties to trust/safety reporting DQ7) routed to the issue tracker + Sentry context.
@@ -178,7 +200,10 @@ tooling + audit log) → Phase 2+ (dedup DQ4, conflict resolution DQ5) → Phase
 - **API:** a `catalog.curation` package exposes `/api/v1/admin/**` (REST/JSON) — CRUD for
   Competition/Edition/KeyDate/Resource/Category(+CategoryTemplate)/Organization, an **import-review
   queue** on a new `import_record` table (Liquibase `0006`: `payload` JSONB + source/confidence/
-  status; approve → creates the real Competition with `provenance.source=import`), landing content
+  status; approve → creates the real Competition with `provenance.source=import`; Liquibase `0013`
+  adds `origin` `PIPELINE`|`USER_REQUEST` — the public Request-a-Competition form stamps
+  `USER_REQUEST` and the admin queue/review/outcome views badge it, so curators can tell an
+  unvetted public request from an S3 extraction), landing content
   (HeroCard upsert-by-position + FeaturedSlot carousel, ≤10, archived-competition guard), and
   verification/provenance controls. Every attributes write validates through
   `CategoryAttributeValidator`; every write stamps provenance.
@@ -399,9 +424,10 @@ Operational tasks (from the product checklist) to complete before public launch 
 - [ ] Emails: `no-reply@` (Brevo) + `support@` (Cloudflare Routing → Gmail); SPF/DKIM/DMARC
 - [ ] Legal pages live: Privacy, T&C, Cookie Policy, affiliate disclosure
 - [ ] Cookie-consent banner — **not needed at launch**: analytics are cookieless by decision (§10) and essential auth cookies are exempt. Revisit *only* if a tracking/marketing tool is ever added.
-- [ ] Privacy-first analytics installed (not standard GA)
+- [~] Privacy-first analytics installed (not standard GA) — **code done (R1-14)**, inert until the
+  owner sets `POSTHOG_KEY` + `CF_WEB_ANALYTICS_TOKEN` in the prod `.env` (setup-runbook §11 / §10a)
 - [x] Logo/icon/favicon, light + dark variants — **finals in (2026-07-16)**: components in `packages/ui`, art in `apps/web/public/brand/`, adaptive `icon.svg` favicon (see §8)
-- [ ] **Beta tag + disclaimer** (product is beta; data may be incomplete; not official affiliation)
+- [x] **Beta tag + disclaimer** (R1-13, 2026-07-17): header "Beta" badge + keyboard-reachable tooltip, and the app-wide footer disclaimer (beta · details can change, confirm on the organizer's site · independent, not affiliated with listed organizers)
 - [ ] Email subscription/newsletter list (Brevo, opt-in)
 - [ ] Password reset + email verification flows
 - [ ] In-app bug/feedback report

@@ -179,6 +179,8 @@ export interface ImportRecord {
   sourceUrl: string | null;
   confidence: number | null;
   status: string;
+  /** PIPELINE (S3/admin ingress) vs USER_REQUEST (public Request-a-Competition form, DQ15). */
+  origin: 'PIPELINE' | 'USER_REQUEST';
   note: string | null;
   reviewedAt: string | null;
   createdAt: string;

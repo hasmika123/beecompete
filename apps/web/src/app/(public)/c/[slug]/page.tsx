@@ -23,7 +23,8 @@ import { KeyFacts } from '@/components/detail/key-facts';
 import { RelatedCompetitions } from '@/components/detail/related-competitions';
 import { ResourcesRow } from '@/components/detail/resources-row';
 import { StickyBottomBar } from '@/components/detail/sticky-bottom-bar';
-import { StubAction } from '@/components/detail/stub-action';
+import { EmailCaptureCta } from '@/components/detail/email-capture-cta';
+import { followByEmail, registerHostInterest } from '@/components/detail/capture-actions';
 import { TrustPanel } from '@/components/detail/trust-panel';
 import { fetchCompetition } from '@/lib/catalog-api';
 import type { CompetitionDetail } from '@/lib/catalog-types';
@@ -127,11 +128,14 @@ export default async function CompetitionDetailPage({
         <Link href="/competitions" className="hover:text-foreground">
           Competitions
         </Link>{' '}
-        ›{' '}
+        <span aria-hidden="true">›</span>{' '}
         <Link href={`/competitions/${competition.category.slug}`} className="hover:text-foreground">
           {competition.category.name}
         </Link>{' '}
-        › <span className="text-foreground">{competition.name}</span>
+        <span aria-hidden="true">›</span>{' '}
+        <span aria-current="page" className="text-foreground">
+          {competition.name}
+        </span>
       </nav>
 
       <div className="mt-6 grid gap-8 lg:grid-cols-3">
@@ -261,21 +265,26 @@ export default async function CompetitionDetailPage({
               </div>
             </div>
 
-            {/* Follow — the page's conversion event (R1 stub; capture at R1-15b).
+            {/* Follow — the page's conversion event (R1-15b: follow-by-email → Brevo, M29).
                 tabIndex + scroll-margin: the mobile bar's anchor jump lands focus here
                 cleanly under the sticky header (review fix L5). */}
             <div id="follow-cta" tabIndex={-1} className="scroll-mt-24 focus-visible:outline-none">
-              <StubAction
+              <EmailCaptureCta
+                action={followByEmail}
+                competitionName={competition.name}
                 label="Follow this competition"
                 icon={<Bell aria-hidden="true" className="size-4" />}
                 variant="primary"
-                note={
+                submitLabel="Follow"
+                blurb="Get an email when key dates for this competition are coming up — no account needed."
+                consent={
                   <>
-                    Email reminders for this competition are almost ready. Meanwhile, the{' '}
-                    <Link href="/#digest" className="underline hover:text-foreground">
-                      weekly digest
-                    </Link>{' '}
-                    covers new and closing-soon competitions.
+                    For parents, educators, and students 16+. We’ll only email you about this
+                    competition — unsubscribe anytime. See our{' '}
+                    <Link href="/privacy" className="underline hover:text-foreground">
+                      Privacy Policy
+                    </Link>
+                    .
                   </>
                 }
               />
@@ -302,16 +311,20 @@ export default async function CompetitionDetailPage({
             <div className="rounded-[var(--radius-panel)] border border-border bg-surface-raised p-5">
               <TrustPanel competition={competition} />
               <div className="mt-4 grid gap-2 border-t border-border pt-4">
-                <StubAction
+                <EmailCaptureCta
+                  action={registerHostInterest}
+                  competitionName={competition.name}
                   label="Claim this competition"
                   icon={<Flag aria-hidden="true" className="size-4" />}
                   variant="secondary"
-                  note={
+                  submitLabel="Notify me"
+                  blurb="Are you the organizer? Host tools are on the way — join the early-access list for this listing."
+                  consent={
                     <>
-                      Are you the organizer? Host tools are on the way — tell us you&apos;re
-                      interested via the{' '}
-                      <Link href="/#digest" className="underline hover:text-foreground">
-                        early-access list
+                      For competition organizers. We’ll email you about claiming this listing and
+                      host access. See our{' '}
+                      <Link href="/privacy" className="underline hover:text-foreground">
+                        Privacy Policy
                       </Link>
                       .
                     </>

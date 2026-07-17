@@ -244,6 +244,44 @@ bucket — NOT the private user-files bucket. Upload is a pre-signed PUT; the br
 - **Outputs:** `SMTP_HOST/PORT/USER/PASS`; verified sending domain.
 - **Gotcha:** deliverability is **critical for the COPPA consent email** — don't skip DKIM/DMARC.
 
+### 7a. Listing-page email captures — Brevo API  *(R1-15 digest · R1-15b follow + host — code is DONE; this is the owner setup to switch them on)*
+Three captures share one Brevo account (the API + contact lists, not SMTP): the weekly **digest**
+(R1-15), per-competition **follow** (R1-15b, M29), and host-interest **"claim this competition"**
+(R1-15b, H46). **Each is inert until its list id is set** (the form shows "opening soon"); all are
+pitched to parents/educators/16+ (host = organizers) and use **double opt-in** when the template is
+configured. Wire only the captures you want live.
+1. **API key:** Brevo → **SMTP & API → API keys** tab → create a key. Server-only secret →
+   `BREVO_API_KEY` (never `NEXT_PUBLIC_`).
+   - **⚠️ Gotcha (verified 2026-07-17):** this must be the **REST API v3 key that starts with
+     `xkeysib-`** — NOT the **SMTP key** (`xsmtpsib-`) from step §7. They're different credentials;
+     the SMTP key returns `401 {"code":"unauthorized","message":"Key not found"}` against the
+     contacts API. If auth fails, check the prefix first.
+2. **Lists:** Brevo → **Contacts → Lists** → create up to three (e.g. "Weekly digest", "Competition
+   follows", "Host waitlist") → copy each numeric id → `BREVO_DIGEST_LIST_ID`,
+   `BREVO_FOLLOW_LIST_ID`, `BREVO_HOST_LIST_ID`.
+3. **Contact attributes:** Brevo → **Contacts → Settings → Contact attributes** → create text
+   attributes **`GRADE`, `INTEREST`, `STATE`** (digest preferences) and **`COMPETITION`** (which
+   listing a follow/host visitor acted on). Brevo rejects contacts with undefined attributes, so
+   create the ones your enabled captures use.
+4. **Double opt-in (recommended):** create one transactional **"confirm your subscription" template**
+   (Brevo → Campaigns → Templates) → copy its id → `BREVO_DOI_TEMPLATE_ID` (shared across all three
+   captures); optionally set `BREVO_DOI_REDIRECT_URL` (post-confirm landing). Without it, single
+   opt-in. *(`BREVO_DIGEST_DOI_TEMPLATE_ID` still works as an alias for a digest-only setup.)*
+5. **Set them in `~/beecompete-prod/.env`** and recreate web (the compose passes them through):
+   `BREVO_API_KEY`, `BREVO_DIGEST_LIST_ID`, `BREVO_FOLLOW_LIST_ID`, `BREVO_HOST_LIST_ID`,
+   `BREVO_DOI_TEMPLATE_ID`, `BREVO_DOI_REDIRECT_URL`.
+6. **Verify:** submit the Landing digest band + a detail page's **Follow** + **Claim** → each shows
+   the confirm message → contacts land in the right list (after confirming) with their attributes.
+- **Outputs:** `BREVO_API_KEY` + the list ids you enabled (+ shared DOI template) in the prod `.env`.
+- **Note:** R1 ships **capture + segmentation only** — the weekly send is manual/curated in Brevo
+  (automated matching send = **M26, Phase 2**); email-followers convert to accounts at **R2-16**.
+- **Request-a-Competition** (Page 6) needs **no Brevo** — it posts to the import/curation queue.
+- **In-app feedback** (R1-16, `/feedback`) reuses `BREVO_API_KEY` to email **support@** via Brevo
+  transactional mail. The **"from" must be a verified sender/domain** (`BREVO_SENDER_EMAIL`, default
+  `no-reply@beecompete.com`) — the same domain verification as the DOI email (§7). Inert without the
+  key (the form tells visitors to email support@ directly). Richer Sentry-linked bug capture waits
+  for the web Sentry client (the F8 `WEB_SENTRY_DSN` build-arg TODO).
+
 ## 8. Deployment pipeline  *(R1)*
 1. Enable **GHCR** (GitHub Container Registry) for the repo's images.
 2. Add **Actions secrets:** `VPS_HOST`, `VPS_SSH_KEY`, `GHCR_TOKEN`, plus app env (`DATABASE_URL`, `SMTP_*`, `S3_*`, etc.).
@@ -279,10 +317,44 @@ is live (§8).
 2. Used for **cache + rate-limit counters only** — sessions and the job queue live in **Postgres** (architecture ADR 9/10), so Redis holds nothing durable and needs no persistence config.
 - **Outputs:** `REDIS_URL`.
 
-## 11. Privacy analytics  *(R1)*
-1. **Cloudflare Web Analytics** (step 3) — add snippet to the web app.
-2. **PostHog** (free tier, EU host) → project key; used for product analytics **and feature flags**.
-- **Outputs:** `POSTHOG_KEY`; CF analytics token.
+## 11. Privacy analytics  *(R1-14 — code is DONE; this is the owner setup to switch it on)*
+The code is wired and **inert until these env vars are set** (like Sentry). Analytics load on
+**public pages only** (never `/admin`), are **cookieless**, honor **DNT/GPC**, and never build a
+person profile — see `architecture.md` §10a / `apps/web/src/components/analytics/analytics.tsx`.
+
+**Cloudflare Web Analytics** (free, cookieless) — **JS-snippet beacon token** (owner decision
+2026-07-17; CF's *automatic* edge injection was tried but doesn't reliably fire on our streamed
+Next.js SSR behind Caddy — verified the beacon never lands in the prod HTML — so the app injects it):
+1. Cloudflare dashboard → **Web Analytics** → **Add a site** → **Enable with JS Snippet installation**
+   → `beecompete.com`.
+2. Copy the **beacon token** (the `token` value in the snippet — a hex string; do NOT paste the whole
+   snippet, the app builds the tag) → `CF_WEB_ANALYTICS_TOKEN`.
+   ⚠️ **Do NOT also enable CF "Automatic Setup"** — two beacons = **double-counted** pageviews.
+
+**PostHog** (free tier — product analytics + feature flags + X20 zero-result search):
+3. Create a PostHog account, choose the **EU** region (data residency; architecture §10).
+4. Create **one** project — **shared by prod + local dev** (owner decision 2026-07-17) → copy the
+   **Project API Key** (starts `phc_…`; write-only, safe in the browser).
+5. In the project settings, turn **OFF**: **Session Replay**, **Autocapture**, **Dead clicks**
+   autocapture, and **Web vitals / performance**. Our code disables all of these client-side too,
+   but the dead-clicks script still *downloads* off the project's remote config unless you also flip
+   it here — belt-and-suspenders for a minors' site.
+
+**Wire it up** — set these in the **prod** stack env (`~/beecompete-prod/.env`), then
+`docker compose -f docker-compose.prod.yml up -d web`:
+```
+POSTHOG_KEY=phc_xxx
+POSTHOG_HOST=https://eu.i.posthog.com        # only if EU; US-host if you chose US
+CF_WEB_ANALYTICS_TOKEN=xxxxxxxxxxxxxxxx
+```
+6. **Local dev:** the **same** PostHog key + CF token go in `apps/web/.env.local` (one shared PostHog
+   project for prod + dev). **Staging:** leave both unset to keep staging out of the analytics.
+7. **Verify:** load a public page → DevTools Network shows requests to `*.i.posthog.com` +
+   `static.cloudflareinsights.com`; Application → Cookies shows **no** `ph_*` cookie; a `$pageview`
+   lands in PostHog → **Activity**. (CF only *records* data for the real `beecompete.com` hostname,
+   so its dashboard fills from prod traffic — but the beacon request fires locally so you can confirm
+   it loads.)
+- **Outputs:** `POSTHOG_KEY`, `CF_WEB_ANALYTICS_TOKEN` (+ optional `POSTHOG_HOST`) in the prod `.env`.
 
 ## 12. Stripe  *(Phase 2 — not needed for R1/R2)*
 1. Stripe account → test + live keys; enable **Stripe Tax**; plan **Connect** for host fee collection later.

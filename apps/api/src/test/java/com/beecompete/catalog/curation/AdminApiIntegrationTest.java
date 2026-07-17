@@ -236,6 +236,8 @@ class AdminApiIntegrationTest {
 						.contentType("application/json").content(submission))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.status", is("PENDING")))
+				// Admin/pipeline ingress defaults to PIPELINE (0013 — vs USER_REQUEST from the public form).
+				.andExpect(jsonPath("$.origin", is("PIPELINE")))
 				.andReturn().getResponse().getContentAsString();
 		String recordId = mapper.readTree(recordJson).get("id").asText();
 

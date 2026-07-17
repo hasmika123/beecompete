@@ -19,6 +19,7 @@ import {
   rejectImport,
   searchOrganizations,
 } from '@/app/admin/import-records/actions';
+import { ImportOriginBadge } from '@/components/admin/status-badges';
 import type { FormState, ImportRecord, Organization } from '@/lib/admin-types';
 
 const INITIAL: FormState = { ok: false };
@@ -112,6 +113,13 @@ export function ImportReview({
       {state.error && <Alert tone="danger">{state.error}</Alert>}
 
       <dl className="grid gap-1 text-sm">
+        {/* Decision-time origin: curators must see "user request" BEFORE approving (0013). */}
+        <div className="flex items-center gap-2">
+          <dt className="text-muted">Origin:</dt>
+          <dd>
+            <ImportOriginBadge origin={record.origin} />
+          </dd>
+        </div>
         <div className="flex gap-2">
           <dt className="text-muted">Source:</dt>
           <dd>

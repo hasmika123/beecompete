@@ -1,7 +1,17 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import { Alert, Button, FormField, Input, Plus, Select, Textarea, Trash } from '@beecompete/ui';
+import {
+  Button,
+  FormField,
+  FormResult,
+  Honeypot,
+  Input,
+  Plus,
+  Select,
+  Textarea,
+  Trash,
+} from '@beecompete/ui';
 import { submitCorrection } from './actions';
 import type { FormState } from '@/lib/admin-types';
 import {
@@ -82,29 +92,22 @@ export function SuggestCorrectionForm({
 
   if (state.ok) {
     return (
-      <Alert tone="success">
-        Thanks — your correction was sent to our curators for review
-        {subjectName ? ` (${subjectName})` : ''}. Nothing changes until a human checks it.
-      </Alert>
+      <FormResult
+        ok
+        message={`Thanks — your correction was sent to our curators for review${
+          subjectName ? ` (${subjectName})` : ''
+        }. Nothing changes until a human checks it.`}
+      />
     );
   }
 
   return (
     <form action={formAction} className="grid gap-5">
-      {state.error && <Alert tone="danger">{state.error}</Alert>}
+      <FormResult ok={false} message={state.error} />
 
       <input type="hidden" name="subjectType" value={subjectType} />
       <input type="hidden" name="subjectId" value={subjectId} />
-      {/* Honeypot — humans never see this; bots that fill it are dropped server-side. */}
-      <div
-        aria-hidden="true"
-        className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden"
-      >
-        <label>
-          Website
-          <input type="text" name="website" tabIndex={-1} autoComplete="off" />
-        </label>
-      </div>
+      <Honeypot />
 
       <div className="grid gap-4">
         {rows.map((row, i) => {
@@ -114,8 +117,11 @@ export function SuggestCorrectionForm({
               <input type="hidden" name="field" value={row.field} />
               <input type="hidden" name="value" value={row.value} />
               <FormField label={i === 0 ? 'What needs fixing?' : `Field ${i + 1}`}>
+                {/* aria-label mirrors the visible FormField label so the accessible name
+                    contains the visible text (WCAG 2.5.3 Label in Name) and the combobox is
+                    reliably named (a wrapping label doesn't name a combobox button). */}
                 <Select
-                  aria-label="Field to correct"
+                  aria-label={i === 0 ? 'What needs fixing?' : `Field ${i + 1}`}
                   placeholder="Pick a field…"
                   options={options.map((o) => ({ value: o.key, label: o.label }))}
                   value={row.field}

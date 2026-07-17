@@ -17,6 +17,7 @@ export interface FormFieldProps {
     id?: string;
     'aria-describedby'?: string;
     'aria-invalid'?: boolean;
+    'aria-required'?: boolean;
   }>;
   hint?: ReactNode;
   error?: ReactNode;
@@ -52,6 +53,9 @@ export function FormField({
         id: controlId,
         'aria-describedby': describedBy,
         'aria-invalid': error != null ? true : children.props['aria-invalid'],
+        // The visual `*` is aria-hidden, so convey the requirement programmatically too
+        // (WCAG 3.3.2 / 1.3.1). Respects an explicit aria-required already on the control.
+        'aria-required': required || children.props['aria-required'] || undefined,
       })
     : children;
 
@@ -78,8 +82,11 @@ export function FormField({
       </LabelTag>
       {control}
       {hasMessage && (
+        // role="alert" on the error so it's announced if it appears while focus is elsewhere
+        // (WCAG 4.1.3). Hints carry no role. It's still wired to the control via aria-describedby.
         <p
           id={describedById}
+          role={error != null ? 'alert' : undefined}
           className={cn('text-xs', error != null ? 'text-danger' : 'text-muted')}
         >
           {error ?? hint}
