@@ -8,14 +8,14 @@ import {
   LegalPage,
   LegalSection,
 } from '@/components/legal/legal-page';
-import { LEGAL_CONTACT_EMAIL } from '@/lib/legal';
+import { LEGAL_CONTACT_EMAIL, OPERATING_ENTITY, governingLawJurisdiction } from '@/lib/legal';
 import { pageMetadata } from '@/lib/seo';
 
 // R1-12 · Terms of Use. Scoped to the R1 browse-only catalog: no accounts, no registrations or
 // payments taken on-platform, third-party organizers. ⚠️ Pre-launch DRAFT — must be reviewed by
-// counsel before R1-17. TODO(R1-17): fill the governing-law state once the operating entity
-// (LLC) is formed (setup-runbook §1b); today the clause references "the state in which BeeCompete
-// is established" as a placeholder.
+// counsel before R1-17. The operating entity's legal name and the governing-law state come from
+// lib/legal.ts (OPERATING_ENTITY + governingLawJurisdiction) — fill those at the R1-17 go-live
+// checklist; until GOVERNING_LAW_STATE is set the clause falls back to a neutral placeholder.
 
 export const revalidate = 0;
 
@@ -55,10 +55,11 @@ export default function TermsOfUsePage() {
     >
       <LegalSection id="acceptance" heading="Agreement to these terms">
         <LegalP>
-          These Terms of Use are an agreement between you and BeeCompete (&ldquo;BeeCompete,&rdquo;
-          &ldquo;we,&rdquo; &ldquo;us&rdquo;). By accessing or using our website, you agree to these
-          terms and to our <LegalLink href="/privacy">Privacy Policy</LegalLink>. If you don&apos;t
-          agree, please don&apos;t use the site.
+          These Terms of Use are an agreement between you and {OPERATING_ENTITY}{' '}
+          (&ldquo;BeeCompete,&rdquo; &ldquo;we,&rdquo; &ldquo;us&rdquo;). By accessing or using our
+          website, you agree to these terms and to our{' '}
+          <LegalLink href="/privacy">Privacy Policy</LegalLink>. If you don&apos;t agree, please
+          don&apos;t use the site.
         </LegalP>
       </LegalSection>
 
@@ -206,9 +207,8 @@ export default function TermsOfUsePage() {
 
       <LegalSection id="governing-law" heading="Governing law">
         <LegalP>
-          These terms are governed by the laws of the United States and the state in which
-          BeeCompete is established, without regard to conflict-of-laws principles. Questions about
-          these terms? Email{' '}
+          These terms are governed by the laws of the United States and {governingLawJurisdiction()}
+          , without regard to conflict-of-laws principles. Questions about these terms? Email{' '}
           <LegalLink href={`mailto:${LEGAL_CONTACT_EMAIL}`}>{LEGAL_CONTACT_EMAIL}</LegalLink>.
         </LegalP>
       </LegalSection>
