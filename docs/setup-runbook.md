@@ -250,8 +250,12 @@ Three captures share one Brevo account (the API + contact lists, not SMTP): the 
 (R1-15b, H46). **Each is inert until its list id is set** (the form shows "opening soon"); all are
 pitched to parents/educators/16+ (host = organizers) and use **double opt-in** when the template is
 configured. Wire only the captures you want live.
-1. **API key:** Brevo → **SMTP & API → API keys** → create a key. Server-only secret →
+1. **API key:** Brevo → **SMTP & API → API keys** tab → create a key. Server-only secret →
    `BREVO_API_KEY` (never `NEXT_PUBLIC_`).
+   - **⚠️ Gotcha (verified 2026-07-17):** this must be the **REST API v3 key that starts with
+     `xkeysib-`** — NOT the **SMTP key** (`xsmtpsib-`) from step §7. They're different credentials;
+     the SMTP key returns `401 {"code":"unauthorized","message":"Key not found"}` against the
+     contacts API. If auth fails, check the prefix first.
 2. **Lists:** Brevo → **Contacts → Lists** → create up to three (e.g. "Weekly digest", "Competition
    follows", "Host waitlist") → copy each numeric id → `BREVO_DIGEST_LIST_ID`,
    `BREVO_FOLLOW_LIST_ID`, `BREVO_HOST_LIST_ID`.
