@@ -322,15 +322,14 @@ The code is wired and **inert until these env vars are set** (like Sentry). Anal
 **public pages only** (never `/admin`), are **cookieless**, honor **DNT/GPC**, and never build a
 person profile — see `architecture.md` §10a / `apps/web/src/components/analytics/analytics.tsx`.
 
-**Cloudflare Web Analytics** (free, cookieless) — **AUTOMATIC edge injection** (owner decision
-2026-07-17; no token, no code, since the site is proxied through Cloudflare):
-1. Cloudflare dashboard → **Web Analytics** → **Add a site** → enable **Automatic Setup** → choose
-   `beecompete.com`. CF injects the beacon at the edge. Leave `CF_WEB_ANALYTICS_TOKEN` **blank**.
-   ⚠️ **Never also set the token** while automatic is on — that injects a second beacon and
-   **double-counts** pageviews.
-2. **Exclude staging:** CF matches hostnames by *postfix*, so a `beecompete.com` site also captures
-   `staging.beecompete.com` by default. To keep staging out, open the site → **Rules → Add rule →
-   Exclude** → hostname `staging.beecompete.com`.
+**Cloudflare Web Analytics** (free, cookieless) — **JS-snippet beacon token** (owner decision
+2026-07-17; CF's *automatic* edge injection was tried but doesn't reliably fire on our streamed
+Next.js SSR behind Caddy — verified the beacon never lands in the prod HTML — so the app injects it):
+1. Cloudflare dashboard → **Web Analytics** → **Add a site** → **Enable with JS Snippet installation**
+   → `beecompete.com`.
+2. Copy the **beacon token** (the `token` value in the snippet — a hex string; do NOT paste the whole
+   snippet, the app builds the tag) → `CF_WEB_ANALYTICS_TOKEN`.
+   ⚠️ **Do NOT also enable CF "Automatic Setup"** — two beacons = **double-counted** pageviews.
 
 **PostHog** (free tier — product analytics + feature flags + X20 zero-result search):
 3. Create a PostHog account, choose the **EU** region (data residency; architecture §10).
@@ -340,22 +339,20 @@ person profile — see `architecture.md` §10a / `apps/web/src/components/analyt
    already disables both client-side, but belt-and-suspenders for a minors' site).
 
 **Wire it up** — set these in the **prod** stack env (`~/beecompete-prod/.env`), then
-`docker compose -f docker-compose.prod.yml up -d web` (CF needs nothing here — it's automatic):
+`docker compose -f docker-compose.prod.yml up -d web`:
 ```
 POSTHOG_KEY=phc_xxx
 POSTHOG_HOST=https://eu.i.posthog.com        # only if EU; US-host if you chose US
-# CF_WEB_ANALYTICS_TOKEN stays UNSET — automatic edge injection
+CF_WEB_ANALYTICS_TOKEN=xxxxxxxxxxxxxxxx
 ```
-6. **Local dev:** the **same** PostHog key goes in `apps/web/.env.local` (shared project). **Staging:**
-   leave `POSTHOG_KEY` unset (or it joins the shared project); CF staging is handled by the rule above.
-7. **Verify — PostHog (local + prod):** load a public page → DevTools Network shows a request to
-   `*.i.posthog.com`; Application → Cookies shows **no** `ph_*` cookie; a `$pageview` lands in
-   PostHog → **Activity**. **Verify — CF (prod only):** automatic injection doesn't touch localhost,
-   so open `https://beecompete.com` in prod → DevTools Network shows `static.cloudflareinsights.com`
-   (beacon) + a `cloudflareinsights.com/cdn-cgi/rum` POST; data shows in the CF dashboard within
-   a few minutes.
-- **Outputs:** `POSTHOG_KEY` (+ optional `POSTHOG_HOST`) in the prod `.env`; CF automatic enabled
-  (no env var).
+6. **Local dev:** the **same** PostHog key + CF token go in `apps/web/.env.local` (one shared PostHog
+   project for prod + dev). **Staging:** leave both unset to keep staging out of the analytics.
+7. **Verify:** load a public page → DevTools Network shows requests to `*.i.posthog.com` +
+   `static.cloudflareinsights.com`; Application → Cookies shows **no** `ph_*` cookie; a `$pageview`
+   lands in PostHog → **Activity**. (CF only *records* data for the real `beecompete.com` hostname,
+   so its dashboard fills from prod traffic — but the beacon request fires locally so you can confirm
+   it loads.)
+- **Outputs:** `POSTHOG_KEY`, `CF_WEB_ANALYTICS_TOKEN` (+ optional `POSTHOG_HOST`) in the prod `.env`.
 
 ## 12. Stripe  *(Phase 2 — not needed for R1/R2)*
 1. Stripe account → test + live keys; enable **Stripe Tax**; plan **Connect** for host fee collection later.

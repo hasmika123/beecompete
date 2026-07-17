@@ -168,11 +168,12 @@ Cloudflare Web Analytics + PostHog, wired in `apps/web` and **inert until env is
 - **DNT / GPC honored:** PostHog isn't started when the visitor signals Do-Not-Track or Global
   Privacy Control. Cloudflare Web Analytics (cookieless, no per-visitor data) loads regardless — it
   has nothing individual to opt out of (matches the Cookie Policy copy).
-- **As activated (owner, 2026-07-17):** Cloudflare uses **automatic edge injection** on the proxied
-  apex — `CF_WEB_ANALYTICS_TOKEN` is left **unset** in prod (setting it too would double-count); the
-  in-app beacon path in `analytics.tsx` stays as an inert fallback, and `staging.beecompete.com` is
-  excluded via a CF Web Analytics rule (CF matches hostnames by postfix). PostHog uses **one shared
-  project for prod + local dev**.
+- **As activated (owner, 2026-07-17):** Cloudflare Web Analytics via the **JS-snippet beacon token**
+  (`CF_WEB_ANALYTICS_TOKEN`), injected by `analytics.tsx`. CF's *automatic* edge injection was tried
+  first but never landed the beacon in our streamed Next.js SSR HTML (behind Caddy behind CF — the
+  challenge-platform script injected fine, the analytics beacon did not), so we inject it ourselves;
+  do NOT also enable automatic, or pageviews double-count. PostHog uses **one shared project for
+  prod + local dev**.
 
 ## 11. Observability
 
