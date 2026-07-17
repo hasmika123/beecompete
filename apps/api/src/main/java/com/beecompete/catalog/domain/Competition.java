@@ -51,9 +51,11 @@ public class Competition {
 	@Column(nullable = false, length = 300)
 	private String name;
 
-	/** The organizer (glossary: Host) — card/details attribution + DQ13 seal. Nullable: imports often start unattributed. */
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "organizer_org_id")
+	/** The organizer (glossary: Host) — card/details attribution + DQ13 seal. Mandatory: every write
+	 * path resolves-or-creates an org (migration 0012, NOT NULL). Imports send an organizerName the
+	 * server resolves to an org; a row that can't be attributed is flagged for manual assignment. */
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "organizer_org_id", nullable = false)
 	private Organization organizer;
 
 	@Column(name = "official_url", length = 1000)

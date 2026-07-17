@@ -34,6 +34,13 @@ export interface CompetitionPayload {
   slug: string;
   name: string;
   organizerOrgId?: string | null;
+  /**
+   * The organization that RUNS the competition, verbatim from the page. The approve path resolves
+   * this to an org by exact name (reuse) or creates one — so seeding never pre-creates orgs by hand.
+   * null when the page doesn't state an organizer (flagged for manual assignment at review). We do
+   * NOT emit `confirmNewOrganizer` — the pipeline never overrides the near-match guard; a curator does.
+   */
+  organizerName?: string | null;
   officialUrl?: string | null;
   logo?: string | null;
   /** Draft only — S4 curators write our own prose (facts aren't copyrightable, prose is). */
@@ -64,6 +71,27 @@ export interface Extraction {
   modelConfidence?: number;
   /** Free-text notes/uncertainties for the S4 reviewer (not persisted server-side). */
   reviewerNotes?: string;
+}
+
+/**
+ * Known facts for a competition carried from the S2 master index (docs/seeding/master-index.csv).
+ * These are UNVERIFIED editorial hints, not truth: they guide the extractor when the page is silent
+ * and are compared against the extraction to FLAG disagreements for the S4 curator. The page always
+ * wins on conflict (README methodology) — the hint just tells us where to look twice.
+ */
+export interface SeedHints {
+  name?: string;
+  organizer?: string;
+  categorySlug?: string;
+  /** free | paid | unknown */
+  cost?: string;
+  /** individual | team | both */
+  participation?: string;
+  /** individual | school_or_chapter | either */
+  entryPathway?: string;
+  /** Human grade band, e.g. "9-12", "K-8" — prompt hint only (not flagged; too ambiguous to parse). */
+  gradeBand?: string;
+  regionScope?: string;
 }
 
 /** The body POSTed to /api/v1/admin/import-records (matches `ImportSubmission`). */

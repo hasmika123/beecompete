@@ -222,8 +222,11 @@ class AdminApiIntegrationTest {
 				.andReturn().getResponse().getContentAsString();
 		String mathId = findBySlug(categories, "math");
 
+		// organizerName (not id) exercises resolve-or-create on approve: no org for "MATHCOUNTS
+		// Foundation" exists yet, so approve creates one (CURATED/HOST) and attributes to it.
 		String submission = """
 				{"payload": {"slug": "mathcounts", "name": "MATHCOUNTS", "categoryId": "%s",
+				             "organizerName": "MATHCOUNTS Foundation",
 				             "participationMode": "BOTH", "delivery": "IN_PERSON",
 				             "entryPathway": "SCHOOL_OR_CHAPTER", "costType": "PAID", "recurrence": "ANNUAL",
 				             "attributes": {"topics": ["arithmetic", "algebra"]}},
@@ -245,6 +248,13 @@ class AdminApiIntegrationTest {
 		mvc.perform(withToken(get("/api/v1/admin/competitions").param("query", "MATHCOUNTS")))
 				.andExpect(jsonPath("$.content[0].provenanceSource", is("IMPORT")))
 				.andExpect(jsonPath("$.content[0].provenanceConfidence", is(0.85)));
+
+		// Resolve-or-create: approve created the organizer org (CURATED/HOST), inheriting the
+		// import provenance stamp. The organizerName never reached the queue as an org before now.
+		mvc.perform(withToken(get("/api/v1/admin/organizations").param("query", "MATHCOUNTS Foundation")))
+				.andExpect(jsonPath("$.content", hasSize(1)))
+				.andExpect(jsonPath("$.content[0].type", is("HOST")))
+				.andExpect(jsonPath("$.content[0].verificationState", is("CURATED")));
 
 		// Re-review is refused.
 		mvc.perform(withToken(post("/api/v1/admin/import-records/" + recordId + "/approve")))
@@ -391,6 +401,108 @@ class AdminApiIntegrationTest {
 				.andExpect(status().isUnprocessableEntity());
 		mvc.perform(withToken(get("/api/v1/admin/competitions").param("query", "Combined Rollback")))
 				.andExpect(jsonPath("$.content", hasSize(0)));
+	}
+
+	@Test
+	@Order(7)
+	void resolvesOrCreatesOrganizerByName() throws Exception {
+		String categories = mvc.perform(withToken(get("/api/v1/admin/categories")))
+				.andReturn().getResponse().getContentAsString();
+		String mathId = findBySlug(categories, "math");
+
+		// Exact-name reuse + auto-create shape: first create makes the org (CURATED/HOST, domain
+		// inferred from officialUrl with a leading www. stripped).
+		mvc.perform(withToken(post("/api/v1/admin/competitions")).contentType("application/json")
+						.content(byName("alpha-reuse-1", "Alpha Reuse One", mathId, "Alpha Reuse Org",
+								"https://www.alphareuse.example.org/comp", null)))
+				.andExpect(status().isCreated());
+		mvc.perform(withToken(get("/api/v1/admin/organizations").param("query", "Alpha Reuse Org")))
+				.andExpect(jsonPath("$.content", hasSize(1)))
+				.andExpect(jsonPath("$.content[0].type", is("HOST")))
+				.andExpect(jsonPath("$.content[0].verificationState", is("CURATED")))
+				.andExpect(jsonPath("$.content[0].domain", is("alphareuse.example.org")));
+
+		// A second competition with the same organizerName REUSES the org — still exactly one.
+		mvc.perform(withToken(post("/api/v1/admin/competitions")).contentType("application/json")
+						.content(byName("alpha-reuse-2", "Alpha Reuse Two", mathId, "Alpha Reuse Org", null, null)))
+				.andExpect(status().isCreated());
+		mvc.perform(withToken(get("/api/v1/admin/organizations").param("query", "Alpha Reuse Org")))
+				.andExpect(jsonPath("$.content", hasSize(1)));
+
+		// Near-match guard: a SIMILAR (containing) org exists but no exact match → 422 listing the
+		// candidate; the competition is NOT created (rolled back before save).
+		mvc.perform(withToken(post("/api/v1/admin/competitions")).contentType("application/json")
+						.content(byName("beta-league", "Beta League", mathId, "Beta Robotics League", null, null)))
+				.andExpect(status().isCreated());
+		mvc.perform(withToken(post("/api/v1/admin/competitions")).contentType("application/json")
+						.content(byName("beta-sub", "Beta Sub", mathId, "Beta Robotics", null, null)))
+				.andExpect(status().isUnprocessableEntity())
+				.andExpect(jsonPath("$.message", containsString("Beta Robotics League")));
+
+		// confirmNewOrganizer=true overrides the guard → creates the new org despite the near match.
+		mvc.perform(withToken(post("/api/v1/admin/competitions")).contentType("application/json")
+						.content(byName("beta-sub", "Beta Sub", mathId, "Beta Robotics", null, true)))
+				.andExpect(status().isCreated());
+		mvc.perform(withToken(get("/api/v1/admin/organizations").param("query", "Beta Robotics")))
+				.andExpect(jsonPath("$.content", hasSize(2))); // "Beta Robotics" + "Beta Robotics League"
+
+		// Archived exact match → 422 (restore or pick another) — never silently reuse an archived org.
+		mvc.perform(withToken(post("/api/v1/admin/competitions")).contentType("application/json")
+						.content(byName("gamma-1", "Gamma One", mathId, "Gamma Archive Org", null, null)))
+				.andExpect(status().isCreated());
+		String gammaOrgs = mvc.perform(withToken(get("/api/v1/admin/organizations")
+						.param("query", "Gamma Archive Org")))
+				.andExpect(jsonPath("$.content", hasSize(1)))
+				.andReturn().getResponse().getContentAsString();
+		String gammaOrgId = mapper.readTree(gammaOrgs).get("content").get(0).get("id").asText();
+		mvc.perform(withToken(delete("/api/v1/admin/organizations/" + gammaOrgId)))
+				.andExpect(jsonPath("$.archivedAt", notNullValue()));
+		mvc.perform(withToken(post("/api/v1/admin/competitions")).contentType("application/json")
+						.content(byName("gamma-2", "Gamma Two", mathId, "Gamma Archive Org", null, null)))
+				.andExpect(status().isUnprocessableEntity())
+				.andExpect(jsonPath("$.message", containsString("archived")));
+
+		// Missing organizer (neither id nor name) → 400 on the direct create (bean validation).
+		mvc.perform(withToken(post("/api/v1/admin/competitions")).contentType("application/json")
+						.content("""
+								{"slug": "no-org", "name": "No Org", "categoryId": "%s",
+								 "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL",
+								 "entryPathway": "INDIVIDUAL", "costType": "FREE", "recurrence": "ANNUAL"}
+								""".formatted(mathId)))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message", containsString("organizer is required")));
+
+		// Missing organizer on the IMPORT path → 422 at approve (isOrganizerPresent on validate()).
+		String noOrgRecord = mvc.perform(withToken(post("/api/v1/admin/import-records"))
+						.contentType("application/json").content("""
+								{"payload": {"slug": "import-no-org", "name": "Import No Org", "categoryId": "%s",
+								 "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL",
+								 "entryPathway": "INDIVIDUAL", "costType": "FREE", "recurrence": "ANNUAL"},
+								 "confidence": 0.50}
+								""".formatted(mathId)))
+				.andReturn().getResponse().getContentAsString();
+		String noOrgId = mapper.readTree(noOrgRecord).get("id").asText();
+		mvc.perform(withToken(post("/api/v1/admin/import-records/" + noOrgId + "/approve")))
+				.andExpect(status().isUnprocessableEntity())
+				.andExpect(jsonPath("$.message", containsString("organizer is required")));
+	}
+
+	/** A minimal competition JSON that attributes the organizer by NAME (resolve-or-create path). */
+	private String byName(String slug, String name, String catId, String organizerName, String officialUrl,
+			Boolean confirmNewOrganizer) {
+		StringBuilder sb = new StringBuilder();
+		sb.append("{\"slug\": \"").append(slug).append("\", \"name\": \"").append(name)
+				.append("\", \"categoryId\": \"").append(catId)
+				.append("\", \"organizerName\": \"").append(organizerName).append('"');
+		if (officialUrl != null) {
+			sb.append(", \"officialUrl\": \"").append(officialUrl).append('"');
+		}
+		if (confirmNewOrganizer != null) {
+			sb.append(", \"confirmNewOrganizer\": ").append(confirmNewOrganizer);
+		}
+		sb.append(", \"participationMode\": \"INDIVIDUAL\", \"delivery\": \"VIRTUAL\","
+				+ " \"entryPathway\": \"INDIVIDUAL\", \"costType\": \"FREE\", \"recurrence\": \"ANNUAL\"}");
+		return sb.toString();
 	}
 
 	private String findBySlug(String categoriesJson, String slug) throws Exception {

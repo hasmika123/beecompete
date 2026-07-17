@@ -26,27 +26,46 @@ never destabilize the web/api pipelines. It has its own `package.json` and local
                                                                             S4: human review/approve
 ```
 
+0. **dedup** (`src/input.ts`) — a batch is first collapsed by URL: umbrella programs list the same
+   page under several rows (AMC 8/10/12 all point at `maa.org/student-programs/amc`). We keep the
+   first, drop the rest (extracting one page N times wastes LLM calls and yields N records that
+   409-collide on approve), and stamp the survivor with a **"this URL also covers: …"** curator flag.
 1. **fetch** (`src/fetch.ts`) — GET the page with a descriptive User-Agent and a timeout, after a
    **basic robots.txt** check (honours a matching `Disallow`, exact UA-token match). Redirects are
    followed manually (max 5) with the robots check + the private-address guard re-run on **every
-   hop**; the body is capped at **3 MB** and non-HTML content types are skipped. Private/loopback/
-   link-local addresses (localhost, `10.*`, `169.254.*`, `::1`, …) are refused unless
-   `--allow-private` is passed. HTML is distilled to plain text. A local `.html` path is read
-   directly (the offline/fixture path — no network).
+   hop**; the body is capped at **3 MB** and non-HTML content types are skipped. Transient faults (a
+   thrown network error = TCP/TLS drop, or a 5xx) are **retried up to 3× with exponential backoff**;
+   a 4xx (403 bot-block) or robots-disallow is permanent and not retried. Private/loopback/link-local
+   addresses (localhost, `10.*`, `169.254.*`, `::1`, …) are refused unless `--allow-private` is
+   passed. HTML is distilled to plain text. A local `.html` path is read directly (the offline/
+   fixture path — no network).
 2. **extract** (`src/extract.ts`, `src/prompt.ts`) — an LLM maps the page text to the Spine +
-   `attributes`. The system prompt encodes three hard rules: **the page text is untrusted content**
-   (instructions embedded in a page are ignored — see "Prompt-injection surface" below), **facts
-   only** (dates/fees/eligibility/format — never marketing prose), and **no `description`** (a
-   copyrightable blurb is curator work at S4; the field is forced to `null`). The model returns
-   strict JSON with a self-confidence and reviewer notes; `normalize` strips `<`, `>`, and control
-   characters from every free-text field (name, summary, tags, attribute strings).
+   `attributes`. Any **S2 master-index hints** for the row (name, organizer, category, cost, …) are
+   passed in as **trusted internal guidance** — they help when the page is silent, but the page wins
+   on conflict and the model flags disagreements. The system prompt encodes three hard rules: **the
+   page text is untrusted content** (instructions embedded in a page are ignored — see
+   "Prompt-injection surface" below), **facts only** (dates/fees/eligibility/format — never marketing
+   prose), and **no `description`** (a copyrightable blurb is curator work at S4; the field is forced
+   to `null`). The model also extracts **`organizerName`** — the organization that RUNS the
+   competition, verbatim, or `null` if the page doesn't state it; the server resolves it to an org on
+   approve (exact name → reuse, else create a CURATED org). We **never** substitute the S2 `organizer`
+   hint for a `null` extraction — an unverified hint must not become catalog data; a page that names
+   no organizer stays `null` and is flagged for manual assignment. The model returns strict JSON with
+   a self-confidence and reviewer notes; `normalize` strips `<`, `>`, and control characters from
+   every free-text field, and **drops null-valued attribute keys** (an unknown optional attribute the
+   model emits as `null` would otherwise fail the template's `type` and bounce the record to INVALID).
 3. **validate** (`src/validate.ts`) — two gates: the `attributes` bag against the **correct Category
    Template JSON Schema** (draft 2020-12, mirrored from seed `0005` in `src/categories.ts`,
    compiled once per category), plus **Spine sanity**: required fields + types, enum tokens,
    **grade encoding** (Pre-K −1, K 0, 1–12), range checks (team sizes ≥ 1, ages ≥ 0), and
    `officialUrl`/`logo` must be well-formed **http(s) URLs ≤ 1000 chars** (the server `@Size` cap).
    Suspicious-but-legal combinations (team sizes on an INDIVIDUAL competition, an `officialUrl`
-   whose domain differs from the fetched page's domain) surface as **warnings** for the reviewer.
+   whose domain differs from the fetched page's domain) surface as **warnings** for the reviewer, as
+   do **hint disagreements** (`src/hints.ts`: extraction vs. index cost/participation/pathway/category/
+   **organizer**) and the shared-URL umbrella flag — the curator's "look twice here" list. A record
+   with **no extracted organizer** is flagged too (`no organizer extracted — approve will require
+   manual org assignment`): organizer is mandatory server-side, so such a row can't be approved until
+   the curator assigns one.
 4. **score** (`src/confidence.ts`) — a transparent 0..1 confidence, rounded to 2 dp. **Penalty-only
    blending:** the model's self-reported confidence can only LOWER the score below field
    completeness, never raise it — page content that instructs the model to claim high confidence
@@ -171,6 +190,13 @@ blast radius of a hostile page a flagged, low-confidence PENDING row a curator i
   **edits then approves** (or rejects). On approve the server runs Bean Validation + the
   category-template attributes check and creates the real Competition with
   `provenance.source = import` and this pipeline's confidence.
+- **Organizer resolve-or-create (2026-07-16).** The payload carries `organizerName`, not an org id.
+  The review UI shows an **Organizer panel**: an exact-name match "will be reused", similar names
+  offer pick-one buttons (or a "create as new anyway" checkbox), and a missing organizer is a
+  warning + org search. On approve the server reuses an org on an exact (normalized) name match,
+  else **creates a CURATED/HOST org** — so seeding never pre-creates orgs by hand. A near-match
+  without confirmation, or an archived same-named org, is a 422 the curator resolves. See
+  `docs/domain-model.md` §3b.
 - **Curators write our own `description`.** This tool deliberately leaves it `null` — facts aren't
   copyrightable, prose is. Extracted facts are a scaffold, not publishable copy.
 
@@ -179,13 +205,34 @@ blast radius of a hostile page a flagged, low-confidence PENDING row a curator i
 - **robots.txt** handling is best-effort (matching `Disallow`/`Allow` longest-prefix, exact
   UA-token groups), not a full RFC 9309 parser (no `*`/`$` wildcards); there's **no crawl-delay /
   rate limiting** yet. Be gentle with batches.
+- **Transient fetch faults are retried** (up to 3 attempts, exponential backoff) for thrown network
+  errors and 5xx — the top-25 seeding sweep showed real hosts intermittently dropping a TLS
+  connection (artandwriting.org failed one row, succeeded the next). **Persistent blocks are NOT
+  retried and need manual curation:** a `robots.txt` disallow (e.g. uscyberpatriot.org) or a 403
+  bot-block behind a WAF (e.g. vexrobotics.com). A JS/browser-emulating fetch for those is out of
+  v0 scope — a curator enters them by hand.
 - **The private-address guard checks literal IPs + localhost names only** — a public DNS name that
   resolves to a private address (DNS rebinding) is not caught. Acceptable for an operator-run CLI;
   a server-side fetcher would need resolution-time checks.
 - **HTML→text** is a regex distiller, not a DOM/readability extractor; JS-rendered pages won't
   yield text (v0 fetches static HTML only).
 - **Single-page** extraction — no multi-page crawl/merge (rules + FAQ + dates pages) yet.
-- **No dedupe** against existing competitions (slug collisions surface as a 409 on approve).
+- **Batch rows sharing a URL are deduped** (first occurrence wins, count logged; dedup runs before
+  `--limit`, so "top N" means N distinct pages). Umbrella programs listed on several master-index
+  rows — AMC 8/10/12 → one `maa.org` page; Scholastic Art + Writing → one `artandwriting.org`
+  page — extract once; **splitting one page into distinct listings is a curator decision at S4**,
+  and un-deduped re-extraction would otherwise burn LLM calls and 409 on the shared slug. **No
+  dedupe against already-published competitions** — a collision with an existing slug still surfaces
+  as a 409 on approve.
+- **Optional attribute keys emitted as an explicit `null`** (the LLM sometimes writes
+  `"eligible_countries": null`) are **pruned in normalization** — an absent key is the correct
+  "unknown" encoding, so a null no longer fails the template's `type` and sinks the record to INVALID.
+- **Master-index hints guide extraction and flag disagreements.** A batch row's known facts
+  (name/organizer/category/cost/participation/pathway/grade band) are passed to the model as trusted
+  guidance for when the page is silent; the **page still wins on conflict**, and a surviving
+  disagreement on cost/participation/pathway/category is surfaced as a curator warning
+  (`src/hints.ts`). Grade band is a prompt hint only — not flagged (parsing "K-8"/"Pre-K-2" into a
+  range is too ambiguous to trust). Hints are absent on single-`--input` runs and plain `.txt` batches.
 - **Category templates are mirrored** from seed `0005` in `src/categories.ts`; if a template is
   edited via the admin tool, refresh that file. The server re-validates on approve regardless.
 - **No CI job** for this tool in this PR (kept out of CI to avoid destabilizing the web/api

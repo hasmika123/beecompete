@@ -194,6 +194,23 @@ tooling + audit log) → Phase 2+ (dedup DQ4, conflict resolution DQ5) → Phase
   manual listing is complete by default — kept HERE, not on the shared `CompetitionRequest`/
   `EditionRequest`, so imports + corrections stay lenient. Plain `POST /competitions` stays for edge
   cases; future editions use `POST /competitions/{id}/editions`.
+- **Mandatory organizer + resolve-or-create (2026-07-16, migration `0012`):**
+  `competition.organizer_org_id` is now `NOT NULL` (entity `@ManyToOne(optional=false)`); the
+  precondition-guarded migration HALTs rather than backfill a placeholder. `CompetitionRequest` gains
+  `organizerName` + `confirmNewOrganizer` and an `@AssertTrue` requiring one of id/name.
+  `CompetitionCurationService.resolveOrganizer` — shared by admin CRUD, import-approve, and the
+  combined create — resolves a given `organizerOrgId` (422 if unknown) or else the `organizerName`:
+  **exact normalized name → reuse**; **similar (containing) names → 422 listing candidates** unless
+  `confirmNewOrganizer`; **archived exact → 422**; **no match → create** a `CURATED`/`HOST` org
+  (domain inferred from the official URL, competition's provenance stamp). Lets the S4 pipeline
+  attribute imports by name without pre-creating orgs. The **import-review UI** (`import-review.tsx`)
+  gains an **Organizer panel**: it pre-fetches orgs matching the extracted `organizerName`
+  (server-side), shows "will be reused / candidates to pick / a new org will be created", a **"create
+  as new anyway"** checkbox (→ `confirmNewOrganizer`), a live org search (a `searchOrganizations`
+  server action), and a **missing-organizer** warning + picker. The competition **edit form** drops
+  its "— none —" organizer option (organizer required in edit too). Domain rules: `domain-model.md`
+  §3b. Conservative by decision — no fuzzy/acronym matching, no auto-merge, no unique index on
+  `organization.name` (R2 same-named schools; single-curator R1 accepts the create race).
 - **Create-competition form (sweep stepper build, 2026-07-15/16):** a **vertical stepper**
   (`packages/ui` `Stepper`) over five steps — Basics / About / Format & eligibility / Media & links /
   First edition — with a form-wide required-fields **completion ring** (`packages/ui` `ProgressRing`)

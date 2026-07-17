@@ -22,6 +22,10 @@ const COMPETITION_REQUEST_FIELDS = new Set([
   'slug',
   'name',
   'organizerOrgId',
+  // organizerName is emitted by the pipeline (resolve-or-create by name). confirmNewOrganizer is a
+  // CompetitionRequest field too but the pipeline never emits it (curator-only override).
+  'organizerName',
+  'confirmNewOrganizer',
   'officialUrl',
   'logo',
   'description',

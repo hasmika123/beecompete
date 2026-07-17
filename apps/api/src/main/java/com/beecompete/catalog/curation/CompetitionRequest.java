@@ -27,6 +27,13 @@ public record CompetitionRequest(
 				message = "slug must be lowercase kebab-case") String slug,
 		@NotBlank @Size(max = 300) String name,
 		UUID organizerOrgId,
+		// Resolve-or-create by name (import path): when no organizerOrgId is given, the service
+		// reuses an org on an exact (normalized) name match, else creates one (CURATED/HOST). The
+		// seeding pipeline sends this so 200+ competitions never need pre-created orgs.
+		@Size(max = 300) String organizerName,
+		// Curator override for the near-match guard: when a similar org name exists but no exact
+		// match, resolve-or-create refuses (422) unless this is true (create a new org anyway).
+		Boolean confirmNewOrganizer,
 		@Size(max = 1000) String officialUrl,
 		@Size(max = 1000) String logo,
 		@Size(max = 10000) String description,
@@ -46,6 +53,11 @@ public record CompetitionRequest(
 		@NotNull CostType costType,
 		@NotNull Recurrence recurrence,
 		Map<String, Object> attributes) {
+
+	@AssertTrue(message = "organizer is required: pass organizerOrgId or organizerName")
+	public boolean isOrganizerPresent() {
+		return organizerOrgId != null || (organizerName != null && !organizerName.isBlank());
+	}
 
 	@AssertTrue(message = "minGrade must be less than or equal to maxGrade")
 	public boolean isGradeRangeValid() {

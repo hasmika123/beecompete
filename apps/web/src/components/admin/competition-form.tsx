@@ -117,11 +117,9 @@ export function CompetitionForm({
   const c = competition;
   const categoryOptions = categories.map((cat) => ({ value: cat.id, label: cat.name }));
   const orgOptions = organizations.map((o) => ({ value: o.id, label: o.name }));
-  const orgSelectOptions = [
-    ...(editing ? [{ value: '', label: '— none —' }] : []),
-    ...orgOptions,
-    { value: ADD_ORG, label: '+ Add organization…' },
-  ];
+  // Organizer is mandatory now (both create and edit) — no "— none —" escape hatch. The server
+  // rejects an empty organizer, and every listing carries one after migration 0012.
+  const orgSelectOptions = [...orgOptions, { value: ADD_ORG, label: '+ Add organization…' }];
 
   // Team size only applies to team/both participation — gate the inputs (disabled fields aren't
   // submitted, so INDIVIDUAL never posts a stray team size).
@@ -271,6 +269,7 @@ export function CompetitionForm({
         { key: 'name', label: 'Name', stepId: 'basics', ok: name.trim() !== '' },
         { key: 'slug', label: 'Slug', stepId: 'basics', ok: slug.trim() !== '' },
         { key: 'category', label: 'Category', stepId: 'basics', ok: categoryId !== '' },
+        { key: 'organizer', label: 'Organizer', stepId: 'basics', ok: orgChosen },
       ]
     : [
         { key: 'name', label: 'Name', stepId: 'basics', ok: name.trim() !== '' },
@@ -301,7 +300,8 @@ export function CompetitionForm({
   const totalRequired = requiredFields.length;
   const allComplete = filledCount === totalRequired;
   const remaining = requiredFields.filter((r) => !r.ok);
-  // On create every listed field carries a visible asterisk; on edit only the spine three do.
+  // On create every listed field carries a visible asterisk; on edit only the spine fields
+  // (name/slug/category/organizer) do — organizer is now mandatory in edit mode too.
   const req = !editing;
 
   // --- step content (written once; laid out as a stepper on create, stacked sections on edit) ---
@@ -353,13 +353,13 @@ export function CompetitionForm({
           </FormField>
           <FormField
             label="Organizer"
-            required={req}
+            required
             hint="the organization the verified seal attaches to."
           >
             <Select
               name="organizerOrgId"
               options={orgSelectOptions}
-              placeholder={editing ? '— none —' : 'Select organizer…'}
+              placeholder="Select organizer…"
               value={organizerOrgId}
               onValueChange={(v) => {
                 if (v === ADD_ORG) {

@@ -2,6 +2,7 @@
   "payload": {
     "slug": "nova-math-challenge",
     "name": "Nova Math Challenge",
+    "organizerName": "Nova Math Foundation",
     "officialUrl": "https://novamath.example.org",
     "logo": "https://novamath.example.org/logo.png",
     "summary": null,

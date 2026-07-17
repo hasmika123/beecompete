@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/admin/page-header';
 import { ImportReview } from '@/components/admin/import-review';
 import { ReviewOutcome } from '@/components/admin/review-outcome';
 import { AdminApiError, adminFetch } from '@/lib/admin-api';
-import type { ImportRecord } from '@/lib/admin-types';
+import type { ImportRecord, Organization, Page } from '@/lib/admin-types';
 
 /** Fetches by id (any status) — deep links + back-after-decision always resolve; reviewed
  * records render a read-only outcome panel instead of the review form. */
@@ -20,6 +20,24 @@ export default async function ReviewImportPage({ params }: { params: Promise<{ i
   }
   const pending = record.status === 'PENDING';
 
+  // Resolve-or-create: pre-fetch organizations matching the extracted organizerName so the review
+  // panel can show "will be reused" vs "will be created" without a client round-trip. Only when the
+  // payload names an organizer but hasn't already been resolved to an org id.
+  const payload = record.payload as Record<string, unknown>;
+  const organizerName = typeof payload.organizerName === 'string' ? payload.organizerName : null;
+  const organizerOrgId = typeof payload.organizerOrgId === 'string' ? payload.organizerOrgId : null;
+  let organizerMatches: Organization[] = [];
+  if (pending && organizerName && !organizerOrgId) {
+    try {
+      const orgs = await adminFetch<Page<Organization>>(
+        `/organizations?query=${encodeURIComponent(organizerName)}&size=10`,
+      );
+      organizerMatches = orgs.content;
+    } catch {
+      // Non-fatal — the panel falls back to "a new organization will be created".
+    }
+  }
+
   return (
     <>
       <Link
@@ -30,7 +48,7 @@ export default async function ReviewImportPage({ params }: { params: Promise<{ i
       </Link>
       <PageHeader title={pending ? 'Review import' : 'Import record'} />
       {pending ? (
-        <ImportReview record={record} />
+        <ImportReview record={record} initialOrganizerMatches={organizerMatches} />
       ) : (
         <div className="grid gap-6">
           <ReviewOutcome status={record.status} note={record.note} reviewedAt={record.reviewedAt} />

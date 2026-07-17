@@ -205,10 +205,11 @@ class CatalogSearchIntegrationTest {
 		mvc.perform(get("/api/v1/competitions?sort=popularity")).andExpect(status().isBadRequest());
 
 		// The write boundary rejects non-canonical evaluation tokens (422, naming the allowed set).
+		// An organizer is stamped in so bean validation passes and the eval-token check is reached.
 		String body = competitionJson("r15-bad-eval", "Bad Eval r15", categoryId("math"))
 				.replace("\"evaluationType\": []", "\"evaluationType\": [\"quiz\"]");
 		mvc.perform(withToken(post("/api/v1/admin/competitions")).contentType("application/json")
-						.content(body))
+						.content(withDefaultOrganizer(body)))
 				.andExpect(status().isUnprocessableEntity())
 				.andExpect(jsonPath("$.message",
 						org.hamcrest.Matchers.containsString("unknown evaluation type")));
@@ -353,10 +354,24 @@ class CatalogSearchIntegrationTest {
 
 	private String createCompetition(String body) throws Exception {
 		String json = mvc.perform(withToken(post("/api/v1/admin/competitions"))
-						.contentType("application/json").content(body))
+						.contentType("application/json").content(withDefaultOrganizer(body)))
 				.andExpect(status().isCreated())
 				.andReturn().getResponse().getContentAsString();
 		return mapper.readTree(json).get("id").asText();
+	}
+
+	/**
+	 * Organizer is mandatory now (resolve-or-create): stamp a single shared organizerName onto every
+	 * seed body that doesn't already carry one. The first create makes the org; the rest reuse it on
+	 * the exact-name match, so this seed still lands one organizer for all the fixtures.
+	 */
+	private String withDefaultOrganizer(String body) throws Exception {
+		com.fasterxml.jackson.databind.node.ObjectNode node =
+				(com.fasterxml.jackson.databind.node.ObjectNode) mapper.readTree(body);
+		if (!node.hasNonNull("organizerOrgId") && !node.hasNonNull("organizerName")) {
+			node.put("organizerName", "Search Fixtures Org r15");
+		}
+		return mapper.writeValueAsString(node);
 	}
 
 	private String createEdition(String competitionId) throws Exception {

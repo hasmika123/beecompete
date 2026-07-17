@@ -155,6 +155,22 @@ profiles silently rotting every fall as students advance a grade — no rollover
 name and the DQ13 seal sits on the ORG, so it's catalog data. `Membership`/`Role` wait for User
 at R2-1.)*
 
+> **Organizer is mandatory (2026-07-16, migration `0012`).** `Competition.organizer` is `NOT NULL`
+> — every write path must attribute a listing. The single competition write path
+> (`CompetitionCurationService`, shared by admin CRUD, import-approve, and the combined create)
+> **resolves-or-creates** the organizer: a given `organizerOrgId` must exist; otherwise it resolves
+> `organizerName` by an **exact (normalized, case-insensitive) name match → reuse**, and creates a
+> fresh org when there is no match. Auto-created orgs are **`CURATED`/`HOST`** (unclaimed, no R1
+> verification work) with `domain` inferred from the official URL and the competition's provenance
+> stamp. Conservative by decision: a name that only matches **similar** (containing) orgs is
+> **refused (422, listing candidates)** unless the curator sets `confirmNewOrganizer` — no
+> fuzzy/acronym matching, no auto-merge (a wrong merge is worse than a duplicate). An exact match
+> that is **archived** is a 422 (restore or pick another). A row with **no organizer** is flagged
+> for manual assignment (the seeding pipeline sends `organizerName: null`, never a placeholder). No
+> unique index on `organization.name` — R2 will legitimately hold same-named schools; the
+> single-curator R1 accepts the create race. Lets the S4 seeding pipeline attribute 200+ imports
+> by name without pre-creating orgs by hand.
+
 **`Membership`** [P1] — `id, user_id, org_id, role_id, status`
 **`Role`** / **`Permission`** [P1] — org-scoped RBAC. `Role{id, org_id?, name}`, `Permission{role_id, action, resource}`
 

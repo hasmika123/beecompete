@@ -35,6 +35,9 @@ function completenessScore(p: CompetitionPayload): number {
     [1, Array.isArray(p.evaluationType) && p.evaluationType.length > 0],
     [1, hasAttributes(p)],
     [1, Boolean(p.officialUrl)],
+    // Low-weight presence signal only: a named organizer means approve won't need manual org
+    // assignment. Absence just nudges the row down the review queue, it doesn't block it.
+    [1, typeof p.organizerName === 'string' && Boolean(p.organizerName.trim())],
   ];
   const total = checks.reduce((sum, [w]) => sum + w, 0);
   const got = checks.reduce((sum, [w, ok]) => sum + (ok ? w : 0), 0);

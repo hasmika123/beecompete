@@ -24,3 +24,5 @@ databaseChangeLog:
       file: db/changelog/changes/0010-seed-regions.yaml
   - include:
       file: db/changelog/changes/0011-landing-value-prop.yaml
+  - include:
+      file: db/changelog/changes/0012-organizer-mandatory.yaml

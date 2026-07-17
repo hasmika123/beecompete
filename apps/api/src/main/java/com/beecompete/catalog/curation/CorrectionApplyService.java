@@ -167,11 +167,12 @@ public class CorrectionApplyService {
 			case COMPETITION -> {
 				Competition c = competitions.findById(subjectId).orElseThrow(this::subjectGone);
 				yield new CompetitionRequest(c.getSlug(), c.getName(),
-						c.getOrganizer() != null ? c.getOrganizer().getId() : null, c.getOfficialUrl(),
-						c.getLogo(), c.getDescription(), c.getSummary(), c.getCategory().getId(), c.getTags(),
-						c.getParticipationMode(), c.getTeamSizeMin(), c.getTeamSizeMax(), c.getDelivery(),
-						c.getEntryPathway(), c.getEvaluationType(), c.getMinGrade(), c.getMaxGrade(),
-						c.getMinAge(), c.getMaxAge(), c.getCostType(), c.getRecurrence(), c.getAttributes());
+						c.getOrganizer() != null ? c.getOrganizer().getId() : null, null, null,
+						c.getOfficialUrl(), c.getLogo(), c.getDescription(), c.getSummary(),
+						c.getCategory().getId(), c.getTags(), c.getParticipationMode(), c.getTeamSizeMin(),
+						c.getTeamSizeMax(), c.getDelivery(), c.getEntryPathway(), c.getEvaluationType(),
+						c.getMinGrade(), c.getMaxGrade(), c.getMinAge(), c.getMaxAge(), c.getCostType(),
+						c.getRecurrence(), c.getAttributes());
 			}
 			case EDITION -> {
 				Edition e = editions.findById(subjectId).orElseThrow(this::subjectGone);

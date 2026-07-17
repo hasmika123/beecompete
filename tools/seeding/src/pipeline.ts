@@ -3,13 +3,18 @@ import { scoreConfidence } from './confidence.ts';
 import type { Config } from './config.ts';
 import { extract, type ExtractBackend } from './extract.ts';
 import { fetchPage, htmlToText } from './fetch.ts';
+import { compareHints } from './hints.ts';
 import { submitToImportQueue } from './submit.ts';
-import type { ImportSubmission } from './types.ts';
+import type { ImportSubmission, SeedHints } from './types.ts';
 import { validatePayload } from './validate.ts';
 
 export interface SeedItem {
   /** An http(s) URL to fetch, OR a local .html file path (offline/fixture path). */
   source: string;
+  /** Known facts from the S2 master index — guide the extractor + flag disagreements (#1/#2). */
+  hints?: SeedHints;
+  /** Names of other index rows that share this exact URL (umbrella-program curator flag). */
+  siblingNames?: string[];
 }
 
 export interface RunOptions {
@@ -45,12 +50,27 @@ export async function runItem(
 ): Promise<ItemReport> {
   try {
     const { sourceUrl, pageText, inputPath, remote } = await acquireText(item, config, opts);
-    const { extraction, backend } = await extract({ sourceUrl, pageText, inputPath }, config, {
-      offline: opts.offline,
-    });
+    const { extraction, backend } = await extract(
+      { sourceUrl, pageText, inputPath, hints: item.hints },
+      config,
+      { offline: opts.offline },
+    );
 
     const { ok, errors, warnings } = validatePayload(extraction.payload);
     warnings.push(...crossCheckOfficialUrl(extraction.payload.officialUrl, sourceUrl, remote));
+    // A page that names no organizer stays null (decision b) — flag it: approve is now blocked
+    // until a curator assigns an org, since organizer is mandatory on every write path.
+    if (!extraction.payload.organizerName) {
+      warnings.push('no organizer extracted — approve will require manual org assignment');
+    }
+    // #1 flagging: disagreements with the S2 index hints + shared-URL umbrella note.
+    if (item.hints) warnings.push(...compareHints(extraction.payload, item.hints));
+    if (item.siblingNames?.length) {
+      warnings.push(
+        `this URL is also listed in the index as: ${item.siblingNames.join(', ')} — the page may ` +
+          'cover multiple competitions; consider splitting into separate listings',
+      );
+    }
     const confidence = scoreConfidence(extraction);
     // H2: sourceUrl is ALWAYS the URL we actually fetched (or the local file path) — never the
     // LLM-extracted officialUrl, which page content can steer. officialUrl stays in the payload.

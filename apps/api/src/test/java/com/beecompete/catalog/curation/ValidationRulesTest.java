@@ -36,8 +36,9 @@ class ValidationRulesTest {
 	// --- CompetitionRequest ---
 
 	private CompetitionRequest competition(Short minGrade, Short maxGrade, Short teamMin, Short teamMax) {
-		return new CompetitionRequest("amc-10", "AMC 10", null, null, null, null, null, UUID.randomUUID(),
-				null, ParticipationMode.INDIVIDUAL, teamMin, teamMax, Delivery.IN_PERSON,
+		// organizerName (not id) satisfies the mandatory-organizer rule — the resolve-or-create path.
+		return new CompetitionRequest("amc-10", "AMC 10", null, "Test Org", null, null, null, null, null,
+				UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, teamMin, teamMax, Delivery.IN_PERSON,
 				EntryPathway.INDIVIDUAL, null, minGrade, maxGrade, null, null, CostType.FREE, Recurrence.ANNUAL,
 				null);
 	}
@@ -45,6 +46,26 @@ class ValidationRulesTest {
 	@Test
 	void validCompetitionPasses() {
 		assertTrue(V.validate(competition((short) 9, (short) 12, null, null)).isEmpty());
+	}
+
+	@Test
+	void organizerMissingFails() {
+		// Neither organizerOrgId nor organizerName → the mandatory-organizer @AssertTrue fails.
+		CompetitionRequest noOrg = new CompetitionRequest("amc-10", "AMC 10", null, null, null, null, null, null,
+				null, UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, null, null, Delivery.IN_PERSON,
+				EntryPathway.INDIVIDUAL, null, (short) 9, (short) 12, null, null, CostType.FREE, Recurrence.ANNUAL,
+				null);
+		assertTrue(hasMessage(V.validate(noOrg), "organizer is required"));
+	}
+
+	@Test
+	void organizerByIdPasses() {
+		// An organizerOrgId (no name) also satisfies the rule.
+		CompetitionRequest byId = new CompetitionRequest("amc-10", "AMC 10", UUID.randomUUID(), null, null, null,
+				null, null, null, UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, null, null,
+				Delivery.IN_PERSON, EntryPathway.INDIVIDUAL, null, (short) 9, (short) 12, null, null, CostType.FREE,
+				Recurrence.ANNUAL, null);
+		assertTrue(V.validate(byId).isEmpty());
 	}
 
 	@Test
