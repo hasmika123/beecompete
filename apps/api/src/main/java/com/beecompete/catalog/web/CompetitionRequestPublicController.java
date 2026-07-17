@@ -1,5 +1,6 @@
 package com.beecompete.catalog.web;
 
+import com.beecompete.catalog.domain.ImportOrigin;
 import com.beecompete.catalog.domain.ImportRecord;
 import com.beecompete.catalog.repository.ImportRecordRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -53,9 +54,10 @@ public class CompetitionRequestPublicController {
 	public RequestSubmitted submit(@Valid @RequestBody CompetitionRequestSubmission submission) {
 		Map<String, Object> payload = buildPayload(submission);
 		requireModestSize(payload);
-		// confidence = null: this isn't a pipeline extraction; the null + the note flag it as a
-		// user request in the admin queue (vs. an S3 import which carries a confidence score).
-		ImportRecord record = new ImportRecord(payload, blankToNull(submission.officialUrl()), null);
+		// origin = USER_REQUEST is the first-class discriminator the admin queue surfaces (the
+		// note is human-readable context only; confidence stays null — not a pipeline score).
+		ImportRecord record = new ImportRecord(payload, blankToNull(submission.officialUrl()), null,
+				ImportOrigin.USER_REQUEST);
 		record.setNote(REQUEST_NOTE);
 		record = imports.save(record);
 		return new RequestSubmitted(record.getId(), record.getStatus().name(), record.getCreatedAt());

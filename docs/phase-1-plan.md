@@ -173,9 +173,10 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
   → Brevo follow/host lists (competition stored as the `COMPETITION` attribute), inert without env;
   (3) the **Request-a-Competition wizard** (`/suggest-a-competition`, 5-step, progress, `?q=` prefill)
   → a **public** `POST /api/v1/competition-requests` (outside the admin filter) that queues an
-  `ImportRecord` (no schema — reuses the R1-3 import/curation queue; null confidence + note flag it
-  as a user request) for curator review. No submitter PII on the request path (COPPA-clear). Owner
-  setup: setup-runbook §7a.
+  `ImportRecord` into the R1-3 import/curation queue for curator review. No submitter PII on the
+  request path (COPPA-clear). **Post-review fix:** migration `0013` adds `import_record.origin`
+  (`PIPELINE`|`USER_REQUEST`) so public requests are badged in the admin queue + review header —
+  curators never apply pipeline-grade trust to an unvetted submission. Owner setup: setup-runbook §7a.
 - **R1-16** — In-app **bug/feedback report**. (DQ7 precursor)
   ✅ **Code done 2026-07-17.** A lightweight `/feedback` page (noindex) + footer "Send Feedback"
   link (Contribute column): category (Bug/Idea/Content/Other) + message + optional reply email +

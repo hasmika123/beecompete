@@ -26,3 +26,5 @@ databaseChangeLog:
       file: db/changelog/changes/0011-landing-value-prop.yaml
   - include:
       file: db/changelog/changes/0012-organizer-mandatory.yaml
+  - include:
+      file: db/changelog/changes/0013-import-origin.yaml

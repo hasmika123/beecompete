@@ -23,6 +23,20 @@ export function ReviewStatusBadge({ status }: { status: string }) {
   return <Badge variant={REVIEW_VARIANT[status] ?? 'outline'}>{status.toLowerCase()}</Badge>;
 }
 
+/**
+ * Import-record origin (migration 0013): a public Request-a-Competition submission gets a
+ * highlighted badge so curators apply extra skepticism (unvetted, possibly spam); the pipeline
+ * baseline stays muted text to avoid wall-of-sameness (same pattern as the trust badges hiding
+ * the curated baseline).
+ */
+export function ImportOriginBadge({ origin }: { origin: 'PIPELINE' | 'USER_REQUEST' }) {
+  return origin === 'USER_REQUEST' ? (
+    <Badge variant="gold">user request</Badge>
+  ) : (
+    <span className="text-xs text-muted">pipeline</span>
+  );
+}
+
 /** Archived vs live — quick scan column in tables. */
 export function ArchivedBadge({ archivedAt }: { archivedAt: string | null }) {
   return archivedAt ? (

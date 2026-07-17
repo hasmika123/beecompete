@@ -312,8 +312,12 @@ listing as the `COMPETITION` attribute, parent/16+ (host = organizer) framing + 
 inert without env (owner chose Brevo lists + DOI, 2026-07-17). The **Request-a-Competition wizard**
 (`/suggest-a-competition`, 5-step + progress + `?q=` prefill) posts to a new **public**
 `POST /api/v1/competition-requests` (`CompetitionRequestPublicController`, outside the admin filter)
-that queues an `ImportRecord` — **no schema**, reuses the R1-3 import/curation queue (null confidence
-+ note flag it a user request); no submitter PII on the request path (COPPA-clear). `lib/brevo.ts`
+that queues an `ImportRecord` into the R1-3 import/curation queue; no submitter PII on the request
+path (COPPA-clear). **Post-review fix (migration `0013`):** `import_record.origin`
+(`PIPELINE`|`USER_REQUEST`) is the first-class discriminator — the public form stamps
+`USER_REQUEST`, and the admin queue (Origin column) + review header + outcome view all badge it, so
+curators never mistake an unvetted public request for an S3 extraction (the old signals — null
+confidence + a note — were shown nowhere and the approve path overwrites the note). `lib/brevo.ts`
 generalized to `subscribeToBrevoList` (digest/follow/host list ids + shared `BREVO_DOI_TEMPLATE_ID`);
 env passed by both compose stacks. **R1-15 verified end-to-end against live Brevo (2026-07-17):**
 digest signup → DOI email → contact with `GRADE`/`INTEREST`/`STATE`; gotcha recorded — the contacts

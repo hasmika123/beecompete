@@ -3,7 +3,7 @@ import { buttonClasses } from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
 import { AdminPagination } from '@/components/admin/admin-pagination';
 import { AdminTable } from '@/components/admin/admin-table';
-import { ReviewStatusBadge } from '@/components/admin/status-badges';
+import { ImportOriginBadge, ReviewStatusBadge } from '@/components/admin/status-badges';
 import { adminFetch } from '@/lib/admin-api';
 import { formatDate } from '@/lib/dates';
 import type { ImportRecord, Page } from '@/lib/admin-types';
@@ -33,7 +33,7 @@ export default async function ImportRecordsPage({
     <>
       <PageHeader
         title="Import queue"
-        description="Review records extracted by the pipeline (S3)."
+        description="Review pipeline extractions (S3) and public competition requests (DQ15)."
       />
 
       <div className="mb-4 flex gap-2">
@@ -64,6 +64,10 @@ export default async function ImportRecordsPage({
                 {title(r.payload)}
               </Link>
             ),
+          },
+          {
+            header: 'Origin',
+            cell: (r) => <ImportOriginBadge origin={r.origin} />,
           },
           {
             header: 'Confidence',

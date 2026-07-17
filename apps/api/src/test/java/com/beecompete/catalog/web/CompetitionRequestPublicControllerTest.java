@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.beecompete.TestcontainersConfiguration;
+import com.beecompete.catalog.domain.ImportOrigin;
 import com.beecompete.catalog.domain.ImportRecord;
 import com.beecompete.catalog.domain.ImportStatus;
 import com.beecompete.catalog.repository.ImportRecordRepository;
@@ -47,6 +48,8 @@ class CompetitionRequestPublicControllerTest {
 		assertThat(pending).hasSize(1);
 		ImportRecord record = pending.get(0);
 		assertThat(record.getStatus()).isEqualTo(ImportStatus.PENDING);
+		// The first-class discriminator curators see in the queue (0013): USER_REQUEST, not PIPELINE.
+		assertThat(record.getOrigin()).isEqualTo(ImportOrigin.USER_REQUEST);
 		// User request, not a pipeline extraction: no confidence, flagged by the note + sourceUrl.
 		assertThat(record.getConfidence()).isNull();
 		assertThat(record.getSourceUrl()).isEqualTo("https://example.org/rumble");

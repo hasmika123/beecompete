@@ -200,7 +200,10 @@ tooling + audit log) → Phase 2+ (dedup DQ4, conflict resolution DQ5) → Phase
 - **API:** a `catalog.curation` package exposes `/api/v1/admin/**` (REST/JSON) — CRUD for
   Competition/Edition/KeyDate/Resource/Category(+CategoryTemplate)/Organization, an **import-review
   queue** on a new `import_record` table (Liquibase `0006`: `payload` JSONB + source/confidence/
-  status; approve → creates the real Competition with `provenance.source=import`), landing content
+  status; approve → creates the real Competition with `provenance.source=import`; Liquibase `0013`
+  adds `origin` `PIPELINE`|`USER_REQUEST` — the public Request-a-Competition form stamps
+  `USER_REQUEST` and the admin queue/review/outcome views badge it, so curators can tell an
+  unvetted public request from an S3 extraction), landing content
   (HeroCard upsert-by-position + FeaturedSlot carousel, ≤10, archived-competition guard), and
   verification/provenance controls. Every attributes write validates through
   `CategoryAttributeValidator`; every write stamps provenance.

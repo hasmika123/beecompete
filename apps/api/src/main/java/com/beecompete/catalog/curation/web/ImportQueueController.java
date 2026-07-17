@@ -141,10 +141,11 @@ public class ImportQueueController {
 	public record RejectRequest(String note) {}
 
 	public record ImportRecordResponse(UUID id, Map<String, Object> payload, String sourceUrl,
-			BigDecimal confidence, String status, String note, Instant reviewedAt, Instant createdAt) {
+			BigDecimal confidence, String status, String origin, String note, Instant reviewedAt,
+			Instant createdAt) {
 		static ImportRecordResponse from(ImportRecord r) {
 			return new ImportRecordResponse(r.getId(), r.getPayload(), r.getSourceUrl(), r.getConfidence(),
-					r.getStatus().name(), r.getNote(), r.getReviewedAt(), r.getCreatedAt());
+					r.getStatus().name(), r.getOrigin().name(), r.getNote(), r.getReviewedAt(), r.getCreatedAt());
 		}
 	}
 }
