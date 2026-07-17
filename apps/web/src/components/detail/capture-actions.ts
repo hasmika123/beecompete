@@ -3,17 +3,17 @@
 import {
   brevoListEnabled,
   getBrevoConfig,
+  isValidEmail,
   reportBrevoError,
   subscribeToBrevoList,
 } from '@/lib/brevo';
+import { isHoneypotTripped } from '@/lib/honeypot';
 import type { FormState } from '@/lib/admin-types';
 
 // Listing-page email captures (R1-15b): per-competition follow (M29) and host-interest (H46).
 // Both go to Brevo lists (owner decision 2026-07-17), pitched to parents/educators/16+ with
 // double opt-in, and are inert without their list env. The competition the visitor acted on is
 // stored as the COMPETITION contact attribute for later segmentation / R2 account conversion.
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function readEmail(form: FormData): string {
   return String(form.get('email') ?? '').trim();
@@ -33,11 +33,10 @@ function successMessage(
 }
 
 export async function followByEmail(_prev: FormState, form: FormData): Promise<FormState> {
-  if (String(form.get('website') ?? '').trim())
-    return { ok: true, error: 'Thanks! Check your inbox.' };
+  if (isHoneypotTripped(form)) return { ok: true, error: 'Thanks! Check your inbox.' };
 
   const email = readEmail(form);
-  if (!email || !EMAIL_RE.test(email)) return { ok: false, error: 'Enter a valid email address.' };
+  if (!isValidEmail(email)) return { ok: false, error: 'Enter a valid email address.' };
 
   const cfg = getBrevoConfig();
   if (!brevoListEnabled(cfg, cfg.followListId)) {
@@ -65,11 +64,10 @@ export async function followByEmail(_prev: FormState, form: FormData): Promise<F
 }
 
 export async function registerHostInterest(_prev: FormState, form: FormData): Promise<FormState> {
-  if (String(form.get('website') ?? '').trim())
-    return { ok: true, error: 'Thanks! Check your inbox.' };
+  if (isHoneypotTripped(form)) return { ok: true, error: 'Thanks! Check your inbox.' };
 
   const email = readEmail(form);
-  if (!email || !EMAIL_RE.test(email)) return { ok: false, error: 'Enter a valid email address.' };
+  if (!isValidEmail(email)) return { ok: false, error: 'Enter a valid email address.' };
 
   const cfg = getBrevoConfig();
   if (!brevoListEnabled(cfg, cfg.hostListId)) {

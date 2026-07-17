@@ -3,9 +3,11 @@
 import {
   brevoListEnabled,
   getBrevoConfig,
+  isValidEmail,
   reportBrevoError,
   subscribeToBrevoList,
 } from '@/lib/brevo';
+import { isHoneypotTripped } from '@/lib/honeypot';
 import type { FormState } from '@/lib/admin-types';
 
 /**
@@ -17,13 +19,12 @@ import type { FormState } from '@/lib/admin-types';
  */
 export async function subscribeDigest(_prev: FormState, form: FormData): Promise<FormState> {
   // Honeypot filled → pretend success, store nothing.
-  if (String(form.get('website') ?? '').trim()) {
+  if (isHoneypotTripped(form)) {
     return { ok: true, error: 'Thanks! Check your inbox to confirm.' };
   }
 
   const email = String(form.get('email') ?? '').trim();
-  // Light client-mirroring check; Brevo does the authoritative validation.
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!isValidEmail(email)) {
     return { ok: false, error: 'Enter a valid email address.' };
   }
 

@@ -53,6 +53,8 @@ export { EmptyState } from './components/empty-state';
 export type { EmptyStateProps } from './components/empty-state';
 
 export { FormField } from './components/form-field';
+
+export { Honeypot, HONEYPOT_FIELD } from './components/honeypot';
 export type { FormFieldProps } from './components/form-field';
 
 export { ProgressRing } from './components/progress-ring';

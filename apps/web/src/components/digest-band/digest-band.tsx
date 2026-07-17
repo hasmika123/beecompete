@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react';
 import Link from 'next/link';
-import { Alert, Button, CheckCircle, Input, Select } from '@beecompete/ui';
+import { Alert, Button, CheckCircle, Honeypot, Input, Select } from '@beecompete/ui';
 import { subscribeDigest } from './actions';
 import { GRADE_OPTIONS, INTEREST_OPTIONS, STATE_OPTIONS } from '@/lib/digest-options';
 import type { FormState } from '@/lib/admin-types';
@@ -49,16 +49,7 @@ export function DigestBand() {
               </Alert>
             )}
             <form action={formAction} className="mt-1 grid w-full max-w-xl gap-3">
-              {/* Honeypot — humans never see this; bots that fill it are dropped server-side. */}
-              <div
-                aria-hidden="true"
-                className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden"
-              >
-                <label>
-                  Website
-                  <input type="text" name="website" tabIndex={-1} autoComplete="off" />
-                </label>
-              </div>
+              <Honeypot />
 
               {/* Optional preferences → Brevo segmentation. */}
               <fieldset className="grid gap-2 text-left">

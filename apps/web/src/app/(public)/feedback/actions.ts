@@ -3,13 +3,15 @@
 import {
   brevoEmailEnabled,
   getBrevoConfig,
+  isValidEmail,
   reportBrevoError,
   sendTransactionalEmail,
 } from '@/lib/brevo';
+import { isHoneypotTripped } from '@/lib/honeypot';
 import { LEGAL_CONTACT_EMAIL } from '@/lib/legal';
+import { normalizeFeedbackCategory } from './categories';
 import type { FormState } from '@/lib/admin-types';
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_MESSAGE = 4000;
 
 /**
@@ -19,15 +21,15 @@ const MAX_MESSAGE = 4000;
  * visitor to email support directly (so feedback is never silently lost).
  */
 export async function submitFeedback(_prev: FormState, form: FormData): Promise<FormState> {
-  if (String(form.get('website') ?? '').trim()) return { ok: true };
+  if (isHoneypotTripped(form)) return { ok: true };
 
   const message = String(form.get('message') ?? '').trim();
   if (message.length < 5) return { ok: false, error: 'Please add a little more detail.' };
   if (message.length > MAX_MESSAGE) return { ok: false, error: 'That message is a bit too long.' };
 
-  const category = String(form.get('category') ?? 'Other').trim() || 'Other';
+  const category = normalizeFeedbackCategory(String(form.get('category') ?? '').trim());
   const email = String(form.get('email') ?? '').trim();
-  const replyToEmail = email && EMAIL_RE.test(email) ? email : undefined;
+  const replyToEmail = email && isValidEmail(email) ? email : undefined;
 
   const cfg = getBrevoConfig();
   if (!brevoEmailEnabled(cfg)) {

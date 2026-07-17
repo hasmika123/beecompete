@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Alert, Button, CheckCircle, Input } from '@beecompete/ui';
+import { Alert, Button, CheckCircle, Honeypot, Input } from '@beecompete/ui';
 import type { ButtonVariant } from '@beecompete/ui';
 import type { FormState } from '@/lib/admin-types';
 
@@ -68,16 +68,7 @@ export function EmailCaptureCta({
 
       {open && (
         <form action={formAction} className="mt-2 grid gap-2">
-          {/* Honeypot — humans never see this; bots that fill it are dropped server-side. */}
-          <div
-            aria-hidden="true"
-            className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden"
-          >
-            <label>
-              Website
-              <input type="text" name="website" tabIndex={-1} autoComplete="off" />
-            </label>
-          </div>
+          <Honeypot />
           <input type="hidden" name="competitionName" value={competitionName} />
 
           <p className="text-xs text-muted">{blurb}</p>
@@ -87,10 +78,13 @@ export function EmailCaptureCta({
             </Alert>
           )}
           <div className="flex flex-col gap-2 sm:flex-row">
+            {/* autoFocus: the form is revealed on click, so moving focus in announces it (and its
+                consent/COPPA framing) to screen-reader users instead of a silent "expanded". */}
             <Input
               type="email"
               name="email"
               required
+              autoFocus
               placeholder="you@example.com"
               aria-label="Email address"
             />

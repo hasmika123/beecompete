@@ -1,5 +1,6 @@
 'use server';
 
+import { isHoneypotTripped } from '@/lib/honeypot';
 import { publicFetch } from '@/lib/public-api';
 import type { FormState } from '@/lib/admin-types';
 
@@ -13,7 +14,7 @@ export async function submitCompetitionRequest(
   _prev: FormState,
   form: FormData,
 ): Promise<FormState> {
-  if (String(form.get('website') ?? '').trim()) {
+  if (isHoneypotTripped(form)) {
     return { ok: true };
   }
 

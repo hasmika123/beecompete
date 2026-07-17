@@ -1,7 +1,17 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import { Alert, Button, FormField, Input, Plus, Select, Textarea, Trash } from '@beecompete/ui';
+import {
+  Alert,
+  Button,
+  FormField,
+  Honeypot,
+  Input,
+  Plus,
+  Select,
+  Textarea,
+  Trash,
+} from '@beecompete/ui';
 import { submitCorrection } from './actions';
 import type { FormState } from '@/lib/admin-types';
 import {
@@ -95,16 +105,7 @@ export function SuggestCorrectionForm({
 
       <input type="hidden" name="subjectType" value={subjectType} />
       <input type="hidden" name="subjectId" value={subjectId} />
-      {/* Honeypot — humans never see this; bots that fill it are dropped server-side. */}
-      <div
-        aria-hidden="true"
-        className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden"
-      >
-        <label>
-          Website
-          <input type="text" name="website" tabIndex={-1} autoComplete="off" />
-        </label>
-      </div>
+      <Honeypot />
 
       <div className="grid gap-4">
         {rows.map((row, i) => {

@@ -23,6 +23,13 @@ export function reportBrevoError(context: string, error: unknown): void {
   Sentry.captureException(error, { tags: { area: 'brevo', context } });
 }
 
+// Shared email shape check for the capture/feedback actions (client-mirroring; Brevo does the
+// authoritative validation). One spelling of "valid email" instead of a copy per action.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export function isValidEmail(email: string): boolean {
+  return EMAIL_RE.test(email);
+}
+
 export interface BrevoConfig {
   apiKey?: string;
   /** Weekly digest list (R1-15). */
@@ -38,6 +45,8 @@ export interface BrevoConfig {
   /** Verified "from" sender for transactional mail (feedback → support@, R1-16). */
   senderEmail: string;
   senderName: string;
+  /** True only when BREVO_SENDER_EMAIL was EXPLICITLY set (not the default) — the gate for feedback. */
+  senderConfigured: boolean;
 }
 
 function positiveInt(raw: string | undefined): number | undefined {
@@ -56,12 +65,19 @@ export function getBrevoConfig(): BrevoConfig {
     doiRedirectUrl: process.env.BREVO_DOI_REDIRECT_URL || undefined,
     senderEmail: process.env.BREVO_SENDER_EMAIL || 'no-reply@beecompete.com',
     senderName: process.env.BREVO_SENDER_NAME || 'BeeCompete',
+    senderConfigured: Boolean(process.env.BREVO_SENDER_EMAIL),
   };
 }
 
-/** Brevo can send transactional mail (feedback, R1-16) as soon as the API key is set. */
+/**
+ * Brevo can send transactional mail (feedback, R1-16) when there's a key AND an explicitly-set
+ * sender. We require BREVO_SENDER_EMAIL rather than trusting the no-reply@ default, because Brevo
+ * 4xxs a send from an unverified sender — so without this gate feedback would report itself "wired"
+ * and then hard-fail every send. Unset sender → the form shows the "email support@ directly" inert
+ * fallback instead (feedback is never silently lost).
+ */
 export function brevoEmailEnabled(cfg: BrevoConfig): boolean {
-  return Boolean(cfg.apiKey);
+  return Boolean(cfg.apiKey && cfg.senderConfigured);
 }
 
 /**
@@ -122,13 +138,34 @@ export async function subscribeToBrevoList(
   }: { email: string; listId: number; attributes?: Record<string, string> },
 ): Promise<SubscribeResult> {
   if (!cfg.apiKey) throw new Error('Brevo is not configured');
+  const hasAttributes = Object.keys(attributes).length > 0;
 
+  try {
+    return await postSubscribe(cfg, email, listId, hasAttributes ? attributes : undefined);
+  } catch (e) {
+    // Attributes are sent inline, so a single unknown/mis-typed one (e.g. a COMPETITION attribute
+    // never created in Brevo) 400s the WHOLE call. Don't lose a valid signup to a segmentation
+    // field — retry once without attributes so the email is still captured, and log so the bad
+    // attribute gets fixed. (No attributes → nothing to salvage, so rethrow.)
+    if (!hasAttributes) throw e;
+    reportBrevoError(`subscribe-attributes (retrying without) list=${listId}`, e);
+    return await postSubscribe(cfg, email, listId, undefined);
+  }
+}
+
+/** One subscribe POST (double opt-in when a template is configured, else single opt-in). */
+async function postSubscribe(
+  cfg: BrevoConfig,
+  email: string,
+  listId: number,
+  attributes: Record<string, string> | undefined,
+): Promise<SubscribeResult> {
   const headers = {
-    'api-key': cfg.apiKey,
+    'api-key': cfg.apiKey as string,
     'content-type': 'application/json',
     accept: 'application/json',
   };
-  const hasAttributes = Object.keys(attributes).length > 0;
+  const attrs = attributes && Object.keys(attributes).length > 0 ? { attributes } : {};
 
   // Double opt-in when a template is configured — preferred for a minors-adjacent audience.
   if (cfg.doiTemplateId) {
@@ -140,7 +177,7 @@ export async function subscribeToBrevoList(
         includeListIds: [listId],
         templateId: cfg.doiTemplateId,
         redirectionUrl: cfg.doiRedirectUrl ?? 'https://beecompete.com/',
-        ...(hasAttributes ? { attributes } : {}),
+        ...attrs,
       }),
     });
     if (!res.ok) throw new Error(`Brevo DOI failed: ${res.status}`);
@@ -151,12 +188,7 @@ export async function subscribeToBrevoList(
   const res = await fetch(`${BREVO_BASE}/contacts`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({
-      email,
-      listIds: [listId],
-      updateEnabled: true,
-      ...(hasAttributes ? { attributes } : {}),
-    }),
+    body: JSON.stringify({ email, listIds: [listId], updateEnabled: true, ...attrs }),
   });
   // 201 created, 204 updated — both fine.
   if (!res.ok) throw new Error(`Brevo contact create failed: ${res.status}`);

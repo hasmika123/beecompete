@@ -7,6 +7,7 @@ import {
   ArrowRight,
   Button,
   CheckCircle,
+  Honeypot,
   Input,
   Select,
   Textarea,
@@ -66,16 +67,7 @@ export function RequestWizard({ initialName = '' }: { initialName?: string }) {
   // final submit with no visible error. The server (@Valid) is the real gate.
   return (
     <form action={formAction} noValidate className="grid gap-6">
-      {/* Honeypot — humans never see this; bots that fill it are dropped server-side. */}
-      <div
-        aria-hidden="true"
-        className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden"
-      >
-        <label>
-          Website
-          <input type="text" name="website" tabIndex={-1} autoComplete="off" />
-        </label>
-      </div>
+      <Honeypot />
 
       {/* Progress */}
       <div>

@@ -1,18 +1,21 @@
 'use client';
 
 import { useActionState } from 'react';
-import { Alert, Button, CheckCircle, FormField, Input, Select, Textarea } from '@beecompete/ui';
+import {
+  Alert,
+  Button,
+  CheckCircle,
+  FormField,
+  Honeypot,
+  Input,
+  Select,
+  Textarea,
+} from '@beecompete/ui';
 import { submitFeedback } from './actions';
+import { FEEDBACK_CATEGORIES } from './categories';
 import type { FormState } from '@/lib/admin-types';
 
 const INITIAL: FormState = { ok: false };
-
-const CATEGORY_OPTIONS = [
-  { value: 'Bug', label: 'Something is broken (bug)' },
-  { value: 'Idea / feature', label: 'An idea or feature request' },
-  { value: 'Content issue', label: 'A listing looks wrong or missing' },
-  { value: 'Other', label: 'Something else' },
-];
 
 // In-app feedback form (R1-16). Reuses shared primitives (no new UI element type). Message is
 // required; email is optional (only used so support can reply). → Brevo email to support@.
@@ -32,19 +35,10 @@ export function FeedbackForm() {
 
   return (
     <form action={formAction} className="grid gap-5">
-      {/* Honeypot — humans never see this; bots that fill it are dropped server-side. */}
-      <div
-        aria-hidden="true"
-        className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden"
-      >
-        <label>
-          Website
-          <input type="text" name="website" tabIndex={-1} autoComplete="off" />
-        </label>
-      </div>
+      <Honeypot />
 
       <FormField label="What's this about?">
-        <Select name="category" defaultValue="Bug" options={CATEGORY_OPTIONS} />
+        <Select name="category" defaultValue="Bug" options={FEEDBACK_CATEGORIES} />
       </FormField>
 
       <FormField label="Tell us more">
