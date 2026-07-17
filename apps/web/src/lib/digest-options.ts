@@ -24,6 +24,12 @@ export const INTEREST_OPTIONS: SelectOption[] = CATEGORY_CONTENT.filter(
   (c) => c.slug !== 'other',
 ).map((c) => ({ value: c.name, label: c.name }));
 
+// Request-a-Competition category picker: value = SLUG (posted as `categorySlug`), label = name.
+// Distinct from INTEREST_OPTIONS above, which intentionally uses names (stored as Brevo attributes).
+export const CATEGORY_SLUG_OPTIONS: SelectOption[] = CATEGORY_CONTENT.filter(
+  (c) => c.slug !== 'other',
+).map((c) => ({ value: c.slug, label: c.name }));
+
 // US states + DC. Value = full name (stored to Brevo); the Select is searchable at this length.
 export const STATE_OPTIONS: SelectOption[] = [
   'Alabama',

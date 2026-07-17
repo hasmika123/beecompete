@@ -1,8 +1,8 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
+import { useEffect } from 'react';
 import Script from 'next/script';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import posthog from 'posthog-js';
 
 // Client analytics (R1-14) — privacy-first + cookieless, for a minors-facing site (COPPA/SOPIPA).
@@ -72,30 +72,28 @@ export function Analytics({ posthogKey, posthogHost, cfBeaconToken }: AnalyticsP
           data-cf-beacon={JSON.stringify({ token: cfBeaconToken })}
         />
       )}
-      {posthogKey && (
-        <Suspense fallback={null}>
-          <PageviewTracker posthogKey={posthogKey} posthogHost={posthogHost} />
-        </Suspense>
-      )}
+      {posthogKey && <PageviewTracker posthogKey={posthogKey} posthogHost={posthogHost} />}
     </>
   );
 }
 
 // Starts PostHog (idempotent — module-level guard) and captures a $pageview on the initial load
-// AND every client-side navigation. Init lives here rather than a parent effect so the first
-// pageview can't be dropped to an effect-ordering race (child effects run before parent effects,
-// and the Suspense boundary can reorder them further). Honors DNT/GPC. useSearchParams() requires
-// the Suspense boundary in the App Router.
+// AND every client-side PATH change. Init lives here rather than a parent effect so the first
+// pageview can't be dropped to an effect-ordering race (child effects run before parent effects).
+// Honors DNT/GPC.
+//
+// Trigger is `pathname` only — NOT searchParams — on purpose: the marketplace filters are
+// instant-apply and mutate the query string, and one filtered view is not a new pageview. posthog
+// still records the full $current_url (incl. query) from window.location, so a real navigation to a
+// different query (e.g. a category hub, which is a different path) is captured; a filter toggle is
+// not. This avoids inflating the pageview counts R1-14 exists to measure.
 function PageviewTracker({ posthogKey, posthogHost }: { posthogKey: string; posthogHost: string }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   useEffect(() => {
     if (privacyOptOut()) return; // DNT / GPC opt-out → never start or capture
     startPostHog(posthogKey, posthogHost);
-    // posthog derives $current_url from window.location itself; pathname/searchParams in the deps
-    // just re-fire this on client-side navigations.
     posthog.capture('$pageview');
-  }, [pathname, searchParams, posthogKey, posthogHost]);
+  }, [pathname, posthogKey, posthogHost]);
   return null;
 }
 

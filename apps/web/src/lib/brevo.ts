@@ -9,7 +9,19 @@
 // subscriber must click a confirmation email before anything is stored on the list, which is both
 // the consent record (CAN-SPAM / prudent COPPA posture) and good deliverability hygiene.
 
+import * as Sentry from '@sentry/nextjs';
+
 const BREVO_BASE = 'https://api.brevo.com/v3';
+
+/**
+ * Report a Brevo failure to the logs + Sentry (inert without a DSN). Callers still show the user a
+ * friendly message, but this makes a prod misconfig (wrong key type, missing contact attribute,
+ * unverified sender) OBSERVABLE instead of silently failing every capture. Never throws.
+ */
+export function reportBrevoError(context: string, error: unknown): void {
+  console.error(`[brevo] ${context} failed`, error);
+  Sentry.captureException(error, { tags: { area: 'brevo', context } });
+}
 
 export interface BrevoConfig {
   apiKey?: string;
@@ -39,11 +51,8 @@ export function getBrevoConfig(): BrevoConfig {
     digestListId: positiveInt(process.env.BREVO_DIGEST_LIST_ID),
     followListId: positiveInt(process.env.BREVO_FOLLOW_LIST_ID),
     hostListId: positiveInt(process.env.BREVO_HOST_LIST_ID),
-    // BREVO_DOI_TEMPLATE_ID is the shared confirmation template; the older BREVO_DIGEST_DOI_TEMPLATE_ID
-    // is still honored as an alias so an early digest-only setup keeps working.
-    doiTemplateId:
-      positiveInt(process.env.BREVO_DOI_TEMPLATE_ID) ??
-      positiveInt(process.env.BREVO_DIGEST_DOI_TEMPLATE_ID),
+    // Shared confirmation template across digest/follow/host captures.
+    doiTemplateId: positiveInt(process.env.BREVO_DOI_TEMPLATE_ID),
     doiRedirectUrl: process.env.BREVO_DOI_REDIRECT_URL || undefined,
     senderEmail: process.env.BREVO_SENDER_EMAIL || 'no-reply@beecompete.com',
     senderName: process.env.BREVO_SENDER_NAME || 'BeeCompete',

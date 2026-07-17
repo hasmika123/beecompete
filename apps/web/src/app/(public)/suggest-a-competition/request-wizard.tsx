@@ -14,7 +14,7 @@ import {
   cn,
 } from '@beecompete/ui';
 import { submitCompetitionRequest } from './actions';
-import { INTEREST_OPTIONS } from '@/lib/digest-options';
+import { CATEGORY_SLUG_OPTIONS } from '@/lib/digest-options';
 import type { FormState } from '@/lib/admin-types';
 
 const INITIAL: FormState = { ok: false };
@@ -61,8 +61,11 @@ export function RequestWizard({ initialName = '' }: { initialName?: string }) {
   const canAdvance = step > 0 || name.trim().length > 0;
   const activeStep = STEPS[step] ?? STEPS[0];
 
+  // noValidate: fields live in a single form across steps (non-active steps are `hidden`), so native
+  // constraint validation on a hidden field (e.g. a malformed type=url) would silently block the
+  // final submit with no visible error. The server (@Valid) is the real gate.
   return (
-    <form action={formAction} className="grid gap-6">
+    <form action={formAction} noValidate className="grid gap-6">
       {/* Honeypot — humans never see this; bots that fill it are dropped server-side. */}
       <div
         aria-hidden="true"
@@ -127,7 +130,7 @@ export function RequestWizard({ initialName = '' }: { initialName?: string }) {
         <div hidden={step !== 3}>
           <Select
             name="category"
-            options={INTEREST_OPTIONS}
+            options={CATEGORY_SLUG_OPTIONS}
             placeholder="Pick the closest subject"
             aria-label="Subject category"
           />

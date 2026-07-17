@@ -1,6 +1,11 @@
 'use server';
 
-import { brevoEmailEnabled, getBrevoConfig, sendTransactionalEmail } from '@/lib/brevo';
+import {
+  brevoEmailEnabled,
+  getBrevoConfig,
+  reportBrevoError,
+  sendTransactionalEmail,
+} from '@/lib/brevo';
 import { LEGAL_CONTACT_EMAIL } from '@/lib/legal';
 import type { FormState } from '@/lib/admin-types';
 
@@ -39,7 +44,8 @@ export async function submitFeedback(_prev: FormState, form: FormData): Promise<
       textContent: `Category: ${category}\nFrom: ${email || '(not provided)'}\n\n${message}`,
       replyToEmail,
     });
-  } catch {
+  } catch (e) {
+    reportBrevoError('feedback-email', e);
     return {
       ok: false,
       error: `Sorry — we couldn’t send that just now. Please try again, or email ${LEGAL_CONTACT_EMAIL}.`,

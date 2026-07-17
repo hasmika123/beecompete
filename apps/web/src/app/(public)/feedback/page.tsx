@@ -3,6 +3,11 @@ import { FeedbackForm } from './feedback-form';
 import { LEGAL_CONTACT_EMAIL } from '@/lib/legal';
 import { pageMetadata } from '@/lib/seo';
 
+// Dynamic (no build prerender) so the (public) layout reads the analytics env at REQUEST time —
+// without this the page is statically prerendered and getAnalyticsConfig() freezes to build-time
+// (empty) env, silently baking analytics off for this route. Matches every other public page.
+export const revalidate = 0;
+
 export function generateMetadata(): Metadata {
   // Utility page — noindex (not SEO content), like the other form pages.
   return pageMetadata({

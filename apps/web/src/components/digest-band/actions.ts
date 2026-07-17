@@ -1,6 +1,11 @@
 'use server';
 
-import { brevoListEnabled, getBrevoConfig, subscribeToBrevoList } from '@/lib/brevo';
+import {
+  brevoListEnabled,
+  getBrevoConfig,
+  reportBrevoError,
+  subscribeToBrevoList,
+} from '@/lib/brevo';
 import type { FormState } from '@/lib/admin-types';
 
 /**
@@ -48,7 +53,8 @@ export async function subscribeDigest(_prev: FormState, form: FormData): Promise
           ? 'Almost there! Check your inbox and confirm your email to start getting the digest.'
           : 'You’re in! Watch for your first weekly digest soon.',
     };
-  } catch {
+  } catch (e) {
+    reportBrevoError('digest-subscribe', e);
     return {
       ok: false,
       error: 'Sorry — we couldn’t sign you up just now. Please try again in a moment.',

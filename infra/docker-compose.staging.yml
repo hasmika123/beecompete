@@ -50,7 +50,6 @@ services:
       BREVO_FOLLOW_LIST_ID: ${BREVO_FOLLOW_LIST_ID:-}
       BREVO_HOST_LIST_ID: ${BREVO_HOST_LIST_ID:-}
       BREVO_DOI_TEMPLATE_ID: ${BREVO_DOI_TEMPLATE_ID:-}
-      BREVO_DIGEST_DOI_TEMPLATE_ID: ${BREVO_DIGEST_DOI_TEMPLATE_ID:-}
       BREVO_DOI_REDIRECT_URL: ${BREVO_DOI_REDIRECT_URL:-}
       # In-app feedback (R1-16) → support@ via Brevo transactional mail. Verified sender required.
       BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL:-}

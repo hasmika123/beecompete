@@ -1,6 +1,11 @@
 'use server';
 
-import { brevoListEnabled, getBrevoConfig, subscribeToBrevoList } from '@/lib/brevo';
+import {
+  brevoListEnabled,
+  getBrevoConfig,
+  reportBrevoError,
+  subscribeToBrevoList,
+} from '@/lib/brevo';
 import type { FormState } from '@/lib/admin-types';
 
 // Listing-page email captures (R1-15b): per-competition follow (M29) and host-interest (H46).
@@ -53,7 +58,8 @@ export async function followByEmail(_prev: FormState, form: FormData): Promise<F
         'You’re following this competition — we’ll email you about key dates.',
       ),
     };
-  } catch {
+  } catch (e) {
+    reportBrevoError('follow-subscribe', e);
     return { ok: false, error: 'Sorry — we couldn’t sign you up just now. Please try again.' };
   }
 }
@@ -84,7 +90,8 @@ export async function registerHostInterest(_prev: FormState, form: FormData): Pr
         'Thanks! We’ll be in touch about claiming this listing and early host access.',
       ),
     };
-  } catch {
+  } catch (e) {
+    reportBrevoError('host-interest', e);
     return { ok: false, error: 'Sorry — something went wrong. Please try again.' };
   }
 }
