@@ -276,6 +276,11 @@ configured. Wire only the captures you want live.
 - **Note:** R1 ships **capture + segmentation only** — the weekly send is manual/curated in Brevo
   (automated matching send = **M26, Phase 2**); email-followers convert to accounts at **R2-16**.
 - **Request-a-Competition** (Page 6) needs **no Brevo** — it posts to the import/curation queue.
+- **In-app feedback** (R1-16, `/feedback`) reuses `BREVO_API_KEY` to email **support@** via Brevo
+  transactional mail. The **"from" must be a verified sender/domain** (`BREVO_SENDER_EMAIL`, default
+  `no-reply@beecompete.com`) — the same domain verification as the DOI email (§7). Inert without the
+  key (the form tells visitors to email support@ directly). Richer Sentry-linked bug capture waits
+  for the web Sentry client (the F8 `WEB_SENTRY_DSN` build-arg TODO).
 
 ## 8. Deployment pipeline  *(R1)*
 1. Enable **GHCR** (GitHub Container Registry) for the repo's images.

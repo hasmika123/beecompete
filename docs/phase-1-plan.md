@@ -88,8 +88,12 @@
 > replacing the R1-7 detail stubs; the **Request-a-Competition wizard** (`/suggest-a-competition`)
 > posts to a new **public** `/api/v1/competition-requests` → the import/curation queue (no schema).
 > Owner setup: setup-runbook §7a; activation deferred to the R1-17 gate.
-> **Next:** R1-16 in-app bug/feedback report, then the R1-17 release gate.
-> Deferred: PR C (S3 hero-image upload + inline FAQ/Resource edit).
+> **R1-16 done (2026-07-17) — in-app bug/feedback report (code):** `/feedback` page + footer link →
+> Brevo transactional email to support@ (reuses `BREVO_API_KEY`, verified sender). Sentry feedback
+> widget deferred to the web-Sentry-client TODO. Owner setup: setup-runbook §7a.
+> **Next:** R1-17 release gate — all build tasks R1-12→R1-16 are done; the gate is activation +
+> compliance (legal counsel review, prod env/tokens, WAF, indexing flip). Deferred: PR C (S3
+> hero-image upload + inline FAQ/Resource edit).
 
 The ordered, buildable task list for Phase 1. **Every task below becomes a GitHub Issue** (titled with its
 task ID + registry refs) before coding — that's the required per-phase step. Build in the listed order;
@@ -173,6 +177,13 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
   as a user request) for curator review. No submitter PII on the request path (COPPA-clear). Owner
   setup: setup-runbook §7a.
 - **R1-16** — In-app **bug/feedback report**. (DQ7 precursor)
+  ✅ **Code done 2026-07-17.** A lightweight `/feedback` page (noindex) + footer "Send Feedback"
+  link (Contribute column): category (Bug/Idea/Content/Other) + message + optional reply email +
+  honeypot → **Brevo transactional email to support@** (`sendTransactionalEmail`, reuses
+  `BREVO_API_KEY`; from = `BREVO_SENDER_EMAIL`, verified sender required). No accounts/DB at R1;
+  inert without Brevo (asks the visitor to email support@ directly). **Sentry feedback widget
+  deferred** — the web Sentry client isn't wired yet (the F8 `WEB_SENTRY_DSN` build-arg TODO); bug
+  reports route through this same form (category "Bug") until then. Owner setup: setup-runbook §7a.
 - **R1-17** — **R1 release gate** (dev-process §8): a11y (WCAG AA) on public pages, WAF/rate-limit on, backups tested, legal pages live, **legal foundation done** (entity + insurance + trademark search — setup-runbook §1b), **content gate met** (see "Data seeding & catalog readiness" below), **search indexing flipped ON** (R1-10 gate — the site is invisible to Google until this): (1) set `SEARCH_INDEXING=on` in `~/beecompete-prod/.env` + `docker compose -f docker-compose.prod.yml up -d web`, (2) verify `https://beecompete.com/robots.txt` serves the allow ruleset + a spot-checked page emits `index, follow`, (3) submit `sitemap.xml` in Google Search Console + Bing Webmaster Tools, (4) confirm staging still serves `Disallow: /` → **tag R1, deploy to prod.**
   - **🛑 R1-12 legal follow-ups (must ALL clear before this gate — the pages are drafts until then):**
     1. **Privacy-counsel review** of the four pages — especially the COPPA posture in the Privacy

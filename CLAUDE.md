@@ -313,8 +313,18 @@ inert without env (owner chose Brevo lists + DOI, 2026-07-17). The **Request-a-C
 that queues an `ImportRecord` — **no schema**, reuses the R1-3 import/curation queue (null confidence
 + note flag it a user request); no submitter PII on the request path (COPPA-clear). `lib/brevo.ts`
 generalized to `subscribeToBrevoList` (digest/follow/host list ids + shared `BREVO_DOI_TEMPLATE_ID`);
-env passed by both compose stacks. Next per `docs/phase-1-plan.md`: **R1-16 in-app bug/feedback
-report**, then the **R1-17 release gate**.
+env passed by both compose stacks. **R1-15 verified end-to-end against live Brevo (2026-07-17):**
+digest signup → DOI email → contact with `GRADE`/`INTEREST`/`STATE`; gotcha recorded — the contacts
+API needs the **REST key `xkeysib-`**, not the SMTP key `xsmtpsib-` (setup-runbook §7a).
+**R1-16 done (2026-07-17) — in-app bug/feedback report (code):** a lightweight `/feedback` page
+(noindex) + footer "Send Feedback" link — category + message + optional reply email + honeypot →
+**Brevo transactional email to support@** (`sendTransactionalEmail` in `lib/brevo.ts`, reuses
+`BREVO_API_KEY`; from = `BREVO_SENDER_EMAIL`, a verified sender). No accounts/DB at R1; inert without
+Brevo (asks the visitor to email support@ directly). **Sentry feedback widget deferred** — the web
+Sentry client isn't wired (F8 `WEB_SENTRY_DSN` build-arg TODO); "Bug" reports route through this
+form until then. **All R1-12→R1-16 build tasks done** — next per `docs/phase-1-plan.md` is the
+**R1-17 release gate** (activation + compliance: legal counsel review, prod env/tokens, WAF,
+indexing flip).
 **Deferred (PR C):** hero-card image upload (reuses the
 R1-19 cover endpoint with a `hero/` key prefix) + inline FAQ/
 Resource row-edit. **Before prod users:** set `ADMIN_API_TOKEN` in both VPS `.env` + `/admin`

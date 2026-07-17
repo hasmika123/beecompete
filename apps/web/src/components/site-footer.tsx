@@ -19,6 +19,7 @@ const EXPLORE = [
 const CONTRIBUTE = [
   { href: '/suggest-a-competition', label: 'Request a Competition' },
   { href: '/suggest-a-correction', label: 'Suggest a Correction' },
+  { href: '/feedback', label: 'Send Feedback' },
 ];
 
 // The three policy pages surfaced compactly in the bottom bar (Affiliate Disclosure already gets
