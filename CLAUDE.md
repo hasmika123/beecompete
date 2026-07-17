@@ -292,8 +292,10 @@ skip PostHog entirely (CF beacon is aggregate/cookieless so it loads regardless)
 (`POSTHOG_KEY`, `POSTHOG_HOST` default EU, `CF_WEB_ANALYTICS_TOKEN`) read by the server layout and
 passed to the client — **NOT `NEXT_PUBLIC_*`** (build-once-promote), **inert without tokens**.
 `trackEvent()` exported for X20 zero-result search (wiring TBD). **Owner switches it on** via
-setup-runbook §11 (create CF Web Analytics + EU PostHog project → set the two tokens in the prod
-`.env`). As-built: architecture §10a.
+setup-runbook §11 — **CF Web Analytics = automatic edge injection** (proxied site, `CF_WEB_ANALYTICS_TOKEN`
+stays UNSET, staging excluded via a CF rule; owner 2026-07-17) + **one EU PostHog project shared by
+prod + dev** (set `POSTHOG_KEY` in the prod `.env`, same key in `apps/web/.env.local`). As-built:
+architecture §10a.
 **R1-15 done (2026-07-17) — weekly digest signup (code):** the `DigestBand` (Landing/How It Works/
 Categories) does real Brevo capture — email + optional Grade/Interest/State selects
 (`lib/digest-options.ts`, static) → Brevo contact on a list with `GRADE`/`INTEREST`/`STATE`

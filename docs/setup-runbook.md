@@ -322,29 +322,40 @@ The code is wired and **inert until these env vars are set** (like Sentry). Anal
 **public pages only** (never `/admin`), are **cookieless**, honor **DNT/GPC**, and never build a
 person profile — see `architecture.md` §10a / `apps/web/src/components/analytics/analytics.tsx`.
 
-**Cloudflare Web Analytics** (free, cookieless):
-1. Cloudflare dashboard → **Web Analytics** → **Add a site** → `beecompete.com`.
-2. Copy the **beacon token** (the `token` value in the snippet — a hex string; you do NOT paste
-   the snippet, just the token).
+**Cloudflare Web Analytics** (free, cookieless) — **AUTOMATIC edge injection** (owner decision
+2026-07-17; no token, no code, since the site is proxied through Cloudflare):
+1. Cloudflare dashboard → **Web Analytics** → **Add a site** → enable **Automatic Setup** → choose
+   `beecompete.com`. CF injects the beacon at the edge. Leave `CF_WEB_ANALYTICS_TOKEN` **blank**.
+   ⚠️ **Never also set the token** while automatic is on — that injects a second beacon and
+   **double-counts** pageviews.
+2. **Exclude staging:** CF matches hostnames by *postfix*, so a `beecompete.com` site also captures
+   `staging.beecompete.com` by default. To keep staging out, open the site → **Rules → Add rule →
+   Exclude** → hostname `staging.beecompete.com`.
 
 **PostHog** (free tier — product analytics + feature flags + X20 zero-result search):
 3. Create a PostHog account, choose the **EU** region (data residency; architecture §10).
-4. Create a project → copy the **Project API Key** (starts `phc_…`; write-only, safe in the browser).
+4. Create **one** project — **shared by prod + local dev** (owner decision 2026-07-17) → copy the
+   **Project API Key** (starts `phc_…`; write-only, safe in the browser).
 5. In the project settings, confirm **Session Replay is OFF** and **Autocapture is OFF** (our code
    already disables both client-side, but belt-and-suspenders for a minors' site).
 
 **Wire it up** — set these in the **prod** stack env (`~/beecompete-prod/.env`), then
-`docker compose -f docker-compose.prod.yml up -d web`:
+`docker compose -f docker-compose.prod.yml up -d web` (CF needs nothing here — it's automatic):
 ```
 POSTHOG_KEY=phc_xxx
-POSTHOG_HOST=https://eu.i.posthog.com        # only if EU; omit/US-host if you chose US
-CF_WEB_ANALYTICS_TOKEN=xxxxxxxxxxxxxxxx
+POSTHOG_HOST=https://eu.i.posthog.com        # only if EU; US-host if you chose US
+# CF_WEB_ANALYTICS_TOKEN stays UNSET — automatic edge injection
 ```
-6. **Staging:** leave these UNSET (staging then has no analytics), or create a **separate** PostHog
-   project + CF site for it — never point staging at the prod project (it pollutes prod data).
-7. Verify: load a public page → DevTools Network shows a request to `static.cloudflareinsights.com`
-   and (PostHog) `*.i.posthog.com`; DevTools → Application → Cookies shows **no** `ph_*` cookie.
-- **Outputs:** `POSTHOG_KEY`; `CF_WEB_ANALYTICS_TOKEN` (+ optional `POSTHOG_HOST`) in the prod `.env`.
+6. **Local dev:** the **same** PostHog key goes in `apps/web/.env.local` (shared project). **Staging:**
+   leave `POSTHOG_KEY` unset (or it joins the shared project); CF staging is handled by the rule above.
+7. **Verify — PostHog (local + prod):** load a public page → DevTools Network shows a request to
+   `*.i.posthog.com`; Application → Cookies shows **no** `ph_*` cookie; a `$pageview` lands in
+   PostHog → **Activity**. **Verify — CF (prod only):** automatic injection doesn't touch localhost,
+   so open `https://beecompete.com` in prod → DevTools Network shows `static.cloudflareinsights.com`
+   (beacon) + a `cloudflareinsights.com/cdn-cgi/rum` POST; data shows in the CF dashboard within
+   a few minutes.
+- **Outputs:** `POSTHOG_KEY` (+ optional `POSTHOG_HOST`) in the prod `.env`; CF automatic enabled
+  (no env var).
 
 ## 12. Stripe  *(Phase 2 — not needed for R1/R2)*
 1. Stripe account → test + live keys; enable **Stripe Tax**; plan **Connect** for host fee collection later.

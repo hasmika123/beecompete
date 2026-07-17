@@ -196,20 +196,22 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
        this removes the on-page "Draft — under review" banner from all four legal pages.
   - **📊 R1-14 analytics activation (code shipped; these are the prod switch-on steps — deferred to
     this gate per owner, 2026-07-17):** the analytics is inert until tokens exist in the prod env.
-    1. **Create the accounts:** Cloudflare → Web Analytics → add `beecompete.com` → copy the **beacon
-       token**; PostHog → **EU** region → new project → copy the **Project API Key** (`phc_…`), and
-       confirm Session Replay + Autocapture are OFF in project settings.
-    2. **Set them in `~/beecompete-prod/.env`:** `POSTHOG_KEY`, `CF_WEB_ANALYTICS_TOKEN`
-       (+ `POSTHOG_HOST=https://eu.i.posthog.com` if EU). Leave staging's blank (stays analytics-free)
-       unless you deliberately want a separate staging project. Full steps: setup-runbook §11.
+    1. **Create the accounts:** Cloudflare → Web Analytics → **enable Automatic Setup** for
+       `beecompete.com` (edge injection — **no token**; add a **Rule** excluding
+       `staging.beecompete.com`); PostHog → **EU** region → **one** project shared by prod + dev →
+       copy the **Project API Key** (`phc_…`), confirm Session Replay + Autocapture OFF.
+    2. **Set in `~/beecompete-prod/.env`:** `POSTHOG_KEY` (+ `POSTHOG_HOST=https://eu.i.posthog.com`
+       if EU). **`CF_WEB_ANALYTICS_TOKEN` stays UNSET** (automatic edge injection — setting it
+       double-counts). Full steps: setup-runbook §11.
     3. **Get the updated compose onto the box:** confirm the deploy-prod workflow copies
        `docker-compose.prod.yml` to `~/beecompete-prod/` (it now passes the analytics vars to the web
        service); if the pipeline only does `pull && up -d` against the file already there, `scp`/`git
        pull` the updated compose onto the box once (same as the Caddyfile pattern).
     4. **Recreate web** (the release deploy sets `IMAGE_TAG` automatically; for a manual env-only
        recreate: `IMAGE_TAG=<current-tag> docker compose -f docker-compose.prod.yml up -d web`).
-    5. **Verify:** load a public page → DevTools Network shows `static.cloudflareinsights.com` +
-       `*.i.posthog.com` requests, and Application → Cookies shows **no** `ph_*` cookie.
+    5. **Verify:** PostHog — a public page fires `*.i.posthog.com` + a `$pageview` in Activity, no
+       `ph_*` cookie (works locally too). CF — automatic doesn't touch localhost, so on prod
+       `beecompete.com` DevTools Network shows `static.cloudflareinsights.com` + a `/cdn-cgi/rum` POST.
   - **✉️ R1-15 / R1-15b Brevo activation (code shipped; prod switch-on — deferred to this gate):**
     the digest + follow + host captures are inert until Brevo is wired. Steps (full: setup-runbook §7a):
     1. Brevo → create an **API key**, up to three **lists** (digest / follow / host), the text
