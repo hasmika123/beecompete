@@ -28,8 +28,8 @@ const BOTTOM_BAR_LEGAL = LEGAL_PAGES.filter((p) => p.href !== '/affiliate-disclo
 export function SiteFooter() {
   return (
     <footer className="border-t border-border">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-2 sm:px-6 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
-        <div className="max-w-xs text-sm text-muted">
+      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1.5fr_2.5fr] lg:gap-16">
+        <div className="max-w-sm text-sm text-muted">
           <Logo />
           <p className="mt-3">
             One place to find K-12 academic competitions — curated listings, real dates, honest
@@ -44,44 +44,50 @@ export function SiteFooter() {
             endorsed by the competitions and organizers listed here.
           </p>
         </div>
-        <nav aria-label="Explore" className="text-sm">
-          <h2 className="mb-3 text-xs font-semibold tracking-wide text-muted uppercase">Explore</h2>
-          <ul className="grid gap-2">
-            {EXPLORE.map(({ href, label }) => (
-              <li key={href}>
-                <Link href={href} className="text-muted hover:text-foreground">
-                  {label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <nav aria-label="Contribute" className="text-sm">
-          <h2 className="mb-3 text-xs font-semibold tracking-wide text-muted uppercase">
-            Contribute
-          </h2>
-          <ul className="grid gap-2">
-            {CONTRIBUTE.map(({ href, label }) => (
-              <li key={href}>
-                <Link href={href} className="text-muted hover:text-foreground">
-                  {label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <nav aria-label="Legal" className="text-sm">
-          <h2 className="mb-3 text-xs font-semibold tracking-wide text-muted uppercase">Legal</h2>
-          <ul className="grid gap-2">
-            {LEGAL_PAGES.map(({ href, label }) => (
-              <li key={href}>
-                <Link href={href} className="text-muted hover:text-foreground">
-                  {label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        {/* The three link columns share their own equal 3-col sub-grid so Explore / Contribute /
+            Legal are evenly spaced regardless of the brand column's width. */}
+        <div className="grid gap-8 sm:grid-cols-3">
+          <nav aria-label="Explore" className="text-sm">
+            <h2 className="mb-3 text-xs font-semibold tracking-wide text-muted uppercase">
+              Explore
+            </h2>
+            <ul className="grid gap-2">
+              {EXPLORE.map(({ href, label }) => (
+                <li key={href}>
+                  <Link href={href} className="text-muted hover:text-foreground">
+                    {label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <nav aria-label="Contribute" className="text-sm">
+            <h2 className="mb-3 text-xs font-semibold tracking-wide text-muted uppercase">
+              Contribute
+            </h2>
+            <ul className="grid gap-2">
+              {CONTRIBUTE.map(({ href, label }) => (
+                <li key={href}>
+                  <Link href={href} className="text-muted hover:text-foreground">
+                    {label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <nav aria-label="Legal" className="text-sm">
+            <h2 className="mb-3 text-xs font-semibold tracking-wide text-muted uppercase">Legal</h2>
+            <ul className="grid gap-2">
+              {LEGAL_PAGES.map(({ href, label }) => (
+                <li key={href}>
+                  <Link href={href} className="text-muted hover:text-foreground">
+                    {label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
       </div>
       <div className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-4 text-xs text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
