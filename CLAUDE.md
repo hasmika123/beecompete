@@ -282,8 +282,19 @@ keyboard-reachable `Tooltip` explainer, and the shared `site-footer` carries the
 disclaimer — beta · details can change (confirm on the organizer's official site) · BeeCompete is
 independent and **not affiliated with or endorsed by** the listed competitions/organizers
 (compliance §8, nominative use). Owner chose badge + footer over a page-top banner (the `flush`
-Alert banner stays unused). Frontend-only, reuses `packages/ui` Badge + Tooltip. Next per
-`docs/phase-1-plan.md`: **R1-14 privacy-first analytics** (Cloudflare Web Analytics + PostHog).
+Alert banner stays unused). Frontend-only, reuses `packages/ui` Badge + Tooltip.
+**R1-14 done (2026-07-17) — privacy-first analytics (code):** Cloudflare Web Analytics + PostHog
+(`posthog-js`), wired in `apps/web/src/components/analytics/analytics.tsx` + `lib/analytics.ts`,
+mounted in the `(public)` layout (public pages only, never `/admin`). **Cookieless + anonymous +
+COPPA-safe:** PostHog `persistence: 'memory'` (no cookies — verified), `person_profiles: 'never'`,
+autocapture/session-replay/surveys OFF, manual `$pageview` on route change, `respect_dnt`; DNT/GPC
+skip PostHog entirely (CF beacon is aggregate/cookieless so it loads regardless). Runtime env
+(`POSTHOG_KEY`, `POSTHOG_HOST` default EU, `CF_WEB_ANALYTICS_TOKEN`) read by the server layout and
+passed to the client — **NOT `NEXT_PUBLIC_*`** (build-once-promote), **inert without tokens**.
+`trackEvent()` exported for X20 zero-result search (wiring TBD). **Owner switches it on** via
+setup-runbook §11 (create CF Web Analytics + EU PostHog project → set the two tokens in the prod
+`.env`). As-built: architecture §10a. Next per `docs/phase-1-plan.md`: **R1-15 weekly digest
+signup** (Brevo).
 **Deferred (PR C):** hero-card image upload (reuses the
 R1-19 cover endpoint with a `hero/` key prefix) + inline FAQ/
 Resource row-edit. **Before prod users:** set `ADMIN_API_TOKEN` in both VPS `.env` + `/admin`

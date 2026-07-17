@@ -279,10 +279,34 @@ is live (§8).
 2. Used for **cache + rate-limit counters only** — sessions and the job queue live in **Postgres** (architecture ADR 9/10), so Redis holds nothing durable and needs no persistence config.
 - **Outputs:** `REDIS_URL`.
 
-## 11. Privacy analytics  *(R1)*
-1. **Cloudflare Web Analytics** (step 3) — add snippet to the web app.
-2. **PostHog** (free tier, EU host) → project key; used for product analytics **and feature flags**.
-- **Outputs:** `POSTHOG_KEY`; CF analytics token.
+## 11. Privacy analytics  *(R1-14 — code is DONE; this is the owner setup to switch it on)*
+The code is wired and **inert until these env vars are set** (like Sentry). Analytics load on
+**public pages only** (never `/admin`), are **cookieless**, honor **DNT/GPC**, and never build a
+person profile — see `architecture.md` §10a / `apps/web/src/components/analytics/analytics.tsx`.
+
+**Cloudflare Web Analytics** (free, cookieless):
+1. Cloudflare dashboard → **Web Analytics** → **Add a site** → `beecompete.com`.
+2. Copy the **beacon token** (the `token` value in the snippet — a hex string; you do NOT paste
+   the snippet, just the token).
+
+**PostHog** (free tier — product analytics + feature flags + X20 zero-result search):
+3. Create a PostHog account, choose the **EU** region (data residency; architecture §10).
+4. Create a project → copy the **Project API Key** (starts `phc_…`; write-only, safe in the browser).
+5. In the project settings, confirm **Session Replay is OFF** and **Autocapture is OFF** (our code
+   already disables both client-side, but belt-and-suspenders for a minors' site).
+
+**Wire it up** — set these in the **prod** stack env (`~/beecompete-prod/.env`), then
+`docker compose -f docker-compose.prod.yml up -d web`:
+```
+POSTHOG_KEY=phc_xxx
+POSTHOG_HOST=https://eu.i.posthog.com        # only if EU; omit/US-host if you chose US
+CF_WEB_ANALYTICS_TOKEN=xxxxxxxxxxxxxxxx
+```
+6. **Staging:** leave these UNSET (staging then has no analytics), or create a **separate** PostHog
+   project + CF site for it — never point staging at the prod project (it pollutes prod data).
+7. Verify: load a public page → DevTools Network shows a request to `static.cloudflareinsights.com`
+   and (PostHog) `*.i.posthog.com`; DevTools → Application → Cookies shows **no** `ph_*` cookie.
+- **Outputs:** `POSTHOG_KEY`; `CF_WEB_ANALYTICS_TOKEN` (+ optional `POSTHOG_HOST`) in the prod `.env`.
 
 ## 12. Stripe  *(Phase 2 — not needed for R1/R2)*
 1. Stripe account → test + live keys; enable **Stripe Tax**; plan **Connect** for host fee collection later.

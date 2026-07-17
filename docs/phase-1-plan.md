@@ -72,8 +72,14 @@
 > tooltip explainer, and the app-wide footer disclaimer (beta · details can change → confirm on the
 > organizer's site · independent, **not affiliated** with listed organizers, compliance §8). Owner
 > chose badge + footer over a page-top banner; frontend-only, reuses Badge/Tooltip.
-> **Next:** R1-14 privacy-first analytics (Cloudflare Web Analytics + PostHog). Deferred: PR C (S3
-> hero-image upload + inline FAQ/Resource edit).
+> **R1-14 done (2026-07-17) — privacy-first analytics (code):** Cloudflare Web Analytics + PostHog,
+> cookieless, public-pages-only, DNT/GPC-honoring, anonymous (memory persistence, `person_profiles:
+> never`, autocapture/replay off, manual SPA pageviews). Runtime-env/inert-without-tokens
+> (build-once-promote safe); `trackEvent()` exposed for X20. **Owner switches it on** by setting
+> `POSTHOG_KEY` + `CF_WEB_ANALYTICS_TOKEN` in the prod `.env` (setup-runbook §11). As-built:
+> architecture §10a.
+> **Next:** R1-15 weekly digest signup (Brevo). Deferred: PR C (S3 hero-image upload + inline
+> FAQ/Resource edit).
 
 The ordered, buildable task list for Phase 1. **Every task below becomes a GitHub Issue** (titled with its
 task ID + registry refs) before coding — that's the required per-phase step. Build in the listed order;
@@ -133,6 +139,12 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
   compliance §8). Owner chose badge + footer over a page-top banner. Frontend-only, reuses existing
   `packages/ui` primitives (Badge, Tooltip).
 - **R1-14** — Privacy-first analytics (Cloudflare Web Analytics + PostHog). (X20)
+  ✅ **Code done 2026-07-17** — cookieless, public-pages-only, DNT/GPC-honoring, anonymous PostHog
+  (memory persistence, no person profiles, autocapture/replay off, manual SPA pageviews) + CF Web
+  Analytics beacon; runtime-env/inert-without-tokens (build-once-promote safe); `trackEvent()`
+  exposed for X20 zero-result search. **Owner setup to switch on:** set `POSTHOG_KEY` +
+  `CF_WEB_ANALYTICS_TOKEN` (+ optional `POSTHOG_HOST`) in the prod `.env` — exact steps in
+  setup-runbook §11. As-built: architecture §10a.
 - **R1-15** — **Weekly Digest signup** (Brevo): email capture + 2–3 preference questions (grade, category/interests, region) per `page-blueprints.md` Landing §5. ⚠ Scope note: R1 ships the *capture + segmentation*; early digest sends are manual/curated via Brevo — the **automated personalized matching send is M26 (Phase 2)**. (M26 precursor)
 - **R1-15b** — Listing-page captures (Brevo/queue-backed, no accounts needed): **per-competition follow-by-email** (M29), **"Request a Competition"** multi-step wizard form (page-blueprints Page 6) → curation queue (DQ15), **"Are you the organizer?" host-interest CTA** → host waitlist (H46).
 - **R1-16** — In-app **bug/feedback report**. (DQ7 precursor)
