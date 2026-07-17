@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react';
 import Link from 'next/link';
-import { Alert, Button, CheckCircle, Honeypot, Input, Select } from '@beecompete/ui';
+import { Button, FormResult, Honeypot, Input, Select } from '@beecompete/ui';
 import { subscribeDigest } from './actions';
 import { GRADE_OPTIONS, INTEREST_OPTIONS, STATE_OPTIONS } from '@/lib/digest-options';
 import type { FormState } from '@/lib/admin-types';
@@ -34,20 +34,19 @@ export function DigestBand() {
         </p>
 
         {state.ok ? (
-          <Alert
-            tone="success"
+          <FormResult
+            ok
+            message={state.error ?? 'You’re in! Watch for your first weekly digest soon.'}
             className="mt-2 w-full max-w-md text-left"
-            icon={<CheckCircle aria-hidden="true" weight="fill" className="size-5 text-success" />}
-          >
-            {state.error ?? 'You’re in! Watch for your first weekly digest soon.'}
-          </Alert>
+          />
         ) : (
           <>
-            {state.error && (
-              <Alert tone="info" className="w-full max-w-md text-left">
-                {state.error}
-              </Alert>
-            )}
+            <FormResult
+              ok={false}
+              message={state.error}
+              errorTone="info"
+              className="w-full max-w-md text-left"
+            />
             <form action={formAction} className="mt-1 grid w-full max-w-xl gap-3">
               <Honeypot />
 

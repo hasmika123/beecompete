@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Alert, Button, CheckCircle, Honeypot, Input } from '@beecompete/ui';
+import { Button, FormResult, Honeypot, Input } from '@beecompete/ui';
 import type { ButtonVariant } from '@beecompete/ui';
 import type { FormState } from '@/lib/admin-types';
 
@@ -43,15 +43,7 @@ export function EmailCaptureCta({
   const [open, setOpen] = useState(false);
 
   if (state.ok) {
-    return (
-      <Alert
-        tone="success"
-        className="text-left"
-        icon={<CheckCircle aria-hidden="true" weight="fill" className="size-5 text-success" />}
-      >
-        {state.error ?? 'Thanks!'}
-      </Alert>
-    );
+    return <FormResult ok message={state.error ?? 'Thanks!'} className="text-left" />;
   }
 
   return (
@@ -72,11 +64,7 @@ export function EmailCaptureCta({
           <input type="hidden" name="competitionName" value={competitionName} />
 
           <p className="text-xs text-muted">{blurb}</p>
-          {state.error && (
-            <Alert tone="info" className="text-left">
-              {state.error}
-            </Alert>
-          )}
+          <FormResult ok={false} message={state.error} errorTone="info" className="text-left" />
           <div className="flex flex-col gap-2 sm:flex-row">
             {/* autoFocus: the form is revealed on click, so moving focus in announces it (and its
                 consent/COPPA framing) to screen-reader users instead of a silent "expanded". */}

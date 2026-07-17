@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -37,9 +37,20 @@ export function RequestWizard({ initialName = '' }: { initialName?: string }) {
   const [step, setStep] = useState(0);
   const [name, setName] = useState(initialName);
 
+  // Move focus to the confirmation panel on submit so screen-reader users hear the outcome (the
+  // form is replaced, so there's no live region otherwise).
+  const successRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (state.ok) successRef.current?.focus();
+  }, [state.ok]);
+
   if (state.ok) {
     return (
-      <div className="rounded-[var(--radius-panel)] border border-border bg-surface p-6 text-center sm:p-10">
+      <div
+        ref={successRef}
+        tabIndex={-1}
+        className="rounded-[var(--radius-panel)] border border-border bg-surface p-6 text-center outline-none sm:p-10"
+      >
         <CheckCircle aria-hidden="true" weight="fill" className="mx-auto size-10 text-success" />
         <h2 className="mt-3 font-display text-2xl text-foreground">Thanks — request received!</h2>
         <p className="mx-auto mt-2 max-w-md text-sm text-muted">

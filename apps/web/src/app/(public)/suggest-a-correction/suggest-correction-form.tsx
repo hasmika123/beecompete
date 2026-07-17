@@ -2,9 +2,9 @@
 
 import { useActionState, useState } from 'react';
 import {
-  Alert,
   Button,
   FormField,
+  FormResult,
   Honeypot,
   Input,
   Plus,
@@ -92,16 +92,18 @@ export function SuggestCorrectionForm({
 
   if (state.ok) {
     return (
-      <Alert tone="success">
-        Thanks — your correction was sent to our curators for review
-        {subjectName ? ` (${subjectName})` : ''}. Nothing changes until a human checks it.
-      </Alert>
+      <FormResult
+        ok
+        message={`Thanks — your correction was sent to our curators for review${
+          subjectName ? ` (${subjectName})` : ''
+        }. Nothing changes until a human checks it.`}
+      />
     );
   }
 
   return (
     <form action={formAction} className="grid gap-5">
-      {state.error && <Alert tone="danger">{state.error}</Alert>}
+      <FormResult ok={false} message={state.error} />
 
       <input type="hidden" name="subjectType" value={subjectType} />
       <input type="hidden" name="subjectId" value={subjectId} />

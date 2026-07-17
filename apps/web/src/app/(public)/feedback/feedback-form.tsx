@@ -1,16 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
-import {
-  Alert,
-  Button,
-  CheckCircle,
-  FormField,
-  Honeypot,
-  Input,
-  Select,
-  Textarea,
-} from '@beecompete/ui';
+import { Button, FormField, FormResult, Honeypot, Input, Select, Textarea } from '@beecompete/ui';
 import { submitFeedback } from './actions';
 import { FEEDBACK_CATEGORIES } from './categories';
 import type { FormState } from '@/lib/admin-types';
@@ -24,12 +15,10 @@ export function FeedbackForm() {
 
   if (state.ok) {
     return (
-      <Alert
-        tone="success"
-        icon={<CheckCircle aria-hidden="true" weight="fill" className="size-5 text-success" />}
-      >
-        Thanks — your feedback went straight to our team. If you left an email, we may follow up.
-      </Alert>
+      <FormResult
+        ok
+        message="Thanks — your feedback went straight to our team. If you left an email, we may follow up."
+      />
     );
   }
 
@@ -58,7 +47,7 @@ export function FeedbackForm() {
         <Input type="email" name="email" placeholder="you@example.com" autoComplete="email" />
       </FormField>
 
-      {state.error && <Alert tone="info">{state.error}</Alert>}
+      <FormResult ok={false} message={state.error} errorTone="info" />
 
       <div>
         <Button type="submit" disabled={submitting}>
