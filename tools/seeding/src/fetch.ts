@@ -29,6 +29,17 @@ export const MAX_RESPONSE_BYTES = 3 * 1024 * 1024;
 const MAX_REDIRECTS = 5;
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 
+/**
+ * Transient-failure retry (v0). Real hosts intermittently drop a connection mid-TLS — in the
+ * top-25 seeding sweep artandwriting.org failed on one row and succeeded on the next, same run.
+ * We retry ONLY transient faults (a thrown network error, or a 5xx) with exponential backoff;
+ * a 4xx (403 bot-block) or a robots-disallow is permanent and is NOT retried.
+ */
+const MAX_FETCH_ATTEMPTS = 3;
+const RETRY_BASE_DELAY_MS = 500;
+
+const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 export async function fetchPage(
   url: string,
   config: Config,
@@ -43,7 +54,7 @@ export async function fetchPage(
     if (!allowed) {
       throw new Error(`robots.txt disallows fetching ${current.href} for our user-agent`);
     }
-    res = await timedFetch(current.href, config, 'manual');
+    res = await fetchWithRetry(current.href, config, 'manual');
     if (REDIRECT_STATUSES.has(res.status)) {
       const location = res.headers.get('location');
       await res.body?.cancel().catch(() => {});
@@ -145,6 +156,36 @@ function assertPublicHost(target: URL, allowPrivate: boolean): void {
         'pass --allow-private if this is intentional',
     );
   }
+}
+
+/**
+ * Wraps {@link timedFetch} with bounded exponential-backoff retries for TRANSIENT faults only:
+ * a thrown network error (undici "fetch failed" = TCP/TLS drop, or an abort/timeout) or a 5xx.
+ * A non-5xx response (incl. 403 bot-blocks and 404s) is returned to the caller unretried — those
+ * are permanent, and the caller turns them into a clear, non-retryable error.
+ */
+async function fetchWithRetry(
+  url: string,
+  config: Config,
+  redirect: RequestRedirect,
+): Promise<Response> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= MAX_FETCH_ATTEMPTS; attempt++) {
+    try {
+      const res = await timedFetch(url, config, redirect);
+      if (res.status >= 500 && res.status <= 599 && attempt < MAX_FETCH_ATTEMPTS) {
+        await res.body?.cancel().catch(() => {});
+        await delay(RETRY_BASE_DELAY_MS * 2 ** (attempt - 1));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      lastErr = err;
+      if (attempt >= MAX_FETCH_ATTEMPTS) break;
+      await delay(RETRY_BASE_DELAY_MS * 2 ** (attempt - 1));
+    }
+  }
+  throw lastErr;
 }
 
 async function timedFetch(
