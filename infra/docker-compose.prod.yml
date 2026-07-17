@@ -37,6 +37,11 @@ services:
       # inert). Browser-side uses NEXT_PUBLIC_SENTRY_DSN, baked at image build.
       SENTRY_DSN: ${WEB_SENTRY_DSN:-}
       SENTRY_ENVIRONMENT: production
+      # Privacy-first analytics (R1-14): cookieless, public-pages-only. All blank = inert.
+      # Set POSTHOG_KEY + CF_WEB_ANALYTICS_TOKEN in the VPS .env to switch on (setup-runbook §11).
+      POSTHOG_KEY: ${POSTHOG_KEY:-}
+      POSTHOG_HOST: ${POSTHOG_HOST:-}
+      CF_WEB_ANALYTICS_TOKEN: ${CF_WEB_ANALYTICS_TOKEN:-}
     depends_on:
       api:
         condition: service_healthy
