@@ -244,6 +244,29 @@ bucket — NOT the private user-files bucket. Upload is a pre-signed PUT; the br
 - **Outputs:** `SMTP_HOST/PORT/USER/PASS`; verified sending domain.
 - **Gotcha:** deliverability is **critical for the COPPA consent email** — don't skip DKIM/DMARC.
 
+### 7a. Weekly-digest signup — Brevo API  *(R1-15 — code is DONE; this is the owner setup to switch it on)*
+The digest form is **inert until these are set** (shows "opening soon"); it's pitched to
+parents/educators/16+ and uses **double opt-in** when a template is configured. Same Brevo account
+as §7, but the digest uses the **API + a contacts list**, not SMTP.
+1. **API key:** Brevo → **SMTP & API → API keys** → create a key. This is a server-only secret →
+   `BREVO_API_KEY` (never `NEXT_PUBLIC_`).
+2. **List:** Brevo → **Contacts → Lists** → create e.g. "Weekly digest" → copy its numeric id →
+   `BREVO_DIGEST_LIST_ID`.
+3. **Contact attributes:** Brevo → **Contacts → Settings → Contact attributes** → create text
+   attributes **`GRADE`, `INTEREST`, `STATE`** (Brevo rejects contacts with undefined attributes,
+   so this step is required for the preference questions to save).
+4. **Double opt-in (recommended):** create a transactional **"confirm your subscription" template**
+   (Brevo → Campaigns → Templates) → copy its id → `BREVO_DIGEST_DOI_TEMPLATE_ID`; optionally set
+   `BREVO_DOI_REDIRECT_URL` (post-confirm landing). Without a template id it falls back to single
+   opt-in.
+5. **Set them in `~/beecompete-prod/.env`** and recreate web (the compose passes them through):
+   `BREVO_API_KEY`, `BREVO_DIGEST_LIST_ID`, `BREVO_DIGEST_DOI_TEMPLATE_ID`, `BREVO_DOI_REDIRECT_URL`.
+6. **Verify:** submit the Landing digest band → success message ("check your inbox to confirm" for
+   DOI) → the contact appears in the Brevo list (after confirming) with GRADE/INTEREST/STATE set.
+- **Outputs:** `BREVO_API_KEY`, `BREVO_DIGEST_LIST_ID` (+ DOI template id) in the prod `.env`.
+- **Note:** R1 ships **capture + segmentation only**; the weekly send is manual/curated in Brevo —
+  the automated personalized matching send is **M26 (Phase 2)**.
+
 ## 8. Deployment pipeline  *(R1)*
 1. Enable **GHCR** (GitHub Container Registry) for the repo's images.
 2. Add **Actions secrets:** `VPS_HOST`, `VPS_SSH_KEY`, `GHCR_TOKEN`, plus app env (`DATABASE_URL`, `SMTP_*`, `S3_*`, etc.).

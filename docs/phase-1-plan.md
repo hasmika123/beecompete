@@ -78,8 +78,13 @@
 > (build-once-promote safe); `trackEvent()` exposed for X20. **Owner switches it on** by setting
 > `POSTHOG_KEY` + `CF_WEB_ANALYTICS_TOKEN` in the prod `.env` (setup-runbook §11). As-built:
 > architecture §10a.
-> **Next:** R1-15 weekly digest signup (Brevo). Deferred: PR C (S3 hero-image upload + inline
-> FAQ/Resource edit).
+> **R1-15 done (2026-07-17) — weekly digest signup (code):** DigestBand does real Brevo capture
+> (email + optional Grade/Interest/State → contact + list attributes, **double opt-in** when
+> configured), parent/educator/16+ framing + consent microcopy + honeypot, **inert without Brevo
+> env**. R1 = capture + segmentation only (M26 send is Phase 2). Owner setup: setup-runbook §7a;
+> activation deferred to the R1-17 gate.
+> **Next:** R1-15b listing-page captures (follow-by-email, request-a-competition wizard, host CTA).
+> Deferred: PR C (S3 hero-image upload + inline FAQ/Resource edit).
 
 The ordered, buildable task list for Phase 1. **Every task below becomes a GitHub Issue** (titled with its
 task ID + registry refs) before coding — that's the required per-phase step. Build in the listed order;
@@ -146,6 +151,12 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
   `CF_WEB_ANALYTICS_TOKEN` (+ optional `POSTHOG_HOST`) in the prod `.env` — exact steps in
   setup-runbook §11. As-built: architecture §10a.
 - **R1-15** — **Weekly Digest signup** (Brevo): email capture + 2–3 preference questions (grade, category/interests, region) per `page-blueprints.md` Landing §5. ⚠ Scope note: R1 ships the *capture + segmentation*; early digest sends are manual/curated via Brevo — the **automated personalized matching send is M26 (Phase 2)**. (M26 precursor)
+  ✅ **Code done 2026-07-17** — the DigestBand (Landing/How It Works/Categories) now does real Brevo
+  capture: email + optional Grade/Interest/State selects → Brevo contact + list (attributes
+  GRADE/INTEREST/STATE), **double opt-in** when a template is configured. Pitched to
+  parents/educators/16+ with consent microcopy + Privacy link (COPPA-safe — a newsletter to a child
+  would trigger consent); honeypot; **inert without Brevo env** (friendly "opening soon"). Single
+  interest for R1 (multi is a later enhancement). Owner setup: setup-runbook §7a.
 - **R1-15b** — Listing-page captures (Brevo/queue-backed, no accounts needed): **per-competition follow-by-email** (M29), **"Request a Competition"** multi-step wizard form (page-blueprints Page 6) → curation queue (DQ15), **"Are you the organizer?" host-interest CTA** → host waitlist (H46).
 - **R1-16** — In-app **bug/feedback report**. (DQ7 precursor)
 - **R1-17** — **R1 release gate** (dev-process §8): a11y (WCAG AA) on public pages, WAF/rate-limit on, backups tested, legal pages live, **legal foundation done** (entity + insurance + trademark search — setup-runbook §1b), **content gate met** (see "Data seeding & catalog readiness" below), **search indexing flipped ON** (R1-10 gate — the site is invisible to Google until this): (1) set `SEARCH_INDEXING=on` in `~/beecompete-prod/.env` + `docker compose -f docker-compose.prod.yml up -d web`, (2) verify `https://beecompete.com/robots.txt` serves the allow ruleset + a spot-checked page emits `index, follow`, (3) submit `sitemap.xml` in Google Search Console + Bing Webmaster Tools, (4) confirm staging still serves `Disallow: /` → **tag R1, deploy to prod.**
@@ -174,8 +185,14 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
        recreate: `IMAGE_TAG=<current-tag> docker compose -f docker-compose.prod.yml up -d web`).
     5. **Verify:** load a public page → DevTools Network shows `static.cloudflareinsights.com` +
        `*.i.posthog.com` requests, and Application → Cookies shows **no** `ph_*` cookie.
-  - **✉️ R1-15 digest activation:** Brevo owner setup (account + API key + list/attributes) — recorded
-    with R1-15 when built; the capture code is inert until the Brevo key is in the prod env.
+  - **✉️ R1-15 digest activation (code shipped; prod switch-on — deferred to this gate):** the
+    signup is inert until Brevo is wired. Steps (full version: setup-runbook §7a):
+    1. Brevo → create an **API key**, a **contacts list**, the text attributes **GRADE/INTEREST/STATE**,
+       and a **double-opt-in template**.
+    2. Set `BREVO_API_KEY`, `BREVO_DIGEST_LIST_ID`, `BREVO_DIGEST_DOI_TEMPLATE_ID`
+       (+ optional `BREVO_DOI_REDIRECT_URL`) in `~/beecompete-prod/.env`; recreate web.
+    3. Verify: submit the Landing digest band → confirm email → contact lands in the Brevo list with
+       the preference attributes set.
 
 **R1 UI/data follow-ups (surfaced 2026-07-13 during the admin/marketplace UI review)** were
 **built the same day** — including the two schema items once tracked here as standalone tasks:

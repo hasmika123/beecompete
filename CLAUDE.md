@@ -293,8 +293,18 @@ skip PostHog entirely (CF beacon is aggregate/cookieless so it loads regardless)
 passed to the client — **NOT `NEXT_PUBLIC_*`** (build-once-promote), **inert without tokens**.
 `trackEvent()` exported for X20 zero-result search (wiring TBD). **Owner switches it on** via
 setup-runbook §11 (create CF Web Analytics + EU PostHog project → set the two tokens in the prod
-`.env`). As-built: architecture §10a. Next per `docs/phase-1-plan.md`: **R1-15 weekly digest
-signup** (Brevo).
+`.env`). As-built: architecture §10a.
+**R1-15 done (2026-07-17) — weekly digest signup (code):** the `DigestBand` (Landing/How It Works/
+Categories) does real Brevo capture — email + optional Grade/Interest/State selects
+(`lib/digest-options.ts`, static) → Brevo contact on a list with `GRADE`/`INTEREST`/`STATE`
+attributes, **double opt-in** when a DOI template is set (`lib/brevo.ts`, server-only). Pitched to
+**parents/educators/16+** with consent microcopy + Privacy link (COPPA-safe — a newsletter to a
+child would trigger consent), honeypot, and **inert without Brevo env** (friendly "opening soon").
+R1 = capture + segmentation only (the automated matching send is M26, Phase 2). Env
+(`BREVO_API_KEY`, `BREVO_DIGEST_LIST_ID`, `BREVO_DIGEST_DOI_TEMPLATE_ID`, `BREVO_DOI_REDIRECT_URL`)
+passed to the web service by both compose stacks; owner setup in setup-runbook §7a. Next per
+`docs/phase-1-plan.md`: **R1-15b listing-page captures** (follow-by-email, request-a-competition
+wizard, host-interest CTA).
 **Deferred (PR C):** hero-card image upload (reuses the
 R1-19 cover endpoint with a `hero/` key prefix) + inline FAQ/
 Resource row-edit. **Before prod users:** set `ADMIN_API_TOKEN` in both VPS `.env` + `/admin`
