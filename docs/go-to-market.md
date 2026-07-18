@@ -1,6 +1,6 @@
 # BeeCompete — Go-to-Market
 
-**Status:** Living document · **Last updated:** 2026-07-07 · Depends on: `development-process.md` (release ladder), `monetization.md`, `competitive-analysis.md`, `phase-1-plan.md` (seeding)
+**Status:** Living document · **Last updated:** 2026-07-18 · Depends on: `development-process.md` (release ladder), `monetization.md`, `competitive-analysis.md`, `phase-1-plan.md` (seeding)
 
 Code and catalog make the product; this doc is the plan for **demand** — the non-coding work that
 runs in parallel with every build phase. If it isn't scheduled here, distribution won't happen by

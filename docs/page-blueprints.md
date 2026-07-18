@@ -413,12 +413,12 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
 ## Status
 | Page | Blueprint | Style prototype | Built |
 |---|---|---|---|
-| Landing | ✅ approved (2026-07-07 · rev 2026-07-09 · hero image-cards rev 2026-07-08 #25–26) | delegated (#29 — supersedes the round-2 prototype review) | ✅ R1-6b (2026-07-12; hero-card images + digest wiring pending — PR C / R1-15; stats TODO(owner)) |
+| Landing | ✅ approved (2026-07-07 · rev 2026-07-09 · hero image-cards rev 2026-07-08 #25–26) | delegated (#29 — supersedes the round-2 prototype review) | ✅ R1-6b (2026-07-12; digest wiring done R1-15. Remaining: hero-card image upload — PR C; sourced stats TODO(owner)) |
 | Competitions (listing) | ✅ approved (2026-07-07 · rev 2026-07-08) | delegated (#29) | ✅ R1-6 (2026-07-12, incl. category hubs #16 + interim /c/ detail stub #30) |
-| Competition details | ✅ approved (2026-07-07 · rev 2026-07-08) | delegated (#29) | ✅ R1-7 (2026-07-12; at-a-glance · tabs+FAQ · key-dates timeline w/ add-to-calendar · trust panel · Event/BreadcrumbList/FAQPage JSON-LD · mobile sticky bar · **resources row + affiliate disclosure = R1-8**. Follow/Claim capture = R1-15b) |
+| Competition details | ✅ approved (2026-07-07 · rev 2026-07-08) | delegated (#29) | ✅ R1-7 (2026-07-12; at-a-glance · tabs+FAQ · key-dates timeline w/ add-to-calendar · trust panel · Event/BreadcrumbList/FAQPage JSON-LD · mobile sticky bar · **resources row + affiliate disclosure (R1-8) + Follow/Claim email capture (R1-15b) — both done**) |
 | How It Works | ✅ approved (2026-07-08) | delegated (#29) | ✅ R1-6b (2026-07-12; demo video placeholder) |
 | Categories (index) | ✅ approved (2026-07-08, may be tuned) | delegated (#29) | ✅ R1-6b (2026-07-12) |
-| Request a Competition | ✅ approved (2026-07-08) | — | interim stub only (R1-6; wizard = R1-15b) |
+| Request a Competition | ✅ approved (2026-07-08) | — | ✅ R1-15b (2026-07-17; 5-step wizard → import/curation queue) |
 | For Parents / For Educators | ⛔ deferred (2026-07-08) | — | — |
 | Community (article index + detail) [Phase 2] | ⛔ deferred (2026-07-08, #27) — blueprint before build | — | — |
 | Tracker | ⛔ deferred — do not design yet | — | — |

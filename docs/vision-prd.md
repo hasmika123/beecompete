@@ -1,6 +1,6 @@
 # BeeCompete — Vision & PRD
 
-**Status:** Living document · **Last updated:** 2026-07-06 · **Type:** Foundational
+**Status:** Living document · **Last updated:** 2026-07-18 · **Type:** Foundational
 
 The "why" behind everything else. Our other docs are strong on *what competitors do* and *how to build it* —
 this one states **the user problem, who has it, and how confident we actually are** that it's real.

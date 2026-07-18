@@ -1,6 +1,6 @@
 # BeeCompete — External Setup Runbook
 
-**Status:** Living document · **Last updated:** 2026-07-12 · **Type:** Runbook
+**Status:** Living document · **Last updated:** 2026-07-18 · **Type:** Runbook
 
 The **manual, external setup steps** (accounts, servers, DNS, keys) that aren't code. Follow these
 **when it's time** — I'll walk you through each *live* when we reach it (many steps need your logins).
@@ -87,12 +87,11 @@ site still shows. The old GoDaddy box (runs a separate app, `dossier`) is left u
   `og:image` URL from the HTML (it carries a build hash), and `curl` it — expect `200
   image/png`. A 500 means the satori/wasm assets didn't trace into the standalone image. 30-second
   check; do it after the first listing lands, before the R1-17 flip.
-- ~~Web-side Sentry not wired.~~ **Code wired 2026-07-12** (Dockerfile build-arg + deploy-staging
-  build-args for the browser side; `WEB_SENTRY_DSN` env on the web services for the Node/SSR side;
-  environment inferred from hostname since one image serves both envs). **Two manual steps remain
-  before it captures anything:** (1) add the web project's DSN as GitHub secret **`WEB_SENTRY_DSN`**
-  (repo-level or in both environments), (2) add `WEB_SENTRY_DSN=<same DSN>` to both VPS `.env` files
-  (`~/beecompete-staging/.env`, `~/beecompete-prod/.env`). Blank = builds fine, Sentry stays inert.
+- ~~Web-side Sentry not wired.~~ **DONE 2026-07-18.** Web + API Sentry projects created; the web DSN is
+  set as the GitHub secret **`WEB_SENTRY_DSN`** (bakes the browser `NEXT_PUBLIC_SENTRY_DSN` at build via
+  deploy-staging's build-arg) **and** in the VPS `.env` (`WEB_SENTRY_DSN` → the web SSR side); the API DSN
+  is `SENTRY_DSN` in the `.env`. The R1.2 rebuild baked the browser DSN — verified live on prod: browser +
+  Next-SSR + Spring-API capture all fire. (`sendDefaultPii:false`, Session Replay off — enforced in code.)
 - ~~On 4 GB, cap the API JVM heap in the stack env so it can't balloon.~~ **Done 2026-07-12:**
   every service in the deploy stacks now has a `mem_limit` (staging api 768m/web 384m; prod api
   1g/web 512m; edge caddy 192m), the API JVM gets `-XX:MaxRAMPercentage=75.0` so the heap sizes
@@ -101,11 +100,18 @@ site still shows. The old GoDaddy box (runs a separate app, `dossier`) is left u
   `docker compose -f docker-compose.edge.yml up -d` on the box.
 - **Security:** rotate the Neon **prod** DB password (it briefly sat in a plaintext local file); keep the
   secrets sheet in a password manager, never in Downloads/repo.
-- Remaining before-launch items are in §s above + the checklist below (Neon paid tier/test restore/
-  autosuspend-off; repo→private + Pro + required reviewer + `protect-main`; UptimeRobot on
-  `/actuator/health`; confirm Sentry `sendDefaultPii:false` + Session Replay off + test errors; Brevo
-  end-to-end consent-email test; AWS root MFA + no root keys; Cloudflare Access lock + robots/noindex on
-  staging).
+- **R1-17 launch activation — DONE 2026-07-18:** privacy-first analytics (§11), Brevo captures (§7a),
+  admin behind Cloudflare Access + `ADMIN_API_TOKEN` (§5), Cloudflare **WAF + rate-limiting** (managed
+  ruleset auto-on + Bot Fight Mode + one rate-limit rule on `/suggest-a-`), **UptimeRobot** on
+  `beecompete.com/` (the API is private/BFF, so `/actuator/health` isn't public — the monitor polls the
+  homepage instead), and Sentry (above) are all live. Neon stays **free-tier** with
+  `scripts/backup-neon.sh` as the logical-backup net; **paid-tier PITR + a test restore are deferred to
+  R2** (no user data yet — trigger: prod content seeding or R2).
+- **Still open before the public launch** (the R1-17 gate — `phase-1-plan.md`): privacy-counsel review of
+  the legal pages + fill entity/governing-law + flip `LEGAL_REVIEW_PENDING`; the content gate (≥ 200
+  seeded); the indexing flip + sitemap submit. Plus housekeeping: rotate the Neon **prod** DB password;
+  repo → private + Pro (branch protection); AWS root MFA + no root keys; Brevo consent-email test (for
+  R2's account flows).
 
 **Decisions D1–D13** (full log in git history): D1 repo public-for-now (revert before launch) · D2 CF
 rate-limit 5/10s · D3 dedicated `deploy` user · D4 harden on the real box · D5 own dedicated server ·

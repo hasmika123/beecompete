@@ -1,6 +1,6 @@
 # BeeCompete — Competitive Analysis: Judging & Competition-Management Platforms
 
-**Status:** Living reference · **Last updated:** 2026-07-06 · **Type:** Reference
+**Status:** Living reference · **Last updated:** 2026-07-18 · **Type:** Reference
 
 Primary-source research (official sites, help docs, G2/Capterra) across 10 platforms in 4
 clusters. Purpose: (1) ensure our **paid host tools** match or beat incumbents, (2) benchmark

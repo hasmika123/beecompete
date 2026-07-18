@@ -1,6 +1,6 @@
 # BeeCompete — Development Process & Release Strategy
 
-**Status:** Living document · **Last updated:** 2026-07-06 · Depends on: `feature-registry.md`, `architecture.md`
+**Status:** Living document · **Last updated:** 2026-07-18 · Depends on: `feature-registry.md`, `architecture.md`
 
 How work flows from a feature-registry line to shipped code, and **when we go public**. Tuned for a
 solo + AI-assisted builder: lightweight, repeatable, with the review discipline that a missing

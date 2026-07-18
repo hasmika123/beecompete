@@ -1,6 +1,6 @@
 # BeeCompete — Compliance Map
 
-**Status:** Living document · **Last updated:** 2026-07-06 · **Type:** Reference
+**Status:** Living document · **Last updated:** 2026-07-18 · **Type:** Reference
 
 > ⚠️ **Not legal advice.** This is an engineering/product map of the regimes that apply to a
 > US-first, minors-facing, payments-handling marketplace. **Before public launch, have a qualified
@@ -87,7 +87,7 @@ Any future exception (e.g., judge clarifications) must be org-visible, logged, a
 
 ## 8. Intellectual property (the marketplace lists third parties)
 
-- We display **other organizations' competition names and logos.** Using names factually (nominative fair use) is generally fine; be careful with **logos** and never **imply endorsement/affiliation**. The **beta disclaimer + "unverified/unofficial" labeling** (Trust Tiers) supports this. When in doubt, use text not logos, and honor takedown requests.
+- We display **other organizations' competition names and logos.** Using names factually (nominative fair use) is generally fine; be careful with **logos** and never **imply endorsement/affiliation**. The **beta disclaimer, the "independent / not affiliated" footer disclaimer (R1-13), and the trust ladder** (curated / claimed / verified — the "unverified" tier was retired 2026-07-13) support this. When in doubt, use text not logos, and honor takedown requests.
 
 ---
 

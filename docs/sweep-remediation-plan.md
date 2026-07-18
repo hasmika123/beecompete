@@ -1,27 +1,10 @@
-# Sweep remediation — remaining backlog (rev 2026-07-16)
+# Sweep remediation — remaining backlog (rev 2026-07-18)
 
-**History.** The 2026-07-13 admin/marketplace audit (rounds 1–4) and the 2026-07-15/16 **sweep build**
-— the readiness gate + combined create, the create-form stepper (vertical stepper + completion ring +
-front-loaded required fields), and Now-bucket items **15–22** (geo seed, prize fallback, conditional
-fee, auto-slug, cover-image S3 upload, form-IA regroup, typed key dates, region picker) — are **fully
-built and verified** (local branch; per-item as-built detail is in the git history). Durable decisions
-were migrated to their home docs before the completed task bodies were removed here:
-
-- `architecture.md` §13a — the **combined complete-by-default create** (now competition + first
-  edition + **typed key dates** + **regions**, with the admin-form completeness + cost-aware fee
-  asserts), the **create-competition stepper** (5 steps + completion ring + auto-slug + grade/age
-  dropdowns + `region-picker.tsx`), and the **cover-image upload** endpoint.
-- `architecture.md` §2 (Files) + `setup-runbook.md` §6 — the **two-bucket S3 model** (public
-  display-assets bucket for covers, ✅ provisioned; private user-files bucket, R2) + the cover-bucket
-  setup steps (bucket / policy / CORS / IAM / env).
-- `domain-model.md` (Region) — the **geo seed** (Liquibase `0010`: US + states + cities + Virtual).
-- `page-blueprints.md` **#37** — the card/at-a-glance **prize fallback** ("Bragging rights" when no
-  `prize_summary` is on record).
-- (Earlier rounds) `architecture.md` §13a/§13b, `domain-model.md` §3f/§8/§8a, `design-brief.md` §3,
-  `page-blueprints.md` #32–36.
-
-This doc now carries only the **not-yet-built** work: the **Phase 2** and **Phase 3** batched items,
-plus one open carry-over note.
+**History.** The 2026-07-13 admin/marketplace audit + the 2026-07-15/16 sweep build (readiness gate,
+combined complete-by-default create, create-form stepper, and Now-bucket items **15–22**) are **fully
+built and shipped** (in prod as of R1.2). Durable decisions were migrated to their home docs —
+`architecture.md` §13a/§2, `setup-runbook.md` §6, `domain-model.md` §3f/§8/§8a, `page-blueprints.md`
+#32–37 — so this doc now carries only the **not-yet-built** work below.
 
 Ground rules: additive-only migrations; server is the source of truth (client validation mirrors,
 never replaces); all shared UI from `packages/ui`; Conventional Commits; migration numbers assigned at
@@ -29,13 +12,13 @@ build time (next free number), not reserved here.
 
 **Open carry-over (one):**
 
-- **Org-trust positive detail render** (org verified seal + host-maintained line, `trust-panel.tsx`)
-  was never confirmed in a browser (local dev SSR cache) — **re-verify once on staging** after this
-  branch deploys. Owner chose the staging check over a local verify (2026-07-16); can't be closed
-  until this branch reaches staging (a push to `main`).
+- **Org-trust positive detail render** (org verified seal + host-maintained line, `trust-panel.tsx`) —
+  the branch is now live in prod, but the render still needs a real competition with an organizer to
+  eyeball. Do this once the **first seeded listing** lands on the catalog (ties to the R1-17 content
+  gate; prod has no seeded listings yet). Low-value visual spot-check, not build work.
 
-_(Settled 2026-07-16: **whole-row-click on admin tables** stays deferred — decision + rationale
-migrated to `architecture.md` §13a; **cover-upload AWS key rotation** done by the owner.)_
+_(Settled: **whole-row-click on admin tables** stays deferred — decision + rationale in
+`architecture.md` §13a; **cover-upload AWS key rotation** done by the owner.)_
 
 ---
 

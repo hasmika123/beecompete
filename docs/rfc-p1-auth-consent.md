@@ -1,6 +1,6 @@
 # RFC — Phase 1: Auth, Parental Consent & Guardian/RBAC
 
-**Status:** Draft for approval · **Last updated:** 2026-07-06 · Depends on: `domain-model.md`, `architecture.md`, `compliance.md`
+**Status:** Draft for approval · **Last updated:** 2026-07-18 · Depends on: `domain-model.md`, `architecture.md`, `compliance.md`
 
 The hardest, most compliance-sensitive subsystem in Phase 1 — the gate for the **R2 accounts launch**.
 This RFC designs identity, the COPPA parental-consent flow, guardianship, and RBAC.

@@ -1,6 +1,6 @@
 # BeeCompete — Domain & Data Model
 
-**Status:** Living document · **Last updated:** 2026-07-12 (R1-1 as-built) · Depends on: `glossary.md`, `feature-registry.md`
+**Status:** Living document · **Last updated:** 2026-07-18 (R1-1 as-built) · Depends on: `glossary.md`, `feature-registry.md`
 
 The foundation. This turns the strategy, feature registry, and foundation hooks into an actual
 data model that supports **all three facets from day one** — even though we build them in phases.

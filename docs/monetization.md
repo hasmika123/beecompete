@@ -1,6 +1,6 @@
 # BeeCompete — Monetization & Packaging
 
-**Status:** Living document · **Last updated:** 2026-07-08 · Depends on: `feature-registry.md`, `competitive-analysis.md`
+**Status:** Living document · **Last updated:** 2026-07-18 · Depends on: `feature-registry.md`, `competitive-analysis.md`
 
 How we make money without breaking the flywheel. Price points here are **benchmark-informed
 hypotheses to validate**, not commitments — flagged 🔬.

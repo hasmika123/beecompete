@@ -1,6 +1,6 @@
 # BeeCompete — Glossary (Ubiquitous Language)
 
-**Status:** Living document · **Last updated:** 2026-07-12
+**Status:** Living document · **Last updated:** 2026-07-18
 
 The single source of truth for **what we call things**. Every other doc, conversation, UI label,
 and eventually every table/field name uses these exact terms. When a term has tempting synonyms,

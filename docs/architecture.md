@@ -1,6 +1,6 @@
 # BeeCompete — Architecture
 
-**Status:** Living document · **Last updated:** 2026-07-06 · Depends on: `domain-model.md`, `feature-registry.md`
+**Status:** Living document · **Last updated:** 2026-07-18 · Depends on: `domain-model.md`, `feature-registry.md`
 
 The technical foundation: stack, system shape, and the cross-cutting concerns (security, privacy,
 observability) that a minors-facing, payments-handling, enterprise app requires. Built solo with AI
@@ -419,20 +419,21 @@ public web data only, no user PII, output schema-validated + human-reviewed befo
 ## 17. Launch & ops readiness checklist
 
 Operational tasks (from the product checklist) to complete before public launch — tracked here so none are lost:
-- [ ] Legal foundation: entity formed + insurance + trademark search (setup-runbook §1b)
-- [ ] Domain purchased + DNS on Cloudflare
-- [ ] Emails: `no-reply@` (Brevo) + `support@` (Cloudflare Routing → Gmail); SPF/DKIM/DMARC
-- [ ] Legal pages live: Privacy, T&C, Cookie Policy, affiliate disclosure
-- [ ] Cookie-consent banner — **not needed at launch**: analytics are cookieless by decision (§10) and essential auth cookies are exempt. Revisit *only* if a tracking/marketing tool is ever added.
-- [~] Privacy-first analytics installed (not standard GA) — **code done (R1-14)**, inert until the
-  owner sets `POSTHOG_KEY` + `CF_WEB_ANALYTICS_TOKEN` in the prod `.env` (setup-runbook §11 / §10a)
+- [ ] Legal foundation: entity formed + insurance + trademark search (setup-runbook §1b) — **still open**
+- [x] Domain purchased + DNS on Cloudflare — live
+- [x] Emails: `no-reply@` (Brevo) + `support@` (Cloudflare Routing → Gmail); SPF/DKIM/DMARC
+- [~] Legal pages live: Privacy, T&C, Cookie Policy, affiliate disclosure — **built as DRAFTS (R1-12); privacy-counsel review pending** (R1-17)
+- [x] Cookie-consent banner — **not needed at launch**: analytics are cookieless by decision (§10) and essential auth cookies are exempt. Revisit *only* if a tracking/marketing tool is ever added.
+- [x] Privacy-first analytics installed (not standard GA) — **activated 2026-07-18** (CF Web Analytics + PostHog, cookieless; §11 / §10a)
 - [x] Logo/icon/favicon, light + dark variants — **finals in (2026-07-16)**: components in `packages/ui`, art in `apps/web/public/brand/`, adaptive `icon.svg` favicon (see §8)
 - [x] **Beta tag + disclaimer** (R1-13, 2026-07-17): header "Beta" badge + keyboard-reachable tooltip, and the app-wide footer disclaimer (beta · details can change, confirm on the organizer's site · independent, not affiliated with listed organizers)
-- [ ] Email subscription/newsletter list (Brevo, opt-in)
-- [ ] Password reset + email verification flows
-- [ ] In-app bug/feedback report
-- [ ] Sitemaps submitted to Google Search Console + Bing Webmaster Tools
-- [ ] Rate limiting + WAF verified; secrets in env; backups restore-tested
+- [x] Email subscription/newsletter list (Brevo, opt-in) — **digest capture live (R1-15, 2026-07-18)**
+- [ ] Password reset + email verification flows — R2 (not R1)
+- [x] In-app bug/feedback report — **done (R1-16)**
+- [ ] Sitemaps submitted to Google Search Console + Bing — **pending the indexing flip (R1-17)**
+- [x] Rate limiting + WAF verified — **done 2026-07-18** (Cloudflare managed ruleset auto-on + Bot Fight Mode + one rate-limit rule on `/suggest-a-`)
+- [x] Uptime monitor (UptimeRobot → homepage — API is BFF-private) + Sentry (web browser + SSR + API) live — **done 2026-07-18**
+- [x] Backups — **logical-backup script `scripts/backup-neon.sh`**; Neon paid-tier PITR + test restore deferred to R2 (no user data yet)
 
 ## 18. Initial ADRs (decision log)
 

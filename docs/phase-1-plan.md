@@ -1,99 +1,25 @@
 # BeeCompete — Phase 1 Build Plan
 
-**Status:** In build · **Last updated:** 2026-07-12 · Depends on: `domain-model.md`, `architecture.md`, `rfc-p1-auth-consent.md`, `development-process.md`
+**Status:** In build · **Last updated:** 2026-07-18 · Depends on: `domain-model.md`, `architecture.md`, `rfc-p1-auth-consent.md`, `development-process.md`
 
-> **Build status (2026-07-12):** Foundation **F1–F8 done** (staging + prod LIVE on IONOS).
-> **R1-1 done** (catalog schema, migrations `0002`–`0004` + Organization). **R1-2 done** (11 launch
-> categories + templates seeded `0005` + `CategoryAttributeValidator`). **R1-3 done** (admin curation
-> API + `/admin` web UI, import queue `0006`; admin auth = shared token + Cloudflare Access →
-> RBAC R2-7; as-built in `architecture.md` §13a). **R1-3b done** (public suggest-a-correction form +
-> `/api/v1/corrections` intake with field whitelist, `/admin/corrections` review queue, approve
-> applies the diff through the curation write path; as-built §13b). **R1-4 done** (public catalog
-> read API: paged list + detail-by-slug, editions with **effectiveStatus** per the domain-model §8
-> rule, verification/provenance exposed, lowercase tokens; as-built §13b). **R1-5 done** (search &
-> filter on the same endpoint: Postgres FTS + pg_trgm typo tolerance — migration `0007` — all M3
-> facets incl. eligibility-semantic participation/pathway, deadline filter/sort, Grade+Category
-> facet counts; popularity sort deferred to R2-10; as-built §13c). **R1-6 done** (marketplace per
-> Page-2 blueprint: CompetitionCard + category art system in `packages/ui`, filter panel/chips/
-> quick-chips/load-more/near-miss, category hubs `/competitions/<slug>` + SEO blocks, sticky nav
-> + Beta tag + real footer; interim noindex detail at `/c/<slug>` — decision #30; styling
-> delegated #29). **R1-6b done** (Landing per Page 1 with admin-managed hero cards + featured
-> carousel + digest band stub, How It Works, Categories index; public `GET /api/v1/categories`,
-> `/landing`, `/regions`). Landing gaps tracked: hero images (PR C), Brevo digest (R1-15),
-> sourced stats TODO(owner) before R1-17. **R1-7 done (2026-07-12)** — competition detail page
-> at `/c/<slug>` per Page-3 blueprint: breadcrumb, at-a-glance strip, Key Facts/About/FAQ tabs,
-> sticky sidebar (Follow stub, key-dates timeline with ics+Google add-to-calendar, trust/
-> attribution panel, Claim stub, Suggest-a-correction), related row, schema.org Event/
-> BreadcrumbList/FAQPage JSON-LD, mobile sticky Follow+Register bar; interim noindex dropped
-> (page inherits the site-wide gate until R1-10/R1-17). Follow/Claim capture backends = R1-15b;
-> Resources row = R1-8. **S2/S3 seeding done + merged (2026-07-12):** S2 master index (**284**
-> ranked competitions after the post-audit cleanup, all 11 categories ≥18) in `docs/seeding/`;
-> S3 extraction-pipeline v0 in `tools/seeding/` (fetch→LLM-extract→schema-validate→POST to the
-> R1-3 import queue). **Post-review fix pass (2026-07-12, PRs #70–73):** adversarial review of
-> R1-7/R1-8/S2/S3, all findings fixed — timezone-aware dates, SSR tab content (SEO),
-> status-gated Register CTA, valid all-day ICS, virtual-only Event JSON-LD, runtime SITE_URL,
-> deadline rule = REG_CLOSE with SUBMISSION_DUE fallback (server + web, blueprint decision #31),
-> S2 data cleanup (326→284), S3 hardening (provenance/confidence/fetch safety).
-> **R1-8 done (2026-07-12) 🔒** — detail-page resources row (M11): reused `ScrollRow` of
-> type-tinted resource cards (book/past_paper/guide/video/other), each an outbound link with
-> `rel="nofollow noopener noreferrer"`, and **affiliate links carry `rel="sponsored nofollow"`
-> + a per-card "Affiliate" chip + a clear, conspicuous inline disclosure rendered with the row
-> whenever any affiliate link is present** (FTC/DQ10; dedicated disclosure page still R1-12).
-> **R1-10 done (2026-07-12) — SEO** (built before R1-9 at owner request): API
-> `GET /api/v1/sitemap`; web `robots.ts` + `sitemap.ts`, shared `lib/seo.pageMetadata`
-> (canonical + OG + Twitter + env-gated robots) on all public pages, dynamic `next/og` OG images
-> (per-competition + default, self-contained), `ItemList` on listings + `WebSite`/`Organization`
-> on Landing, ISR on detail pages (`[slug]` on-demand). **Indexing gated by `SEARCH_INDEXING`
-> (default OFF)** — robots `Disallow:/` + page `noindex` until R1-17 flips it in prod (legal +
-> COPPA gate first; the machinery is all in place). Build-once-promote (no API at build time)
-> precludes build-time SSG for no-param pages — those render at request with data-cached reads.
-> **R1-9 done (2026-07-13) — trust/verification badges (DQ13):** shared `packages/ui`
-> `TrustBadge` (+ `trustTierMeta`/`isElevatedTier`) for the listing trust tier
-> (curated→claimed→verified→unverified) — on cards (elevated + unverified caution; curated
-> hidden as the R1 baseline) and the detail trust panel (badge + tier blurb, replacing the R1-7
-> first-pass). Organizer verified seal stays a separate org-level signal; locked "maintained
-> by" wording preserved. Frontend-only.
-> **R1-11 done (2026-07-13) — share a competition (M21):** shared `packages/ui` `ShareMenu` on
-> the detail header (channels + copy-link + native sheet). Privacy: plain intent links, clean
-> URL, no tracking, collects nothing (M21/M34 rule).
-> **R1-12 done (2026-07-17) 🔒 — legal pages** (branch `feat/R1-12-17-launch-surface`, covering
-> the whole R1-12→R1-17 launch surface): four public policy pages — `/privacy` (COPPA-aware),
-> `/terms`, `/cookies`, `/affiliate-disclosure` (DQ10/FTC) — scoped honestly to the R1 browse-only
-> reality (no accounts, no PII, no payments; account/consent/payments language deferred to R2).
-> Shared `components/legal/legal-page.tsx` layout + prose primitives + TOC; cross-page constants
-> in `lib/legal.ts` (contact email, `OPERATING_ENTITY` + governing-law placeholders pending entity
-> formation, `LEGAL_REVIEW_PENDING` flag driving an on-page "under review" notice). Wired into the
-> footer (new Legal column + bottom-bar links), `sitemap.ts`, and the R1-8 resources-row inline
-> disclosure ("Learn more" → `/affiliate-disclosure`). ⚠️ **These are DRAFTS — the R1-17 gate
-> still requires a privacy attorney to review them (compliance.md §Launch gate #1/#6), the
-> operating entity's legal name + governing-law state filled in, and `LEGAL_REVIEW_PENDING`
-> flipped false.** Frontend-only, no schema/API change.
-> **R1-13 done (2026-07-17) — beta tag + disclaimer:** header "Beta" badge + keyboard-reachable
-> tooltip explainer, and the app-wide footer disclaimer (beta · details can change → confirm on the
-> organizer's site · independent, **not affiliated** with listed organizers, compliance §8). Owner
-> chose badge + footer over a page-top banner; frontend-only, reuses Badge/Tooltip.
-> **R1-14 done (2026-07-17) — privacy-first analytics (code):** Cloudflare Web Analytics + PostHog,
-> cookieless, public-pages-only, DNT/GPC-honoring, anonymous (memory persistence, `person_profiles:
-> never`, autocapture/replay off, manual SPA pageviews). Runtime-env/inert-without-tokens
-> (build-once-promote safe); `trackEvent()` exposed for X20. **Owner switches it on** by setting
-> `POSTHOG_KEY` + `CF_WEB_ANALYTICS_TOKEN` in the prod `.env` (setup-runbook §11). As-built:
-> architecture §10a.
-> **R1-15 done (2026-07-17) — weekly digest signup (code):** DigestBand does real Brevo capture
-> (email + optional Grade/Interest/State → contact + list attributes, **double opt-in** when
-> configured), parent/educator/16+ framing + consent microcopy + honeypot, **inert without Brevo
-> env**. R1 = capture + segmentation only (M26 send is Phase 2). Owner setup: setup-runbook §7a;
-> activation deferred to the R1-17 gate.
-> **R1-15b done (2026-07-17) — listing-page captures (code):** per-competition **follow-by-email**
-> + host-interest **"claim"** now do real Brevo capture (owner-chosen: Brevo lists + parent/16+ DOI),
-> replacing the R1-7 detail stubs; the **Request-a-Competition wizard** (`/suggest-a-competition`)
-> posts to a new **public** `/api/v1/competition-requests` → the import/curation queue (no schema).
-> Owner setup: setup-runbook §7a; activation deferred to the R1-17 gate.
-> **R1-16 done (2026-07-17) — in-app bug/feedback report (code):** `/feedback` page + footer link →
-> Brevo transactional email to support@ (reuses `BREVO_API_KEY`, verified sender). Sentry feedback
-> widget deferred to the web-Sentry-client TODO. Owner setup: setup-runbook §7a.
-> **Next:** R1-17 release gate — all build tasks R1-12→R1-16 are done; the gate is activation +
-> compliance (legal counsel review, prod env/tokens, WAF, indexing flip). Deferred: PR C (S3
-> hero-image upload + inline FAQ/Resource edit).
+> **Build status (2026-07-18):** Foundation **F1–F8 done**. **R1 build (R1-1 → R1-16) is code-complete
+> and LIVE in production** — catalog schema + Liquibase `0002`–`0013`, admin curation + import/correction
+> queues, public catalog + search/filter API, the full public frontend (marketplace, category hubs,
+> competition detail, Landing / How It Works / Categories), SEO + env-gated indexing, trust badges,
+> share, the four (draft) legal pages, privacy-first analytics, Brevo captures (digest / follow / host +
+> feedback), and a WCAG 2.1 AA a11y pass. **As-built detail lives in `architecture.md` §10a/§13a–§13c
+> and `domain-model.md` §3b/§3f/§8/§8a — not re-logged here.**
+> **S2/S3 seeding done:** the 284-competition master index (`docs/seeding/`) + the S3 extraction pipeline
+> (`tools/seeding/`); S4 curation (the ≥ 200-live content gate) is the remaining seeding work.
+> **Deployed:** IONOS VPS behind a shared edge Caddy, build-once-promote (staging on a `main` push, prod
+> on an `R*` tag; currently **R1.2**) — see `setup-runbook.md` "Current deployment — AS BUILT".
+> **R1-17 activation DONE (2026-07-18):** privacy-first analytics, Brevo captures, admin lockdown
+> (Cloudflare Access + `ADMIN_API_TOKEN`), Cloudflare WAF + rate-limiting, UptimeRobot, and Sentry
+> (web + API) are all live; Neon logical backups scripted (`scripts/backup-neon.sh`; paid-tier PITR
+> deferred to R2). **Remaining R1-17 gate:** (1) privacy-counsel review of the legal pages + fill the
+> operating entity / governing-law state + flip `LEGAL_REVIEW_PENDING`; (2) the content gate (S4
+> seeding, ≥ 200 live); (3) flip `SEARCH_INDEXING=on` + submit the sitemap. Deferred: PR C (hero-image
+> upload + inline FAQ/Resource edit) and the `sweep-remediation-plan.md` backlog.
 
 The ordered, buildable task list for Phase 1. **Every task below becomes a GitHub Issue** (titled with its
 task ID + registry refs) before coding — that's the required per-phase step. Build in the listed order;
@@ -185,44 +111,24 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
   inert without Brevo (asks the visitor to email support@ directly). **Sentry feedback widget
   deferred** — the web Sentry client isn't wired yet (the F8 `WEB_SENTRY_DSN` build-arg TODO); bug
   reports route through this same form (category "Bug") until then. Owner setup: setup-runbook §7a.
-- **R1-17** — **R1 release gate** (dev-process §8): a11y (WCAG AA) on public pages, WAF/rate-limit on, backups tested, legal pages live, **legal foundation done** (entity + insurance + trademark search — setup-runbook §1b), **content gate met** (see "Data seeding & catalog readiness" below), **search indexing flipped ON** (R1-10 gate — the site is invisible to Google until this): (1) set `SEARCH_INDEXING=on` in `~/beecompete-prod/.env` + `docker compose -f docker-compose.prod.yml up -d web`, (2) verify `https://beecompete.com/robots.txt` serves the allow ruleset + a spot-checked page emits `index, follow`, (3) submit `sitemap.xml` in Google Search Console + Bing Webmaster Tools, (4) confirm staging still serves `Disallow: /` → **tag R1, deploy to prod.**
-  - **🛑 R1-12 legal follow-ups (must ALL clear before this gate — the pages are drafts until then):**
-    1. **Privacy-counsel review** of the four pages — especially the COPPA posture in the Privacy
-       Policy (compliance.md §Launch gate #6). This is the hard blocker; the copy is not final
-       until a qualified privacy attorney has signed off.
-    2. **Fill the operating entity's legal name + governing-law state** into `apps/web/src/lib/legal.ts`
-       (`OPERATING_ENTITY` + the Terms governing-law clause) once the LLC is formed — tied to the
-       "legal foundation done" item above (setup-runbook §1b).
-    3. **Flip `LEGAL_REVIEW_PENDING` → `false`** in `apps/web/src/lib/legal.ts` after #1–#2 are done —
-       this removes the on-page "Draft — under review" banner from all four legal pages.
-  - **📊 R1-14 analytics activation (code shipped; these are the prod switch-on steps — deferred to
-    this gate per owner, 2026-07-17):** the analytics is inert until tokens exist in the prod env.
-    1. **Create the accounts:** Cloudflare → Web Analytics → **Enable with JS Snippet installation**
-       for `beecompete.com` → copy the **beacon token** (do NOT also enable Automatic Setup — it
-       double-counts and doesn't reliably inject on our SSR anyway); PostHog → **EU** region → **one**
-       project shared by prod + dev → copy the **Project API Key** (`phc_…`), confirm Session Replay
-       + Autocapture OFF.
-    2. **Set in `~/beecompete-prod/.env`:** `POSTHOG_KEY`, `CF_WEB_ANALYTICS_TOKEN`
-       (+ `POSTHOG_HOST=https://eu.i.posthog.com` if EU). Full steps: setup-runbook §11.
-    3. **Get the updated compose onto the box:** confirm the deploy-prod workflow copies
-       `docker-compose.prod.yml` to `~/beecompete-prod/` (it now passes the analytics vars to the web
-       service); if the pipeline only does `pull && up -d` against the file already there, `scp`/`git
-       pull` the updated compose onto the box once (same as the Caddyfile pattern).
-    4. **Recreate web** (the release deploy sets `IMAGE_TAG` automatically; for a manual env-only
-       recreate: `IMAGE_TAG=<current-tag> docker compose -f docker-compose.prod.yml up -d web`).
-    5. **Verify:** load a public page → DevTools Network shows `*.i.posthog.com` +
-       `static.cloudflareinsights.com` requests, a `$pageview` in PostHog Activity, and **no** `ph_*`
-       cookie. (CF *records* data only for the real `beecompete.com` hostname.)
-  - **✉️ R1-15 / R1-15b Brevo activation (code shipped; prod switch-on — deferred to this gate):**
-    the digest + follow + host captures are inert until Brevo is wired. Steps (full: setup-runbook §7a):
-    1. Brevo → create an **API key**, up to three **lists** (digest / follow / host), the text
-       attributes **GRADE/INTEREST/STATE** + **COMPETITION**, and one shared **double-opt-in template**.
-    2. Set `BREVO_API_KEY`, `BREVO_DIGEST_LIST_ID`, `BREVO_FOLLOW_LIST_ID`, `BREVO_HOST_LIST_ID`,
-       `BREVO_DOI_TEMPLATE_ID` (+ optional `BREVO_DOI_REDIRECT_URL`) in `~/beecompete-prod/.env`;
-       recreate web. (Wire only the captures you want live — each is independently inert.)
-    3. Verify: submit the digest band + a detail page's Follow + Claim → confirm email → contacts land
-       in the right lists with their attributes. (Request-a-Competition needs no Brevo — it queues to
-       the import queue; check `/admin/import-records` for a test submission.)
+- **R1-17** — **R1 release gate** (dev-process §8). **Activation DONE (2026-07-18):** WCAG-AA a11y pass
+  on public pages; Cloudflare **WAF + rate-limiting** on; **admin** behind Cloudflare Access +
+  `ADMIN_API_TOKEN`; **analytics** (CF Web Analytics + PostHog) + **Brevo** captures live; **UptimeRobot**
+  + **Sentry** (web + API) on; Neon **logical backups** scripted (`scripts/backup-neon.sh`; paid-tier PITR
+  deferred to R2). Switch-on steps + gotchas: setup-runbook §7a (Brevo) / §11 (analytics) / §5 (admin) /
+  §9 (Sentry + uptime). **Still open before the gate clears:**
+  - **🛑 Legal (hard blocker) — the four legal pages are DRAFTS until:**
+    1. **Privacy-counsel review** of all four, especially the COPPA posture in the Privacy Policy
+       (compliance.md §Launch gate #6). Not final until a qualified privacy attorney signs off.
+    2. **Fill `OPERATING_ENTITY` + `GOVERNING_LAW_STATE`** in `apps/web/src/lib/legal.ts` once the LLC is
+       formed (the "legal foundation done" item — setup-runbook §1b).
+    3. **Flip `LEGAL_REVIEW_PENDING` → `false`** after #1–#2 — drops the on-page "Draft — under review" banner.
+  - **📚 Content gate** — ≥ 200 competitions live across the ~10 categories (S4 seeding; see "Data seeding
+    & catalog readiness" below). As blocking as any code item.
+  - **🔎 Flip indexing** — the site is `noindex` until: set `SEARCH_INDEXING=on` in `~/beecompete-prod/.env`
+    + recreate web, verify `robots.txt` serves the allow ruleset + a page emits `index, follow`, confirm
+    staging still serves `Disallow: /`, then submit `sitemap.xml` to Google + Bing.
+  - Then **tag the release + deploy to prod** — the public launch.
 
 **R1 UI/data follow-ups (surfaced 2026-07-13 during the admin/marketplace UI review)** were
 **built the same day** — including the two schema items once tracked here as standalone tasks:

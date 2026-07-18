@@ -1,6 +1,6 @@
 # BeeCompete — Design Brief
 
-**Status:** Living document · **Last updated:** 2026-07-07 · **Type:** Reference — input to **F7** and to every **hero-page design pass** (`development-process.md` §3)
+**Status:** Living document · **Last updated:** 2026-07-18 · **Type:** Reference — input to **F7** and to every **hero-page design pass** (`development-process.md` §3)
 
 The single home for aesthetic direction and your page-specific input. Claude sessions building UI
 read this doc the way they read the glossary — decisions live here, not in chat history.
@@ -185,18 +185,12 @@ The hero design pass is therefore two checkpoints: 🧑 approve the **blueprint*
 
 **Structure + status live in `docs/page-blueprints.md` (source of truth).** Quick reference:
 
-| Page | Release | Structure | Style prototype |
-|---|---|---|---|
-| Landing | R1 | ✅ approved (rev 2026-07-09; hero right half = admin-managed image cards, blueprints #25–26) | round 2 — re-prototype hero (plain Browse button + category strip + image-card right half) & new section order |
-| Competitions (listing) | R1 | ✅ approved (rev 2026-07-08) | not started |
-| Competition detail | R1 | ✅ approved (rev 2026-07-08) | not started |
-| How It Works | R1 | ✅ approved (2026-07-08) | not started |
-| Categories (index) | R1 | ✅ approved (2026-07-08, may be tuned) | not started |
-| Request a Competition (wizard form) | R1 | ✅ approved (2026-07-08) | light pass (step-form interaction only) |
-| For Parents / For Educators | — | ⛔ deferred (2026-07-08) | — |
-| Community (article index + detail) | Phase 2 | ⛔ deferred (2026-07-08, blueprints #27) — blueprint before build | — |
-| Tracker ("My Competitions") | R2 | ⛔ deferred | — |
-| Parent dashboard | R2 | ⛔ deferred | — |
+| Page | Release | Status |
+|---|---|---|
+| Landing · Competitions · Competition detail · How It Works · Categories · Request-a-Competition wizard | R1 | ✅ **built** (2026-07-12 → 07-17). The separate style-prototype checkpoint was **waived** (blueprints #29) — styling delegated to builder judgment; owner steers reactively with reference photos (§1). |
+| For Parents / For Educators | — | ⛔ deferred (2026-07-08) |
+| Community (article index + detail) | Phase 2 | ⛔ deferred (blueprints #27) — blueprint before build |
+| Tracker ("My Competitions") · Parent dashboard | R2 | ⛔ deferred — do not design yet |
 
 *Anything not listed here is a utility page (assembled from `packages/ui` primitives, no design pass).*
 

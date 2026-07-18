@@ -1,6 +1,6 @@
 # BeeCompete — Feature Registry
 
-**Status:** Living document · **Owner:** Product · **Last updated:** 2026-07-08
+**Status:** Living document · **Owner:** Product · **Last updated:** 2026-07-18
 
 The master list of every feature across all three facets and all phases. This is the
 **single source of truth for scope** and the **anti-creep tool**: if a feature isn't here,
@@ -124,7 +124,7 @@ though we build them later. Those feed directly into the Domain & Data Model doc
 | DQ10 | Affiliate disclosure system | 1 | S | FTC requirement — ships with affiliate links (M11) |
 | DQ11 | **Host identity verification** (edu/org email domain, domain-ownership proof, nonprofit/business lookup, Stripe KYC) | 3 | M | 🪝 Gate to claim/publish a listing |
 | DQ12 | **Pre-publication moderation gate** — self-submitted listings reviewed (or auto-approved for verified-domain hosts) before going public | 3 | M | "Public posting" = submit for review, never instant anonymous publish |
-| DQ13 | **Verified-organizer badges + host trust tiers** (curated / claimed / verified / unverified) | 1 | M | User-facing; extends DQ1 provenance. Public **maintainer attribution** (locked 2026-07-07): "Listing **maintained by** BeeCompete Curation Team" while curated (team-level, never individual staff names) → flips to the host org after claim. Wording rule: **"maintained by," never "managed by"** — no implied operation of/affiliation with the competition (compliance §8) |
+| DQ13 | **Verified-organizer badges + host trust tiers** (curated / claimed / verified — org-level; the "unverified" tier was retired 2026-07-13) | 1 | M | User-facing; extends DQ1 provenance. Public **maintainer attribution** (locked 2026-07-07): "Listing **maintained by** BeeCompete Curation Team" while curated (team-level, never individual staff names) → flips to the host org after claim. Wording rule: **"maintained by," never "managed by"** — no implied operation of/affiliation with the competition (compliance §8) |
 | DQ14 | Scam/abuse heuristics (off-platform-payment flags, minor-safety review, progressive host reputation) | 3 | M | Extra scrutiny because users are minors |
 | DQ15 | **"Request a Competition"** — user-submitted new-listing requests → curation queue (canonical label, owner 2026-07-13; supersedes "Suggest a competition"). Route slug stays `/suggest-a-competition` until the R1-15b wizard build. | 1 | S | Complements DQ6 (which covers corrections to *existing* listings only); demand signal feeds seeding priorities (S2) |
 
