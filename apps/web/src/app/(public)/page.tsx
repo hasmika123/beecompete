@@ -13,6 +13,7 @@ import {
   cn,
 } from '@beecompete/ui';
 import { DigestBand } from '@/components/digest-band/digest-band';
+import { HostWaitlistBand } from '@/components/host-waitlist/host-waitlist-band';
 import { HeroCards } from '@/components/landing/hero-cards';
 import { ScrollRow } from '@/components/scroll-row';
 import { fetchCategories, fetchLanding } from '@/lib/catalog-api';
@@ -230,7 +231,7 @@ export default async function LandingPage() {
       </section>
 
       {/* 4. Audience cards (H46). Parents/Educators pages are deferred → digest anchor;
-          Organizers CTA = interest capture (host waitlist wiring lands at R1-15b). */}
+          Organizers → the host waitlist band below (#hosts), wired at R1-15c. */}
       <section aria-labelledby="audience-heading" className="grid gap-5">
         <h2 id="audience-heading" className="font-display text-2xl text-foreground sm:text-3xl">
           Built for the whole team behind a student
@@ -241,6 +242,7 @@ export default async function LandingPage() {
               title: 'For Parents',
               copy: 'Find competitions that fit your kid — grade, budget, and interests.',
               cta: 'Get the weekly digest',
+              href: '/#digest',
               icon: (
                 <Users aria-hidden="true" weight="duotone" className="size-8 text-brand-gold" />
               ),
@@ -249,6 +251,7 @@ export default async function LandingPage() {
               title: 'For Educators',
               copy: 'Point your students and clubs at vetted, current opportunities.',
               cta: 'Get the weekly digest',
+              href: '/#digest',
               icon: (
                 <GraduationCap
                   aria-hidden="true"
@@ -258,9 +261,13 @@ export default async function LandingPage() {
               ),
             },
             {
+              // Organizers get the HOST waitlist, not the digest: this card used to point at
+              // /#digest, dropping someone who clicked "Get early access" onto the parent-facing
+              // Weekly Digest signup (R1-15c).
               title: 'For Organizers',
               copy: 'Reach the families searching for exactly what you run.',
               cta: 'Get early access',
+              href: '/#hosts',
               icon: (
                 <Medal aria-hidden="true" weight="duotone" className="size-8 text-brand-gold" />
               ),
@@ -268,7 +275,7 @@ export default async function LandingPage() {
           ].map((audience) => (
             <Link
               key={audience.title}
-              href="/#digest"
+              href={audience.href}
               className="group block rounded-[var(--radius-panel)] border border-border bg-surface-raised p-6 transition-transform hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)]"
             >
               {audience.icon}
@@ -282,8 +289,12 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* 5. Weekly digest band (R1-15 wiring). */}
+      {/* 5. Weekly Digest band (R1-15 wiring). */}
       <DigestBand />
+
+      {/* 6. Host waitlist band (R1-15c, H46) — the supply-side counterpart to the digest, and the
+          destination for the "For Organizers" card above. */}
+      <HostWaitlistBand />
     </div>
   );
 }

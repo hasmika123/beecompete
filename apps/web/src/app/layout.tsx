@@ -14,11 +14,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+// Single light value, not a prefers-color-scheme pair: the app defaults to light for everyone now
+// (see theme-provider.tsx), so keying browser chrome off the OS would tint the address bar dark
+// while the page renders light. Matches the --background light token exactly (tokens.css).
 export const viewport: Viewport = {
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#faf9f5' },
-    { media: '(prefers-color-scheme: dark)', color: '#262624' },
-  ],
+  themeColor: '#fdfdfc',
 };
 
 // Root layout is intentionally minimal — just <html>/<body>/theme. Section chrome lives in the

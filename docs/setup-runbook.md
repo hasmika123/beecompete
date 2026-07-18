@@ -262,25 +262,44 @@ configured. Wire only the captures you want live.
      `xkeysib-`** — NOT the **SMTP key** (`xsmtpsib-`) from step §7. They're different credentials;
      the SMTP key returns `401 {"code":"unauthorized","message":"Key not found"}` against the
      contacts API. If auth fails, check the prefix first.
-2. **Lists:** Brevo → **Contacts → Lists** → create up to three (e.g. "Weekly digest", "Competition
+2. **Lists:** Brevo → **Contacts → Lists** → create three (e.g. "Weekly digest", "Competition
    follows", "Host waitlist") → copy each numeric id → `BREVO_DIGEST_LIST_ID`,
-   `BREVO_FOLLOW_LIST_ID`, `BREVO_HOST_LIST_ID`.
-3. **Contact attributes:** Brevo → **Contacts → Settings → Contact attributes** → create text
-   attributes **`GRADE`, `INTEREST`, `STATE`** (digest preferences) and **`COMPETITION`** (which
-   listing a follow/host visitor acted on). Brevo rejects contacts with undefined attributes, so
-   create the ones your enabled captures use.
+   `BREVO_FOLLOW_LIST_ID`, `BREVO_HOST_WAITLIST_LIST_ID`. They stay **separate** on purpose: a
+   blended list can't be mailed without spamming the other two audiences.
+   *(`BREVO_HOST_LIST_ID` is the pre-R1-15c name for the host waitlist and is still read as a
+   fallback, so an existing prod env keeps working until you rename it.)*
+3. **Contact attributes:** Brevo → **Contacts → Settings → Contact attributes** → create the text
+   attribute **`COMPETITION`** (which listing a follow/claim visitor acted on). Brevo rejects
+   contacts with undefined attributes. `GRADE`/`INTEREST`/`STATE` are **no longer sent** (the Weekly
+   Digest became one curated send at R1-15c) — if they already exist, **leave them**: deleting them
+   destroys values existing subscribers submitted, which M26 will want in Phase 2.
 4. **Double opt-in (recommended):** create one transactional **"confirm your subscription" template**
-   (Brevo → Campaigns → Templates) → copy its id → `BREVO_DOI_TEMPLATE_ID` (shared across all three
-   captures); optionally set `BREVO_DOI_REDIRECT_URL` (post-confirm landing). Without it, single
-   opt-in. *(`BREVO_DIGEST_DOI_TEMPLATE_ID` still works as an alias for a digest-only setup.)*
-5. **Set them in `~/beecompete-prod/.env`** and recreate web (the compose passes them through):
-   `BREVO_API_KEY`, `BREVO_DIGEST_LIST_ID`, `BREVO_FOLLOW_LIST_ID`, `BREVO_HOST_LIST_ID`,
-   `BREVO_DOI_TEMPLATE_ID`, `BREVO_DOI_REDIRECT_URL`.
-6. **Verify:** submit the Landing digest band + a detail page's **Follow** + **Claim** → each shows
-   the confirm message → contacts land in the right list (after confirming) with their attributes.
-- **Outputs:** `BREVO_API_KEY` + the list ids you enabled (+ shared DOI template) in the prod `.env`.
-- **Note:** R1 ships **capture + segmentation only** — the weekly send is manual/curated in Brevo
-  (automated matching send = **M26, Phase 2**); email-followers convert to accounts at **R2-16**.
+   (Brevo → Campaigns → Templates) whose confirm button uses Brevo's **double opt-in link tag** →
+   copy its id → `BREVO_DOI_TEMPLATE_ID` (shared across all three list captures). Without it,
+   single opt-in.
+   **Do NOT set a redirect URL here or in the env.** Where a subscriber lands after confirming is a
+   per-API-call field, so the app sends each flow to its own `/subscribed/<flow>` page derived from
+   `SITE_URL` — which also means a staging confirmation lands on staging. `BREVO_DOI_REDIRECT_URL`
+   was **removed at R1-15c**; delete it from any `.env` that still has it (a stale value would have
+   pointed all three flows at the same page).
+5. **Claim inbox:** `HOST_CLAIM_EMAIL` (e.g. `admin@beecompete.com`) — where "Claim this
+   competition" requests are emailed. This is a **form → inbox**, not a list: no list id, no double
+   opt-in, no confirmation page. Unset falls back to the support address so a claim is never lost.
+   Needs `BREVO_SENDER_EMAIL` set (same verified-sender requirement as feedback, below).
+6. **Set them in `~/beecompete-prod/.env`** and recreate web (the compose passes them through):
+   `BREVO_API_KEY`, `BREVO_DIGEST_LIST_ID`, `BREVO_FOLLOW_LIST_ID`, `BREVO_HOST_WAITLIST_LIST_ID`,
+   `BREVO_DOI_TEMPLATE_ID`, `HOST_CLAIM_EMAIL`.
+7. **Verify:** submit the Landing digest band, the Landing **host waitlist** band (`#hosts`), a
+   detail page's **Follow**, and a detail page's **Claim**. The three list captures each echo the
+   address back ("we sent a confirmation link to …") and, after you click confirm in the email,
+   land on `/subscribed/digest`, `/subscribed/follow`, or `/subscribed/hosts` respectively — not the
+   site root. The claim form instead emails `HOST_CLAIM_EMAIL` with Reply-To set to the submitter.
+- **Outputs:** `BREVO_API_KEY` + the three list ids (+ shared DOI template) + `HOST_CLAIM_EMAIL` in
+  the prod `.env`.
+- **Note:** R1 ships **capture only** — the weekly send is manual/curated in Brevo (automated
+  personalized matching = **M26, Phase 2**); email-followers convert to accounts at **R2-16**.
+  Follow deliberately promises "when dates are announced or updated", not per-deadline reminders,
+  because automated deadline alerts are M30/X11 in Phase 2.
 - **Request-a-Competition** (Page 6) needs **no Brevo** — it posts to the import/curation queue.
 - **In-app feedback** (R1-16, `/feedback`) reuses `BREVO_API_KEY` to email **support@** via Brevo
   transactional mail. The **"from" must be a verified sender/domain** (`BREVO_SENDER_EMAIL`, default

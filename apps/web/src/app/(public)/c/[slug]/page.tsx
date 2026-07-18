@@ -8,7 +8,6 @@ import {
   CategoryCover,
   CategoryTag,
   ExternalLink,
-  Flag,
   Pencil,
   ShareMenu,
   VerifiedSeal,
@@ -24,7 +23,8 @@ import { RelatedCompetitions } from '@/components/detail/related-competitions';
 import { ResourcesRow } from '@/components/detail/resources-row';
 import { StickyBottomBar } from '@/components/detail/sticky-bottom-bar';
 import { EmailCaptureCta } from '@/components/detail/email-capture-cta';
-import { followByEmail, registerHostInterest } from '@/components/detail/capture-actions';
+import { ClaimListingCta } from '@/components/detail/claim-listing-cta';
+import { followByEmail } from '@/components/detail/capture-actions';
 import { TrustPanel } from '@/components/detail/trust-panel';
 import { fetchCompetition } from '@/lib/catalog-api';
 import type { CompetitionDetail } from '@/lib/catalog-types';
@@ -276,7 +276,7 @@ export default async function CompetitionDetailPage({
                 icon={<Bell aria-hidden="true" className="size-4" />}
                 variant="primary"
                 submitLabel="Follow"
-                blurb="Get an email when key dates for this competition are coming up — no account needed."
+                blurb="Get an email when this competition’s dates are announced or updated — no account needed."
                 consent={
                   <>
                     For parents, educators, and students 16+. We’ll only email you about this
@@ -311,25 +311,9 @@ export default async function CompetitionDetailPage({
             <div className="rounded-[var(--radius-panel)] border border-border bg-surface-raised p-5">
               <TrustPanel competition={competition} />
               <div className="mt-4 grid gap-2 border-t border-border pt-4">
-                <EmailCaptureCta
-                  action={registerHostInterest}
-                  competitionName={competition.name}
-                  label="Claim this competition"
-                  icon={<Flag aria-hidden="true" className="size-4" />}
-                  variant="secondary"
-                  submitLabel="Notify me"
-                  blurb="Are you the organizer? Host tools are on the way — join the early-access list for this listing."
-                  consent={
-                    <>
-                      For competition organizers. We’ll email you about claiming this listing and
-                      host access. See our{' '}
-                      <Link href="/privacy" className="underline hover:text-foreground">
-                        Privacy Policy
-                      </Link>
-                      .
-                    </>
-                  }
-                />
+                {/* Claim is a FORM → admin inbox, not a list capture (R1-15c): it needs context
+                    and gets a human reply. See claim-actions.ts. */}
+                <ClaimListingCta competitionName={competition.name} />
                 <Link
                   href={correctionHref(competition)}
                   className={cn(

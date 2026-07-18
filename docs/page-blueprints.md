@@ -104,14 +104,26 @@ disclaimer (→ R1-13) · contact/support · social links (→ R1-12) · Request
   the weekly-digest band (§5 anchor; owner 2026-07-08).
 - **Interaction:** hover = card expands/grows.
 
-**5. Weekly digest signup** (→ R1-15) *(reframed — owner 2026-07-08)*
-- **Layout:** capture band branded as a **weekly personalized competitions digest** — heading
-  promises a weekly list of **new competitions matching the reader's preferences**; email input +
-  submit (Brevo).
-- **Flow:** subscribing asks 2–3 quick preference questions (grade, category/interests, region);
-  the weekly send lists new/matching competitions. *(Also segments the list for R2 activation.)*
+**5. Weekly Digest signup** (→ R1-15) *(reframed — owner 2026-07-08; simplified — owner 2026-07-18)*
+- **Layout:** capture band branded as a **weekly competitions digest** — heading promises a weekly
+  list of **newly added and closing-soon competitions, curated by us**; email input + submit (Brevo).
+- **Flow:** email only. **No preference questions** — the R1 digest is one curated send that goes to
+  every subscriber alike, so asking for grade/interest/region would collect data we can't yet act on
+  and imply a personalized send we can't deliver weekly. Per-subscriber matching returns with
+  **M26 (Phase 2)**, which re-collects preferences when it can honor them.
+- **Success:** inline, echoes the submitted address ("we sent a confirmation link to …") plus a
+  spam/promotions hint; confirming in the email lands on **§7** below.
 
-**6. Footer** — shared component.
+**6. Host waitlist signup** (→ H46, R1-15c)
+- **Layout:** capture band anchored `#hosts`, mirroring §5 but on the raised surface rather than the
+  gold band — heading offers **early access to host tools**; email input + submit (Brevo).
+- **Why:** the supply-side counterpart to §5 and the destination for the **"For Organizers"**
+  audience card (§4), which previously pointed at `/#digest` and dropped organizers onto the
+  parent-facing digest signup.
+- **Framing:** organizer consent microcopy, *not* the parent/16+ framing §5 uses — this audience is
+  adults acting for an organization.
+
+**7. Footer** — shared component.
 
 *Moved to the How It Works page (owner 2026-07-08): the demo video, the stats & imagery grid, and
 the How It Works timeline. Removed: the full-bleed Category highlight section (replaced by the
@@ -195,6 +207,8 @@ carousel & related rows become swipe; audience cards stack.
 **4. Main content — right column (sidebar), top to bottom — sticky on desktop once scrolled**
 *(owner 2026-07-08: the Follow CTA is the page's conversion event; it never leaves view)*
 - **a. "Follow this Competition" button** — R1 = follow-by-email capture (→ M29); R2 = Save (→ M7).
+  Promises email **when the competition's dates are announced or updated** — deliberately *not*
+  per-deadline reminders, which need M30/X11 automation in Phase 2 (owner 2026-07-18).
 - **b. Vertical timeline** of the edition's key dates/events (reg opens → closes → rounds → results,
   → M6), current/next date emphasized **with an add-to-calendar link (ics + Google Calendar) at
   R1** — no account needed (owner 2026-07-08).
@@ -202,7 +216,11 @@ carousel & related rows become swipe; audience cards stack.
   verified …" · **"Listing maintained by BeeCompete Curation Team"** (flips to the host org after
   claim; locked wording — *maintained*, never *managed*).
 - **d. "Claim this Competition" button** (→ H46) — deliberately adjacent to the attribution line
-  ("maintained by BeeCompete" + "claim it" = the host-recruitment hook).
+  ("maintained by BeeCompete" + "claim it" = the host-recruitment hook). Reveals a short **Claim
+  Request form** — name · email · role · optional message, plus an optional "email me when host
+  tools are ready" checkbox (the only thing that joins the Host Waitlist). It **emails our admin
+  inbox**; it is not a list signup (owner 2026-07-18), because a claim is a 1:1 conversation that
+  needs context and gets a human reply. Verified ownership transfer remains **H1/DQ11, Phase 3**.
 - **e. "Suggest a Correction" button** (→ DQ6) — opens the correction form (task R1-3b).
 - **f. [R2] Social-proof counter** ("N students tracking this") — displayed **only above a
   cold-start threshold (~25)**; never shown below it (owner 2026-07-08).
@@ -272,6 +290,26 @@ deadline-filtered view.
 - **Confirmation step** states what happens next ("our curation team reviews suggestions within
   X days") — closing that loop is what makes people submit.
 - Zero-results referrals prefill the first step from the logged query when possible (→ X20).
+
+---
+
+## Page 7: Subscription confirmed *(→ R1-15c, owner 2026-07-18; route `/subscribed/<flow>`)*
+
+*(job: close the double-opt-in loop — confirm the subscription actually took, and send them somewhere
+useful instead of dead-ending)*
+
+- **Reached only from a confirmation email.** Brevo redirects here after the subscriber clicks
+  confirm. Before R1-15c they were dropped on the bare site root with no feedback at all.
+- **One route, three flows:** `/subscribed/digest`, `/subscribed/follow`, `/subscribed/hosts`. The
+  DOI *redirect* is a per-API-call field, so all three share one Brevo template and still land
+  somewhere specific. An unknown flow slug 404s rather than claiming a subscription that may not
+  exist.
+- **Layout:** centered confirmation mark · heading · one line restating **what they subscribed to and
+  what happens next** · primary CTA into the catalog (or How It Works, for hosts) · secondary "back
+  to home". Built from existing page patterns — no new element types (owner 2026-07-18).
+- **Always `noindex`**, independent of the global `SEARCH_INDEXING` flag: a private transactional
+  endpoint has no business in search results.
+- **No claim variant** — a Claim Request emails the admin inbox and has no opt-in step to confirm.
 
 ---
 

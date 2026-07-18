@@ -3,45 +3,42 @@
 import { useActionState } from 'react';
 import Link from 'next/link';
 import { Button, FormResult, Honeypot, Input } from '@beecompete/ui';
-import { subscribeDigest } from './actions';
+import { joinHostWaitlist } from './actions';
 import type { FormState } from '@/lib/admin-types';
 
 const INITIAL: FormState = { ok: false };
 
 /**
- * Weekly Digest capture band (Landing §5, reused on How It Works + Categories; decision #9).
+ * Host waitlist capture band (R1-15c, H46). Anchored #hosts so the Landing "For Organizers" card
+ * has a real destination — it previously pointed at /#digest, dropping an organizer who clicked
+ * "Get early access" onto the parent-facing Weekly Digest signup.
  *
- * ONE CURATED SEND for everyone (owner 2026-07-18) — email is the only field. The grade / interest
- * / state selects were removed with the personalized promise: R1 digests are hand-curated, so
- * segmenting them weekly isn't sustainable, and asking for a student's grade to power a matching
- * feature that doesn't exist yet is data we shouldn't be holding. M26 (Phase 2) re-collects
- * preferences when automated matching can actually honor them.
- *
- * Still pitched to parents/educators/16+ — a marketing email to a child would trigger COPPA.
+ * Organizer framing, not parent/16+: this audience is adults acting for an organization, so the
+ * consent microcopy differs from the digest/follow captures by design.
  * Inert until Brevo env is set — see actions.ts / lib/brevo.ts.
  */
-export function DigestBand() {
-  const [state, formAction, submitting] = useActionState(subscribeDigest, INITIAL);
+export function HostWaitlistBand() {
+  const [state, formAction, submitting] = useActionState(joinHostWaitlist, INITIAL);
 
   return (
     <section
-      id="digest"
-      aria-labelledby="digest-heading"
-      className="rounded-[var(--radius-panel)] border border-border bg-brand-gold-soft/60 p-6 sm:p-10"
+      id="hosts"
+      aria-labelledby="hosts-heading"
+      className="rounded-[var(--radius-panel)] border border-border bg-surface-raised p-6 sm:p-10"
     >
       <div className="mx-auto grid max-w-2xl justify-items-center gap-3 text-center">
-        <h2 id="digest-heading" className="font-display text-2xl text-foreground sm:text-3xl">
-          New competitions, <em>every week</em>
+        <h2 id="hosts-heading" className="font-display text-2xl text-foreground sm:text-3xl">
+          Run a competition? <em>Get early access</em>
         </h2>
         <p className="text-sm text-muted">
-          One short email a week with newly added and closing-soon competitions, hand-picked by our
-          curators. No spam, unsubscribe anytime.
+          Host tools — claiming your listing, managing editions, reaching the families already
+          searching for what you run — are on the way. We’ll email you when they open up.
         </p>
 
         {state.ok ? (
           <FormResult
             ok
-            message={state.error ?? 'You’re in! Watch for your first Weekly Digest soon.'}
+            message={state.error ?? 'You’re on the list.'}
             className="mt-2 w-full max-w-md text-left"
           />
         ) : (
@@ -61,19 +58,18 @@ export function DigestBand() {
                   name="email"
                   required
                   autoComplete="email"
-                  placeholder="you@example.com"
+                  placeholder="you@organization.org"
                   aria-label="Email address"
-                  className="bg-background"
                 />
                 <Button type="submit" disabled={submitting} className="shrink-0">
-                  {submitting ? 'Signing up…' : 'Get the digest'}
+                  {submitting ? 'Joining…' : 'Join the waitlist'}
                 </Button>
               </div>
             </form>
 
             <p className="max-w-md text-xs text-muted">
-              For parents, educators, and students 16+. We’ll send the Weekly Digest and nothing
-              else — unsubscribe anytime. See our{' '}
+              For competition organizers. We’ll email you about host access and nothing else —
+              unsubscribe anytime. See our{' '}
               <Link
                 href="/privacy"
                 className="font-medium text-foreground underline underline-offset-2 hover:text-brand-gold"

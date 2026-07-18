@@ -92,6 +92,9 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
   parents/educators/16+ with consent microcopy + Privacy link (COPPA-safe — a newsletter to a child
   would trigger consent); honeypot; **inert without Brevo env** (friendly "opening soon"). Single
   interest for R1 (multi is a later enhancement). Owner setup: setup-runbook §7a.
+  ⚠ **Superseded in part by R1-15c (2026-07-18):** the preference questions were removed and the
+  digest is now one curated send for everyone. The attribute-collection described above no longer
+  happens — see R1-15c below.
 - **R1-15b** — Listing-page captures (Brevo/queue-backed, no accounts needed): **per-competition follow-by-email** (M29), **"Request a Competition"** multi-step wizard form (page-blueprints Page 6) → curation queue (DQ15), **"Are you the organizer?" host-interest CTA** → host waitlist (H46).
   ✅ **Code done 2026-07-17.** Owner decisions (2026-07-17): follow + host captures use **Brevo lists**
   (no schema), and follow ships now with **parent/16+ framing + double opt-in** (COPPA-safe). Built:
@@ -103,6 +106,37 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
   request path (COPPA-clear). **Post-review fix:** migration `0013` adds `import_record.origin`
   (`PIPELINE`|`USER_REQUEST`) so public requests are badged in the admin queue + review header —
   curators never apply pipeline-grade trust to an unvetted submission. Owner setup: setup-runbook §7a.
+  ⚠ **Superseded in part by R1-15c (2026-07-18):** the host-interest capture split in two — a general
+  **Host Waitlist** list and a **Claim Request** form that emails the admin inbox instead of joining
+  a list. Follow is unchanged apart from softened copy. See R1-15c below.
+- **R1-15c** — **Subscription-flow split + light-mode default.** Owner decisions 2026-07-18.
+  ✅ **Code done 2026-07-18.** Four flows, deliberately distinct instead of three blended lists:
+  (1) **Weekly Digest** → digest list; (2) **Follow** → follow list; (3) **Host Waitlist** → its own
+  list (`BREVO_HOST_WAITLIST_LIST_ID`, legacy `BREVO_HOST_LIST_ID` still read as a fallback);
+  (4) **Claim Request** → a form emailing `HOST_CLAIM_EMAIL` (`admin@beecompete.com`), **not a
+  list** — a claim is a 1:1 support conversation needing context and a human reply, and a business
+  contact shouldn't land on a marketing list they never joined. Optional waitlist opt-in checkbox is
+  the one bridge between (3) and (4); it's best-effort so a list failure can't fail the claim.
+  - **Digest de-personalized** — grade/interest/state selects removed, `GRADE`/`INTEREST`/`STATE`
+    no longer sent, `lib/digest-options.ts` → `lib/category-options.ts` (only the Request-a-
+    Competition category picker survived). R1 sends are hand-curated, so a weekly *personalized*
+    promise wasn't deliverable. **M26 (Phase 2) re-collects preferences** when matching can honor
+    them; the existing Brevo attributes are deliberately **left in place** so already-submitted
+    values survive for it.
+  - **Follow copy softened** to "when this competition's dates are announced or updated" — automated
+    per-deadline reminders are M30/X11 in Phase 2.
+  - **Host waitlist band** added to the Landing (`#hosts`); the **"For Organizers" audience card no
+    longer points at `/#digest`**, which had been dropping organizers onto the parent-facing digest.
+  - **`/subscribed/[flow]` confirmation page** (page-blueprints Page 7) — DOI `redirectionUrl` is a
+    per-call field, so one Brevo template now lands each flow on its own page built from `SITE_URL`
+    (staging confirms land on staging). **`BREVO_DOI_REDIRECT_URL` removed** — one env var could
+    only ever point all three flows at the same place.
+  - **Capture UX:** success copy echoes the submitted address + a spam/promotions hint; emails
+    normalized to trimmed lowercase (case-variant duplicates were silently colliding in Brevo); the
+    honeypot's unconditional "check your inbox" now mirrors real per-flow copy.
+  - **Light mode is the default** regardless of OS `prefers-color-scheme` (`enableSystem={false}`);
+    the toggle and its persistence are unchanged, so an explicit dark choice still sticks.
+  - Owner setup: setup-runbook §7a.
 - **R1-16** — In-app **bug/feedback report**. (DQ7 precursor)
   ✅ **Code done 2026-07-17.** A lightweight `/feedback` page (noindex) + footer "Send Feedback"
   link (Contribute column): category (Bug/Idea/Content/Other) + message + optional reply email +
