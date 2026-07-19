@@ -106,13 +106,17 @@ export async function submitClaimRequest(_prev: FormState, form: FormData): Prom
 
   // Best-effort, post-send: the claim is already delivered, so a list failure here is logged and
   // swallowed rather than shown as a failure for something that actually succeeded.
+  //
+  // Deliberately sends NO attributes. Brevo attributes are per-CONTACT, not per-list, so writing
+  // COMPETITION here would clobber the multi-value follow list of anyone who also follows
+  // competitions — a claimant who follows AMC 10 would lose that follow. The claim email to the
+  // admin inbox already records which listing this was, so nothing is lost by omitting it.
   if (joinWaitlist && brevoListEnabled(cfg, cfg.hostWaitlistListId)) {
     try {
       await subscribeToBrevoList(cfg, {
         email,
         listId: cfg.hostWaitlistListId,
         redirectUrl: absoluteUrl(confirmationPath('hosts')),
-        attributes: { COMPETITION: competition },
       });
     } catch (e) {
       reportBrevoError('claim-waitlist-optin', e);

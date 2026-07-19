@@ -125,6 +125,23 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
     values survive for it.
   - **Follow copy softened** to "when this competition's dates are announced or updated" — automated
     per-deadline reminders are M30/X11 in Phase 2.
+  - **Follow is multi-competition (append + dedupe).** A Brevo attribute has one slot per *contact*,
+    so following a second competition used to overwrite the first — silently un-mailing them about
+    it. `COMPETITION` now stores a delimiter-wrapped list (`|AMC 10|MATHCOUNTS|`, segment on
+    *contains* `|AMC 10|`) in a **text** attribute; *multiple-choice* was rejected because it needs
+    every competition pre-registered as an option, i.e. a sync job whose lag drops follow data.
+    `subscribeWithAttributeList` reads the contact first and branches: **not yet on this list** →
+    normal double opt-in (consent is per-list, so a digest subscriber's first follow still gets its
+    own consent record); **already confirmed on it** → `PUT` the appended value, deliberately
+    **sending no second confirmation email**; **already has that competition** → no write at all,
+    which is what makes double-submits and re-follows harmless. A failed read falls back to a plain
+    subscribe rather than dropping a real signup. Entries are capped so a runaway list can't exceed
+    Brevo's 10,000-char text limit. Pure encode/parse logic is unit-tested in
+    `lib/brevo-attribute-list.test.ts`.
+    ⚠ **Verify once against a real Brevo contact:** Brevo does **not** document what
+    `POST /contacts/doubleOptinConfirmation` does for an already-confirmed contact. The read-first
+    branch is designed to never call it in that state, but the "existing contact, new list" path
+    (digest subscriber's first follow) does — confirm it sends exactly one confirmation email.
   - **Host waitlist band** added to the Landing (`#hosts`); the **"For Organizers" audience card no
     longer points at `/#digest`**, which had been dropping organizers onto the parent-facing digest.
   - **`/subscribed/[flow]` confirmation page** (page-blueprints Page 7) — DOI `redirectionUrl` is a

@@ -18,6 +18,12 @@
 // posture) and good deliverability hygiene.
 
 import * as Sentry from '@sentry/nextjs';
+import {
+  addToAttributeList,
+  encodeAttributeList,
+  parseAttributeList,
+  sanitizeEntry,
+} from '@/lib/brevo-attribute-list';
 
 const BREVO_BASE = 'https://api.brevo.com/v3';
 
@@ -131,7 +137,77 @@ export function brevoListEnabled(cfg: BrevoConfig, listId: number | undefined): 
   return Boolean(cfg.apiKey && listId);
 }
 
-export type SubscribeResult = 'confirm' | 'subscribed';
+export type SubscribeResult =
+  /** Double-opt-in email sent; nothing is stored until they click. */
+  | 'confirm'
+  /** Single opt-in — added to the list immediately. */
+  | 'subscribed'
+  /** Already a confirmed member of this list; a value was appended WITHOUT emailing them again. */
+  | 'added'
+  /** Already a confirmed member and the value was already recorded — nothing to do. */
+  | 'already';
+
+export interface BrevoContact {
+  id: number;
+  email: string;
+  attributes: Record<string, unknown>;
+  listIds: number[];
+}
+
+/**
+ * Fetch one contact by email. Returns null when Brevo has never seen the address (404) — with
+ * double opt-in that also covers "signed up but never clicked confirm", since the contact isn't
+ * created until they do. Throws on any other non-2xx so the caller can decide how to degrade.
+ */
+export async function getBrevoContact(
+  cfg: BrevoConfig,
+  email: string,
+): Promise<BrevoContact | null> {
+  if (!cfg.apiKey) throw new Error('Brevo is not configured');
+
+  const res = await fetch(`${BREVO_BASE}/contacts/${encodeURIComponent(email)}`, {
+    headers: { 'api-key': cfg.apiKey, accept: 'application/json' },
+    cache: 'no-store',
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Brevo get contact failed: ${res.status}`);
+
+  const data = (await res.json()) as Partial<BrevoContact>;
+  return {
+    id: data.id ?? 0,
+    email: data.email ?? email,
+    attributes: data.attributes ?? {},
+    listIds: data.listIds ?? [],
+  };
+}
+
+/**
+ * Update an existing contact's attributes and/or add it to lists. Sends NO email — which is the
+ * whole point: someone who already double-opted into this list should not be re-confirmed just
+ * because they followed a second competition. `listIds` ADDS lists (removal is `unlinkListIds`).
+ */
+export async function updateBrevoContact(
+  cfg: BrevoConfig,
+  email: string,
+  { listIds, attributes }: { listIds?: number[]; attributes?: Record<string, string> },
+): Promise<void> {
+  if (!cfg.apiKey) throw new Error('Brevo is not configured');
+
+  const res = await fetch(`${BREVO_BASE}/contacts/${encodeURIComponent(email)}`, {
+    method: 'PUT',
+    headers: {
+      'api-key': cfg.apiKey,
+      'content-type': 'application/json',
+      accept: 'application/json',
+    },
+    body: JSON.stringify({
+      ...(listIds && listIds.length > 0 ? { listIds } : {}),
+      ...(attributes && Object.keys(attributes).length > 0 ? { attributes } : {}),
+    }),
+  });
+  // 204 is the documented success for an update.
+  if (!res.ok) throw new Error(`Brevo update contact failed: ${res.status}`);
+}
 
 /**
  * Add a contact to a Brevo list. Returns 'confirm' when a double-opt-in email was sent (the
@@ -170,6 +246,68 @@ export async function subscribeToBrevoList(
     reportBrevoError(`subscribe-attributes (retrying without) list=${listId}`, e);
     return await postSubscribe(cfg, email, listId, redirectUrl, undefined);
   }
+}
+
+/**
+ * Subscribe to a list where one contact can accumulate MANY values in a single text attribute —
+ * the per-competition Follow case, where a contact attribute's single slot would otherwise mean
+ * each new follow silently overwrote the last.
+ *
+ * Reads the contact first and branches:
+ *   - not a confirmed member of this list  → normal subscribe (double opt-in), carrying over any
+ *     values they already had, so a digest subscriber's first follow still gets a consent record
+ *     for the FOLLOW list specifically. Consent is per-list, so this must not be skipped.
+ *   - already a confirmed member           → PUT the appended value. No email: their existing
+ *     double opt-in already covers this list, so re-confirming would just be spam.
+ *   - already a member AND already has it  → 'already', no write at all (handles double-submits
+ *     and re-following the same competition).
+ *
+ * If the read fails (rate limit, transient network), we fall back to a plain subscribe rather than
+ * dropping a real signup — that degrades to the old overwrite behaviour for this one call, which is
+ * strictly better than losing the person.
+ */
+export async function subscribeWithAttributeList(
+  cfg: BrevoConfig,
+  {
+    email,
+    listId,
+    redirectUrl,
+    attribute,
+    value,
+  }: { email: string; listId: number; redirectUrl: string; attribute: string; value: string },
+): Promise<SubscribeResult> {
+  let existing: BrevoContact | null = null;
+  try {
+    existing = await getBrevoContact(cfg, email);
+  } catch (e) {
+    reportBrevoError(`get-contact (falling back to overwrite) list=${listId}`, e);
+    return subscribeToBrevoList(cfg, {
+      email,
+      listId,
+      redirectUrl,
+      attributes: { [attribute]: encodeAttributeList([sanitizeEntry(value)]) },
+    });
+  }
+
+  const current = parseAttributeList(existing?.attributes?.[attribute]);
+  const next = addToAttributeList(current, value);
+
+  // Not on this list yet (brand-new contact, or one who only ever joined a different list) → the
+  // subscribe path, so this list gets its own consent record.
+  if (!existing || !existing.listIds.includes(listId)) {
+    return subscribeToBrevoList(cfg, {
+      email,
+      listId,
+      redirectUrl,
+      attributes: { [attribute]: encodeAttributeList(next) },
+    });
+  }
+
+  // addToAttributeList returns the SAME array reference when the value was already present.
+  if (next === current) return 'already';
+
+  await updateBrevoContact(cfg, email, { attributes: { [attribute]: encodeAttributeList(next) } });
+  return 'added';
 }
 
 /**

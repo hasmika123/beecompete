@@ -268,11 +268,23 @@ configured. Wire only the captures you want live.
    blended list can't be mailed without spamming the other two audiences.
    *(`BREVO_HOST_LIST_ID` is the pre-R1-15c name for the host waitlist and is still read as a
    fallback, so an existing prod env keeps working until you rename it.)*
-3. **Contact attributes:** Brevo → **Contacts → Settings → Contact attributes** → create the text
-   attribute **`COMPETITION`** (which listing a follow/claim visitor acted on). Brevo rejects
+3. **Contact attributes:** Brevo → **Contacts → Settings → Contact attributes** → create the
+   attribute **`COMPETITION`**, type **text** (not *multiple-choice* — see below). Brevo rejects
    contacts with undefined attributes. `GRADE`/`INTEREST`/`STATE` are **no longer sent** (the Weekly
    Digest became one curated send at R1-15c) — if they already exist, **leave them**: deleting them
    destroys values existing subscribers submitted, which M26 will want in Phase 2.
+
+   **`COMPETITION` holds a LIST, delimiter-wrapped:** `|AMC 10|MATHCOUNTS|`. A Brevo attribute has
+   one slot per *contact* (not per list), so a follower's second competition would otherwise
+   overwrite the first and silently stop mailing them about it. To segment, filter on
+   **`COMPETITION` contains `|AMC 10|`** — include the pipes, or "AMC 10" also matches a listing
+   named "AMC 10/12". Type must be **text**: *multiple-choice* would be a truer fit but requires
+   every competition pre-registered as an option, i.e. a sync job that silently drops follows
+   whenever it lags behind the catalog.
+
+   Only the **Follow** capture writes `COMPETITION`. The host-waitlist opt-in on a Claim Request
+   deliberately writes no attributes, because attributes are per-contact and it would clobber the
+   follow list of a claimant who also follows competitions.
 4. **Double opt-in (recommended):** create one transactional **"confirm your subscription" template**
    (Brevo → Campaigns → Templates) whose confirm button uses Brevo's **double opt-in link tag** →
    copy its id → `BREVO_DOI_TEMPLATE_ID` (shared across all three list captures). Without it,

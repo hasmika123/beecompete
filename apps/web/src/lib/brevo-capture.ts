@@ -5,6 +5,7 @@ import {
   isValidEmail,
   reportBrevoError,
   subscribeToBrevoList,
+  subscribeWithAttributeList,
 } from '@/lib/brevo';
 import { isHoneypotTripped } from '@/lib/honeypot';
 import { absoluteUrl } from '@/lib/site';
@@ -18,6 +19,11 @@ interface CaptureOptions {
   flow: SubscriptionFlow;
   /** Non-empty attributes to segment on (Brevo attaches best-effort — see subscribeToBrevoList). */
   attributes?: Record<string, string>;
+  /**
+   * Accumulate `value` into a multi-value text attribute instead of overwriting it, so one contact
+   * can follow several competitions. Mutually exclusive with `attributes`.
+   */
+  appendAttribute?: { name: string; value: string };
   /** Shown when the list isn't wired (inert). */
   notReady: string;
   /** Success copy for double opt-in. Takes the address so we can echo it back — the single most
@@ -25,6 +31,11 @@ interface CaptureOptions {
   confirm: (email: string) => string;
   /** Success copy for single opt-in (added immediately, nothing to confirm). */
   done: string;
+  /** Appended to an ALREADY-confirmed contact — no confirmation email was sent. Required with
+   *  `appendAttribute`, unreachable without it. */
+  added?: string;
+  /** They already had this value recorded (double-submit / re-follow). Nothing was written. */
+  already?: string;
 }
 
 /**
@@ -61,19 +72,38 @@ export async function captureToList(form: FormData, opts: CaptureOptions): Promi
   }[opts.flow];
   if (!brevoListEnabled(cfg, listId)) return { ok: false, error: opts.notReady };
 
+  // Absolute + built from SITE_URL, so a staging confirmation lands on staging instead of
+  // bouncing the tester into production.
+  const redirectUrl = absoluteUrl(confirmationPath(opts.flow));
+
   try {
-    const result = await subscribeToBrevoList(cfg, {
-      email,
-      listId,
-      // Absolute + built from SITE_URL, so a staging confirmation lands on staging instead of
-      // bouncing the tester into production.
-      redirectUrl: absoluteUrl(confirmationPath(opts.flow)),
-      attributes: opts.attributes,
-    });
-    return {
-      ok: true,
-      error: result === 'confirm' ? `${opts.confirm(email)} ${SPAM_HINT}` : opts.done,
-    };
+    const result = opts.appendAttribute
+      ? await subscribeWithAttributeList(cfg, {
+          email,
+          listId,
+          redirectUrl,
+          attribute: opts.appendAttribute.name,
+          value: opts.appendAttribute.value,
+        })
+      : await subscribeToBrevoList(cfg, {
+          email,
+          listId,
+          redirectUrl,
+          attributes: opts.attributes,
+        });
+
+    switch (result) {
+      case 'confirm':
+        return { ok: true, error: `${opts.confirm(email)} ${SPAM_HINT}` };
+      // Already confirmed on this list — no second confirmation email was sent, so don't tell them
+      // to go check their inbox for one.
+      case 'added':
+        return { ok: true, error: opts.added ?? opts.done };
+      case 'already':
+        return { ok: true, error: opts.already ?? opts.done };
+      default:
+        return { ok: true, error: opts.done };
+    }
   } catch (e) {
     reportBrevoError(`${opts.flow}-capture`, e);
     return { ok: false, error: 'Sorry — we couldn’t sign you up just now. Please try again.' };
