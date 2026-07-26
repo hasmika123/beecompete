@@ -117,12 +117,17 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
   list** — a claim is a 1:1 support conversation needing context and a human reply, and a business
   contact shouldn't land on a marketing list they never joined. Optional waitlist opt-in checkbox is
   the one bridge between (3) and (4); it's best-effort so a list failure can't fail the claim.
-  - **Digest de-personalized** — grade/interest/state selects removed, `GRADE`/`INTEREST`/`STATE`
-    no longer sent, `lib/digest-options.ts` → `lib/category-options.ts` (only the Request-a-
-    Competition category picker survived). R1 sends are hand-curated, so a weekly *personalized*
-    promise wasn't deliverable. **M26 (Phase 2) re-collects preferences** when matching can honor
-    them; the existing Brevo attributes are deliberately **left in place** so already-submitted
-    values survive for it.
+  - **Digest de-personalized** — the *promise* is one curated send for everyone; R1 sends are
+    hand-curated, so a weekly *personalized* promise wasn't deliverable. `lib/digest-options.ts` →
+    `lib/category-options.ts` (only the Request-a-Competition category picker survived).
+    **Rev 2026-07-26:** preference *collection* returned as a **popup after the email step**
+    (`lib/digest-preferences.ts` + Modal in the DigestBand): three optional selects, honestly
+    framed as curator insight + future personalization — the send stays generic. Save / Skip /
+    every dismissal completes the subscription (closing an optional extra must not cancel the
+    signup); Skip and dismissal drop selected answers (`intent=skip`). With DOI the contact doesn't
+    exist until confirmation, so preferences must ride the single subscribe call — hence popup
+    *before* the action fires, and a no-JS band submit degrades to email-only. `GRADE`/`INTEREST`/
+    `STATE` text attributes must exist in Brevo (setup-runbook §7a).
   - **Follow copy softened** to "when this competition's dates are announced or updated" — automated
     per-deadline reminders are M30/X11 in Phase 2.
   - **Follow is multi-competition (append + dedupe).** A Brevo attribute has one slot per *contact*,

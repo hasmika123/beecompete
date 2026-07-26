@@ -268,11 +268,12 @@ configured. Wire only the captures you want live.
    blended list can't be mailed without spamming the other two audiences.
    *(`BREVO_HOST_LIST_ID` is the pre-R1-15c name for the host waitlist and is still read as a
    fallback, so an existing prod env keeps working until you rename it.)*
-3. **Contact attributes:** Brevo → **Contacts → Settings → Contact attributes** → create the
-   attribute **`COMPETITION`**, type **text** (not *multiple-choice* — see below). Brevo rejects
-   contacts with undefined attributes. `GRADE`/`INTEREST`/`STATE` are **no longer sent** (the Weekly
-   Digest became one curated send at R1-15c) — if they already exist, **leave them**: deleting them
-   destroys values existing subscribers submitted, which M26 will want in Phase 2.
+3. **Contact attributes:** Brevo → **Contacts → Settings → Contact attributes** → create **four
+   text attributes**: **`COMPETITION`** (see below) and **`GRADE`, `INTEREST`, `STATE`** (the
+   digest signup's optional preference popup, rev 2026-07-26 — asked after the email step, stored
+   for curator insight + M26 segmentation; the R1 send itself stays one curated email for
+   everyone). Brevo rejects contacts with undefined attributes — a missing one triggers the
+   attribute-retry (signup kept, preferences dropped, Sentry event).
 
    **`COMPETITION` holds a LIST, delimiter-wrapped:** `|AMC 10|MATHCOUNTS|`. A Brevo attribute has
    one slot per *contact* (not per list), so a follower's second competition would otherwise

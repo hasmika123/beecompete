@@ -88,8 +88,9 @@ curation tooling + import/correction queues, public catalog + search/filter API,
 frontend (marketplace, category hubs, competition detail, Landing / How It Works / Categories), SEO
 (sitemap / OG / structured data, indexing env-gated), trust badges, share, the four legal pages,
 privacy-first analytics, Brevo email captures, and a WCAG 2.1 AA a11y pass. **R1-15c (2026-07-18)**
-split the email captures into four distinct flows — Weekly Digest (now one *generic* curated send,
-no preference questions) · per-competition Follow · Host Waitlist · Claim Request (a form emailing
+split the email captures into four distinct flows — Weekly Digest (one *generic* curated send;
+signup asks optional grade/interest/state in a popup after the email step, rev 2026-07-26) ·
+per-competition Follow · Host Waitlist · Claim Request (a form emailing
 `HOST_CLAIM_EMAIL`, **not** a list) — added the `/subscribed/[flow]` post-confirmation page, and made
 **light mode the default** regardless of OS setting (the toggle still works and persists). **The detailed as-built lives in the proper docs — don't re-log task-by-task here:**
 `architecture.md` §10a/§13a–§13c, `domain-model.md` §3b/§3f/§8/§8a, `setup-runbook.md`. Next is the

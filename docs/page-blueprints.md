@@ -107,10 +107,15 @@ disclaimer (→ R1-13) · contact/support · social links (→ R1-12) · Request
 **5. Weekly Digest signup** (→ R1-15) *(reframed — owner 2026-07-08; simplified — owner 2026-07-18)*
 - **Layout:** capture band branded as a **weekly competitions digest** — heading promises a weekly
   list of **newly added and closing-soon competitions, curated by us**; email input + submit (Brevo).
-- **Flow:** email only. **No preference questions** — the R1 digest is one curated send that goes to
-  every subscriber alike, so asking for grade/interest/region would collect data we can't yet act on
-  and imply a personalized send we can't deliver weekly. Per-subscriber matching returns with
-  **M26 (Phase 2)**, which re-collects preferences when it can honor them.
+- **Flow:** the band asks for **email only** (lowest friction); submitting opens a **popup with
+  three optional preference questions** (grade / interest / state — owner 2026-07-26). Save, Skip,
+  and every dismissal path (Escape / backdrop / ✕) all complete the subscription — dismissing the
+  optional extra must not cancel the signup the visitor asked for; Skip and dismissal drop any
+  selected answers. The R1 digest remains **one curated send for every subscriber alike** — the
+  popup copy says preferences guide curators + future personalization (M26, Phase 2), never
+  promising a personalized send today. *(Technical constraint: with double opt-in the contact
+  doesn't exist until confirmation, so preferences must ride on the single subscribe call — the
+  popup sits before it, not after.)*
 - **Success:** inline, echoes the submitted address ("we sent a confirmation link to …") plus a
   spam/promotions hint; confirming in the email lands on **§7** below.
 
