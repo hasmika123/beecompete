@@ -90,8 +90,11 @@ services:
     env_file: [.env]
     networks: [internal]
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:8080/actuator/health']
-      interval: 15s
+      # LIVENESS only — the /actuator/health aggregate includes the DataSource ping; a 15s
+      # interval meant a Neon round-trip every 15s, 24/7, which defeated autosuspend and
+      # exhausted the shared free-tier compute quota (July 2026 outage; same fix as prod).
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:8080/actuator/health/liveness']
+      interval: 30s
       timeout: 5s
       retries: 10
       start_period: 60s

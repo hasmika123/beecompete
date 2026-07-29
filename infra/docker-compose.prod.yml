@@ -87,8 +87,13 @@ services:
     env_file: [.env]
     networks: [internal]
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:8080/actuator/health']
-      interval: 15s
+      # LIVENESS only — the plain /actuator/health aggregate includes the DataSource ping,
+      # so at interval 15s this healthcheck was a Neon round-trip every 15s, 24/7 (×2 with
+      # staging). That kept the compute permanently awake and exhausted the free-tier
+      # quota (July 2026 outage). Liveness proves the JVM/app is up without touching the
+      # DB; DB visibility is the external /api/healthz/db monitor's job (setup-runbook).
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:8080/actuator/health/liveness']
+      interval: 30s
       timeout: 5s
       retries: 10
       start_period: 60s
