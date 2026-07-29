@@ -107,6 +107,20 @@ site still shows. The old GoDaddy box (runs a separate app, `dossier`) is left u
   homepage instead), and Sentry (above) are all live. Neon stays **free-tier** with
   `scripts/backup-neon.sh` as the logical-backup net; **paid-tier PITR + a test restore are deferred to
   R2** (no user data yet — trigger: prod content seeding or R2).
+- **INCIDENT 2026-07-29 — Neon free-tier compute quota exhausted; DB down for days, monitoring blind.**
+  Both stacks share one Neon account; three independent always-on loops kept BOTH computes from ever
+  autosuspending (free tier ≈ 191.9 compute-h/mo; two 0.25-CU computes awake 24/7 ≈ 360): **(a)** the
+  docker healthchecks hit the `/actuator/health` aggregate (includes the DataSource ping) every 15 s ×
+  2 stacks; **(b)** Hikari `minimum-idle: 2` + `max-lifetime` 4 min re-dialed Neon every ≤4 min even at
+  zero traffic; **(c)** homepage/public pages are dynamic, though their reads mostly hit Next's hourly
+  data cache. Meanwhile `beecompete.com/` kept serving 200s from that stale data cache, so UptimeRobot
+  never fired. **Fixes (in repo, land on next deploy):** compose healthchecks → `/actuator/health/liveness`
+  @30 s (no DB touch); Hikari `minimum-idle: 0` (pool drains → Neon can suspend); new public probe
+  **`/api/healthz/db`** (web BFF → API health aggregate, real DB round-trip, 200/503) for a second
+  UptimeRobot monitor at **30–60 min** (§9.3). **Owner actions:** add that monitor; check the Neon console
+  usage graph to confirm the burn profile; quota resets Aug 1 (or upgrade the plan to restore service
+  sooner). With the fixes, idle burn should drop to a few compute-h/day — re-check the Neon usage graph
+  mid-August.
 - **Still open before the public launch** (the R1-17 gate — `phase-1-plan.md`): privacy-counsel review of
   the legal pages + fill entity/governing-law + flip `LEGAL_REVIEW_PENDING`; the content gate (≥ 200
   seeded); the indexing flip + sitemap submit. Plus housekeeping: rotate the Neon **prod** DB password;
@@ -314,8 +328,14 @@ is live (§8).
 2. **Confirm capture:** trigger a test error on staging and verify it lands in Sentry (both a browser
    error and an API 500). Check JSON logs are flowing (`docker logs` on the api container shows one
    JSON object per line, `service:beecompete-api`).
-3. **Uptime monitor** (UptimeRobot/BetterStack free) → poll `https://<domain>/actuator/health`
-   (expects `{"status":"UP"}`); alert to email.
+3. **Uptime monitor** (UptimeRobot/BetterStack free) → TWO monitors (July 2026 lesson: the
+   homepage stays 200 off Next's data cache even with the DB dead, so one homepage monitor is
+   blind to a database outage):
+   - `https://<domain>/` at 5 min — edge/web reachability (cheap, no DB).
+   - `https://<domain>/api/healthz/db` at **30–60 min** — the only public URL doing a real
+     Neon round-trip (200 UP / 503 DOWN). ⚠️ Never poll it at 5 min: each hit wakes Neon for
+     ~5 min, so a 5-min interval keeps the compute awake 24/7 and burns the free-tier quota.
+   (The Spring API is private/BFF — `/actuator/health` is not public; the probe route proxies it.)
 - **Outputs:** DSNs live in each env; Sentry receiving events; uptime alerts on; JSON logs aggregating.
 
 ## 10. Redis  *(R2; R1 if rate-limiting early)*

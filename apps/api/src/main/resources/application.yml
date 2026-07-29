@@ -17,7 +17,13 @@ spring:
     # modest and lifetimes under Neon's idle window; tolerate cold-start wake latency.
     hikari:
       maximum-pool-size: ${DB_POOL_MAX:10}
-      minimum-idle: ${DB_POOL_MIN:2}
+      # 0, NOT a positive floor: an idle floor makes Hikari perpetually replace retired
+      # connections (max-lifetime below), so a zero-traffic API still re-dials Neon every
+      # few minutes — that defeats autosuspend and burns the free-tier compute quota
+      # (July 2026 outage). With 0 the pool drains to empty after idle-timeout and Neon
+      # can suspend; the first request after a nap pays one cold start, absorbed by
+      # connection-timeout.
+      minimum-idle: ${DB_POOL_MIN:0}
       max-lifetime: 240000 # 4 min — under Neon's ~5 min idle window
       idle-timeout: 120000 # 2 min
       connection-timeout: 20000 # generous enough to absorb a cold start
