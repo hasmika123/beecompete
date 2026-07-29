@@ -9,7 +9,7 @@
 > share, the four (draft) legal pages, privacy-first analytics, Brevo captures (digest / follow / host +
 > feedback), and a WCAG 2.1 AA a11y pass. **As-built detail lives in `architecture.md` §10a/§13a–§13c
 > and `domain-model.md` §3b/§3f/§8/§8a — not re-logged here.**
-> **S2/S3 seeding done:** the 342-competition master index (`docs/seeding/`, incl. the 2026-07-29 S2b extension) + the S3 extraction pipeline
+> **S2/S3 seeding done:** the 448-competition master index (`docs/seeding/`, incl. the 2026-07-29 S2b/S2c extensions) + the S3 extraction pipeline
 > (`tools/seeding/`); S4 curation (the ≥ 200-live content gate) is the remaining seeding work.
 > **Deployed:** IONOS VPS behind a shared edge Caddy, build-once-promote (staging on a `main` push, prod
 > on an `R*` tag; currently **R1.2**) — see `setup-runbook.md` "Current deployment — AS BUILT".

@@ -35,8 +35,8 @@ that the extraction pipeline and curators work down, in rank order, until the R1
 - Every live listing has a **current or upcoming Edition with verified dates**.
 - The **top ~50 by expected search volume** get a full spine + curated resources.
 
-This long-list deliberately **over-supplies** that gate (342 rows after the 2026-07-29 S2b
-extension) so that attrition during extraction and verification (dead pages, defunct programs,
+This long-list deliberately **over-supplies** that gate (448 rows after the 2026-07-29 S2b/S2c
+extensions) so that attrition during extraction and verification (dead pages, defunct programs,
 thin editions) still leaves ≥ 200 live.
 
 ### Intentional multi-row programs (S3 dedup note)
@@ -141,3 +141,15 @@ model attaches regions at the Edition level (`EditionRegion`).
   Caribou Contests, Lexus Eco Challenge, Panasonic Academic Challenge, Letters About Literature.
   One in-place repair: Conrad Challenge's `official_url` → `conrad.spacecenter.org` (old domain's
   TLS is dead).
+- **S2c extension (2026-07-29):** +106 rows (342 → 448), same per-site verification bar, going one
+  tier deeper: **state/regional science fairs + junior academies** (20, incl. TXSEF, SSEF Florida,
+  PJAS, GSEF), **university math tournaments + state math circuits** (16, incl. EMCC, TMSCA, FAMAT),
+  the **MUN/model-congress/national-circuit debate invitationals** (18, incl. PMUNC, Greenhill,
+  Stanford Invitational), **scholastic journalism/theatre/film** (16, incl. NSPA/CSPA/JEA/Thespys —
+  a previously uncovered lane), more essay/civics (13), misc national STEM (12, incl. Breakthrough
+  Junior Challenge, MITRE eCTF HS), and state academic/reading leagues (11, incl. UIL Academics,
+  America's Battle of the Books). Confirmed-dead this pass: Mandelbrot, Online Math Open, Illinois
+  WYSE/ACES, HSCTF, CyberStart America, NASA App Development Challenge (paused), White House Student
+  Film Festival, Lexus Eco Challenge, and the Carnegie-rental vanity music circuit (excluded by
+  policy). Note: some fall-cycle rows (CSPA Aug 31, Greenhill/VAMUN/BosMUN Aug-Sep, JEA Oct) have
+  imminent deadlines — curators should prioritize them in S4.
