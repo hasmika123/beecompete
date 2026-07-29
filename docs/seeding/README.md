@@ -35,9 +35,9 @@ that the extraction pipeline and curators work down, in rank order, until the R1
 - Every live listing has a **current or upcoming Edition with verified dates**.
 - The **top ~50 by expected search volume** get a full spine + curated resources.
 
-This long-list deliberately **over-supplies** that gate (284 rows post-audit) so that attrition
-during extraction and verification (dead pages, defunct programs, thin editions) still leaves
-≥ 200 live.
+This long-list deliberately **over-supplies** that gate (342 rows after the 2026-07-29 S2b
+extension) so that attrition during extraction and verification (dead pages, defunct programs,
+thin editions) still leaves ≥ 200 live.
 
 ### Intentional multi-row programs (S3 dedup note)
 
@@ -133,3 +133,11 @@ model attaches regions at the Edition level (`EditionRegion`).
   whose `official_url` pointed at a different program — and repaired a few in place with
   web-verified real programs (NASA Student Launch, USESO, INCubatoredu National Pitch). Rule going
   forward: **a row's `official_url` must belong to that specific competition.**
+- **S2b extension (2026-07-29):** +58 rows (284 → 342), each verified against its official site for
+  an active 2025-26/2026-27 cycle before inclusion. Notable coverage gains: seven world-language
+  exams + classics exams (`academic-bowl` 18 → 30), MUN circuit majors (`debate-speech`), and
+  CTSO/umbrella events (FFA CDEs, TSA National Conference, Beta Club). Candidates confirmed
+  defunct/dormant during this pass and deliberately excluded: JSA (dissolved 2024), ProjectCSGIRLS,
+  Caribou Contests, Lexus Eco Challenge, Panasonic Academic Challenge, Letters About Literature.
+  One in-place repair: Conrad Challenge's `official_url` → `conrad.spacecenter.org` (old domain's
+  TLS is dead).
