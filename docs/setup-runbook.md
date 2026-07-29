@@ -109,7 +109,10 @@ site still shows. The old GoDaddy box (runs a separate app, `dossier`) is left u
   R2** (no user data yet — trigger: prod content seeding or R2).
 - **Still open before the public launch** (the R1-17 gate — `phase-1-plan.md`): privacy-counsel review of
   the legal pages + fill entity/governing-law + flip `LEGAL_REVIEW_PENDING`; the content gate (≥ 200
-  seeded); the indexing flip + sitemap submit. Plus housekeeping: rotate the Neon **prod** DB password;
+  seeded — start it with `cd tools/seeding && bash run-prod-submit.sh`, which tunnels to the internal
+  prod API and fills the `/admin/import-records` queue; then curate/approve. Steps + caveats in the
+  R1-17 content-gate bullet of `phase-1-plan.md`); the indexing flip + sitemap submit. Plus
+  housekeeping: rotate the Neon **prod** DB password;
   repo → private + Pro (branch protection); AWS root MFA + no root keys; Brevo consent-email test (for
   R2's account flows).
 
