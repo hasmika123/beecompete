@@ -9,7 +9,7 @@
 // deliberately out of scope here.
 //
 // ┌─ R1-17 GO-LIVE CHECKLIST (everything the legal surface needs is in THIS file) ──────────────┐
-// │ 1. OPERATING_ENTITY   → set to the LLC's registered legal name once formed.                 │
+// │ 1. OPERATING_ENTITY   → DONE 2026-08-20: AutomoraLab LLC.                                   │
 // │ 2. GOVERNING_LAW_STATE → set to the state of formation (Terms governing-law clause).        │
 // │ 3. LEGAL_REVIEW_PENDING → flip to false AFTER counsel signs off (drops the "Draft" notice). │
 // │ Then bump LEGAL_LAST_UPDATED. No page files need editing — they read these constants.       │
@@ -20,15 +20,15 @@
 export const LEGAL_CONTACT_EMAIL = 'support@beecompete.com';
 
 /** The operating entity's legal name — the party you contract with in the Terms and the owner of
- *  the site's IP. TODO(R1-17, checklist #1): set to the LLC's registered name once formed, e.g.
- *  'BeeCompete LLC' (setup-runbook §1b — entity is a pre-launch, pre-R2 requirement). Distinct
- *  from the BRAND name "BeeCompete", which stays as-is in product copy; the Terms establish
- *  "BeeCompete" as the short form for this entity. */
-export const OPERATING_ENTITY = 'BeeCompete';
+ *  the site's IP. Set 2026-08-20 (R1-17 checklist #1 ✔). Distinct from the BRAND name
+ *  "BeeCompete", which stays as-is in product copy; the Terms establish "BeeCompete" as the short
+ *  form for this entity, so nothing user-facing needs renaming. */
+export const OPERATING_ENTITY = 'AutomoraLab LLC';
 
-/** US state whose law governs the Terms and venues disputes. TODO(R1-17, checklist #2): set to the
- *  state of LLC formation, e.g. 'Delaware'. Left null until then — governingLawJurisdiction() falls
- *  back to neutral placeholder wording so the clause is never blank or wrong. */
+/** US state whose law governs the Terms and venues disputes. TODO(R1-17, checklist #2): set to
+ *  AutomoraLab LLC's state of formation, e.g. 'Delaware'. STILL NULL — naming the entity does not
+ *  settle this, and guessing it would put a wrong venue in a contract. Until it is set,
+ *  governingLawJurisdiction() falls back to neutral wording so the clause is never blank or wrong. */
 export const GOVERNING_LAW_STATE: string | null = null;
 
 /** The jurisdiction phrase for the Terms' governing-law clause. Resolves to the concrete state once
@@ -40,7 +40,7 @@ export function governingLawJurisdiction(): string {
 }
 
 /** ISO date of the last substantive revision — shown as "Last updated" and bump on every edit. */
-export const LEGAL_LAST_UPDATED = '2026-07-17';
+export const LEGAL_LAST_UPDATED = '2026-08-20';
 
 /** True until a lawyer signs off (R1-17). Drives the on-page "under review" notice so the copy
  *  never silently reads as finalized before counsel has seen it. Flip to false at the launch gate. */
