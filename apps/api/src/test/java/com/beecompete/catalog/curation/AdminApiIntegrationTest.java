@@ -493,6 +493,11 @@ class AdminApiIntegrationTest {
 	@Test
 	@Order(8)
 	void importApproveCreatesTheFirstEditionAndKeyDates() throws Exception {
+		// NAMING: these fixtures must not resemble CatalogSearchIntegrationTest's isolation marker
+		// ("r15seed"). That suite scopes every assertion with q=<marker> and search is trigram-fuzzy
+		// (pg_trgm word similarity), so a competition called e.g. "Seeded Open" in this shared
+		// database silently joins its result sets and breaks four of its tests. Keep these names
+		// trigram-distant from that marker.
 		String categories = mvc.perform(withToken(get("/api/v1/admin/categories")))
 				.andReturn().getResponse().getContentAsString();
 		String mathId = findBySlug(categories, "math");
@@ -504,8 +509,8 @@ class AdminApiIntegrationTest {
 		// simply doesn't state a prize would be unapprovable. This asserts the leniency, not just the
 		// happy path - if someone later validates the wrapper here, this test is what fails.
 		String submission = """
-				{"payload": {"slug": "seeded-open", "name": "Seeded Open", "categoryId": "%s",
-				             "organizerName": "Seeded Org",
+				{"payload": {"slug": "import-edition-probe", "name": "Import Edition Probe", "categoryId": "%s",
+				             "organizerName": "Probe Org",
 				             "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL",
 				             "entryPathway": "INDIVIDUAL", "costType": "FREE", "recurrence": "ANNUAL",
 				             "edition": {"cycleLabel": "2026", "status": "OPEN", "scopeLevel": "NATIONAL"},
@@ -524,7 +529,7 @@ class AdminApiIntegrationTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.status", is("APPROVED")));
 
-		String compJson = mvc.perform(withToken(get("/api/v1/admin/competitions").param("query", "Seeded Open")))
+		String compJson = mvc.perform(withToken(get("/api/v1/admin/competitions").param("query", "Import Edition Probe")))
 				.andExpect(jsonPath("$.content", hasSize(1)))
 				.andExpect(jsonPath("$.content[0].provenanceSource", is("IMPORT")))
 				.andReturn().getResponse().getContentAsString();
@@ -546,7 +551,7 @@ class AdminApiIntegrationTest {
 		// THE POINT: the approved listing is immediately public. The readiness gate is
 		// EXISTS(edition) (domain-model 8a), so before this change every approved import was an
 		// invisible zombie - a seeding run of hundreds would have published nothing.
-		mvc.perform(get("/api/v1/competitions/seeded-open"))
+		mvc.perform(get("/api/v1/competitions/import-edition-probe"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.editions", hasSize(1)));
 
@@ -554,7 +559,7 @@ class AdminApiIntegrationTest {
 		// dates the curator believed they were approving.
 		String orphanDates = """
 				{"payload": {"slug": "orphan-dates", "name": "Orphan Dates", "categoryId": "%s",
-				             "organizerName": "Seeded Org",
+				             "organizerName": "Probe Org",
 				             "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL",
 				             "entryPathway": "INDIVIDUAL", "costType": "FREE", "recurrence": "ANNUAL",
 				             "keyDates": [{"type": "REG_CLOSE"}]},
@@ -574,7 +579,7 @@ class AdminApiIntegrationTest {
 		// entry fee needs a currency), it is only the wrapper's admin-form policy we skip.
 		String badEdition = """
 				{"payload": {"slug": "bad-edition", "name": "Bad Edition", "categoryId": "%s",
-				             "organizerName": "Seeded Org",
+				             "organizerName": "Probe Org",
 				             "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL",
 				             "entryPathway": "INDIVIDUAL", "costType": "FREE", "recurrence": "ANNUAL",
 				             "edition": {"cycleLabel": "2026", "status": "OPEN", "scopeLevel": "NATIONAL",
