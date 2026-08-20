@@ -59,14 +59,14 @@ export default function DesignPage() {
 
       <Section title="Type">
         <p className="font-display text-5xl text-foreground">
-          Search. Compete. <em>Participate.</em>
+          Search. Prepare. <em>Compete.</em>
         </p>
         <p className="font-display mt-2 text-2xl text-muted">
-          Display serif — Fraunces, weighted so titles never look thin.{' '}
+          Display serif: Fraunces, weighted so titles never look thin.{' '}
           <em>Italic accents, used sparingly.</em>
         </p>
         <p className="mt-4 max-w-prose text-base text-foreground">
-          Body and UI text is Inter — a clean, readable sans for paragraphs, labels, buttons, and
+          Body and UI text is Inter, a clean, readable sans for paragraphs, labels, buttons, and
           forms. It pairs quietly with the serif headlines above.
         </p>
         <p className="font-display mt-4 text-4xl text-foreground">
@@ -76,7 +76,7 @@ export default function DesignPage() {
 
       <Section title="Icons">
         <p className="mb-3 text-sm text-muted">
-          Phosphor, via <code className="rounded bg-surface px-1.5 py-0.5">@beecompete/ui</code> —
+          Phosphor, via <code className="rounded bg-surface px-1.5 py-0.5">@beecompete/ui</code>:
           regular by default; <code className="rounded bg-surface px-1.5 py-0.5">weight</code>{' '}
           variants (bold · fill · duotone) for emphasis and active states.
         </p>
@@ -146,7 +146,7 @@ export default function DesignPage() {
 
       <Section title="Cards">
         <p className="mb-3 text-sm text-muted">
-          CompetitionCard shown at its real listing width — 4 per row on desktop (--card-w, 258px;
+          CompetitionCard shown at its real listing width: 4 per row on desktop (--card-w, 264px;
           shell-derived, see tokens.css).
         </p>
         <div className="flex flex-wrap items-start gap-5">
@@ -264,7 +264,7 @@ export default function DesignPage() {
               <CardTitle>Plain card</CardTitle>
               <CardDescription>
                 Rounded 16px, hairline border, no shadow at rest. The card to the left is
-                `interactive` — hover it for the one sanctioned soft lift.
+                `interactive`. Hover it for the one sanctioned soft lift.
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-3">

@@ -76,7 +76,11 @@ site still shows. The old GoDaddy box (runs a separate app, `dossier`) is left u
   serves `robots.txt: Disallow:/` + per-page `noindex` until `SEARCH_INDEXING=on` is set in
   `~/beecompete-prod/.env` and the web service is recreated (`docker compose -f
   docker-compose.prod.yml up -d web` — env changes require recreate, which also clears the ISR
-  cache so cached noindex HTML can't linger). Then: verify `beecompete.com/robots.txt` + a
+  cache so cached noindex HTML can't linger). ⚠️ **That recreate needs `IMAGE_TAG` exported
+  first** — the pipeline injects it and it is deliberately absent from the prod `.env`, so the
+  bare command aborts with *"set IMAGE_TAG to the promoted build"*. Recover the running tag:
+  `export IMAGE_TAG=$(docker inspect --format '{{.Config.Image}}' beecompete-prod-web-1 | sed 's/.*://')`.
+  Then: verify `beecompete.com/robots.txt` + a
   page's robots meta, submit `sitemap.xml` to Google Search Console + Bing Webmaster Tools, and
   confirm staging still serves `Disallow:/` (staging's compose deliberately has no way to
   receive the flag). Full checklist lives in the R1-17 bullet of `docs/phase-1-plan.md`.
@@ -107,6 +111,20 @@ site still shows. The old GoDaddy box (runs a separate app, `dossier`) is left u
   homepage instead), and Sentry (above) are all live. Neon stays **free-tier** with
   `scripts/backup-neon.sh` as the logical-backup net; **paid-tier PITR + a test restore are deferred to
   R2** (no user data yet — trigger: prod content seeding or R2).
+- **INCIDENT 2026-07-29 — Neon free-tier compute quota exhausted; DB down for days, monitoring blind.**
+  Both stacks share one Neon account; three independent always-on loops kept BOTH computes from ever
+  autosuspending (free tier ≈ 191.9 compute-h/mo; two 0.25-CU computes awake 24/7 ≈ 360): **(a)** the
+  docker healthchecks hit the `/actuator/health` aggregate (includes the DataSource ping) every 15 s ×
+  2 stacks; **(b)** Hikari `minimum-idle: 2` + `max-lifetime` 4 min re-dialed Neon every ≤4 min even at
+  zero traffic; **(c)** homepage/public pages are dynamic, though their reads mostly hit Next's hourly
+  data cache. Meanwhile `beecompete.com/` kept serving 200s from that stale data cache, so UptimeRobot
+  never fired. **Fixes (in repo, land on next deploy):** compose healthchecks → `/actuator/health/liveness`
+  @30 s (no DB touch); Hikari `minimum-idle: 0` (pool drains → Neon can suspend); new public probe
+  **`/api/healthz/db`** (web BFF → API health aggregate, real DB round-trip, 200/503) for a second
+  UptimeRobot monitor at **30–60 min** (§9.3). **Owner actions:** add that monitor; check the Neon console
+  usage graph to confirm the burn profile; quota resets Aug 1 (or upgrade the plan to restore service
+  sooner). With the fixes, idle burn should drop to a few compute-h/day — re-check the Neon usage graph
+  mid-August.
 - **Still open before the public launch** (the R1-17 gate — `phase-1-plan.md`): privacy-counsel review of
   the legal pages + fill entity/governing-law + flip `LEGAL_REVIEW_PENDING`; the content gate (≥ 200
   seeded); the indexing flip + sitemap submit. Plus housekeeping: rotate the Neon **prod** DB password;
@@ -346,13 +364,53 @@ is live (§8).
 2. **Confirm capture:** trigger a test error on staging and verify it lands in Sentry (both a browser
    error and an API 500). Check JSON logs are flowing (`docker logs` on the api container shows one
    JSON object per line, `service:beecompete-api`).
-3. **Uptime monitor** (UptimeRobot/BetterStack free) → poll `https://<domain>/actuator/health`
-   (expects `{"status":"UP"}`); alert to email.
+3. **Uptime monitor** (UptimeRobot/BetterStack free) → TWO monitors (July 2026 lesson: the
+   homepage stays 200 off Next's data cache even with the DB dead, so one homepage monitor is
+   blind to a database outage):
+   - `https://<domain>/` at 5 min — edge/web reachability (cheap, no DB).
+   - `https://<domain>/api/healthz/db` at **30–60 min** — the only public URL doing a real
+     Neon round-trip (200 UP / 503 DOWN). ⚠️ Never poll it at 5 min: each hit wakes Neon for
+     ~5 min, so a 5-min interval keeps the compute awake 24/7 and burns the free-tier quota.
+     🔒 **Token-gated, fail closed** (2026-08-19) — because that same "each hit wakes Neon"
+     property made an ungated public URL a quota-burn lever for anything sweeping `/api/*`.
+     Set `HEALTHZ_TOKEN` in the prod `.env` (`openssl rand -hex 32`), recreate web, then add it
+     to the monitor as a custom header **`X-Healthz-Token: <token>`** (UptimeRobot → the
+     monitor → Advanced/Request settings → custom HTTP headers). A `?token=<token>` query
+     fallback works for monitors that can't set headers, but prefer the header: query strings
+     land in access/proxy logs. **Reading the alert:** `401` = token missing/wrong (or
+     `HEALTHZ_TOKEN` unset on the box), `503` = a genuine API/DB outage, `200` = healthy.
+   (The Spring API is private/BFF — `/actuator/health` is not public; the probe route proxies it.)
 - **Outputs:** DSNs live in each env; Sentry receiving events; uptime alerts on; JSON logs aggregating.
 
-## 10. Redis  *(R2; R1 if rate-limiting early)*
+## 10. Redis  *(DEFERRED TO R2 — decided 2026-08-19, do NOT deploy at R1)*
+
+**As-built at R1: Redis is not deployed anywhere.** It exists only in `infra/docker-compose.yml`
+(local dev) — deliberately absent from the `.edge`/`.staging`/`.prod` stacks — and `apps/api` has
+**no** Redis dependency in `build.gradle.kts` (no `spring-boot-starter-data-redis`, no bucket4j, no
+rate-limit library). So there is **no application-level rate limiting on any endpoint at R1.**
+
+**Why deferring is correct, not a shortcut** — the thing Redis would protect isn't publicly
+reachable. Per `infra/Caddyfile`, the edge has site blocks for the **web** containers only; each
+Spring API stays on its stack's `internal` network with no route in, so `/api/v1/**` has zero public
+attack surface (BFF pattern, architecture §4/§5). Standing up a Redis container on the shared 4 GB
+box before launch would add a service, a failure mode, and ~50–100 MB of the memory budget three
+stacks already share, in exchange for guarding endpoints nobody outside the box can call.
+
+**What actually guards the public surface at R1** (all of it Next.js server actions, not the API):
+per-action honeypot + Bean-Validation-mirroring size caps in-app, Cloudflare WAF, and the **one**
+free CF rate-limit rule — currently scoped to `/suggest-a-` (Block, 20/10s). Known gaps, accepted
+for launch: the Brevo captures (digest / follow / host) and `/feedback` are **not** covered by that
+rule, so a flood there burns Brevo send quota and sender reputation rather than the DB. Post-launch,
+watch real traffic for a week before re-pointing the rule (see `cloudflare-ratelimit-repoint-at-r2`).
+
+**Trigger to actually build this (R2):** accounts + login land. Login brute-force needs a shared
+counter, and that's the first requirement a per-instance in-memory limiter can't honestly meet.
+Then:
 1. Add a **Redis** container to Compose (or a managed Redis).
-2. Used for **cache + rate-limit counters only** — sessions and the job queue live in **Postgres** (architecture ADR 9/10), so Redis holds nothing durable and needs no persistence config.
+2. Used for **cache + rate-limit counters only** — sessions and the job queue live in **Postgres**
+   (architecture ADR 9/10), so Redis holds nothing durable and needs no persistence config.
+3. Re-scope the CF rate-limit rule (or upgrade to Pro for more rules) now that app-level limiting
+   covers the authenticated surface.
 - **Outputs:** `REDIS_URL`.
 
 ## 11. Privacy analytics  *(R1-14 — code is DONE; this is the owner setup to switch it on)*
@@ -378,8 +436,9 @@ Next.js SSR behind Caddy — verified the beacon never lands in the prod HTML �
    but the dead-clicks script still *downloads* off the project's remote config unless you also flip
    it here — belt-and-suspenders for a minors' site.
 
-**Wire it up** — set these in the **prod** stack env (`~/beecompete-prod/.env`), then
-`docker compose -f docker-compose.prod.yml up -d web`:
+**Wire it up** — set these in the **prod** stack env (`~/beecompete-prod/.env`), then recreate web
+(`export IMAGE_TAG=…` first — see the `IMAGE_TAG` note in the "Known gaps / deferred" section, or
+the owner's-manual §12 cheatsheet, for why a bare `up -d web` aborts):
 ```
 POSTHOG_KEY=phc_xxx
 POSTHOG_HOST=https://eu.i.posthog.com        # only if EU; US-host if you chose US

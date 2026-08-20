@@ -17,7 +17,7 @@ export function FeedbackForm() {
     return (
       <FormResult
         ok
-        message="Thanks — your feedback went straight to our team. If you left an email, we may follow up."
+        message="Thanks! Your feedback went straight to our team. If you left an email, we may follow up."
       />
     );
   }
@@ -49,7 +49,7 @@ export function FeedbackForm() {
 
       <FormField
         label="Your email (optional)"
-        hint="Only if you'd like a reply — we won't add you to anything."
+        hint="Only if you'd like a reply. We won't add you to anything."
       >
         <Input type="email" name="email" placeholder="you@example.com" autoComplete="email" />
       </FormField>

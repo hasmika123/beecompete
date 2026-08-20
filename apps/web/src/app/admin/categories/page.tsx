@@ -38,7 +38,7 @@ export default async function CategoriesPage() {
             header: 'Parent',
             cell: (c) => (
               <span className="text-muted">
-                {c.parentId ? (byId.get(c.parentId)?.name ?? '—') : '—'}
+                {c.parentId ? (byId.get(c.parentId)?.name ?? '–') : '–'}
               </span>
             ),
           },

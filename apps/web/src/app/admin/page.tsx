@@ -124,7 +124,7 @@ function StatCard({
           >
             {label}
           </span>
-          <span className="font-display text-3xl text-foreground">{value ?? '—'}</span>
+          <span className="font-display text-3xl text-foreground">{value ?? '–'}</span>
           <span
             className={cn(
               'mt-2 inline-flex items-center gap-1 text-xs font-medium transition-colors',

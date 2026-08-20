@@ -101,7 +101,7 @@ export function ResourcesRow({ resources }: { resources: ResourceView[] }) {
           <span>
             Some links below are{' '}
             <strong className="font-medium text-foreground">affiliate links</strong>. If you buy
-            through them, BeeCompete may earn a small commission at no extra cost to you — it never
+            through them, BeeCompete may earn a small commission at no extra cost to you. It never
             affects what we list or recommend.{' '}
             <Link
               href="/affiliate-disclosure"

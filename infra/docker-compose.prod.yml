@@ -38,6 +38,11 @@ services:
       # Search-indexing gate (R1-10): unset = noindex + robots Disallow:/. Flip to "on" at the
       # R1-17 launch gate (legal pages live + COPPA sign-off) to let Google index prod.
       SEARCH_INDEXING: ${SEARCH_INDEXING:-}
+      # Shared secret for the /api/healthz/db monitoring probe — the ONE public URL that does a
+      # real Neon round-trip, and every hit wakes the compute for ~5 min. Blank = the probe 401s
+      # for everyone (fail closed), so set this AND put it in the UptimeRobot monitor's
+      # X-Healthz-Token header, or that monitor goes red. Generate: openssl rand -hex 32
+      HEALTHZ_TOKEN: ${HEALTHZ_TOKEN:-}
       # Node-side (SSR/BFF) Sentry for the WEB project (VPS .env: WEB_SENTRY_DSN; blank =
       # inert). Browser-side uses NEXT_PUBLIC_SENTRY_DSN, baked at image build.
       SENTRY_DSN: ${WEB_SENTRY_DSN:-}
@@ -90,8 +95,13 @@ services:
     env_file: [.env]
     networks: [internal]
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:8080/actuator/health']
-      interval: 15s
+      # LIVENESS only — the plain /actuator/health aggregate includes the DataSource ping,
+      # so at interval 15s this healthcheck was a Neon round-trip every 15s, 24/7 (×2 with
+      # staging). That kept the compute permanently awake and exhausted the free-tier
+      # quota (July 2026 outage). Liveness proves the JVM/app is up without touching the
+      # DB; DB visibility is the external /api/healthz/db monitor's job (setup-runbook).
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:8080/actuator/health/liveness']
+      interval: 30s
       timeout: 5s
       retries: 10
       start_period: 60s

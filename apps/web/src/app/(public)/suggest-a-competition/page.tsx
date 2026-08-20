@@ -27,7 +27,7 @@ export default async function SuggestCompetitionPage({
       <header className="mb-8">
         <h1 className="font-display text-3xl text-foreground sm:text-4xl">Request a competition</h1>
         <p className="mt-3 text-muted">
-          Know a great K-12 competition we haven&apos;t listed? Tell us about it — a few quick
+          Know a great K-12 competition we haven&apos;t listed? Tell us about it. A few quick
           questions and our curation team takes it from there. Every request is reviewed by a human
           before anything goes live.
         </p>

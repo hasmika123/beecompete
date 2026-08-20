@@ -11,6 +11,18 @@ import { cn } from '../lib/cn';
 // variants the same `alt` yields exactly one announcement in either theme. When the logo sits in
 // a link that already carries an `aria-label` (header, admin rail), that label wins and the alt
 // isn't doubled.
+//
+// ⚠ `shrink-0 max-w-none` on the images and `shrink-0` on the wrapper are load-bearing, not
+// decoration: without them the mobile header rendered the wordmark 100x30 against its natural
+// 164x30 ratio — visibly squashed. TWO separate mechanisms had to be disabled, which is why
+// dropping either half brings the squash back:
+//   * flex shrink — both call sites put the logo in a flex row, so the wrapper and the image are
+//     flex items and compress once the row runs out of room;
+//   * Preflight's `img { max-width: 100% }` — that clamps the image to whatever width its parent
+//     ended up with, and it applies even after the image itself has stopped shrinking, so
+//     `shrink-0` alone left the img pinned to a squeezed wrapper.
+// `w-auto` does neither of those: it only says "derive width from the height", which is exactly
+// what gets overridden. Height utilities remain the single supported way to resize this.
 
 /**
  * Full wordmark logo. Default height `h-7`; pass a height utility via `className` to resize
@@ -18,20 +30,20 @@ import { cn } from '../lib/cn';
  */
 export function Logo({ className }: { className?: string }) {
   return (
-    <span className="inline-flex items-center">
+    <span className="inline-flex shrink-0 items-center">
       <img
         src="/brand/logo-light.png"
         alt="BeeCompete"
         width={821}
         height={150}
-        className={cn('block h-7 w-auto dark:hidden', className)}
+        className={cn('block h-7 w-auto max-w-none shrink-0 dark:hidden', className)}
       />
       <img
         src="/brand/logo-dark.png"
         alt="BeeCompete"
         width={822}
         height={153}
-        className={cn('hidden h-7 w-auto dark:block', className)}
+        className={cn('hidden h-7 w-auto max-w-none shrink-0 dark:block', className)}
       />
     </span>
   );
@@ -45,14 +57,14 @@ export function Logo({ className }: { className?: string }) {
 export function LogoMark({ className, label }: { className?: string; label?: string }) {
   const alt = label ?? '';
   return (
-    <span className="inline-flex items-center">
+    <span className="inline-flex shrink-0 items-center">
       <img
         src="/brand/mark-light.png"
         alt={alt}
         aria-hidden={label ? undefined : true}
         width={171}
         height={150}
-        className={cn('block h-7 w-auto dark:hidden', className)}
+        className={cn('block h-7 w-auto max-w-none shrink-0 dark:hidden', className)}
       />
       <img
         src="/brand/mark-dark.png"
@@ -60,7 +72,7 @@ export function LogoMark({ className, label }: { className?: string; label?: str
         aria-hidden={label ? undefined : true}
         width={166}
         height={138}
-        className={cn('hidden h-7 w-auto dark:block', className)}
+        className={cn('hidden h-7 w-auto max-w-none shrink-0 dark:block', className)}
       />
     </span>
   );

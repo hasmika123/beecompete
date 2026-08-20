@@ -33,7 +33,7 @@ export function CorrectionReview({ proposal }: { proposal: CorrectionProposal })
     <div className="grid gap-6">
       {state.error && <Alert tone="danger">{state.error}</Alert>}
       {!proposal.currentValues && (
-        <Alert tone="warning">The subject record no longer exists — approve will fail.</Alert>
+        <Alert tone="warning">The subject record no longer exists. Approve will fail.</Alert>
       )}
 
       <dl className="grid gap-1 text-sm">
@@ -95,7 +95,7 @@ export function CorrectionReview({ proposal }: { proposal: CorrectionProposal })
           onClick={async () => {
             const ok = await confirm({
               title: 'Reject this correction?',
-              message: 'Rejection is final — a rejected proposal can’t be reopened for approval.',
+              message: 'Rejection is final. A rejected proposal can’t be reopened for approval.',
               confirmLabel: 'Reject',
               tone: 'danger',
             });

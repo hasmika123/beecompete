@@ -39,7 +39,7 @@ export default async function EditEditionPage({
       >
         <ArrowLeft aria-hidden="true" className="size-4" /> Back to competition
       </Link>
-      <PageHeader title={`Edition — ${edition.cycleLabel}`} />
+      <PageHeader title={`Edition: ${edition.cycleLabel}`} />
 
       <div className="grid gap-6">
         <EditionForm competitionId={id} edition={edition} siblingEditions={siblingEditions} />

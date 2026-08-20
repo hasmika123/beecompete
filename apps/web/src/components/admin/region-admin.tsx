@@ -71,10 +71,10 @@ export function RegionAdmin({ regions }: { regions: Region[] }) {
             <Select
               name="parentId"
               options={[
-                { value: '', label: '— none (top level) —' },
+                { value: '', label: 'None (top level)' },
                 ...regions.map((r) => ({ value: r.id, label: r.name })),
               ]}
-              placeholder="— none (top level) —"
+              placeholder="None (top level)"
               searchable
             />
           </FormField>
@@ -85,7 +85,7 @@ export function RegionAdmin({ regions }: { regions: Region[] }) {
       </form>
 
       {regions.length === 0 ? (
-        <p className="text-sm text-muted">No regions yet — add the first one above.</p>
+        <p className="text-sm text-muted">No regions yet. Add the first one above.</p>
       ) : (
         <div className="overflow-x-auto rounded-[var(--radius-panel)] border border-border">
           <table className="w-full text-sm">
@@ -114,9 +114,9 @@ export function RegionAdmin({ regions }: { regions: Region[] }) {
                   >
                     <td className="px-4 py-2.5 font-medium text-foreground">{region.name}</td>
                     <td className="px-4 py-2.5 text-muted">{enumLabel(region.level)}</td>
-                    <td className="px-4 py-2.5 text-muted">{region.code ?? '—'}</td>
+                    <td className="px-4 py-2.5 text-muted">{region.code ?? '–'}</td>
                     <td className="px-4 py-2.5 text-muted">
-                      {region.parentId ? (nameById.get(region.parentId) ?? '—') : '—'}
+                      {region.parentId ? (nameById.get(region.parentId) ?? '–') : '–'}
                     </td>
                     <td className="px-4 py-2.5 text-right">
                       <div className="inline-flex gap-1">
@@ -225,8 +225,8 @@ function RegionEditRow({
             <FormField label="Parent">
               <Select
                 name="parentId"
-                options={[{ value: '', label: '— none (top level) —' }, ...parentOptions]}
-                placeholder="— none (top level) —"
+                options={[{ value: '', label: 'None (top level)' }, ...parentOptions]}
+                placeholder="None (top level)"
                 defaultValue={region.parentId ?? ''}
                 searchable
               />

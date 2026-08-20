@@ -37,11 +37,11 @@ export function CategoryEditForm({
       <FormField label="Slug" required>
         <Input name="slug" defaultValue={category.slug} required pattern="[a-z0-9]+(-[a-z0-9]+)*" />
       </FormField>
-      <FormField label="Parent" hint="optional — for subcategories">
+      <FormField label="Parent" hint="optional, for subcategories">
         <Select
           name="parentId"
-          options={[{ value: '', label: '— none (top level) —' }, ...parentOptions]}
-          placeholder="— none (top level) —"
+          options={[{ value: '', label: 'None (top level)' }, ...parentOptions]}
+          placeholder="None (top level)"
           defaultValue={category.parentId ?? ''}
           searchable
         />

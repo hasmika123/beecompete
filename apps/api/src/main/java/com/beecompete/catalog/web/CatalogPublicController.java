@@ -170,7 +170,7 @@ public class CatalogPublicController {
 
 	private static ResponseStatusException badToken(String param, String value, List<String> allowed) {
 		return new ResponseStatusException(HttpStatus.BAD_REQUEST,
-				"unknown " + param + " '" + value + "' — allowed: " + String.join(", ", allowed));
+				"unknown " + param + " '" + value + "'; allowed: " + String.join(", ", allowed));
 	}
 
 	@GetMapping("/competitions/{slug}")

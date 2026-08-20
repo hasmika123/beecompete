@@ -44,7 +44,7 @@ export async function submitCompetitionRequest(
   } catch (e) {
     return {
       ok: false,
-      error: e instanceof Error ? e.message : 'Something went wrong — please try again.',
+      error: e instanceof Error ? e.message : 'Something went wrong. Please try again.',
     };
   }
   return { ok: true };

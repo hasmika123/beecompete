@@ -68,13 +68,18 @@
 
 :root {
   /* Layout constants (mode-independent) */
-  /* The ONE platform card width (blueprints #34, owner 2026-07-13). Derived from the public
-   * shell: max-w-6xl (1152px) − px-6 (48px) = 1104px usable; 4 tracks + 3 × gap-6 ⇒
-   * (1104 − 72) / 4 = 258px. The marketplace filter panel is exactly one track wide, so
-   * opening it drops exactly one column at IDENTICAL card width (4 ↔ 3 per row). Every card
-   * row (marketplace grid, landing featured, categories closing-soon, detail related) uses
-   * this var — change it here, never inline. */
-  --card-w: 258px;
+  /* The ONE platform card width (blueprints #34, owner 2026-07-13; widened by #74). DERIVED
+   * from the public shell, not chosen: max-w-6xl (1152px) − px-6 (48px) = 1104px usable;
+   * 4 tracks + 3 × gap-4 ⇒ (1104 − 48) / 4 = 264px.
+   * ⚠ This value is LOCKED TO THE GRID GAP. Three places must agree or the row silently drops
+   * to 3 columns: the marketplace grid, the detail "related" grid, and the marketplace FRAME
+   * (panel ↔ grid). The frame gap must equal the grid gap — that identity is what makes the
+   * panel, which is exactly one track wide, drop exactly one column at unchanged card width
+   * (4 ↔ 3 per row, blueprints #34). Re-derive this number whenever the gap changes; at the
+   * old gap-6 the same 4 tracks would need 1128px and overflow the shell.
+   * Every card row (marketplace grid, landing featured, categories closing-soon, detail
+   * related) uses this var — change it here, never inline. */
+  --card-w: 264px;
 
   /* Brand (fixed across modes) */
   --brand-gold: #f5c330;

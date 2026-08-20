@@ -285,7 +285,7 @@ class CatalogSearchIntegrationTest {
 
 		String algebra = createCompetition("""
 				{"slug": "r15-algebra-open", "name": "Algebra Open r15", "categoryId": "%s",
-				 "summary": "A friendly algebra contest — %s", "description": "Algebra problem solving contest.",
+				 "summary": "A friendly algebra contest %s", "description": "Algebra problem solving contest.",
 				 "minGrade": 3, "maxGrade": 8, "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL",
 				 "entryPathway": "INDIVIDUAL", "costType": "FREE", "recurrence": "ANNUAL",
 				 "evaluationType": ["exam"]}
@@ -297,7 +297,7 @@ class CatalogSearchIntegrationTest {
 
 		String robotics = createCompetition("""
 				{"slug": "r15-robotics-league", "name": "Robotics League r15", "categoryId": "%s",
-				 "summary": "Build-season league — %s", "minGrade": 6, "maxGrade": 12,
+				 "summary": "Build-season league %s", "minGrade": 6, "maxGrade": 12,
 				 "participationMode": "TEAM", "delivery": "IN_PERSON", "entryPathway": "SCHOOL_OR_CHAPTER",
 				 "costType": "PAID", "recurrence": "ANNUAL", "evaluationType": ["live_performance"]}
 				""".formatted(sciEng, MARK));
@@ -317,7 +317,7 @@ class CatalogSearchIntegrationTest {
 		// keeping this seed's "no card facts" shape — it stays the no-deadline/no-prize fixture.
 		String essay = createCompetition("""
 				{"slug": "r15-essay-prize", "name": "Essay Prize r15", "categoryId": "%s",
-				 "summary": "Open essay prize — %s", "participationMode": "BOTH", "delivery": "HYBRID",
+				 "summary": "Open essay prize %s", "participationMode": "BOTH", "delivery": "HYBRID",
 				 "entryPathway": "EITHER", "costType": "FREE", "recurrence": "ANNUAL",
 				 "evaluationType": ["submission", "portfolio"]}
 				""".formatted(compSci, MARK));
@@ -326,7 +326,7 @@ class CatalogSearchIntegrationTest {
 		// Submission-only (no registration step at all) — its SUBMISSION_DUE is the deadline.
 		String writing = createCompetition("""
 				{"slug": "r15-writing-award", "name": "Writing Award r15", "categoryId": "%s",
-				 "summary": "Submission-only writing award — %s", "participationMode": "INDIVIDUAL",
+				 "summary": "Submission-only writing award %s", "participationMode": "INDIVIDUAL",
 				 "delivery": "VIRTUAL", "entryPathway": "INDIVIDUAL", "costType": "FREE",
 				 "recurrence": "ANNUAL", "evaluationType": ["submission"]}
 				""".formatted(writingEssay, MARK));
@@ -347,7 +347,7 @@ class CatalogSearchIntegrationTest {
 		// alone must keep it invisible. Asserted by readinessGateHidesEditionlessListings().
 		createCompetition("""
 				{"slug": "r15-shell-no-edition", "name": "Shell No Edition r15", "categoryId": "%s",
-				 "summary": "Editionless zombie — %s", "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL",
+				 "summary": "Editionless zombie %s", "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL",
 				 "entryPathway": "INDIVIDUAL", "costType": "FREE", "recurrence": "ANNUAL"}
 				""".formatted(math, MARK));
 	}

@@ -11,10 +11,20 @@ import type { FormState } from '@/lib/admin-types';
  * Distinct from claiming a specific listing, which is a form → admin inbox (claim-actions.ts): this
  * is a broadcast audience, that is a support conversation. Keeping them apart is the whole point of
  * the R1-15c split — a claim buried in a marketing list is a claim nobody answers.
+ *
+ * Rendered by the landing HostBand, which the audience cards disclose on demand (#57). The
+ * always-visible HostWaitlistBand this action shipped with was retired in that redesign; the copy
+ * and the flow below are unchanged, so the Brevo side is unaffected.
  */
 export async function joinHostWaitlist(_prev: FormState, form: FormData): Promise<FormState> {
+  // Optional free-text org name → COMPANY, so the waitlist is usable for outreach without a
+  // second round of questions. Carried over from the redesign's host capture; the field is
+  // optional, and Brevo rejects empty attribute values, so only send it when filled.
+  const organization = String(form.get('organization') ?? '').trim();
+
   return captureToList(form, {
     flow: 'hosts',
+    attributes: organization ? { COMPANY: organization.slice(0, 200) } : {},
     notReady: 'Host tools are on the way — check back shortly!',
     confirm: (email) =>
       `Almost there — we sent a confirmation link to ${email}. Click it and you’ll be first to hear when host tools open up.`,

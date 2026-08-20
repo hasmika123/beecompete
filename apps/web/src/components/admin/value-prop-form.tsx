@@ -16,7 +16,7 @@ const INITIAL: FormState = { ok: false };
 const CARD_TITLE: Record<string, string> = { PRIMARY: 'Left card', SECONDARY: 'Right card' };
 const STAT_TITLE: Record<string, string> = { PRIMARY: 'First stat', SECONDARY: 'Second stat' };
 const IMAGE_HINT =
-  'Optional — leave empty to keep the gradient placeholder · PNG/JPG/WebP · up to 5 MB';
+  'Optional · leave empty to keep the gradient placeholder · PNG/JPG/WebP · up to 5 MB';
 
 /**
  * Editor for the landing "Competing changes what's possible" section (M36) — ONE form, ONE save:
@@ -90,7 +90,7 @@ export function ValuePropForm({ cards, stats }: { cards: ValuePropCard[]; stats:
         <div>
           <h3 className="text-sm font-semibold text-foreground">Stats</h3>
           <p className="text-xs text-muted">
-            The two figures beside the cards. Keep a source line — the numbers should be sourced and
+            The two figures beside the cards. Keep a source line; the numbers should be sourced and
             non-causal before launch.
           </p>
         </div>
@@ -119,7 +119,7 @@ export function ValuePropForm({ cards, stats }: { cards: ValuePropCard[]; stats:
                     maxLength={300}
                   />
                 </FormField>
-                <FormField label="Source" hint="attribution shown as “— Source: …” (optional)">
+                <FormField label="Source" hint="attribution shown as “Source: …” (optional)">
                   <Input
                     name={`stat_${slot}_source`}
                     defaultValue={stat?.source ?? ''}

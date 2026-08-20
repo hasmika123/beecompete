@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { CompetitionCard, MapPin, buttonClasses, categoryArt, cn } from '@beecompete/ui';
-import { DigestBand } from '@/components/digest-band/digest-band';
+import { CompetitionCard, MapPin, buttonClasses } from '@beecompete/ui';
+import { CategoryGrid } from '@/components/categories/category-grid';
 import { ScrollRow } from '@/components/scroll-row';
 import { fetchCategories, fetchRegions, searchCompetitions } from '@/lib/catalog-api';
 import { toCardData } from '@/lib/catalog-display';
@@ -30,16 +30,28 @@ export default async function CategoriesPage() {
     searchCompetitions({ deadlineWithinDays: 30, sort: 'deadline', size: 8 }),
   ]);
   const countBySlug = new Map(categories.map((c) => [c.slug, c.count]));
+  // Merged server-side: the grid is a client component (#108, the Show-more disclosure), so it
+  // gets plain serialisable data rather than the Map.
+  const categoryTiles = CATEGORY_CONTENT.map((c) => ({
+    slug: c.slug,
+    name: c.name,
+    oneLiner: c.oneLiner,
+    count: countBySlug.get(c.slug) ?? 0,
+  }));
   const stateRegions = regions.filter((r) => r.level === 'state');
 
   return (
     // grid-cols-1: constrain the auto track — the Closing-soon ScrollRow's intrinsic width
     // otherwise stretches every section past the viewport.
     <div className="grid grid-cols-1 gap-14">
-      <header className="max-w-2xl">
+      {/* max-w-3xl, not 2xl (#73): the intro line needs 702px on one line at 18px and the 2xl cap
+          (672px) was breaking "search." onto its own row — the page itself has 1104px to give.
+          3xl (768px) clears it by 66px. Below ~750px of viewport the line no longer fits and wraps
+          naturally, which is the intended behaviour on phones. Re-measure if this copy changes. */}
+      <header className="max-w-3xl">
         <h1 className="font-display text-4xl text-foreground sm:text-5xl">Browse every angle</h1>
         <p className="mt-3 text-lg text-muted">
-          By subject, by grade, by state, by deadline — pick the door that fits how you search.
+          By subject, by grade, by state, by deadline. Pick the door that fits how you search.
         </p>
       </header>
 
@@ -47,37 +59,7 @@ export default async function CategoriesPage() {
         <h2 id="by-category" className="font-display text-2xl text-foreground">
           By category
         </h2>
-        <ul className="mt-5 grid list-none grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {CATEGORY_CONTENT.map((category) => {
-            const art = categoryArt(category.slug);
-            const Icon = art.icon;
-            return (
-              <li key={category.slug}>
-                <Link
-                  href={`/competitions/${category.slug}`}
-                  className="group flex h-full flex-col gap-2 rounded-[var(--radius-panel)] border border-border bg-surface-raised p-5 transition-transform hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)]"
-                >
-                  <span
-                    className={cn(
-                      'flex size-10 items-center justify-center rounded-full bg-linear-to-br',
-                      art.cover,
-                    )}
-                  >
-                    <Icon
-                      aria-hidden="true"
-                      weight="duotone"
-                      className={cn('size-5', art.coverIcon)}
-                    />
-                  </span>
-                  <span className="font-display text-lg text-foreground">{category.name}</span>
-                  <span className="text-xs text-muted">
-                    {countBySlug.get(category.slug) ?? 0} listed · {category.oneLiner}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <CategoryGrid categories={categoryTiles} />
       </section>
 
       <section aria-labelledby="by-grade">
@@ -146,8 +128,6 @@ export default async function CategoriesPage() {
           </ScrollRow>
         </section>
       )}
-
-      <DigestBand />
     </div>
   );
 }

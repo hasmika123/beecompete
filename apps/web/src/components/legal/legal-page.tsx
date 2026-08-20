@@ -63,7 +63,7 @@ export function LegalPage({
       </header>
 
       {LEGAL_REVIEW_PENDING && (
-        <Alert tone="warning" title="Draft — under review">
+        <Alert tone="warning" title="Draft: under review">
           BeeCompete is in beta and this policy is being finalized. We&apos;re reviewing it ahead of
           our public launch, and some details may change. Questions in the meantime? Email us at{' '}
           <LegalLink href={`mailto:${LEGAL_CONTACT_EMAIL}`}>{LEGAL_CONTACT_EMAIL}</LegalLink>.

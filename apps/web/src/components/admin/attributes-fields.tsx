@@ -122,7 +122,7 @@ function RawJsonField({
           }
         }}
       />
-      {invalid && <p className="text-xs text-danger">Not valid JSON — last valid value kept.</p>}
+      {invalid && <p className="text-xs text-danger">Not valid JSON. Last valid value kept.</p>}
     </div>
   );
 }
@@ -187,9 +187,9 @@ export function AttributesFields({ schema, uiHints, value, onChange }: Attribute
           <Select
             id={id}
             value={typeof v === 'string' ? v : ''}
-            placeholder="— none —"
+            placeholder="None"
             options={[
-              { value: '', label: '— none —' },
+              { value: '', label: 'None' },
               ...prop.enum
                 .filter((o): o is string => typeof o === 'string')
                 .map((o) => ({ value: o, label: o })),
@@ -258,7 +258,7 @@ export function AttributesFields({ schema, uiHints, value, onChange }: Attribute
       ))}
       {schemaKeys.length === 0 && extraKeys.length === 0 && (
         <p className="text-sm text-muted sm:col-span-2">
-          This category&apos;s template declares no fields — add any via raw JSON.
+          This category&apos;s template declares no fields. Add any via raw JSON.
         </p>
       )}
     </div>

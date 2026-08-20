@@ -1,6 +1,7 @@
 import type { CompetitionCardData } from '@beecompete/ui';
 import type { CompetitionSummary } from '@/lib/catalog-types';
 import { calendarDaysUntil, formatDate } from '@/lib/dates';
+import { displayRegionName, isUsCountry, stateCode } from '@/lib/us-states';
 
 // Display derivation for catalog data — the CompetitionCard is presentation-only, so the
 // wording rules live here: grade encoding (Q2: Pre-K = −1, K = 0, 1–12), relative deadline
@@ -60,11 +61,43 @@ export function deadlineDisplay(
   return { label: `Closes ${formatDate(nextDeadline, timeZone)}`, urgent: false };
 }
 
-/** "Texas" · "Texas +2" · undefined when untagged (stay factual — no "Nationwide" guess). */
+/**
+ * "Texas" · "Austin, TX" · "Texas +2" · "Nationwide" · "Online" · undefined when untagged.
+ *
+ * #77 (supersedes #76's always-abbreviate): a state abbreviates ONLY beside a city —
+ * "Austin, TX" — where the code is qualifying a longer label. A state standing alone keeps its
+ * full name ("Texas"): a bare two-letter code next to Free/Paid read like a stray tag, and the
+ * footer has the width.
+ *
+ * The US country tag is dropped (US-only catalog) — but only when another region survives it.
+ * Tagged at country level ONLY is a real statement (not state-restricted) and renders
+ * "Nationwide"; UNTAGGED is missing data and stays undefined. Those must not collapse.
+ *
+ * The DTO sends flat names with no level (see us-states.ts), so "city" here means any region that
+ * is not a known state / the US tag / the virtual region. That heuristic is why the payload needs
+ * level+code (sweep plan §12); this function then shrinks to composing from real levels.
+ */
 export function regionLabel(regions: string[]): string | undefined {
   if (regions.length === 0) return undefined;
-  if (regions.length === 1) return regions[0];
-  return `${regions[0]} +${regions.length - 1}`;
+
+  const named = regions.filter((r) => !isUsCountry(r)).map((r) => displayRegionName(r));
+  if (named.length === 0) return 'Nationwide';
+
+  const firstState = named.find((r) => stateCode(r) !== undefined);
+  // "Online" (the virtual region) is not a city — a hybrid tagged virtual+state must not compose
+  // into "Online, TX".
+  const firstCity = named.find((r) => stateCode(r) === undefined && r !== 'Online');
+
+  // City + state pair → "Austin, TX"; anything tagged beyond the pair is counted.
+  if (firstCity !== undefined && firstState !== undefined) {
+    const pair = `${firstCity}, ${stateCode(firstState)}`;
+    const rest = named.length - 2;
+    return rest > 0 ? `${pair} +${rest}` : pair;
+  }
+
+  // No pairing → first region under its full name ("Texas", "Austin", "Online"), rest counted.
+  if (named.length === 1) return named[0];
+  return `${named[0]} +${named.length - 1}`;
 }
 
 /** CompetitionSummary → the card's display props. Detail pages live at /c/<slug> (decision #30). */

@@ -62,7 +62,7 @@ export function ResourceManager({
                 if (
                   !(await confirm({
                     title: 'Delete this resource?',
-                    message: 'This is permanent — there is no restore.',
+                    message: 'This is permanent. There is no restore.',
                     confirmLabel: 'Delete',
                     tone: 'danger',
                   }))

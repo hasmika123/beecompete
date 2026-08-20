@@ -13,6 +13,7 @@ import {
   buttonClasses,
 } from '@beecompete/ui';
 import { subscribeDigest } from './actions';
+import { CapturePanel } from '@/components/landing/capture-panel';
 import { GRADE_OPTIONS, INTEREST_OPTIONS, STATE_OPTIONS } from '@/lib/digest-preferences';
 import type { FormState } from '@/lib/admin-types';
 
@@ -23,9 +24,10 @@ const INITIAL: FormState = { ok: false };
  *
  * TWO-STEP CAPTURE (owner 2026-07-26): the band itself asks for the email only — lowest possible
  * friction — and submitting it opens a popup with the three OPTIONAL preference questions
- * (grade / interest / state). The digest is still ONE curated send for everyone (owner
- * 2026-07-18); preferences are stored as Brevo attributes for curator insight + M26 (Phase 2)
- * personalization, and the popup copy says exactly that.
+ * (grade / interest / state). The digest is ONE curated send for everyone (owner 2026-07-18);
+ * preferences are stored as Brevo attributes for curator insight + M26 (Phase 2) personalization,
+ * and the popup copy says exactly that. The heading must NOT promise a personalized digest — that
+ * promise moved to M26 (glossary, "Weekly Digest").
  *
  * WHY THE POPUP IS BEFORE THE SUBSCRIBE CALL, NOT AFTER: with double opt-in the Brevo contact
  * doesn't exist until the confirmation email is clicked, so attributes can only ride along on the
@@ -38,10 +40,16 @@ const INITIAL: FormState = { ok: false };
  * placed "inside" the band's form would be outside it in the DOM and never reach its FormData.
  * Without JS the band form posts directly (email-only subscribe) — graceful degradation.
  *
+ * `onClose` is passed ONLY by the landing page, where #57 made this band open on demand from the
+ * audience cards; it is forwarded to CapturePanel, which renders the ✕ and the focus target. How It
+ * Works and Categories render this with no props and it stays permanently visible there — do not
+ * make the prop required. NOTE the two closes are different things: `onClose` dismisses the whole
+ * band, while `dismiss()` below closes only the preferences popup (and still subscribes).
+ *
  * Still pitched to parents/educators/16+ — a marketing email to a child would trigger COPPA.
  * Inert until Brevo env is set — see actions.ts / lib/brevo.ts.
  */
-export function DigestBand() {
+export function DigestBand({ onClose }: { onClose?: () => void } = {}) {
   const [state, formAction, submitting] = useActionState(subscribeDigest, INITIAL);
   const [email, setEmail] = useState('');
   const [prefsOpen, setPrefsOpen] = useState(false);
@@ -65,16 +73,22 @@ export function DigestBand() {
   };
 
   return (
-    <section
+    <CapturePanel
       id="digest"
-      aria-labelledby="digest-heading"
-      className="rounded-[var(--radius-panel)] border border-border bg-brand-gold-soft/60 p-6 sm:p-10"
+      headingId="digest-heading"
+      onClose={onClose}
+      closeLabel="Close the Weekly Digest signup"
     >
-      <div className="mx-auto grid max-w-2xl justify-items-center gap-3 text-center">
+      <>
+        {/* No whitespace-nowrap tuning here (unlike the pre-R1-15c heading): that copy was the
+            long "matched to your student" variant and needed measured breakpoints to hold one
+            line. This heading is short enough to fit unaided — re-measure only if it grows. */}
         <h2 id="digest-heading" className="font-display text-2xl text-foreground sm:text-3xl">
           New competitions, <em>every week</em>
         </h2>
-        <p className="text-sm text-muted">
+        {/* max-w-2xl on the copy, not the container: CapturePanel centres children in a max-w-4xl
+            column (sized for the old long heading), which is too wide a measure for body text. */}
+        <p className="max-w-2xl text-sm text-muted">
           One short email a week with newly added and closing-soon competitions, hand-picked by our
           curators. No spam, unsubscribe anytime.
         </p>
@@ -184,7 +198,7 @@ export function DigestBand() {
             </Modal>
           </>
         )}
-      </div>
-    </section>
+      </>
+    </CapturePanel>
   );
 }

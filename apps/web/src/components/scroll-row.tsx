@@ -6,6 +6,13 @@ import { Button, ChevronLeft, ChevronRight, cn } from '@beecompete/ui';
 // Shared horizontal scroll row with side arrow buttons — the hero category strip and the
 // Featured carousel (Page 1). USER-DRIVEN ONLY: no auto-advance (carousel rule, decision #8);
 // the next item peeks at the edge via padding so scrollability is obvious.
+//
+// The arrows are a POINTER affordance and are hidden below sm (mobile pass): they are absolutely
+// positioned OVER the track, so on a 375px screen — where a single card already fills the row —
+// they landed on top of that card's own content and covered its share button. Touch has swipe,
+// and the peeking next card is the scrollability cue, so nothing is lost by dropping them there.
+// Every horizontal row on the site (Featured, Closing soon, Prep resources, Related) goes through
+// this component, so this is the one place that behaviour is defined.
 export function ScrollRow({
   label,
   children,
@@ -61,7 +68,7 @@ export function ScrollRow({
           size="sm"
           aria-label="Scroll left"
           onClick={() => scrollBy(-1)}
-          className="absolute top-1/2 left-0 z-10 -translate-y-1/2 shadow-[var(--shadow-popover)]"
+          className="absolute top-1/2 left-0 z-10 hidden -translate-y-1/2 shadow-[var(--shadow-popover)] sm:inline-flex"
         >
           <ChevronLeft aria-hidden="true" className="size-4" />
         </Button>
@@ -72,7 +79,7 @@ export function ScrollRow({
           size="sm"
           aria-label="Scroll right"
           onClick={() => scrollBy(1)}
-          className="absolute top-1/2 right-0 z-10 -translate-y-1/2 shadow-[var(--shadow-popover)]"
+          className="absolute top-1/2 right-0 z-10 hidden -translate-y-1/2 shadow-[var(--shadow-popover)] sm:inline-flex"
         >
           <ChevronRight aria-hidden="true" className="size-4" />
         </Button>

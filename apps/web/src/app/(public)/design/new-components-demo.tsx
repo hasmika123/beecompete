@@ -78,7 +78,7 @@ export function NewComponentsShowcase() {
     <ToastProvider>
       <Section title="Trust badges (DQ13)">
         <p className="mb-2 text-sm text-muted">
-          Listing trust tiers — hover for the tier explanation. `curated` is the R1 baseline (hidden
+          Listing trust tiers. Hover for the tier explanation. `curated` is the R1 baseline (hidden
           on dense card grids); elevated/caution tiers surface.
         </p>
         <div className="flex flex-wrap gap-2">
@@ -91,7 +91,7 @@ export function NewComponentsShowcase() {
       <Section title="Share menu (M21)">
         <p className="mb-2 text-sm text-muted">
           Explicit channels + copy-link (and the OS share sheet where available). Plain intent
-          links, clean URL — collects nothing.
+          links, clean URL. Collects nothing.
         </p>
         <ShareMenu title="AMC 10" path="/c/amc-10" />
       </Section>
@@ -169,7 +169,7 @@ export function NewComponentsShowcase() {
       <Section title="Alerts">
         <div className="grid max-w-xl gap-3">
           <Alert tone="info" title="Beta">
-            BeeCompete is in beta — details may change while we verify listings.
+            BeeCompete is in beta, so details may change while we verify listings.
           </Alert>
           <Alert tone="success" title="Verified organizer">
             This listing is maintained directly by the organizer.
@@ -213,12 +213,12 @@ export function NewComponentsShowcase() {
             Curated prep links and past papers (with affiliate disclosure).
           </TabPanel>
           <TabPanel value="faq" className="text-sm text-muted">
-            Curated Q&amp;A — rendered with FAQPage structured data at R1-7.
+            Curated Q&amp;A, rendered with FAQPage structured data at R1-7.
           </TabPanel>
         </Tabs>
 
-        <p className="mt-6 mb-2 text-sm text-muted">Attached (active tab merges into the card):</p>
-        <Tabs variant="attached" defaultValue="consistency">
+        <p className="mt-6 mb-2 text-sm text-muted">Pill (ink bar, gold active pill):</p>
+        <Tabs variant="pill" defaultValue="consistency">
           <TabList>
             <Tab value="dedication">Dedication</Tab>
             <Tab value="reputability">Reputability</Tab>

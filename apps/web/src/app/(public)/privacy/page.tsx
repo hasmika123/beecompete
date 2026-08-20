@@ -48,7 +48,7 @@ export default function PrivacyPolicyPage() {
       title="Privacy Policy"
       icon={ShieldCheck}
       currentPath="/privacy"
-      summary="BeeCompete is built for students, families, and educators — so privacy comes first. This policy explains what we collect on our catalog today, and just as importantly, what we don’t."
+      summary="BeeCompete is built for students, families, and educators, so privacy comes first. This policy explains what we collect on our catalog today, and just as importantly, what we don’t."
       sections={SECTIONS}
     >
       <LegalSection id="summary" heading="The short version">
@@ -63,7 +63,7 @@ export default function PrivacyPolicyPage() {
         </LegalP>
         <LegalP>
           This page covers the current version of BeeCompete. When we add optional features that
-          collect information — like an email digest or saved competitions — we&apos;ll update this
+          collect information, like an email digest or saved competitions, we&apos;ll update this
           policy and, for any features involving children under 13, put verifiable parental consent
           in place first.
         </LegalP>
@@ -76,9 +76,9 @@ export default function PrivacyPolicyPage() {
             <strong className="font-medium text-foreground">
               Information you choose to send us.
             </strong>{' '}
-            If you use a form — such as{' '}
+            If you use a form, such as{' '}
             <LegalLink href="/suggest-a-correction">suggesting a correction</LegalLink> or{' '}
-            <LegalLink href="/suggest-a-competition">requesting a competition</LegalLink> — we
+            <LegalLink href="/suggest-a-competition">requesting a competition</LegalLink>, we
             receive what you type into it. Please don&apos;t include sensitive personal details;
             these forms only need enough to act on your suggestion.
           </LegalLI>
@@ -144,8 +144,8 @@ export default function PrivacyPolicyPage() {
           <LegalLI>We never sell or rent personal information.</LegalLI>
           <LegalLI>
             We never use a student&apos;s activity to build a behavioral advertising profile or to
-            serve targeted ads. Any promotion of a competition is based only on context — like the
-            page or subject you&apos;re viewing — not on tracking an individual.
+            serve targeted ads. Any promotion of a competition is based only on context, like the
+            page or subject you&apos;re viewing, not on tracking an individual.
           </LegalLI>
           <LegalLI>We don&apos;t allow third-party advertising trackers on the site.</LegalLI>
         </LegalList>
@@ -153,7 +153,7 @@ export default function PrivacyPolicyPage() {
 
       <LegalSection id="cookies" heading="Cookies and analytics">
         <LegalP>
-          We keep cookies to a minimum — essentially just what&apos;s needed to remember your light/
+          We keep cookies to a minimum: essentially just what&apos;s needed to remember your light/
           dark theme choice and to keep the site secure. We do not use advertising or cross-site
           tracking cookies. Full details, and how to control cookies, are in our{' '}
           <LegalLink href="/cookies">Cookie Policy</LegalLink>.
@@ -206,7 +206,7 @@ export default function PrivacyPolicyPage() {
           <LegalLI>
             <strong className="font-medium text-foreground">Global Privacy Control.</strong> Our
             analytics don&apos;t track individuals or sell data, so there&apos;s nothing to opt out
-            of — but we honor browser Do-Not-Track / Global Privacy Control signals as an opt-out
+            of, but we honor browser Do-Not-Track / Global Privacy Control signals as an opt-out
             preference.
           </LegalLI>
         </LegalList>
@@ -222,14 +222,14 @@ export default function PrivacyPolicyPage() {
           We use reasonable technical and organizational measures to protect information, including
           encryption in transit, access controls, and least-privilege practices. No method of
           transmission or storage is ever completely secure, so we can&apos;t guarantee absolute
-          security — but keeping data minimal is our first line of defense.
+          security, but keeping data minimal is our first line of defense.
         </LegalP>
       </LegalSection>
 
       <LegalSection id="changes" heading="Changes to this policy">
         <LegalP>
           BeeCompete is a US-based service intended for users in the United States. As the product
-          grows — especially when we add accounts — we&apos;ll update this policy and change the
+          grows, especially when we add accounts, we&apos;ll update this policy and change the
           &ldquo;Last updated&rdquo; date at the top. For significant changes affecting how we
           handle personal information, we&apos;ll take reasonable steps to highlight them.
         </LegalP>

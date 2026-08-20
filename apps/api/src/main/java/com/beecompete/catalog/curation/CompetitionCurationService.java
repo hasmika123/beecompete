@@ -128,7 +128,7 @@ public class CompetitionCurationService {
 			if (exact.getArchivedAt() != null) {
 				throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
 						"organizer name matches an archived organization (" + exact.getId()
-								+ ") — restore it or pick another");
+								+ "); restore it or pick another");
 			}
 			return exact; // decision (a): exact match → reuse
 		}
@@ -136,7 +136,7 @@ public class CompetitionCurationService {
 				.findByNameContainingIgnoreCase(name, PageRequest.of(0, 5)).getContent();
 		if (!near.isEmpty() && !Boolean.TRUE.equals(request.confirmNewOrganizer())) {
 			String candidates = near.stream()
-					.map(o -> o.getId() + " — " + o.getName())
+					.map(o -> o.getId() + " · " + o.getName())
 					.collect(Collectors.joining(", "));
 			throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
 					"no exact organizer match for '" + name + "' but similar organizations exist: " + candidates
@@ -200,7 +200,7 @@ public class CompetitionCurationService {
 				.toList();
 		if (!unknown.isEmpty()) {
 			throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-					"unknown evaluation type(s): " + String.join(", ", unknown) + " — allowed: "
+					"unknown evaluation type(s): " + String.join(", ", unknown) + "; allowed: "
 							+ String.join(", ", EvaluationTypes.TOKENS.stream().sorted().toList()));
 		}
 	}

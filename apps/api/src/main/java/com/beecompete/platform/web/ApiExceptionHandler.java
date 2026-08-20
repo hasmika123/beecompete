@@ -39,7 +39,7 @@ public class ApiExceptionHandler {
 
 	@ExceptionHandler(OptimisticLockingFailureException.class)
 	public ResponseEntity<Map<String, Object>> onOptimisticLock(OptimisticLockingFailureException ex) {
-		return body(HttpStatus.CONFLICT, "this record was modified by someone else — reload and retry");
+		return body(HttpStatus.CONFLICT, "this record was modified by someone else; reload and retry");
 	}
 
 	@ExceptionHandler(DataIntegrityViolationException.class)

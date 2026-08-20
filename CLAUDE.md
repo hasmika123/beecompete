@@ -108,7 +108,10 @@ cookieless / anonymous), Brevo captures live (digest verified end-to-end; double
 locked** behind Cloudflare Access + `ADMIN_API_TOKEN`, Cloudflare **WAF + rate-limiting** on,
 **UptimeRobot** monitoring `beecompete.com`, and **Sentry** live (web browser + SSR + API). Neon stays
 on the **free tier** with a logical-backup safety net (`scripts/backup-neon.sh`); paid-tier PITR is
-deferred to R2.
+deferred to R2. **2026-07-29 quota incident:** always-on healthchecks/pool churn defeated Neon
+autosuspend and exhausted the free-tier compute quota while the homepage kept serving cached 200s —
+fixes + the `/api/healthz/db` monitoring probe are in `setup-runbook.md` (as-built INCIDENT bullet +
+§9.3). Never re-point a frequent (≤5 min) monitor or healthcheck at anything that touches the DB.
 
 **Remaining before the site can go public (the rest of the R1-17 gate):**
 1. **Legal** — a privacy attorney must review the four legal pages (still DRAFTS; `LEGAL_REVIEW_PENDING`

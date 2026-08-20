@@ -75,13 +75,13 @@ export default async function ReviewImportPage({ params }: { params: Promise<{ i
                     {record.sourceUrl}
                   </a>
                 ) : (
-                  '—'
+                  '–'
                 )}
               </dd>
             </div>
             <div className="flex gap-2">
               <dt className="text-muted">Confidence:</dt>
-              <dd>{record.confidence ?? '—'}</dd>
+              <dd>{record.confidence ?? '–'}</dd>
             </div>
           </dl>
           <div>

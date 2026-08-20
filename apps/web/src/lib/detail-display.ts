@@ -1,4 +1,6 @@
 import type { CompetitionDetail, EditionView, KeyDateView } from '@/lib/catalog-types';
+import { deadlineDisplay } from '@/lib/catalog-display';
+import { formatDate } from '@/lib/dates';
 
 // Display derivation for the competition-detail page (R1-7, page-blueprints Page 3). Pure,
 // server+client safe: no side-effecting imports. Wording rules live here (the components stay
@@ -67,6 +69,72 @@ export function recurrenceLabel(token: string): string {
 }
 export function evaluationLabel(token: string): string {
   return EVALUATION_LABELS[token] ?? token;
+}
+
+const EDITION_STATUS_LABELS: Record<string, string> = {
+  open: 'Open',
+  upcoming: 'Upcoming',
+  ongoing: 'In progress',
+  closed: 'Closed',
+  archived: 'Archived',
+};
+
+/**
+ * Edition effective-status → label. Lived in the detail page until #88 moved the status out of
+ * the header tag row and into the At-a-glance strip.
+ * ⚠ Deliberately SHORTER than the old badge wording ("Registration open"/"Registration closed"):
+ * a standalone badge had to name what was open, but a strip item is already labelled "Status", and
+ * the long strings truncated to "Registration o…" in the strip's 2-column mobile grid.
+ */
+export function editionStatusLabel(token: string): string {
+  return EDITION_STATUS_LABELS[token] ?? token;
+}
+
+// --- JSONB `attributes` bag rendering (shared by the Details and About tabs) ---
+// Lives here rather than in key-facts.tsx because BOTH tabs read the bag since #106: Details
+// renders the standard eligibility keys, About dumps everything else.
+
+/**
+ * The standard eligibility keys from the attributes bag (domain-model, conventional 2026-07-08).
+ * Pulled OUT of the generic list and rendered under Eligibility with proper labels —
+ * humanizeAttrKey would title-case them into the wrong section. ⚠ Planned promotion to Spine
+ * columns (filterable) at Phase 3 — sweep-remediation-plan §16; labels here survive that move.
+ */
+export const ELIGIBILITY_ATTR_LABELS: Record<string, string> = {
+  eligible_countries: 'Eligible countries',
+  citizenship_countries: 'Citizenship',
+  student_status_required: 'Student status',
+};
+
+export function humanizeAttrKey(key: string): string {
+  return key
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
+}
+
+export function renderAttrValue(value: unknown): string | null {
+  if (value == null || value === '') return null;
+  if (Array.isArray(value)) {
+    const parts = value.map(renderAttrValue).filter(Boolean);
+    return parts.length ? parts.join(', ') : null;
+  }
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (typeof value === 'object') return null; // skip nested objects at R1
+  return String(value);
+}
+
+export interface AttrRow {
+  label: string;
+  value: string;
+}
+
+/** Every attribute EXCEPT the eligibility keys, humanized — the About tab's payload (#106). */
+export function categoryAttributeRows(attributes: Record<string, unknown> | null): AttrRow[] {
+  return Object.entries(attributes ?? {})
+    .filter(([key]) => !(key in ELIGIBILITY_ATTR_LABELS))
+    .map(([key, value]) => ({ label: humanizeAttrKey(key), value: renderAttrValue(value) }))
+    .filter((r): r is AttrRow => r.value != null);
 }
 
 const RESOURCE_TYPE_LABELS: Record<string, string> = {
@@ -138,6 +206,33 @@ export function nextDeadline(
   return chosen && chosen.startsAt
     ? { iso: chosen.startsAt, kind: chosen.type, timezone: chosen.timezone }
     : undefined;
+}
+
+export interface DeadlineFact {
+  /** The headline value — relative inside the 14-day window, otherwise the absolute date. */
+  value: string;
+  /** The absolute date, present ONLY when `value` is relative and would otherwise hide it. */
+  hint?: string;
+  urgent: boolean;
+}
+
+/**
+ * The At-a-glance deadline cell (#89). `deadlineDisplay` deliberately goes relative inside its
+ * 14-day window ("11 days to go"), which answers "how long?" but throws away "until WHEN?" —
+ * previously you had to open the Timeline panel to recover the date. This pairs the two: the
+ * relative value keeps the urgency, the absolute date rides along underneath it. Beyond the
+ * window the value already IS the date, so there is no hint to add and adding one would just
+ * print it twice.
+ */
+export function deadlineFact(deadline: NextDeadline, now?: Date): DeadlineFact {
+  const absolute = formatDate(deadline.iso, deadline.timezone);
+  const view = deadlineDisplay(deadline.iso, now, deadline.timezone);
+  const value = view?.label ?? `Closes ${absolute}`;
+  return {
+    value,
+    hint: value.includes(absolute) ? undefined : absolute,
+    urgent: view?.urgent ?? false,
+  };
 }
 
 /**
@@ -225,10 +320,75 @@ export function costLabel(competition: CompetitionDetail, edition?: EditionView)
 }
 
 /**
- * Prize value for the at-a-glance strip — the edition's summary, or a friendly "Bragging rights"
- * fallback (sweep item 16, owner-picked). Note: a null summary means the prize is *uncurated*, not
- * necessarily that there's none — so a curator who's confirmed a real prize should still fill it in.
+ * Prize for the at-a-glance strip. #82 folds in the typed `prize_value` (it existed on Edition but
+ * rendered nowhere): "$5,000 — Scholarships and medals" · "$5,000" · summary alone · "Bragging
+ * rights" fallback (sweep item 16, owner-picked). The amount LEADS when present — it is the
+ * scannable fact; the summary is its caption. Note: a null summary means the prize is *uncurated*,
+ * not necessarily that there's none — curators still fill confirmed prizes in.
  */
 export function prizeLabel(edition?: EditionView): string {
-  return edition?.prizeSummary ?? 'Bragging rights';
+  const value = edition?.prizeValue;
+  let amount: string | undefined;
+  if (value != null && Number(value) > 0) {
+    const currency = edition?.prizeCurrency ?? 'USD';
+    try {
+      amount = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency,
+        // "$5,000", not "$5,000.00" — cents only when the value actually has them.
+        minimumFractionDigits: Number.isInteger(Number(value)) ? 0 : 2,
+      }).format(Number(value));
+    } catch {
+      amount = `${value} ${currency}`;
+    }
+  }
+  const summary = edition?.prizeSummary ?? undefined;
+  if (amount && summary) return `${amount} · ${summary}`;
+  return amount ?? summary ?? 'Bragging rights';
+}
+
+/**
+ * Earliest FUTURE reg_open across editions (#82). When present, registration has not opened yet,
+ * so the at-a-glance deadline slot shows "Opens {date}" instead of "Closes {date}" — a bare close
+ * date on a not-yet-open competition reads as "you can enter now", which is wrong.
+ */
+export function regOpensAt(
+  editions: EditionView[],
+  now: Date = new Date(),
+): { iso: string; timezone: string | null } | undefined {
+  const opens = editions
+    .flatMap((e) => e.keyDates)
+    .filter(
+      (d) =>
+        d.type === 'reg_open' &&
+        d.startsAt != null &&
+        new Date(d.startsAt).getTime() > now.getTime(),
+    )
+    .sort((a, b) => new Date(a.startsAt!).getTime() - new Date(b.startsAt!).getTime())[0];
+  return opens?.startsAt ? { iso: opens.startsAt, timezone: opens.timezone } : undefined;
+}
+
+/**
+ * Age eligibility with its cutoff anchor (#82): "13–19 (as of Jun 1, 2027)". The cutoff is the
+ * date age is computed AS OF (glossary: "under 19 as of June 1") — without it a bare range is
+ * ambiguous for kids near the boundary. Undefined when the competition has no age gate at all.
+ */
+export function ageLabel(
+  competition: CompetitionDetail,
+  edition?: EditionView,
+): string | undefined {
+  const { minAge, maxAge } = competition;
+  if (minAge == null && maxAge == null) return undefined;
+  const range =
+    minAge != null && maxAge != null
+      ? `${minAge}–${maxAge}`
+      : maxAge != null
+        ? `Up to ${maxAge}`
+        : `${minAge}+`;
+  const cutoff = edition?.ageCutoffDate;
+  if (!cutoff) return range;
+  const anchored = new Date(cutoff);
+  return Number.isNaN(anchored.getTime())
+    ? range
+    : `${range} (as of ${anchored.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })})`;
 }

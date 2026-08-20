@@ -34,7 +34,7 @@ export interface ImageUploadProps {
   className?: string;
 }
 
-const PENDING_NOTE = 'Direct upload isn’t enabled yet — paste an image URL for now.';
+const PENDING_NOTE = 'Direct upload isn’t enabled yet. Paste an image URL for now.';
 
 export function ImageUpload({
   name,

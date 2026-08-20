@@ -22,6 +22,15 @@ interface EmailCaptureCtaProps {
   /** Consent / audience microcopy shown under the input (parent/16+ or organizer framing). */
   consent: ReactNode;
   submitLabel: string;
+  /**
+   * Render the form directly, with no disclosure button (#86). Used by the Follow capture, whose
+   * trigger lives in the breadcrumb row and whose whole panel is the disclosure (follow-disclosure
+   * .tsx) — a second button inside it would be a second layer to click through. The label becomes
+   * a heading instead.
+   * ⚠ Do NOT set this on the Claim/host capture: that one has no external trigger, so its button
+   * is the only way in.
+   */
+  alwaysOpen?: boolean;
 }
 
 /**
@@ -38,9 +47,10 @@ export function EmailCaptureCta({
   blurb,
   consent,
   submitLabel,
+  alwaysOpen = false,
 }: EmailCaptureCtaProps) {
   const [state, formAction, submitting] = useActionState(action, INITIAL);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(alwaysOpen);
 
   if (state.ok) {
     return <FormResult ok message={state.error ?? 'Thanks!'} className="text-left" />;
@@ -48,15 +58,22 @@ export function EmailCaptureCta({
 
   return (
     <div>
-      <Button
-        variant={variant}
-        className="w-full justify-center"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-      >
-        {icon}
-        {label}
-      </Button>
+      {alwaysOpen ? (
+        <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          {icon}
+          {label}
+        </p>
+      ) : (
+        <Button
+          variant={variant}
+          className="w-full justify-center"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+        >
+          {icon}
+          {label}
+        </Button>
+      )}
 
       {open && (
         <form action={formAction} className="mt-2 grid gap-2">
@@ -66,8 +83,11 @@ export function EmailCaptureCta({
           <p className="text-xs text-muted">{blurb}</p>
           <FormResult ok={false} message={state.error} errorTone="info" className="text-left" />
           <div className="flex flex-col gap-2 sm:flex-row">
-            {/* autoFocus: the form is revealed on click, so moving focus in announces it (and its
-                consent/COPPA framing) to screen-reader users instead of a silent "expanded". */}
+            {/* autoFocus: the form is revealed on click either way — by this component's own
+                button, or (alwaysOpen) by the Follow disclosure that mounts the whole panel — so
+                moving focus in announces it, and its consent/COPPA framing, to screen-reader users
+                instead of a silent "expanded". It also carries the viewport to the panel when the
+                mobile sticky bar is what opened it. */}
             <Input
               type="email"
               name="email"

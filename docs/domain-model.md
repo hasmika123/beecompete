@@ -85,6 +85,9 @@ only through a school/chapter — filterable, shown in the Details at-a-glance s
 > validated per Category Template where relevant):* `eligible_countries[]`,
 > `citizenship_countries[]`, `student_status_required` (international/eligibility depth) and
 > `syllabus` / `topics[]` (feeds Participant+ practice content + recommender, → P8).
+> ⚠ The three **eligibility keys are slated for JSONB→Spine promotion** (filterable columns) at
+> Phase 3 with H36 — owner 2026-08-18, plan in `sweep-remediation-plan.md` §16. Until then they
+> render under the detail page Eligibility group (#82) but cannot be filtered on.
 
 **`Edition`** [P1] — one running of a Competition.
 `id, competition_id, cycle_label ("2026"), status (upcoming|open|closed|ongoing|archived),
@@ -119,6 +122,11 @@ level so virtual Editions can carry a region row. **Seeded** at sweep item 15, 2
 `0010`: US + 50 states + DC + ~25 major cities + `Virtual / Online` — so admins pick, not
 hand-create; more (Canada, counties) via admin CRUD. The grouped/searchable admin picker is
 `region-picker.tsx`.)*
+⚠ **None of this structure survives into the public search projection**: `CompetitionSummary.regions`
+is a flat `string[]` of NAMES — no `level`, no `code` — so the web re-derives both by name matching
+against a hand-written map (`apps/web/src/lib/us-states.ts`). Planned fix (`RegionRef {name, code?,
+level}`, DTO-only, no migration): **`sweep-remediation-plan.md` §12**, batched with the
+`prizeKind`/`prizeValue` summary fields in §15 so the projection is touched once.
 **`EditionRegion`** [P1] — join: which regions an **Edition** covers *(locked 2026-07-07; renamed from `CompetitionRegion` — the join is Edition-level, never Competition-level)*. One registration = one Edition (Q3); the Competition's region filter is derived from its Editions.
 
 **`Resource`** [P1] — curated prep/reference link on a Competition.

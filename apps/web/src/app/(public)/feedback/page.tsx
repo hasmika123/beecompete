@@ -26,8 +26,8 @@ export default function FeedbackPage() {
       <header className="mb-8">
         <h1 className="font-display text-3xl text-foreground sm:text-4xl">Send feedback</h1>
         <p className="mt-3 text-muted">
-          Spotted a bug, or have an idea? We read everything — it goes straight to the team. You can
-          also email us at{' '}
+          Spotted a bug, or have an idea? We read everything, and it goes straight to the team. You
+          can also email us at{' '}
           <a
             href={`mailto:${LEGAL_CONTACT_EMAIL}`}
             className="font-medium text-foreground underline underline-offset-2 hover:text-brand-gold"
