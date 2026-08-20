@@ -186,7 +186,12 @@ export function ImportEditionPanel({
                         ) : null}
                       </span>
                       <span className="text-sm text-muted">
-                        {iso ? formatInZone(iso, zone) : 'Date TBD'}
+                        {/* When the row carries no timezone, render in UTC rather than letting
+                            formatInZone fall back to Eastern. The extractor emits T00:00:00Z for a
+                            page that gives a day but no clock time, and Eastern would show that as
+                            the PREVIOUS calendar day — "Nov. 3" on the page becoming "Nov 2" here,
+                            on most date-only extractions. Showing UTC keeps the day as extracted. */}
+                        {iso ? formatInZone(iso, zone ?? 'UTC') : 'Date TBD'}
                       </span>
                     </div>
                     <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto] sm:items-end">
