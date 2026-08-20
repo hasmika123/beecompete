@@ -26,7 +26,14 @@ export const RECURRENCES = ['ANNUAL', 'ONE_OFF', 'ROLLING'] as const;
 // labeled options; this token list is kept for reference / future use.
 export const ORG_TRUST_STATES = ['CURATED', 'CLAIMED', 'VERIFIED'] as const;
 export const EDITION_STATUSES = ['UPCOMING', 'OPEN', 'CLOSED', 'ONGOING', 'ARCHIVED'] as const;
-export const SCOPE_LEVELS = ['NATIONAL', 'STATE', 'REGIONAL', 'LOCAL', 'VIRTUAL'] as const;
+export const SCOPE_LEVELS = [
+  'INTERNATIONAL',
+  'NATIONAL',
+  'STATE',
+  'REGIONAL',
+  'LOCAL',
+  'VIRTUAL',
+] as const;
 export const KEY_DATE_TYPES = [
   'REG_OPEN',
   'REG_CLOSE',

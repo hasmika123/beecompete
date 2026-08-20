@@ -3,3 +3,7 @@ node_modules/
 .env
 .env.local
 dist/
+
+# audit-index's default output. The committed snapshot lives at docs/seeding/url-audit.csv;
+# an ad-hoc local run should not dirty the tree.
+audit-report.csv

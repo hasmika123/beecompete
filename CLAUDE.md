@@ -123,7 +123,13 @@ fixes + the `/api/healthz/db` monitoring probe are in `setup-runbook.md` (as-bui
    `apps/web/src/lib/legal.ts` (2026-08-20); `LEGAL_REVIEW_PENDING` flips to `false` only after
    counsel signs off — that is the last constant, and the only one that is not ours to decide.
 2. **Content gate** — seed ≥ 200 competitions across the ~10 categories (`docs/seeding/`; the S3
-   extraction pipeline is in `tools/seeding/`).
+   extraction pipeline is in `tools/seeding/`). **The blocker is now the index, not the pipeline:**
+   the 2026-08-20 URL audit (`pnpm --dir tools/seeding audit-index` → `docs/seeding/url-audit.csv`)
+   found only **162 of 424** URLs pointed at readable competition content. A hand-curation pass over
+   the **top 50** then lifted that to **184 of 425** (top 50 alone: 12 → 35 program pages). ~176 rows
+   are still org front doors. Read `docs/seeding/README.md` → "URL quality" before planning a bulk
+   run; 5 rows are `robots.txt`-disallowed and must never be extracted, and ten top-50 rows carry a
+   `URL AUDIT:` note explaining why no URL edit can fix them.
 3. **Flip indexing** — set `SEARCH_INDEXING=on` in `~/beecompete-prod/.env` + recreate web, verify
    `robots.txt` / a page's `index,follow`, and submit `sitemap.xml` to Google + Bing.
 

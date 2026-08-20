@@ -57,7 +57,11 @@ export function RegionPicker({
   regions: Region[];
   selectedIds: string[];
   onToggle: (id: string) => void;
-  /** Edition scope level — NATIONAL suggests the US; STATE/REGIONAL opens the country groups. */
+  /**
+   * Edition scope level — INTERNATIONAL/NATIONAL suggest the US; STATE/REGIONAL opens the country
+   * groups. INTERNATIONAL suggests the US too: the site is US-first, so an ISEF-style running is
+   * still tagged with the countries we actually serve, and reach is what the scope level records.
+   */
   scopeLevel?: string;
   /** Competition delivery — VIRTUAL suggests the Virtual / Online region. */
   delivery?: string;
@@ -77,7 +81,7 @@ export function RegionPicker({
   const suggestions = useMemo(() => {
     const out: Region[] = [];
     if (delivery === 'VIRTUAL') out.push(...regions.filter((r) => r.level === 'VIRTUAL'));
-    if (scopeLevel === 'NATIONAL') {
+    if (scopeLevel === 'NATIONAL' || scopeLevel === 'INTERNATIONAL') {
       const us = regions.find((r) => r.level === 'COUNTRY' && r.code === 'US');
       if (us) out.push(us);
     }

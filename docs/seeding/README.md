@@ -14,6 +14,7 @@ that the extraction pipeline and curators work down, in rank order, until the R1
 | `master-index.csv` | Machine-readable long-list — one row per competition, ranked. The S3 pipeline reads this. |
 | `master-index.md` | Human-readable companion — per-category tables + a coverage summary. |
 | `README.md` | This file — provenance, methodology, column definitions, and how S3/S4 consume it. |
+| `url-audit.csv` | **URL-quality snapshot** (2026-08-20) — one verdict per distinct `official_url`. Regenerate with `pnpm --dir tools/seeding audit-index`. See "URL quality" below. |
 
 ## How S3 / S4 consume it
 
@@ -53,6 +54,96 @@ not as independent competitions:
 
 Other same-URL row groups (e.g. the MAA AMC family, NSDA events, VFW Patriot's Pen / Voice of
 Democracy) are genuinely distinct competitions that share an organizer homepage.
+
+## URL quality — read this before planning a bulk extraction run
+
+`official_url` is the ceiling on everything S3 can extract. The **first live sweep (2026-08-20)**
+made that concrete: the NSDA row points at the organization's front door, so the extractor found no
+running at all and the record would have published as a hidden listing. So the whole index is now
+audited **before** LLM spend, by `tools/seeding/src/audit.ts` (no LLM calls — a keyword heuristic
+over the same distilled text the extractor sees):
+
+```bash
+pnpm --dir tools/seeding audit-index          # whole index -> docs/seeding/url-audit.csv
+pnpm --dir tools/seeding audit-index --limit 50
+```
+
+| Verdict | Means | What S3/S4 should do |
+|---|---|---|
+| `PROGRAM` | Reads like a competition page | Extract as-is |
+| `THIN` | Reachable deep page, little competition vocabulary | Glance at it before extracting |
+| `HOMEPAGE` | An org front door (or a deep link that now redirects to one) | **Find the program page first** — extraction yields a thin record, often with no edition |
+| `UNREACHABLE` | Dead, bot-blocked, robots-disallowed, or not HTML | Re-source or drop the row |
+
+Verdicts are **triage, not truth** — the same standing rule as the index's own columns. A `HOMEPAGE`
+row is not worthless: in the 5-page sweep, Scholastic (a `HOMEPAGE`) still produced an edition,
+while NSDA did not.
+
+### The 2026-08-20 baseline, and the top-50 curation pass
+
+448 index rows collapse to ~425 distinct URLs (umbrella programs share a page). The first audit
+found the index in worse shape than the row count suggests; a hand-curation pass over the top 50 by
+`rank_composite` then followed, replacing 31 URLs with pages verified by the classifier:
+
+| Verdict | Baseline | After the top-50 pass |
+|---|---:|---:|
+| `PROGRAM` | 88 (21%) | **112 (26%)** |
+| `THIN` | 74 (17%) | 72 (17%) |
+| `HOMEPAGE` | 194 (46%) | 176 (41%) |
+| `UNREACHABLE` | 68 (16%) | 65 (15%) |
+| **readable content** (`PROGRAM` + `THIN`) | **162 of 424** | **184 of 425** |
+
+Within the **top 50** — the rows curators touch first, and the ones carrying the R1 SEO thesis — the
+change is the whole point: **12 → 35 program pages**, and 40 of 50 now point at readable competition
+content (was 18).
+
+Three things the baseline established, which the curation pass did not change:
+
+1. **The over-supply assumption needs re-reading.** The index was sized so attrition still leaves
+   ≥ 200 live. That holds by *row count*, but only 184 URLs currently point at readable competition
+   content — before any curation attrition. The remaining `HOMEPAGE` rows are recoverable, not lost;
+   each needs a human to find the real program URL, exactly as the top 50 did.
+2. **`HOMEPAGE` is an index-construction artifact, not link rot.** 192 of the original 194 were
+   recorded as bare origins during S2; only 2 were deep links that had since died. Fixing this is
+   editing the index, not chasing broken sites.
+3. **Coverage is uneven by category.** `writing-essay` is in good shape (20 `PROGRAM` of 33);
+   `science-engineering` is the worst (40 `HOMEPAGE` of 77), and `computer-science` still has more
+   unreachable rows (9) than program pages (4). The categories with a ≥ 15-listing gate are not
+   equally close to it.
+
+Of the ~65 `UNREACHABLE`: about 40 are genuinely gone (24 × HTTP 404, 16 × `ENOTFOUND` — a `www.`
+prefix flip recovers only one of them, so they are dead domains, not typos), 8 have broken TLS
+(expired / mismatched / self-signed certs — the competition is alive, the fetch is not), 8 are 403
+bot-blocks, **5 are `robots.txt`-disallowed**, and the rest are transient.
+
+> **The `robots.txt`-disallowed rows must not be extracted at all** — not by a retry, not by a
+> different user-agent. Filter the CSV on `problem` containing `robots.txt` to see them. If a
+> listing there matters, ask the organizer for permission or curate it by hand.
+
+### What hand-curation looks like (and what it can't fix)
+
+The top-50 pass replaced a URL only when the replacement was **fetched and classified first** —
+never guessed. The method: harvest the org homepage's own links, rank the ones whose path or anchor
+text reads like a competition page, fetch the top candidates, and take the best verified one that is
+*also* the page a student should land on. Where the program page beat a rules/dates page on
+semantics but lost on signal count, semantics won: `official_url` is a user-facing link, not just an
+extraction source.
+
+**Ten of the top 50 could not be fixed by editing a URL**, and each now carries a `URL AUDIT:` note
+in the index's `notes` column so nobody re-investigates from scratch:
+
+| Reason | Rows |
+|---|---|
+| `robots.txt` disallows crawling — never extract | CyberPatriot, Technovation Girls |
+| 403 bot-block (the URL is fine, our fetcher is not welcome) | NAQT HSNCT |
+| Every path redirect-loops against our fetcher | National Merit Scholarship Program |
+| Subpages 403 behind Cloudflare | picoCTF |
+| No page with real competition detail exists to point at | USAD, 3M Young Scientist Challenge, America's Battle of the Books, ARML |
+| Structural: one org page serves many competitions | the nine NSDA event rows (Lincoln-Douglas, Public Forum, …) — these are events *within* one tournament, which is a modelling question, not a URL defect |
+
+Those need manual entry or an organizer conversation, which is the same conclusion
+`phase-1-plan.md` already reached for bot-blocked sites.
+
 
 ## Ranking methodology
 

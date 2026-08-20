@@ -180,7 +180,16 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
        formed (the "legal foundation done" item — setup-runbook §1b).
     3. **Flip `LEGAL_REVIEW_PENDING` → `false`** after #1–#2 — drops the on-page "Draft — under review" banner.
   - **📚 Content gate** — ≥ 200 competitions live across the ~10 categories (S4 seeding; see "Data seeding
-    & catalog readiness" below). As blocking as any code item. **Two steps, in order:**
+    & catalog readiness" below). As blocking as any code item. **Three steps, in order:**
+    0. **Audit the index's URLs first** — `official_url` is the ceiling on what S3 can extract, and
+       the 2026-08-20 audit found only **162 of 424** URLs pointed at readable competition content.
+       Hand-curating the **top 50** lifted that to **184 of 425**; ~176 rows are still org front
+       doors, 65 unreachable, and 5 `robots.txt`-disallowed and off-limits. Running the import
+       before fixing those spends LLM budget producing thin records and hidden listings.
+       ```bash
+       pnpm --dir tools/seeding audit-index   # -> docs/seeding/url-audit.csv
+       ```
+       Findings and what they mean for the ≥ 200 gate: `docs/seeding/README.md` → "URL quality".
     1. **Run the S3 import** (fills the review queue — one command, ~1–2 h unattended, a few $ of LLM):
        ```bash
        cd tools/seeding && bash run-prod-submit.sh

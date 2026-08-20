@@ -29,14 +29,14 @@ Proves all 11 seed categories are represented and the major ones clear the R1 ga
 |--:|---|---|---|---|---|---|---|---|---|
 | 4.8 | AMC 10 | Mathematical Association of America | 9-10 | national | paid | individual | school_or_chapter | annual | <https://maa.org/student-programs/amc> |
 | 4.8 | AMC 12 | Mathematical Association of America | 11-12 | national | paid | individual | school_or_chapter | annual | <https://maa.org/student-programs/amc> |
-| 4.8 | MATHCOUNTS Competition Series | MATHCOUNTS Foundation | 6-8 | national | paid | both | school_or_chapter | annual | <https://www.mathcounts.org> |
+| 4.8 | MATHCOUNTS Competition Series | MATHCOUNTS Foundation | 6-8 | national | paid | both | school_or_chapter | annual | <https://www.mathcounts.org/programs/mathcounts-competition-series> |
 | 4.6 | AMC 8 | Mathematical Association of America | 6-8 | national | paid | individual | school_or_chapter | annual | <https://maa.org/student-programs/amc> |
 | 4.6 | Math Kangaroo | Math Kangaroo USA | 1-12 | national | paid | individual | either | annual | <https://mathkangaroo.org> |
-| 4.1 | Math Olympiads for Elementary and Middle Schools (MOEMS) | MOEMS | 4-8 | national | paid | team | school_or_chapter | annual | <https://moems.org> |
-| 4.1 | Math Prize for Girls | AoPS Initiative / Advantage Testing | 9-12 | national | free | individual | individual | annual | <https://mathprize.atfoundation.org> |
+| 4.1 | Math Olympiads for Elementary and Middle Schools (MOEMS) | MOEMS | 4-8 | national | paid | team | school_or_chapter | annual | <https://www.moems.org/pages/contests-tournaments> |
+| 4.1 | Math Prize for Girls | AoPS Initiative / Advantage Testing | 9-12 | national | free | individual | individual | annual | <https://mathprize.atfoundation.org/apply> |
 | 3.8 | AIME (American Invitational Mathematics Exam) | Mathematical Association of America | 9-12 | national | paid | individual | school_or_chapter | annual | <https://maa.org/student-programs/amc> |
 | 3.8 | American Regions Mathematics League (ARML) | ARML | 9-12 | national | paid | team | school_or_chapter | annual | <https://www.arml.com> |
-| 3.8 | Harvard-MIT Mathematics Tournament (HMMT) | HMMT | 9-12 | national | paid | team | school_or_chapter | annual | <https://www.hmmt.org> |
+| 3.8 | Harvard-MIT Mathematics Tournament (HMMT) | HMMT | 9-12 | national | paid | team | school_or_chapter | annual | <https://www.hmmt.org/www/tournaments/novfeb> |
 | 3.6 | USA(J)MO | Mathematical Association of America | 9-12 | national | free | individual | school_or_chapter | annual | <https://maa.org/student-programs/amc> |
 | 3.5 | Purple Comet! Math Meet | Purple Comet | 6-12 | national | free | team | school_or_chapter | annual | <https://purplecomet.org> |
 | 3.5 | USA Mathematical Talent Search (USAMTS) | Art of Problem Solving Initiative | 6-12 | national | free | individual | individual | annual | <https://www.usamts.org> |
@@ -58,7 +58,7 @@ Proves all 11 seed categories are represented and the major ones clear the R1 ga
 | 3.0 | HiMCM (High School Mathematical Contest in Modeling) | COMAP | 9-12 | national | paid | team | school_or_chapter | annual | <https://www.contest.comap.org/highschool/contests/himcm/index.html> |
 | 3.0 | Florida Association of Mu Alpha Theta (FAMAT) | FAMAT | 6-12 | state | paid | both | school_or_chapter | annual | <https://famat.org> |
 | 3.0 | PerennialMath Competitions | PerennialMath | 3-8 | national | paid | both | either | annual | <https://perennialmath.com> |
-| 2.9 | MATHCOUNTS Countdown / Chapter | MATHCOUNTS Foundation | 6-8 | state | paid | team | school_or_chapter | annual | <https://www.mathcounts.org> |
+| 2.9 | MATHCOUNTS Countdown / Chapter | MATHCOUNTS Foundation | 6-8 | state | paid | team | school_or_chapter | annual | <https://www.mathcounts.org/programs/mathcounts-competition-series> |
 | 2.9 | mathleague.org contests | mathleague.org | 3-12 | national | paid | both | either | annual | <https://www.mathleague.org/hsevents.php> |
 | 2.9 | Girls' Adventures in Math (GAIM) | Math-M-Addicts | 3-8 | virtual | unknown | team | either | annual | <https://www.girlsadventuresinmath.com/the-competition> |
 | 2.9 | Minnesota State High School Mathematics League | MN State HS Mathematics League | 9-12 | state | paid | both | school_or_chapter | annual | <https://www.mnmathleague.org> |
@@ -92,11 +92,11 @@ Proves all 11 seed categories are represented and the major ones clear the R1 ga
 |--:|---|---|---|---|---|---|---|---|---|
 | 4.6 | Regeneron International Science and Engineering Fair (ISEF) | Society for Science | 9-12 | national | free | both | school_or_chapter | annual | <https://www.societyforscience.org/isef> |
 | 4.6 | Regeneron Science Talent Search (STS) | Society for Science | 12-12 | national | free | individual | individual | annual | <https://www.societyforscience.org/regeneron-sts> |
-| 4.6 | Science Olympiad | Science Olympiad, Inc. | 6-12 | national | paid | team | school_or_chapter | annual | <https://www.soinc.org> |
+| 4.6 | Science Olympiad | Science Olympiad, Inc. | 6-12 | national | paid | team | school_or_chapter | annual | <https://www.soinc.org/play/tournaments> |
 | 4.1 | 3M Young Scientist Challenge | 3M / Discovery Education | 5-8 | national | free | individual | individual | annual | <https://www.youngscientistlab.com> |
 | 4.1 | National Science Bowl | U.S. Department of Energy | 6-12 | national | free | team | school_or_chapter | annual | <https://science.osti.gov/wdts/nsb> |
 | 4.1 | Thermo Fisher Scientific Junior Innovators Challenge | Society for Science | 6-8 | national | free | individual | school_or_chapter | annual | <https://www.societyforscience.org/jic> |
-| 3.9 | Breakthrough Junior Challenge | Breakthrough Prize Foundation | 7-12 | virtual | free | individual | individual | annual | <https://breakthroughjuniorchallenge.org> |
+| 3.9 | Breakthrough Junior Challenge | Breakthrough Prize Foundation | 7-12 | virtual | free | individual | individual | annual | <https://breakthroughjuniorchallenge.org/enter> |
 | 3.5 | FFA Agriscience Fair | National FFA Organization | 7-12 | national | paid | both | school_or_chapter | annual | <https://www.ffa.org/participate/awards/agriscience-fair/> |
 | 3.3 | Conrad Challenge | Conrad Foundation | 9-12 | national | free | team | either | annual | <https://conrad.spacecenter.org> |
 | 3.3 | Envirothon | National Conservation Foundation | 9-12 | national | free | team | school_or_chapter | annual | <https://envirothon.org> |
@@ -173,9 +173,9 @@ Proves all 11 seed categories are represented and the major ones clear the R1 ga
 
 | Rank | Name | Organizer | Grades | Region | Cost | Part. | Pathway | Recur. | URL |
 |--:|---|---|---|---|---|---|---|---|---|
-| 4.3 | Congressional App Challenge | U.S. House of Representatives | 6-12 | national | free | both | individual | annual | <https://www.congressionalappchallenge.us> |
+| 4.3 | Congressional App Challenge | U.S. House of Representatives | 6-12 | national | free | both | individual | annual | <https://www.congressionalappchallenge.us/students/rules> |
 | 4.3 | CyberPatriot National Youth Cyber Defense Competition | Air & Space Forces Association | 6-12 | national | paid | team | school_or_chapter | annual | <https://www.uscyberpatriot.org> |
-| 4.3 | USA Computing Olympiad (USACO) | USACO | 6-12 | national | free | individual | individual | annual | <https://usaco.org> |
+| 4.3 | USA Computing Olympiad (USACO) | USACO | 6-12 | national | free | individual | individual | annual | <https://usaco.org/index.php?page=contests> |
 | 3.8 | Technovation Girls | Technovation | 5-12 | national | free | team | either | annual | <https://www.technovation.org> |
 | 3.8 | picoCTF | Carnegie Mellon University | 6-12 | national | free | both | either | annual | <https://picoctf.org> |
 | 3.5 | MLH high school hackathons (Local Hack Day) | Major League Hacking | 9-12 | national | free | both | individual | rolling | <https://mlh.io> |
@@ -205,9 +205,9 @@ Proves all 11 seed categories are represented and the major ones clear the R1 ga
 
 | Rank | Name | Organizer | Grades | Region | Cost | Part. | Pathway | Recur. | URL |
 |--:|---|---|---|---|---|---|---|---|---|
-| 4.8 | FIRST Robotics Competition (FRC) | FIRST | 9-12 | national | paid | team | school_or_chapter | annual | <https://www.firstinspires.org/robotics/frc> |
-| 4.3 | FIRST LEGO League Challenge | FIRST | 4-8 | national | paid | team | school_or_chapter | annual | <https://www.firstinspires.org/robotics/fll> |
-| 4.3 | FIRST Tech Challenge (FTC) | FIRST | 7-12 | national | paid | team | school_or_chapter | annual | <https://www.firstinspires.org/robotics/ftc> |
+| 4.8 | FIRST Robotics Competition (FRC) | FIRST | 9-12 | national | paid | team | school_or_chapter | annual | <https://www.firstinspires.org/programs/frc/get-started> |
+| 4.3 | FIRST LEGO League Challenge | FIRST | 4-8 | national | paid | team | school_or_chapter | annual | <https://www.firstinspires.org/programs/fll/get-started> |
+| 4.3 | FIRST Tech Challenge (FTC) | FIRST | 7-12 | national | paid | team | school_or_chapter | annual | <https://www.firstinspires.org/programs/ftc/get-started> |
 | 4.3 | VEX Robotics Competition (V5RC) | REC Foundation | 6-12 | national | paid | team | school_or_chapter | annual | <https://www.vexrobotics.com/competition> |
 | 3.5 | FIRST LEGO League Explore | FIRST | 1-4 | national | paid | team | school_or_chapter | annual | <https://www.firstinspires.org/robotics/fll/explore> |
 | 3.5 | VEX IQ Robotics Competition | REC Foundation | 4-8 | national | paid | team | school_or_chapter | annual | <https://www.vexrobotics.com/iq/competition> |
@@ -235,8 +235,8 @@ Proves all 11 seed categories are represented and the major ones clear the R1 ga
 
 | Rank | Name | Organizer | Grades | Region | Cost | Part. | Pathway | Recur. | URL |
 |--:|---|---|---|---|---|---|---|---|---|
-| 4.6 | NSDA National Speech & Debate Tournament | National Speech & Debate Association | 6-12 | national | paid | both | school_or_chapter | annual | <https://www.speechanddebate.org> |
-| 4.1 | National High School Mock Trial Championship | National High School Mock Trial | 9-12 | national | paid | team | school_or_chapter | annual | <https://www.nationalmocktrial.org> |
+| 4.6 | NSDA National Speech & Debate Tournament | National Speech & Debate Association | 6-12 | national | paid | both | school_or_chapter | annual | <https://www.speechanddebate.org/nationals> |
+| 4.1 | National High School Mock Trial Championship | National High School Mock Trial | 9-12 | national | paid | team | school_or_chapter | annual | <https://www.nationalmocktrial.org/rules/rules-competition> |
 | 3.8 | Lincoln-Douglas Debate | National Speech & Debate Association | 9-12 | national | paid | individual | school_or_chapter | annual | <https://www.speechanddebate.org> |
 | 3.8 | Public Forum Debate | National Speech & Debate Association | 9-12 | national | paid | team | school_or_chapter | annual | <https://www.speechanddebate.org> |
 | 3.7 | Greenhill Fall Classic | Greenhill School | 9-12 | national | paid | team | school_or_chapter | annual | <https://greenhill.tabroom.com> |
@@ -293,9 +293,9 @@ Proves all 11 seed categories are represented and the major ones clear the R1 ga
 
 | Rank | Name | Organizer | Grades | Region | Cost | Part. | Pathway | Recur. | URL |
 |--:|---|---|---|---|---|---|---|---|---|
-| 4.1 | DECA International Career Development Conference | DECA Inc. | 9-12 | national | paid | both | school_or_chapter | annual | <https://www.deca.org> |
-| 4.1 | FBLA National Leadership Conference | Future Business Leaders of America | 6-12 | national | paid | both | school_or_chapter | annual | <https://www.fbla.org> |
-| 3.8 | Diamond Challenge | Horn Entrepreneurship, University of Delaware | 9-12 | national | free | team | either | annual | <https://diamondchallenge.org> |
+| 4.1 | DECA International Career Development Conference | DECA Inc. | 9-12 | national | paid | both | school_or_chapter | annual | <https://www.deca.org/compete> |
+| 4.1 | FBLA National Leadership Conference | Future Business Leaders of America | 6-12 | national | paid | both | school_or_chapter | annual | <https://www.fbla.org/high-school/competitive-events> |
+| 3.8 | Diamond Challenge | Horn Entrepreneurship, University of Delaware | 9-12 | national | free | team | either | annual | <https://diamondchallenge.org/competition> |
 | 3.3 | Business Professionals of America (BPA) NLC | Business Professionals of America | 6-12 | national | paid | both | school_or_chapter | annual | <https://bpa.org> |
 | 3.3 | FCCLA National Leadership Conference | Family, Career and Community Leaders of America | 6-12 | national | paid | both | school_or_chapter | annual | <https://fcclainc.org> |
 | 3.3 | JA Titan | Junior Achievement USA | 9-12 | national | free | team | school_or_chapter | annual | <https://jausa.ja.org/programs/ja-titan> |
@@ -323,14 +323,14 @@ Proves all 11 seed categories are represented and the major ones clear the R1 ga
 
 | Rank | Name | Organizer | Grades | Region | Cost | Part. | Pathway | Recur. | URL |
 |--:|---|---|---|---|---|---|---|---|---|
-| 4.8 | Scholastic Art & Writing Awards (Writing) | Alliance for Young Artists & Writers | 7-12 | national | paid | individual | either | annual | <https://www.artandwriting.org> |
-| 3.8 | The New York Times Learning Network Contests | The New York Times | 6-12 | national | free | individual | individual | rolling | <https://www.nytimes.com/section/learning> |
+| 4.8 | Scholastic Art & Writing Awards (Writing) | Alliance for Young Artists & Writers | 7-12 | national | paid | individual | either | annual | <https://www.artandwriting.org/awards> |
+| 3.8 | The New York Times Learning Network Contests | The New York Times | 6-12 | national | free | individual | individual | rolling | <https://www.nytimes.com/spotlight/learning-contests> |
 | 3.5 | C-SPAN StudentCam | C-SPAN | 6-12 | national | free | both | individual | annual | <https://www.studentcam.org> |
 | 3.5 | John F. Kennedy Profile in Courage Essay Contest | JFK Library Foundation | 9-12 | national | free | individual | individual | annual | <https://www.jfklibrary.org/learn/education/profile-in-courage-essay-contest> |
 | 3.4 | Write the World Monthly Competitions | Write the World | 7-12 | virtual | free | individual | individual | rolling | <https://writetheworld.org> |
 | 3.3 | John Locke Institute Essay Competition | John Locke Institute | 6-12 | national | free | individual | individual | annual | <https://www.johnlockeinstitute.com/essay-competition> |
 | 3.3 | Poetry Out Loud | National Endowment for the Arts | 9-12 | national | free | individual | school_or_chapter | annual | <https://www.poetryoutloud.org> |
-| 3.3 | YoungArts (Writing disciplines) | National YoungArts Foundation | 10-12 | national | paid | individual | individual | annual | <https://www.youngarts.org> |
+| 3.3 | YoungArts (Writing disciplines) | National YoungArts Foundation | 10-12 | national | paid | individual | individual | annual | <https://youngarts.org/competition> |
 | 3.1 | Sala and Aron Samueli Holocaust Art & Writing Contest | Chapman University | 6-12 | national | free | individual | school_or_chapter | annual | <https://www.chapman.edu/research/institutes-and-centers/holocaust-education/holocaust-art-and-writing-contest/index.aspx> |
 | 3.0 | The Concord Review | The Concord Review | 9-12 | national | paid | individual | individual | rolling | <https://www.tcr.org> |
 | 3.0 | VFW Patriot's Pen | Veterans of Foreign Wars | 6-8 | national | free | individual | either | annual | <https://www.vfw.org/community/youth-and-education/youth-scholarships> |
@@ -368,13 +368,13 @@ Proves all 11 seed categories are represented and the major ones clear the R1 ga
 
 | Rank | Name | Organizer | Grades | Region | Cost | Part. | Pathway | Recur. | URL |
 |--:|---|---|---|---|---|---|---|---|---|
-| 4.8 | Scholastic Art & Writing Awards (Art) | Alliance for Young Artists & Writers | 7-12 | national | paid | individual | either | annual | <https://www.artandwriting.org> |
-| 4.1 | National YoungArts Foundation | National YoungArts Foundation | 10-12 | national | paid | individual | individual | annual | <https://www.youngarts.org> |
-| 4.0 | Doodle for Google | Google | K-12 | national | free | individual | either | annual | <https://doodles.google/d4g> |
+| 4.8 | Scholastic Art & Writing Awards (Art) | Alliance for Young Artists & Writers | 7-12 | national | paid | individual | either | annual | <https://www.artandwriting.org/awards> |
+| 4.1 | National YoungArts Foundation | National YoungArts Foundation | 10-12 | national | paid | individual | individual | annual | <https://youngarts.org/competition> |
+| 4.0 | Doodle for Google | Google | K-12 | national | free | individual | either | annual | <https://doodles.google.com/intl/ALL_in/d4g/rules/> |
 | 4.0 | CSPA Crown & Gold Circle Awards | Columbia Scholastic Press Association | 6-12 | national | paid | both | school_or_chapter | annual | <https://precollege.sps.columbia.edu/columbia-scholastic-press-association> |
 | 4.0 | JEA National Student Media Contests | Journalism Education Association | 9-12 | national | paid | individual | school_or_chapter | annual | <https://jea.org/contests/> |
-| 3.9 | International Thespian Excellence Awards (Thespys) | Educational Theatre Association | 9-12 | national | paid | both | school_or_chapter | annual | <https://itf.schooltheatre.org/thespys/> |
-| 3.8 | STN Nationals & Challenges | Student Television Network | 6-12 | national | paid | team | school_or_chapter | annual | <https://www.studenttelevision.com> |
+| 3.9 | International Thespian Excellence Awards (Thespys) | Educational Theatre Association | 9-12 | national | paid | both | school_or_chapter | annual | <https://schooltheatre.org/thespys> |
+| 3.8 | STN Nationals & Challenges | Student Television Network | 6-12 | national | paid | team | school_or_chapter | annual | <https://www.studenttelevision.com/nationals> |
 | 3.6 | NSPA Pacemaker & Individual Awards | National Scholastic Press Association | 6-12 | national | paid | both | school_or_chapter | annual | <https://studentpress.org/nspa/> |
 | 3.6 | Quill and Scroll Writing Visual Multimedia Contest | Quill and Scroll Society | 9-12 | national | paid | individual | school_or_chapter | annual | <https://quillandscroll.org/contests/> |
 | 3.5 | Bands of America Grand National Championships | Music for All | 9-12 | national | paid | team | school_or_chapter | annual | <https://marching.musicforall.org/grandnationals> |
@@ -407,7 +407,7 @@ Proves all 11 seed categories are represented and the major ones clear the R1 ga
 | 2.5 | National Trumpet Competition | National Trumpet Competition | 5-12 | national | paid | both | individual | annual | <https://nationaltrumpetcomp.org> |
 | 2.3 | NFPW High School Communications Contest | National Federation of Press Women | 9-12 | national | paid | individual | either | annual | <https://www.nfpw.org/high-school-contest> |
 | 2.3 | ARTEFFECT | Lowell Milken Center for Unsung Heroes | 6-12 | national | free | individual | individual | annual | <https://www.arteffectlmc.org> |
-| 2.2 | National Dance / YoungArts dance discipline | National YoungArts Foundation | 10-12 | national | paid | individual | individual | annual | <https://www.youngarts.org> |
+| 2.2 | National Dance / YoungArts dance discipline | National YoungArts Foundation | 10-12 | national | paid | individual | individual | annual | <https://youngarts.org/competition> |
 | 2.1 | Ocean Awareness Contest | Bow Seat Programs | 6-12 | virtual | free | both | either | annual | <https://bowseat.org/programs/ocean-awareness-contest/> |
 | 2.1 | Embracing Our Differences | Embracing Our Differences Inc. | K-12 | national | free | individual | individual | annual | <https://www.embracingourdifferences.org> |
 | 2.0 | Cooper International Competition (violin/piano) | Oberlin Conservatory | 9-12 | national | paid | individual | individual | annual | <https://www.oberlin.edu/cooper-competition> |
@@ -424,7 +424,7 @@ Proves all 11 seed categories are represented and the major ones clear the R1 ga
 | 4.1 | United States Academic Decathlon | USAD | 9-12 | national | paid | team | school_or_chapter | annual | <https://www.usad.org> |
 | 4.1 | UIL Academics | University Interscholastic League | 2-12 | state | paid | both | school_or_chapter | annual | <https://www.uiltexas.org/academics> |
 | 4.0 | America's Battle of the Books | America's Battle of the Books | 3-12 | national | paid | team | either | annual | <https://www.battleofthebooks.org> |
-| 3.6 | National Latin Exam | American Classical League / NJCL | 6-12 | national | paid | individual | school_or_chapter | annual | <https://www.nle.org> |
+| 3.6 | National Latin Exam | American Classical League / NJCL | 6-12 | national | paid | individual | school_or_chapter | annual | <https://www.nle.org/registration> |
 | 3.6 | National Spanish Examinations | AATSP | 6-12 | national | paid | individual | school_or_chapter | annual | <https://www.nationalspanishexam.org> |
 | 3.6 | Le Grand Concours (National French Contest) | AATF | 1-12 | national | paid | individual | school_or_chapter | annual | <https://frenchteachers.org/concours/> |
 | 3.3 | NAQT Middle School National Championship (MSNCT) | NAQT | 6-8 | national | paid | team | school_or_chapter | annual | <https://www.naqt.com> |
@@ -464,7 +464,7 @@ Proves all 11 seed categories are represented and the major ones clear the R1 ga
 
 | Rank | Name | Organizer | Grades | Region | Cost | Part. | Pathway | Recur. | URL |
 |--:|---|---|---|---|---|---|---|---|---|
-| 4.1 | National History Day | National History Day | 6-12 | national | paid | both | school_or_chapter | annual | <https://www.nhd.org> |
+| 4.1 | National History Day | National History Day | 6-12 | national | paid | both | school_or_chapter | annual | <https://nhd.org/en/contest/national-contest> |
 | 3.8 | National Civics Bee | U.S. Chamber of Commerce Foundation | 6-8 | national | free | individual | school_or_chapter | annual | <https://www.civicsbee.org> |
 | 2.8 | Bill of Rights Institute — MyImpact Challenge | Bill of Rights Institute | 9-12 | national | free | individual | individual | annual | <https://billofrightsinstitute.org/myimpact-challenge> |
 | 2.8 | National History Bee | International Academic Competitions | 4-12 | national | paid | individual | either | annual | <https://www.historybee.com> |
@@ -495,12 +495,12 @@ Proves all 11 seed categories are represented and the major ones clear the R1 ga
 
 | Rank | Name | Organizer | Grades | Region | Cost | Part. | Pathway | Recur. | URL |
 |--:|---|---|---|---|---|---|---|---|---|
-| 4.6 | Scripps National Spelling Bee | E.W. Scripps Company | K-8 | national | paid | individual | school_or_chapter | annual | <https://spellingbee.com> |
+| 4.6 | Scripps National Spelling Bee | E.W. Scripps Company | K-8 | national | paid | individual | school_or_chapter | annual | <https://spellingbee.com/rules> |
 | 4.0 | FFA Career Development Events | National FFA Organization | 7-12 | national | paid | both | school_or_chapter | annual | <https://www.ffa.org/participate/cdes/> |
 | 3.8 | National Merit Scholarship Program | NMSC | 11-11 | national | paid | individual | school_or_chapter | annual | <https://www.nationalmerit.org> |
 | 3.8 | TSA National Conference Competitive Events | Technology Student Association | 6-12 | national | paid | both | school_or_chapter | annual | <https://tsaweb.org/competitions> |
-| 3.6 | Destination Imagination | Destination Imagination | K-12 | national | paid | team | school_or_chapter | annual | <https://www.destinationimagination.org> |
-| 3.6 | Odyssey of the Mind | Odyssey of the Mind | K-12 | national | paid | team | school_or_chapter | annual | <https://www.odysseyofthemind.com> |
+| 3.6 | Destination Imagination | Destination Imagination | K-12 | national | paid | team | school_or_chapter | annual | <https://www.destinationimagination.org/challenge-experience> |
+| 3.6 | Odyssey of the Mind | Odyssey of the Mind | K-12 | national | paid | team | school_or_chapter | annual | <https://odysseyofthemind.com/program-guide> |
 | 3.3 | Davidson Fellows Scholarship | Davidson Institute | K-12 | national | free | individual | individual | annual | <https://www.davidsongifted.org/fellows-scholarship> |
 | 3.3 | Samsung Solve for Tomorrow | Samsung | 6-12 | national | free | team | school_or_chapter | annual | <https://www.samsung.com/us/solvefortomorrow> |
 | 3.3 | US Chess National K-12 / Grade Championships | US Chess Federation | K-12 | national | paid | both | either | annual | <https://new.uschess.org> |
