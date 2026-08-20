@@ -447,3 +447,33 @@ test('edition + key-date free text is sanitized like every other field (M4)', as
   assert.equal(extraction.payload.edition?.prizeSummary, 'a bprize');
   assert.equal(extraction.payload.keyDates?.[0]?.label, 'winners emannounced');
 });
+
+test('a bare calendar date is rejected for startsAt — Date.parse accepts it, the server does not', async () => {
+  const payload = await loadGoodPayload();
+  // Regression: the first live submit emitted "2026-11-03" here. Date.parse() reads that as UTC
+  // midnight so the old check passed, then approve 422'd on java.time.Instant. The pre-flight gate
+  // must catch it, not the server.
+  payload.keyDates = [{ type: 'REG_CLOSE', startsAt: '2026-11-03' }];
+  const { ok, errors } = validatePayload(payload);
+  assert.equal(ok, false);
+  assert.ok(
+    errors.some(
+      (e) => e.includes('is a date without a time') && e.includes('2026-11-03T00:00:00Z'),
+    ),
+    `expected the date-without-time error suggesting a full instant, got: ${errors.join(' | ')}`,
+  );
+});
+
+test('a full instant still passes, and ageCutoffDate stays a plain date', async () => {
+  const payload = await loadGoodPayload();
+  payload.keyDates = [{ type: 'REG_CLOSE', startsAt: '2026-11-03T00:00:00Z' }];
+  payload.edition = {
+    cycleLabel: '2026',
+    status: 'OPEN',
+    scopeLevel: 'NATIONAL',
+    // LocalDate server-side — a bare date is correct here and must NOT be flagged.
+    ageCutoffDate: '2026-09-01',
+  };
+  const { ok, errors } = validatePayload(payload);
+  assert.equal(ok, true, `expected valid, got: ${errors.join(' | ')}`);
+});

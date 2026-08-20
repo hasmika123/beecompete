@@ -178,7 +178,16 @@ function validateKeyDates(dates: KeyDatePayload[], errors: string[], warnings: s
   }
 }
 
-/** Returns the parsed epoch ms, or null when absent/invalid (the error is recorded). */
+/**
+ * Returns the parsed epoch ms, or null when absent/invalid (the error is recorded).
+ *
+ * ⚠ A bare calendar date is REJECTED even though `Date.parse('2026-11-03')` succeeds in JS
+ * (it reads as UTC midnight). The server maps startsAt/endsAt to `java.time.Instant`, whose
+ * Jackson deserializer requires a time component and 422s on a date-only string. Accepting it
+ * here would mean the pre-flight gate passes a payload approve then rejects — which is exactly
+ * what this validator exists to prevent, and it happened for real on the first live submit.
+ * (`edition.ageCutoffDate` is a LocalDate, so a bare date IS correct there — different check.)
+ */
 function checkInstant(
   errors: string[],
   field: string,
@@ -187,6 +196,13 @@ function checkInstant(
   if (value == null) return null;
   if (typeof value !== 'string') {
     errors.push(`${field} must be an ISO-8601 string or null`);
+    return null;
+  }
+  if (ISO_DATE.test(value)) {
+    errors.push(
+      `${field} is a date without a time (${value}); the server needs a full ISO-8601 ` +
+        `instant, e.g. ${value}T00:00:00Z`,
+    );
     return null;
   }
   const ms = Date.parse(value);

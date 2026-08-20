@@ -103,6 +103,10 @@ A listing is only useful with a running attached, so also fill these INSIDE "pay
   who trusts it misses the real one.
 - Only emit a date you can read off the page. If the page gives a date with no year, and the year is
   not unambiguous from context, treat it as TBD.
+- **startsAt/endsAt must be a FULL ISO-8601 instant with a time, e.g. "2026-11-03T00:00:00Z" —
+  never a bare date like "2026-11-03".** The server stores these as instants and rejects a
+  date-only value outright. When the page gives a day but no clock time, use T00:00:00Z and say
+  so in reviewerNotes. (This does NOT apply to edition.ageCutoffDate, which is a plain date.)
 - If no timezone is stated, leave timezone null rather than assuming one.
 - Emit a REG_CLOSE or SUBMISSION_DUE row whenever the page implies a closing date exists, even when
   the date itself is TBD — that row is what the public card and search read as the deadline.
