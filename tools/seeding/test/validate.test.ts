@@ -457,7 +457,9 @@ test('a bare calendar date is rejected for startsAt — Date.parse accepts it, t
   const { ok, errors } = validatePayload(payload);
   assert.equal(ok, false);
   assert.ok(
-    errors.some((e) => e.includes('is a date without a time') && e.includes('2026-11-03T00:00:00Z')),
+    errors.some(
+      (e) => e.includes('is a date without a time') && e.includes('2026-11-03T00:00:00Z'),
+    ),
     `expected the date-without-time error suggesting a full instant, got: ${errors.join(' | ')}`,
   );
 });
