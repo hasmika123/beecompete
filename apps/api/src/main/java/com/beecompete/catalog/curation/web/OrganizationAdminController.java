@@ -96,7 +96,7 @@ public class OrganizationAdminController {
 		// R1-19 org trust ladder: CURATED (unclaimed) → CLAIMED → VERIFIED. UNVERIFIED is retired.
 		if (request.state() == VerificationState.UNVERIFIED) {
 			throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-					"organizations use CURATED (unclaimed), CLAIMED, or VERIFIED — not UNVERIFIED");
+					"organizations use CURATED (unclaimed), CLAIMED, or VERIFIED, not UNVERIFIED");
 		}
 		Organization organization = require(id);
 		organization.setVerificationState(request.state());

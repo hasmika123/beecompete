@@ -83,8 +83,13 @@ export interface ShareMenuProps {
   title: string;
   /** Site-relative path; resolved to an absolute URL against the current origin at open time. */
   path: string;
-  /** `button` = labeled pill (detail header). `icon` = compact circle (card corner). */
-  variant?: 'button' | 'icon';
+  /**
+   * `button` = labeled pill (detail header). `icon` = compact circle over cover art (card
+   * corner). `icon-secondary` = compact circle on a PLAIN page ground, wearing the secondary
+   * Button's material — the detail page's breadcrumb row and sticky bar, where it has to read as
+   * the twin of the Follow button next to it.
+   */
+  variant?: 'button' | 'icon' | 'icon-secondary';
   className?: string;
 }
 
@@ -161,8 +166,10 @@ export function ShareMenu({ title, path, variant = 'button', className }: ShareM
     }
   };
 
+  // Both icon variants are the same button with the same accessible name; only the material
+  // differs, so they share one branch rather than being copy-pasted.
   const trigger =
-    variant === 'icon' ? (
+    variant !== 'button' ? (
       <button
         ref={triggerRef}
         type="button"
@@ -171,10 +178,14 @@ export function ShareMenu({ title, path, variant = 'button', className }: ShareM
         aria-label={`Share ${title}`}
         onClick={toggle}
         className={cn(
-          'inline-flex size-8 items-center justify-center rounded-full text-foreground shadow-sm transition-colors',
-          // Backdrop keeps the icon legible over any cover art (§4 text-over-imagery rule).
-          'border border-border bg-surface-raised/90 backdrop-blur hover:bg-surface',
+          'inline-flex items-center justify-center rounded-full text-foreground transition-colors',
           'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+          variant === 'icon'
+            ? // Over cover art: the backdrop keeps the icon legible (§4 text-over-imagery rule).
+              'size-8 border border-border bg-surface-raised/90 shadow-sm backdrop-blur hover:bg-surface'
+            : // On a plain ground: the secondary Button's exact fill/border/hover, at 36px so it
+              // is a comfortable touch target and matches the Follow circle it sits beside.
+              'size-9 border border-border bg-surface hover:bg-border/60',
         )}
       >
         <Share aria-hidden="true" className="size-4" />

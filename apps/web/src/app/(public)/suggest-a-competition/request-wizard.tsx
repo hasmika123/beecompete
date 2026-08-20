@@ -65,7 +65,7 @@ export function RequestWizard({ initialName = '' }: { initialName?: string }) {
         className="rounded-[var(--radius-panel)] border border-border bg-surface p-6 text-center outline-none sm:p-10"
       >
         <CheckCircle aria-hidden="true" weight="fill" className="mx-auto size-10 text-success" />
-        <h2 className="mt-3 font-display text-2xl text-foreground">Thanks — request received!</h2>
+        <h2 className="mt-3 font-display text-2xl text-foreground">Thanks! Request received.</h2>
         <p className="mx-auto mt-2 max-w-md text-sm text-muted">
           Our curation team reviews every suggestion (usually within a few days) and writes an
           honest listing before it goes live. We don&apos;t publish anything automatically.
@@ -133,7 +133,7 @@ export function RequestWizard({ initialName = '' }: { initialName?: string }) {
           {/* Conveys the requirement non-visually AND explains why "Next" is disabled until it's
               filled (the disabled button alone gives AT users no reason) — WCAG 3.3.2. */}
           <p id="wizard-name-hint" className="mt-2 text-xs text-muted">
-            Required — everything after this is optional.
+            Required. Everything after this is optional.
           </p>
         </div>
         <div hidden={step !== 1}>

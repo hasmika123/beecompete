@@ -98,6 +98,40 @@ Any future exception (e.g., judge clarifications) must be org-visible, logged, a
 4. WCAG 2.1 AA baseline on public pages.
 5. Incident-response plan + tested backups.
 6. **Attorney review of COPPA posture + privacy policy.**
+7. **The age-screen question below must be asked explicitly** — don't let it be absorbed into the
+   general "review our COPPA posture" of item 6. It is the one open question a code audit can't close.
+
+### R1 data inventory — what we actually collect (verified against source, 2026-08-19)
+Checked in code rather than assumed, so counsel can rely on it:
+- **Cookies: none.** The app sets zero cookies (no `Set-Cookie`, no `document.cookie`, no `cookies()`).
+  Browser storage is two functional preferences — the `next-themes` light/dark key and an
+  admin-sidebar collapse flag. Neither is personal data.
+- **Analytics: anonymous.** PostHog runs `persistence: 'memory'` + `person_profiles: 'never'`, with
+  autocapture / session recording / surveys / performance / dead-clicks all off and a DNT/GPC gate
+  before init. Cloudflare's beacon is aggregate and cookieless. Sentry sets `sendDefaultPii: false`
+  on all three runtimes and loads **no** Session Replay in the browser.
+- **Database: no PII columns.** No submitter / `email` / `ip_address` / `user_agent` column exists in
+  any migration; `/suggest-a-competition` deliberately stores no submitter identity.
+- **⚠️ The single PII store is Brevo.** The digest capture sends **email + `GRADE` + `INTEREST` +
+  `STATE`**; follow/host add `COMPETITION` / `COMPANY`; `/feedback` carries an optional reply address.
+
+### 🔒 Open question for counsel — the digest capture's age posture
+**Put this to the privacy attorney in these terms:** BeeCompete is a K-12 academic-competition
+marketplace. The weekly-digest form collects an **email address together with a grade level**. The
+only control today is a self-declaration in the form copy ("For parents, educators, and students
+16+"), with the field labeled "Your student's grade" — i.e. framed as a parent entering a child's
+grade. There is **no neutral age screen and no verification.** Is this site *child-directed* or
+*mixed-audience* under the FTC's analysis, and does the mixed-audience path require a **neutral age
+screen before collection** rather than a notice alongside it? Double opt-in is enabled, which is a
+consent *record* but is not an age check.
+
+**Until counsel answers, do not** add any field to a capture form that narrows a subscriber toward an
+identifiable minor (school name, birth date, exact age, full name).
 
 ## What lets us launch *earlier* with less burden
-A **browse-only marketplace with no accounts collects no personal data**, so COPPA consent flows aren't triggered yet (still need a privacy policy + affiliate disclosure). This is why the release strategy (see `development-process.md`) ships a public browse-only marketplace *before* accounts — real traffic and SEO with a much lighter compliance load.
+A **browse-only marketplace with no accounts collects almost no personal data** — the deliberate
+exception is the opt-in email captures above, which is exactly why they're framed for
+parents/educators/16+ and use double opt-in. COPPA *parental-consent flows* aren't triggered yet
+(we still need a privacy policy + affiliate disclosure, and the age-screen question resolved). This
+is why the release strategy (see `development-process.md`) ships a public browse-only marketplace
+*before* accounts — real traffic and SEO with a much lighter compliance load.

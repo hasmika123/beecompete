@@ -17,9 +17,9 @@ export async function followByEmail(_prev: FormState, form: FormData): Promise<F
   return captureToList(form, {
     list: 'follow',
     attributes: competitionAttribute(form),
-    notReady: 'Email reminders are almost ready — check back shortly!',
+    notReady: 'Email reminders are almost ready. Check back shortly!',
     confirm: 'Almost there! Check your inbox and confirm to get reminders for this competition.',
-    done: 'You’re following this competition — we’ll email you about key dates.',
+    done: 'You’re following this competition. We’ll email you about key dates.',
   });
 }
 
@@ -27,7 +27,7 @@ export async function registerHostInterest(_prev: FormState, form: FormData): Pr
   return captureToList(form, {
     list: 'host',
     attributes: competitionAttribute(form),
-    notReady: 'Host tools are on the way — check back shortly!',
+    notReady: 'Host tools are on the way. Check back shortly!',
     confirm:
       'Thanks! Check your inbox to confirm, and we’ll be in touch about claiming this listing.',
     done: 'Thanks! We’ll be in touch about claiming this listing and early host access.',

@@ -46,6 +46,6 @@ export async function captureToList(form: FormData, opts: CaptureOptions): Promi
     return { ok: true, error: result === 'confirm' ? opts.confirm : opts.done };
   } catch (e) {
     reportBrevoError(`${opts.list}-capture`, e);
-    return { ok: false, error: 'Sorry — we couldn’t sign you up just now. Please try again.' };
+    return { ok: false, error: 'Sorry, we couldn’t sign you up just now. Please try again.' };
   }
 }

@@ -53,7 +53,7 @@ public class CoverUploadController {
 		S3Presigner p = presigner.getIfAvailable();
 		if (p == null || bucket.isBlank() || publicBaseUrl.isBlank()) {
 			throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-					"cover upload isn't configured — set S3_BUCKET, AWS_REGION, and S3_PUBLIC_BASE_URL");
+					"cover upload isn't configured; set S3_BUCKET, AWS_REGION, and S3_PUBLIC_BASE_URL");
 		}
 		String ext = EXT_BY_TYPE.get(request.contentType());
 		if (ext == null) {

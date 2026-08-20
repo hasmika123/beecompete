@@ -113,15 +113,15 @@ export function EditionForm({
         <FormSection title="Advancement" cols="sm:grid-cols-2">
           <FormField
             label="Advances to"
-            hint="the next edition winners advance into (Q5) — e.g. state → national."
+            hint="the next edition winners advance into (Q5), e.g. state → national."
           >
             <Select
               name="advancesToEditionId"
               options={[
-                { value: '', label: '— none —' },
+                { value: '', label: 'None' },
                 ...siblingEditions.map((s) => ({ value: s.id, label: s.cycleLabel })),
               ]}
-              placeholder="— none —"
+              placeholder="None"
               defaultValue={e?.advancesToEditionId ?? ''}
               searchable
             />

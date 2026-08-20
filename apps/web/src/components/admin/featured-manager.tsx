@@ -42,7 +42,7 @@ export function FeaturedManager({
     <div className="grid gap-4">
       {ids.length === 0 && (
         <p className="text-sm text-muted">
-          No featured competitions yet — add up to 10 below to fill the Landing carousel.
+          No featured competitions yet. Add up to 10 below to fill the Landing carousel.
         </p>
       )}
       <ol className="grid gap-2">

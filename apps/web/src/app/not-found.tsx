@@ -17,8 +17,8 @@ export default function NotFound() {
           We couldn’t find that page
         </h1>
         <p className="mt-3 max-w-md text-muted">
-          The competition or page you’re after may have moved, been archived, or never existed —
-          let’s get you back to the catalog.
+          The competition or page you’re after may have moved, been archived, or never existed.
+          Let’s get you back to the catalog.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link href="/competitions" className={buttonClasses({ variant: 'brand' })}>

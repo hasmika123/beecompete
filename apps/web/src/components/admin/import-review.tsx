@@ -75,7 +75,7 @@ export function ImportReview({
 
   const patchPayload = (patch: (obj: Record<string, unknown>) => void): void => {
     if (!parsed) {
-      toast({ title: 'Fix the JSON first — it doesn’t parse.', tone: 'error' });
+      toast({ title: 'Fix the JSON first. It doesn’t parse.', tone: 'error' });
       return;
     }
     const next = { ...parsed };
@@ -133,13 +133,13 @@ export function ImportReview({
                 {record.sourceUrl}
               </a>
             ) : (
-              '—'
+              '–'
             )}
           </dd>
         </div>
         <div className="flex gap-2">
           <dt className="text-muted">Confidence:</dt>
-          <dd>{record.confidence ?? '—'}</dd>
+          <dd>{record.confidence ?? '–'}</dd>
         </div>
       </dl>
 
@@ -149,8 +149,8 @@ export function ImportReview({
         {curId ? (
           <div className="grid gap-2">
             <p className="flex items-center gap-1.5 text-sm text-success">
-              <Check aria-hidden="true" className="size-4" /> Resolved to an existing organization —
-              no new org will be created.
+              <Check aria-hidden="true" className="size-4" /> Resolved to an existing organization.
+              No new org will be created.
             </p>
             <p className="text-xs text-muted">
               organizerOrgId: <code className="font-mono">{curId}</code>
@@ -168,12 +168,12 @@ export function ImportReview({
             </p>
             {archivedExact ? (
               <Alert tone="warning">
-                A same-named organization is <b>archived</b>. Restore it or pick another — approving
+                A same-named organization is <b>archived</b>. Restore it or pick another. Approving
                 will fail while an archived org matches the name.
               </Alert>
             ) : exactMatch ? (
               <p className="flex items-center gap-1.5 text-sm text-success">
-                <Check aria-hidden="true" className="size-4" /> Exact match — “{exactMatch.name}”
+                <Check aria-hidden="true" className="size-4" /> Exact match: “{exactMatch.name}”
                 will be reused.
               </p>
             ) : nearMatches.length > 0 ? (
@@ -205,7 +205,7 @@ export function ImportReview({
               </div>
             ) : (
               <p className="text-sm text-muted">
-                No existing organization matches — a new one (“{curName}”, CURATED) will be created
+                No existing organization matches. A new one (“{curName}”, CURATED) will be created
                 on approve.
               </p>
             )}
@@ -221,7 +221,7 @@ export function ImportReview({
         ) : (
           <div className="grid gap-2">
             <Alert tone="warning">
-              No organizer — assign one before approving. Search below, or add an{' '}
+              No organizer. Assign one before approving. Search below, or add an{' '}
               <code className="font-mono">organizerName</code> to the payload.
             </Alert>
             <OrgSearch onPick={chooseOrg} />
@@ -235,9 +235,7 @@ export function ImportReview({
         <FormField
           label="Extracted payload (edit before approving)"
           hint="Approving validates this against the category template and creates the competition (provenance = import)."
-          error={
-            jsonInvalid ? 'Not valid JSON — approving will fail until this parses.' : undefined
-          }
+          error={jsonInvalid ? 'Not valid JSON. Approving will fail until this parses.' : undefined}
         >
           <Textarea
             value={payloadText}
@@ -267,7 +265,7 @@ export function ImportReview({
           onClick={async () => {
             const ok = await confirm({
               title: 'Reject this import?',
-              message: 'Rejection is final — a rejected record can’t be reopened for approval.',
+              message: 'Rejection is final. A rejected record can’t be reopened for approval.',
               confirmLabel: 'Reject',
               tone: 'danger',
             });

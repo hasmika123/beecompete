@@ -44,7 +44,7 @@ describe('CompetitionCard', () => {
     );
     const free = screen.getByText('Free');
     expect(free.className).toContain('text-success');
-    expect(screen.getByText('—')).toBeTruthy();
+    expect(screen.getByText('–')).toBeTruthy();
   });
 
   it('reserves the organizer + description slots on a sparse card (fixed-slot anatomy)', () => {

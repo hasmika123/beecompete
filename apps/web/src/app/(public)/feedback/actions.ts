@@ -35,7 +35,7 @@ export async function submitFeedback(_prev: FormState, form: FormData): Promise<
   if (!brevoEmailEnabled(cfg)) {
     return {
       ok: false,
-      error: `Feedback isn’t wired up yet — please email ${LEGAL_CONTACT_EMAIL} directly for now.`,
+      error: `Feedback isn’t wired up yet. Please email ${LEGAL_CONTACT_EMAIL} directly for now.`,
     };
   }
 
@@ -50,7 +50,7 @@ export async function submitFeedback(_prev: FormState, form: FormData): Promise<
     reportBrevoError('feedback-email', e);
     return {
       ok: false,
-      error: `Sorry — we couldn’t send that just now. Please try again, or email ${LEGAL_CONTACT_EMAIL}.`,
+      error: `Sorry, we couldn’t send that just now. Please try again, or email ${LEGAL_CONTACT_EMAIL}.`,
     };
   }
   return { ok: true };

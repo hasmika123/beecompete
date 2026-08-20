@@ -37,6 +37,10 @@ services:
       # Canonical origin for metadata/JSON-LD absolute URLs — runtime, NOT NEXT_PUBLIC_*:
       # the image is built once and promoted, so build-time inlining can't vary per stack.
       SITE_URL: https://staging.beecompete.com
+      # Shared secret for the /api/healthz/db monitoring probe (blank = probe 401s, fail closed).
+      # Staging isn't monitored today, so leaving this unset is fine — set it only if you add a
+      # staging uptime monitor, and use a DIFFERENT value from prod's.
+      HEALTHZ_TOKEN: ${HEALTHZ_TOKEN:-}
       # Node-side (SSR/BFF) Sentry for the WEB project — a separate Sentry project from
       # the API's, so its DSN lives in the VPS .env as WEB_SENTRY_DSN (blank = inert).
       # (Browser-side uses NEXT_PUBLIC_SENTRY_DSN, baked at image build — see Dockerfile.)

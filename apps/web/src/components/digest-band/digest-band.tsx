@@ -4,6 +4,7 @@ import { useActionState } from 'react';
 import Link from 'next/link';
 import { Button, FormResult, Honeypot, Input, Select } from '@beecompete/ui';
 import { subscribeDigest } from './actions';
+import { CapturePanel } from '@/components/landing/capture-panel';
 import { GRADE_OPTIONS, INTEREST_OPTIONS, STATE_OPTIONS } from '@/lib/digest-options';
 import type { FormState } from '@/lib/admin-types';
 
@@ -14,21 +15,34 @@ const INITIAL: FormState = { ok: false };
  * decision #9). R1-15: real Brevo capture + segmentation. Pitched to parents/educators/16+ (a
  * newsletter to a child would trigger COPPA); the 3 preference questions are optional and stored
  * as Brevo contact attributes. Inert until Brevo env is set — see actions.ts / lib/brevo.ts.
+ *
+ * `onClose` is passed ONLY by the landing page, where #57 made this band open on demand from the
+ * audience cards. How It Works and Categories render it with no props and it stays permanently
+ * visible there, exactly as before — do not make the prop required.
  */
-export function DigestBand() {
+export function DigestBand({ onClose }: { onClose?: () => void } = {}) {
   const [state, formAction, submitting] = useActionState(subscribeDigest, INITIAL);
 
   return (
-    <section
+    <CapturePanel
       id="digest"
-      aria-labelledby="digest-heading"
-      className="rounded-[var(--radius-panel)] border border-border bg-brand-gold-soft/60 p-6 sm:p-10"
+      headingId="digest-heading"
+      onClose={onClose}
+      closeLabel="Close the weekly digest signup"
     >
-      <div className="mx-auto grid max-w-2xl justify-items-center gap-3 text-center">
-        <h2 id="digest-heading" className="font-display text-2xl text-foreground sm:text-3xl">
-          New competitions, <em>matched to your student</em> — weekly
+      <>
+        {/* One line from md up (#56). Both halves of this are needed: `whitespace-nowrap` alone
+            would overflow, and the size step alone would still wrap. 30px needs 737px, which only
+            fits from lg (896px available); 24px needs 590px, which fits md's 640px — so the 3xl
+            step is held back to lg. Below md it wraps by design, per the owner: phones may split
+            it. Re-measure both numbers if this copy ever changes. */}
+        <h2
+          id="digest-heading"
+          className="font-display text-2xl text-foreground md:whitespace-nowrap lg:text-3xl"
+        >
+          New competitions, <em>matched to your student</em>, every week
         </h2>
-        <p className="text-sm text-muted">
+        <p className="max-w-2xl text-sm text-muted">
           One short email a week with new and closing-soon competitions that fit your student&apos;s
           grade and interests. No spam, unsubscribe anytime.
         </p>
@@ -52,12 +66,11 @@ export function DigestBand() {
 
               {/* Optional preferences → Brevo segmentation. */}
               <fieldset className="grid gap-2 text-left">
-                <legend className="text-xs font-medium text-muted">
-                  Personalize your digest{' '}
-                  {/* Full-strength muted (not /80): at 80% over the gold-soft band this small
-                      text fell to ~3.4:1, under AA 4.5:1 (WCAG 1.4.3). */}
-                  <span className="font-normal text-muted">(optional)</span>
-                </legend>
+                {/* Legend hidden VISUALLY only (#56 removed the on-screen text), not deleted: it
+                    is the fieldset's accessible name, so dropping it would leave AT announcing an
+                    unlabelled group of three selects. Each Select keeps its own aria-label, but
+                    the group still needs to say what the three are for. */}
+                <legend className="sr-only">Personalize your digest (optional)</legend>
                 <div className="grid gap-2 sm:grid-cols-3">
                   <Select
                     name="grade"
@@ -98,7 +111,7 @@ export function DigestBand() {
 
             <p className="max-w-md text-xs text-muted">
               For parents, educators, and students 16+. We’ll send the weekly digest and nothing
-              else — unsubscribe anytime. See our{' '}
+              else. Unsubscribe anytime. See our{' '}
               <Link
                 href="/privacy"
                 className="font-medium text-foreground underline underline-offset-2 hover:text-brand-gold"
@@ -109,7 +122,7 @@ export function DigestBand() {
             </p>
           </>
         )}
-      </div>
-    </section>
+      </>
+    </CapturePanel>
   );
 }

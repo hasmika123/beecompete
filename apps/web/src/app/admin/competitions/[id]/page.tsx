@@ -100,7 +100,7 @@ export default async function EditCompetitionPage({ params }: { params: Promise<
             {/* Moved from the bottom of the competition form (item 7) — this is where the
                 pointer is actionable. */}
             <Alert tone="info" className="mb-4">
-              Dates &amp; deadlines live here — add an Edition, then set its key dates (registration
+              Dates &amp; deadlines live here. Add an Edition, then set its key dates (registration
               close, submission due, results) on the edition page.
             </Alert>
             <div className="mb-3 flex justify-end">

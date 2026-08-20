@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight, CompetitionCard } from '@beecompete/ui';
+import { ScrollRow } from '@/components/scroll-row';
 import { searchCompetitions } from '@/lib/catalog-api';
 import { toCardData } from '@/lib/catalog-display';
 
@@ -38,15 +39,22 @@ export async function RelatedCompetitions({
           <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
       </div>
-      {/* Same fixed --card-w tracks as the marketplace grid — pixel-identical cards everywhere
-          (blueprints #34) instead of the old stretchy lg:grid-cols-4. */}
-      <ul className="grid list-none grid-cols-1 gap-6 sm:grid-cols-[repeat(auto-fill,var(--card-w))]">
+      {/* Horizontal ScrollRow (#85, was a wrapping grid) — same --card-w cards, same pattern as
+          the landing Featured row and Prep resources above, so the two rails on this page scroll
+          identically instead of one wrapping to a second line. */}
+      <ScrollRow
+        label={
+          categorySlug === 'other'
+            ? 'More competitions to explore'
+            : `More ${categoryName.toLowerCase()} competitions`
+        }
+      >
         {items.map((item) => (
-          <li key={item.id}>
+          <div key={item.id} role="listitem" className="w-(--card-w) shrink-0 snap-start">
             <CompetitionCard data={toCardData(item)} linkComponent={Link} className="h-full" />
-          </li>
+          </div>
         ))}
-      </ul>
+      </ScrollRow>
     </section>
   );
 }

@@ -54,12 +54,32 @@ read this doc the way they read the glossary — decisions live here, not in cha
   marks ~170×145) — fine for every current surface; a large ≥512px app/PWA icon would want a
   higher-res or vector source later. Wired into the `Logo`/`LogoMark` components, the favicon, and the
   OG share cards (see §6 + architecture §8).
-- **Tabs → "attached" variant (owner 2026-07-08):** reference photo of a trading site (101Investing)
-  showing **connected tabs** — the active tab is a filled rounded-top riser that merges seamlessly
-  into a filled content card below it (a "folder tab" look), inactive tabs are plain muted text.
-  Built as `Tabs variant="attached"` (the `underline` variant remains the default). Adapted to
-  tokens: the card uses `surface` (soft grey in light, near-black in dark — matches the reference's
-  dark card) rather than a hardcoded black, so it works in both modes.
+- **Tabs → "attached" variant (owner 2026-07-08) — SUPERSEDED 2026-08-18, see next entry:**
+  reference photo of a trading site (101Investing) showing **connected tabs** — the active tab is a
+  filled rounded-top riser that merges seamlessly into a filled content card below it (a "folder
+  tab" look), inactive tabs are plain muted text. Built as `Tabs variant="attached"` (the
+  `underline` variant remains the default). Adapted to tokens: the card used `surface`.
+- **Tabs → "pill" variant (owner reference image, 2026-08-18):** screenshot of a **dark pill-shaped
+  tab bar** — fully rounded ink-navy container, the **active tab a gold/yellow pill with dark bold
+  text**, inactive tabs light muted labels on the bar ("doesn't have to be exactly like this, but
+  similar"). Replaces the folder-tab look after the #92–#98 iterations on it failed to land. Adapted
+  to tokens: bar = `primary` (graphite light / warm-light dark — inverts like the button system),
+  active pill = **`brand-gold` + `brand-ink` text** (the brand-button pairing, so the reference's
+  yellow pill IS our gold accent). Adaptation rev (owner steer, same day): the reference's DARK
+  bar was a dark-mode app's — on our near-white page it read too dark, so the bar wears the
+  secondary-button materials instead (`surface` well + hairline border, `text-muted` inactive
+  labels, secondary hover fills); the gold pill stays the only saturated element. Bar + panels
+  sit as a free-standing bar with the content card right under it (owner rev, same day). Built as `Tabs variant="pill"`
+  (replaces `attached` entirely; `underline` still the default elsewhere).
+
+### Copy rule: no em dashes *(owner 2026-08-18)*
+
+**Never use an em dash (—) in user-facing copy.** Rewrite the sentence instead: a colon when the
+second half explains the first, a comma for an aside, a semicolon for a linked clause, or just two
+sentences. Applies to every rendered string, including page/OG metadata, form hints, toasts,
+validation and API error messages, and the category SEO blocks. Swept clean 2026-08-18 (#109);
+`–` (en dash) remains the "no value" glyph in admin tables and on cards, `·` stays the inline
+separator, and en dashes in numeric ranges ("9–12") are untouched.
 
 ## 2. Brand personality *(locked 2026-07-07)*
 

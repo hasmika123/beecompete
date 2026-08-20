@@ -76,13 +76,15 @@ async function nearMiss(params: MarketplaceParams, categorySlug: string | undefi
 }
 
 function CardGrid({ items }: { items: CompetitionSummary[] }) {
-  // Fixed --card-w tracks (auto-fill) — card width is 258px by construction (the token is
+  // Fixed --card-w tracks (auto-fill) — card width is 264px by construction (the token is
   // derived to fill the shell EXACTLY: 4 tracks + 3 gaps = the 1104px content width; see
   // tokens.css), so it stays IDENTICAL whether the filter panel is open or closed: the panel
   // is one track wide, so opening it drops exactly one column (4 ↔ 3 per row, blueprints #34).
   // Single full-width column on phones.
+  // ⚠ gap-4 is part of that derivation, not styling — it must match --card-w and the frame's
+  // panel↔grid gap. Change one without the others and a row quietly fits only 3 cards.
   return (
-    <ul className="grid list-none grid-cols-1 gap-6 sm:grid-cols-[repeat(auto-fill,var(--card-w))]">
+    <ul className="grid list-none grid-cols-1 gap-4 sm:grid-cols-[repeat(auto-fill,var(--card-w))]">
       {items.map((item) => (
         <li key={item.id}>
           <CompetitionCard data={toCardData(item)} linkComponent={Link} className="h-full" />
@@ -146,7 +148,11 @@ export async function MarketplacePage({ rawSearchParams, hub }: MarketplacePageP
         />
       )}
       {hub ? (
-        <header className="grid gap-2">
+        // -mt-6 (owner #106): the shell's pt-12 left the breadcrumb sitting low under the header.
+        // The layout's own pt-12 can NOT be reduced — it is a term in the landing hero's
+        // --hero-available calc — so breadcrumb pages claw back 24px locally. Same offset on the
+        // detail page's breadcrumb row; keep the two in step.
+        <header className="-mt-6 grid gap-2">
           <nav aria-label="Breadcrumb" className="text-sm text-muted">
             <Link href="/competitions" className="hover:text-foreground">
               Competitions
@@ -169,7 +175,7 @@ export async function MarketplacePage({ rawSearchParams, hub }: MarketplacePageP
             Find your next <em>competition</em>
           </h1>
           <p className="max-w-2xl text-muted">
-            Every listing is curated — real dates, honest details, and a link straight to the
+            Every listing is curated: real dates, honest details, and a link straight to the
             organizer.
           </p>
         </header>
@@ -196,7 +202,7 @@ export async function MarketplacePage({ rawSearchParams, hub }: MarketplacePageP
                   >
                     {chip.label}
                     <X aria-hidden="true" className="size-3" />
-                    <span className="sr-only"> — remove filter</span>
+                    <span className="sr-only">, remove filter</span>
                   </Link>
                 </li>
               ))}
@@ -223,8 +229,13 @@ export async function MarketplacePage({ rawSearchParams, hub }: MarketplacePageP
           ) : undefined
         }
         quickChips={
+          // One swipeable row below sm (mobile pass), a wrapping row from sm. `flex-wrap` at
+          // every size put "High School" alone on a second line — 4 chips need ~384px and a phone
+          // row is 343px — which reads as a stray button rather than the fourth of a set. The
+          // chips are `shrink-0` so the row overflows (and scrolls) instead of squeezing labels;
+          // the scrollbar is hidden to match every other horizontal strip on the site.
           <div
-            className="flex flex-wrap items-center gap-2 overflow-x-auto"
+            className="flex flex-nowrap items-center gap-2 overflow-x-auto [scrollbar-width:none] sm:flex-wrap [&::-webkit-scrollbar]:hidden"
             aria-label="Grade levels"
           >
             <Link
@@ -233,6 +244,7 @@ export async function MarketplacePage({ rawSearchParams, hub }: MarketplacePageP
               className={buttonClasses({
                 variant: !band && params.minGrade === undefined ? 'primary' : 'secondary',
                 size: 'sm',
+                className: 'shrink-0',
               })}
             >
               All
@@ -245,6 +257,7 @@ export async function MarketplacePage({ rawSearchParams, hub }: MarketplacePageP
                 className={buttonClasses({
                   variant: band === b.key ? 'primary' : 'secondary',
                   size: 'sm',
+                  className: 'shrink-0',
                 })}
               >
                 {b.label}
@@ -278,8 +291,8 @@ export async function MarketplacePage({ rawSearchParams, hub }: MarketplacePageP
               title="No competitions match"
               description={
                 miss
-                  ? `Nothing matches every filter — but relaxing the ${miss.label} filter finds these.`
-                  : 'Nothing matches every filter. Try removing a filter — or tell us what we’re missing.'
+                  ? `Nothing matches every filter, but relaxing the ${miss.label} filter finds these.`
+                  : 'Nothing matches every filter. Try removing a filter, or tell us what we’re missing.'
               }
               action={
                 <Link href="/suggest-a-competition" className={buttonClasses({ variant: 'brand' })}>

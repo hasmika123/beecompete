@@ -57,7 +57,7 @@ const TIERS: Record<TrustTier, TrustTierMeta> = {
   unverified: {
     tier: 'unverified',
     label: 'Unverified',
-    blurb: 'Not yet reviewed by our team — some details may be incomplete.',
+    blurb: 'Not yet reviewed by our team. Some details may be incomplete.',
     variant: 'outline',
     icon: CircleHelp,
   },

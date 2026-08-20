@@ -198,7 +198,7 @@ export function CompetitionForm({
       try {
         parsed = JSON.parse(rawText);
       } catch {
-        toast({ title: 'Fix the JSON first — it doesn’t parse.', tone: 'error' });
+        toast({ title: 'Fix the JSON first. It doesn’t parse.', tone: 'error' });
         return;
       }
     }
@@ -399,7 +399,7 @@ export function CompetitionForm({
           <FormField
             label="Description"
             required={req}
-            hint="Full write-up (About tab). Write our own — never paste theirs."
+            hint="Full write-up (About tab). Write our own; never paste theirs."
           >
             <Textarea
               name="description"
@@ -494,7 +494,7 @@ export function CompetitionForm({
           </div>
           <FormField
             label="Evaluation types"
-            hint="how entries are judged — pick any that apply."
+            hint="how entries are judged; pick any that apply."
             labelAsText
           >
             <div className="flex flex-wrap gap-x-4 gap-y-2 pt-1">
@@ -561,7 +561,7 @@ export function CompetitionForm({
               onSelectFile={uploadCoverImage}
             />
             <p className="text-xs text-muted">
-              Shown on the listing card and the detail header — falls back to generated category art
+              Shown on the listing card and the detail header. Falls back to generated category art
               when empty.
             </p>
           </div>
@@ -587,7 +587,7 @@ export function CompetitionForm({
       content: (
         <div className="grid gap-4">
           <p className="text-xs text-muted">
-            Category-specific fields — validated against the category template on save.
+            Category-specific fields, validated against the category template on save.
           </p>
           {structured ? (
             <>
@@ -632,7 +632,7 @@ export function CompetitionForm({
           ) : (
             <FormField
               label="Attributes (JSON)"
-              hint="No template for this category yet — raw JSON only (pick a category first)."
+              hint="No template for this category yet; raw JSON only (pick a category first)."
             >
               <Textarea
                 name="attributes"
@@ -659,7 +659,7 @@ export function CompetitionForm({
       content: (
         <div className="grid gap-4">
           <p className="text-xs text-muted">
-            The current year’s running — needed for the listing to go live. Later years are added on
+            The current year’s running, needed for the listing to go live. Later years are added on
             the Editions tab.
           </p>
           <div className="grid gap-4 sm:grid-cols-3">
@@ -746,7 +746,7 @@ export function CompetitionForm({
             label="Regions"
             required
             labelAsText
-            hint="where this runs — shown on the card. Pick at least one."
+            hint="where this runs; shown on the card. Pick at least one."
           >
             {/* Single element child (a div, not a Fragment): FormField clones its child to wire
                 id/aria, and a Fragment can't take those props. */}
@@ -767,7 +767,7 @@ export function CompetitionForm({
             <span className="text-sm font-medium text-foreground">
               Key dates{' '}
               <span className="font-normal text-muted">
-                — needs a Reg close or Submission due (dated or TBD); add the rest as you have them
+                · needs a Reg close or Submission due (dated or TBD); add the rest as you have them
               </span>
             </span>
             {keyDateRows.map((row, i) => (
@@ -816,7 +816,7 @@ export function CompetitionForm({
                 <div className="flex flex-wrap items-end gap-3">
                   <FormField
                     label="Label"
-                    hint="optional — shown for Custom dates"
+                    hint="optional, shown for Custom dates"
                     className="min-w-40 flex-1"
                   >
                     <Input

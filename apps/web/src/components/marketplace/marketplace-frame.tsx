@@ -136,7 +136,17 @@ export function MarketplaceFrame({
   return (
     <div className="grid gap-4">
       <div className="flex flex-wrap items-center gap-3">
-        <form action={path} method="get" role="search" className="relative min-w-0 flex-1 basis-64">
+        {/* `max-sm:basis-full` keeps the search box on a row of its own below sm. The sort group
+            beside it is `flex-1` there (it has to be, to give the Select a shrinkable track), and
+            two flex-1 items on one line do not wrap — they just split it, which squeezed the
+            Select to 0px and pushed the count off-screen. A full basis forces the wrap the old
+            three-sibling layout got for free. */}
+        <form
+          action={path}
+          method="get"
+          role="search"
+          className="relative min-w-0 flex-1 basis-64 max-sm:basis-full"
+        >
           {/* Preserve active filters when searching. */}
           {Object.entries({
             sort: params.sort,
@@ -167,32 +177,45 @@ export function MarketplaceFrame({
           />
         </form>
 
-        <Select
-          aria-label="Sort"
-          value={sortValue}
-          onValueChange={(sort) => navigate(marketplaceHref(path, params, { sort }))}
-          options={sortOptions.map((s) => ({ value: s.value, label: s.label }))}
-          className="w-44"
-        />
+        {/* Sort + Filter + count are ONE group (mobile pass) rather than three siblings of the
+            wrapping row. As siblings the phone layout came out three rows tall — search, then
+            sort+filter, then a lone count line — because the count could not fit beside them at
+            the Select's fixed w-44. Grouped, the count sits on the sort line and the Select gives
+            up its fixed width below sm (flex-1 against a min-w-0 track) to pay for it. From sm the
+            group is `flex-none` and every child returns to its old fixed size, so the desktop row
+            is byte-for-byte the layout it was. */}
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
+          <Select
+            aria-label="Sort"
+            value={sortValue}
+            onValueChange={(sort) => navigate(marketplaceHref(path, params, { sort }))}
+            options={sortOptions.map((s) => ({ value: s.value, label: s.label }))}
+            className="w-full min-w-0 flex-1 sm:w-44 sm:flex-none"
+          />
 
-        <Button
-          variant={open ? 'primary' : 'secondary'}
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-          aria-controls="marketplace-filters"
-        >
-          <Filter aria-hidden="true" className="size-4" /> Filter
-        </Button>
+          <Button
+            variant={open ? 'primary' : 'secondary'}
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            aria-controls="marketplace-filters"
+            className="shrink-0"
+          >
+            <Filter aria-hidden="true" className="size-4" /> Filter
+          </Button>
 
-        <span className="text-sm text-muted" aria-live="polite">
-          {total} competition{total === 1 ? '' : 's'}
-        </span>
+          <span className="shrink-0 text-sm whitespace-nowrap text-muted" aria-live="polite">
+            {total} competition{total === 1 ? '' : 's'}
+          </span>
+        </div>
       </div>
 
       {chips}
       {quickChips}
 
-      <div className="flex items-start gap-6">
+      {/* ⚠ gap-4 here is load-bearing: it must EQUAL the card grid's gap. The panel is exactly
+          one --card-w track, so panel + this gap == one card + one grid gap, which is the whole
+          reason opening the panel drops exactly one column instead of resizing every card. */}
+      <div className="flex items-start gap-4">
         {open && (
           // No internal scroll (owner): the panel sits in normal flow and the PAGE grows;
           // facets are collapsed by default so it stays short. w-(--card-w) = exactly one card

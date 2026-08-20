@@ -50,6 +50,7 @@ export {
   Heart,
   ImageSquare,
   Info,
+  InstagramLogo as Instagram,
   Link as LinkIcon,
   LinkedinLogo as Linkedin,
   ListBullets as ListIcon,
@@ -89,4 +90,5 @@ export {
   WhatsappLogo as Whatsapp,
   X,
   XLogo,
+  YoutubeLogo as Youtube,
 } from '@phosphor-icons/react/dist/ssr';

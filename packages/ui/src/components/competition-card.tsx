@@ -11,8 +11,10 @@ import { ShareMenu } from './share-menu';
  * The CompetitionCard (blueprints "Shared components"; approved F7 direction from the /design
  * study). FIXED-SLOT anatomy (owner 2026-07-13, blueprints #35): every card renders the same
  * rows at the same heights — cover → 1 line tags → 1 line title → 1 line organizer (blank
- * reserved space when unattributed) → exactly 2 lines description → Cost/Region facts row →
- * PRIZE-bold/deadline-quiet footer (Kaggle pattern, owner r8). Slots reserve their height even
+ * reserved space when unattributed) → exactly 2 lines description → Cost/PRIZE facts row →
+ * region/deadline-quiet footer (#75 swapped prize and region; prize keeps its gold-bold emphasis
+ * in its new slot, so the Kaggle-pattern standout moved up a row with it). Slots reserve their
+ * height even
  * when the data is missing, so a row of mixed sparse/full cards keeps every horizontal rule
  * aligned. The whole card is one link, with a Share button in the top-right corner (A8).
  *
@@ -127,10 +129,23 @@ export function CompetitionCard({
         </CardDescription>
       </div>
 
-      {/* Two logistics facts in fixed half-width slots (owner r10): Cost + Region. With every
+      {/* Cost + Prize (#75, was Cost + Region; region moved down to the footer).
+          ⚠ The split is `auto minmax(0,1fr)`, no longer the even halves of owner r10. That change
+          is REQUIRED by the swap, not cosmetic: r10's halves were sized for short region labels
+          ("Nationwide"), and prize copy is several times longer. At a 50/50 split every prize on
+          the page truncated to 87px of the ~281px it wants — the card's standout fact reduced to
+          "Medals, tro…". Cost is a two-state word ("Free"/"Paid") so it needs only its intrinsic
+          width; handing the remainder to prize roughly doubles what survives. Prize is still
+          truncated for long copy — it was in the old footer too — but it now reads. With every
           slot above fixed-height, `mt-auto` is a safety net rather than the aligner — it keeps
           this row (and the footer) bottom-pinned even if a future slot goes variable. */}
-      <div className="mt-auto grid grid-cols-2 gap-x-3 border-t border-border p-4 py-3">
+      {/* gap-x-11 (#79; 3 → 5 → 7 → 9 → 11 across #76–#79, +8px each): the gap is the right lever —
+          padding would move Cost too. ⚠ Every step comes out of the prize track, which is the
+          `1fr`: prize is down ~32px of visible width since #75 and past this point the gap starts
+          costing readable prize text rather than just repositioning it. If it needs to sit further
+          right again, move the DIVIDER instead — give the row a fixed cost column and right-align
+          the pair — rather than widening this gap further. */}
+      <div className="mt-auto grid grid-cols-[auto_minmax(0,1fr)] gap-x-11 border-t border-border p-4 py-3">
         <div className="flex min-w-0 items-center gap-1.5">
           <Ticket
             aria-hidden="true"
@@ -145,18 +160,18 @@ export function CompetitionCard({
             {data.free ? 'Free' : 'Paid'}
           </span>
         </div>
-        <div className="flex min-w-0 items-center gap-1.5">
-          <MapPin aria-hidden="true" className="size-4 shrink-0 text-muted" />
-          <span className="truncate text-sm font-medium text-foreground">
-            {data.regionLabel ?? '—'}
-          </span>
-        </div>
-      </div>
-
-      {/* Footer: PRIZE bold + deadline quiet (Kaggle pattern, owner r8). Sits directly under
-          the facts row, both anchored to the bottom via the facts row's mt-auto. */}
-      <div className="flex items-center justify-between gap-2.5 border-t border-border p-4 py-3">
-        <span className="flex min-w-0 items-center gap-1.5">
+        {/* Prize sits here (owner 2026-08-17, #75 — swapped with region). It keeps its OWN
+            treatment (gold fill + bold) rather than adopting the slot's: prize is the standout
+            fact on the card, and letting it inherit the quieter fact styling — or letting region
+            inherit prize's bold — would invert the card's hierarchy rather than just swap two
+            positions. ⚠ This slot is half-width, so long prize copy truncates harder here than it
+            did in the full-width footer.
+            `justify-end` (#80) is the fourth "push prize right" and the first that costs NOTHING:
+            widening the gap again would have started clipping even short labels ("Bragging rights"
+            needs 104px of the 114px left). Right-aligning moves the SHORT labels to the card's
+            right padding instead — the long ones already span the track and sit there — so every
+            prize now shares one right edge, stacked over the deadline in the footer below. */}
+        <div className="flex min-w-0 items-center justify-end gap-1.5">
           {data.prizeLabel ? (
             <>
               <Trophy
@@ -169,8 +184,20 @@ export function CompetitionCard({
               </strong>
             </>
           ) : (
-            <span className="text-sm text-muted">—</span>
+            <span className="text-sm text-muted">–</span>
           )}
+        </div>
+      </div>
+
+      {/* Footer: region + deadline quiet (#75 swapped region in for prize; the Kaggle-pattern
+          emphasis moved up to the facts row with it). Sits directly under the facts row, both
+          anchored to the bottom via the facts row's mt-auto. */}
+      <div className="flex items-center justify-between gap-2.5 border-t border-border p-4 py-3">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <MapPin aria-hidden="true" className="size-4 shrink-0 text-muted" />
+          <span className="truncate text-sm font-medium text-foreground">
+            {data.regionLabel ?? '–'}
+          </span>
         </span>
         {data.deadlineLabel && (
           <span

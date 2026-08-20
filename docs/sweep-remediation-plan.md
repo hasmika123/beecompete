@@ -56,12 +56,128 @@ org-ladder writes, DQ11): remove the dead endpoints + request-DTO field; add a c
 that competition/edition `verification_state` stays `CURATED` on every write path. Columns stay
 (additive-only).
 
+### 12. Region payload: expose level + code on the public search projection (owner 2026-08-17)
+
+**Problem.** `CompetitionSummary.regions` is a flat `string[]` of names. The DB has everything the
+card wants — `Region` is a structured tree (`COUNTRY|STATE|COUNTY|CITY|VIRTUAL`, `code`, `parent`)
+with 50 states + DC + ~25 cities + the virtual region seeded (Liquibase `0010`) — but none of it
+survives into the search payload. So the web now carries a hand-written **name→USPS-code map +
+name heuristics** (`apps/web/src/lib/us-states.ts`, `regionLabel` in `catalog-display.ts`) to
+render "Austin, TX" / "Texas" / "Online": a *city* is guessed as "any name that isn't a known
+state / the US tag / the virtual region". That map is knowingly duplicated data and the heuristic
+breaks the day a non-US or ambiguous region appears.
+
+**Decision: display logic NOW (shipped, #76/#77), payload fix at R2 — not now.** The client-side
+form is fully working and tested (11 `regionLabel` tests); the payload change touches the search
+projection + its cache shape, which is exactly the "R2 schema/payload batch" this section exists
+for. Nothing user-visible is blocked in the interim, so there is no reason to break payload
+compatibility mid-R1.
+
+**Plan (additive):**
+
+- `RegionRef { name, code?, level }` on `CompetitionSummary.regions` (replacing the bare string —
+  the search projection already joins region rows, so no schema change and no migration; this is
+  DTO + projection only). Keep the field name `regions`; ship the shape change in one R2 batch
+  with the other payload items so caches/ISR invalidate once.
+- Same ride-alongs, same pass: `prizeKind`/`prizeValue`/`prizeCurrency` on the summary (Phase 3
+  §15 slice 2 names this same DTO gap — coordinate so the projection is touched once).
+- Web: `regionLabel` switches from name-heuristics to real levels — city = `level === 'city'`,
+  state code from `code`, virtual = `level === 'virtual'` — and **`us-states.ts` is deleted**
+  except for `US_STATES`, which the digest form still needs for its picker options.
+- Composition rule stays exactly as pinned by the #77 tests: full state name alone, "City, ST"
+  when paired, "Nationwide" for country-only, "Online" for virtual, undefined when untagged.
+  The tests are the contract; only the classification source changes.
+
 ---
 
 ## Phase 3 — Host Tools, lifecycle machine & structure (don't build now)
 
-_Both items are **design-gated at Gate A** — deliberately not planned deeper here (don't harden
-early; the recorded target models are the plan)._
+_Items 13/14 are **design-gated at Gate A** — deliberately not planned deeper here (don't harden
+early; the recorded target models are the plan). Item 15 is **not** gated: it is registry **H47**,
+whose target shape is already recorded, so it is planned to the level below._
+
+### 15. Typed prize / award structures — H47 (owner-requested 2026-08-17)
+
+**Ask.** The card's prize slot should stop showing free prose ("Medals, trophies and scholarship
+awards") and show a *specific* kind — **bragging rights · knowledge · money (with the amount) ·
+scholarship · internship**, plus other appropriate kinds.
+
+**Why it is not an R1 display tweak.** Today `Edition.prize_summary` is a free-text `varchar(500)`
+written by curators; `prize_value` + `prize_currency` exist beside it but are **not exposed on
+`CompetitionSummary`**, so the card literally has no structured prize to render. Delivering the ask
+means a new typed field, a migration, API + DTO changes and admin UI — 🔒 full-loop work by
+`development-process.md`, and it lands squarely on registry **H47** ("per-Edition award list …
+place, monetary/non-monetary/travel-grant, value + currency, display order"), whose `Award` entity
+is **reserved** in domain-model Rev 7. Building a prize enum now would harden a reserved entity
+ahead of its phase — the thing CLAUDE.md's hard-stop rule exists to prevent.
+
+**Target model** — extend H47 rather than invent a parallel one. `Award` (reserved) already carries
+place / kind / value + currency / display order; the card needs only a **cheap derived summary** of
+an Edition's award list, not the list itself.
+
+- **`prize_kind`** enum on Edition (additive, nullable): `BRAGGING_RIGHTS | KNOWLEDGE | MEDAL_TROPHY
+  | CASH | SCHOLARSHIP | INTERNSHIP | TRAVEL_GRANT | GEAR | PUBLICATION | OTHER`. Rationale for the
+  ones beyond the owner's list: `MEDAL_TROPHY` because it is what most current summaries actually
+  say; `TRAVEL_GRANT` because H47 already names it; `GEAR`/`PUBLICATION` are common real prizes that
+  would otherwise all collapse into `OTHER`. ⚠ Add the enum to the **glossary first** (CLAUDE.md
+  rule) — these become user-visible labels and filter values.
+- **Amount** reuses the existing `prize_value` + `prize_currency`; no new money columns. The
+  existing invariant (`prize_value ≥ 0`, ≤2 dp, currency required when value present) already
+  covers it. Card renders `$5,000` for `CASH`/`SCHOLARSHIP` when a value exists, else the kind label.
+- **Multi-kind** competitions (cash *and* internship) are exactly what H47's award LIST solves.
+  Interim single `prize_kind` = the dominant/headline prize; do not model an array on Edition, or it
+  will have to be unpicked when `Award` ships.
+
+**Slices, in order** — each independently shippable, additive-only:
+
+1. **Schema + glossary.** Glossary entry for the kinds; Liquibase (next free number) adding
+   `edition.prize_kind` nullable + a check constraint. Backfill stays `NULL` — see the honesty note.
+2. **API.** `prize_kind` on the Edition admin request/response and `CorrectionFields`; add
+   `prizeKind` + `prizeValue` + `prizeCurrency` to `CompetitionSummary` (the search projection) so
+   the card can read them. This is the same DTO gap that forces the region name→code map in
+   `lib/us-states.ts` — **fix both in one pass** and delete that map.
+3. **Admin.** Kind picker on the Edition form beside the existing value/currency fields; the pair
+   already validates together.
+4. **Web.** Card renders kind (+ amount); `prize_summary` becomes the tooltip/detail-page long form,
+   not the card line. Extend `catalog-display` with a `prizeDisplay()` alongside `regionLabel`.
+5. **Filter (optional, R2+).** "Has cash prize" / "Scholarship" facet — only worth it once kinds are
+   populated; needs a search-index change, so keep it out of the first pass.
+
+⚠ **Honesty constraint — the reason this cannot be a pure data migration.** `prize_kind` cannot be
+inferred from `prize_summary` by keyword matching; "no cash prize, just bragging rights" would
+classify as `CASH`. Rows must be curated, so the field stays **nullable** and the card must fall
+back to today's behaviour when it is `NULL` (the existing "Bragging rights" fallback for a null
+summary is a *display* default and must not be written into the column as if it were curated fact).
+Plan for a long tail of `NULL` and a curation pass, not a one-shot backfill.
+
+**Not in scope here:** winner assignment (Gate B, judging), award display order, per-place award
+lists on the detail page — all H47 proper.
+
+### 16. Promote eligibility JSONB keys → Spine columns (owner 2026-08-18)
+
+`eligible_countries[]`, `citizenship_countries[]`, `student_status_required` are today **standard
+attributes-bag keys** (JSONB, display-only — domain-model 2026-07-08), rendered under the detail
+page's Eligibility group (#82). **Owner decision: promote them to real Spine columns later so they
+become filterable/indexable; leave as JSONB for now.**
+
+**When:** with **H36 eligibility pre-screening (Phase 3)** — the first feature that *reads* these
+fields programmatically. Promoting earlier buys an index nobody queries; promoting later than H36
+would force H36 to parse JSONB. If an "eligible from my country" *filter* is demanded sooner
+(international expansion), pull it into the then-current R-batch instead.
+
+**Plan (additive, the designed JSONB→Spine promotion path):**
+
+1. Migration (next free number): `competition.eligible_countries text[]`,
+   `citizenship_countries text[]`, `student_status_required varchar` — nullable, plus GIN indexes
+   on the arrays. *(Country codes ISO-3166-1 alpha-2 — glossary entry at build time.)*
+2. Backfill from `attributes` where the keys exist; **leave the JSONB keys in place** during a
+   deprecation window so nothing breaks mid-deploy; strip them from Category Templates + bag in a
+   follow-up change once admin writes target the columns.
+3. Admin: typed inputs on the competition form (country multi-select, status text) replacing
+   free-JSON entry; correction-queue fields ride along.
+4. API: columns onto `CompetitionSummary`/`CompetitionDetail`; add `eligibleCountry` search param
+   when the filter ships. Web: `ELIGIBILITY_ATTR_LABELS` in `key-facts.tsx` switches from bag keys
+   to DTO fields — display labels and grouping survive unchanged.
 
 ### 13. Competition structure — Edition → Stage → Round (H24/H25)
 

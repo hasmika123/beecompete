@@ -76,7 +76,7 @@ export default async function OrganizationsPage({
             header: 'Type',
             cell: (o) => <span className="text-muted">{enumLabel(o.type)}</span>,
           },
-          { header: 'Domain', cell: (o) => <span className="text-muted">{o.domain ?? '—'}</span> },
+          { header: 'Domain', cell: (o) => <span className="text-muted">{o.domain ?? '–'}</span> },
           {
             header: 'Verification',
             cell: (o) => <VerificationBadge state={o.verificationState} />,

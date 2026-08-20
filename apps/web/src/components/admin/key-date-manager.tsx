@@ -43,7 +43,7 @@ export function KeyDateManager({
           >
             <span className="min-w-0">
               <span className="font-medium text-foreground">{enumLabel(k.type)}</span>
-              {k.label && <span className="ml-2 text-foreground">— {k.label}</span>}
+              {k.label && <span className="ml-2 text-foreground">· {k.label}</span>}
               <span className="ml-2 text-muted">
                 {k.startsAt ? formatInZone(k.startsAt, k.timezone) : 'Date TBD'}
               </span>
@@ -60,7 +60,7 @@ export function KeyDateManager({
                 if (
                   !(await confirm({
                     title: 'Delete this key date?',
-                    message: 'This is permanent — there is no restore.',
+                    message: 'This is permanent. There is no restore.',
                     confirmLabel: 'Delete',
                     tone: 'danger',
                   }))
@@ -110,10 +110,10 @@ export function KeyDateManager({
         <FormField label="Timezone">
           <Select name="timezone" options={ADMIN_TIMEZONES} defaultValue="America/New_York" />
         </FormField>
-        <FormField label="Ends" hint="optional — for windows">
+        <FormField label="Ends" hint="optional, for windows">
           <Input name="endsAt" type="datetime-local" disabled={tbd} />
         </FormField>
-        <FormField label="Label" hint="optional — shown for Custom dates">
+        <FormField label="Label" hint="optional, shown for Custom dates">
           <Input name="label" maxLength={200} />
         </FormField>
         {/* TBD (R1-18): the milestone exists but its date is unknown — submit without a date.

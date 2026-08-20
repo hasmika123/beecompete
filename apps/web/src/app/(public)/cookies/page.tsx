@@ -31,7 +31,7 @@ export function generateMetadata(): Metadata {
   return pageMetadata({
     title: 'Cookie Policy',
     description:
-      'How BeeCompete uses cookies and local storage — kept to the minimum needed to remember your theme and keep the site secure. No advertising or cross-site tracking cookies.',
+      'How BeeCompete uses cookies and local storage, kept to the minimum needed to remember your theme and keep the site secure. No advertising or cross-site tracking cookies.',
     path: '/cookies',
   });
 }
@@ -42,7 +42,7 @@ export default function CookiePolicyPage() {
       title="Cookie Policy"
       icon={Cookie}
       currentPath="/cookies"
-      summary="We keep cookies to a minimum. BeeCompete uses only what’s needed to remember your preferences and keep the site secure — no advertising cookies and no cross-site tracking."
+      summary="We keep cookies to a minimum. BeeCompete uses only what’s needed to remember your preferences and keep the site secure. No advertising cookies and no cross-site tracking."
       sections={SECTIONS}
     >
       <LegalSection id="what" heading="What cookies (and local storage) are">
@@ -75,8 +75,8 @@ export default function CookiePolicyPage() {
         <LegalP>
           To understand which pages are useful, we use privacy-first analytics configured to work{' '}
           <strong className="font-medium text-foreground">without tracking cookies</strong> and
-          without following you across other sites. The measurement is aggregate — it tells us a
-          page was viewed, not who you are.
+          without following you across other sites. The measurement is aggregate: it tells us a page
+          was viewed, not who you are.
         </LegalP>
       </LegalSection>
 
@@ -96,7 +96,7 @@ export default function CookiePolicyPage() {
       <LegalSection id="managing" heading="Managing cookies">
         <LegalP>
           You&apos;re always in control. You can view, block, or delete cookies and clear local
-          storage from your browser&apos;s settings — most browsers explain how in their help pages.
+          storage from your browser&apos;s settings. Most browsers explain how in their help pages.
           Because we use so few, blocking them mostly just means the site won&apos;t remember your
           theme choice; blocking strictly necessary cookies may prevent some pages from working
           correctly.
@@ -105,7 +105,7 @@ export default function CookiePolicyPage() {
 
       <LegalSection id="dnt" heading="Do Not Track & Global Privacy Control">
         <LegalP>
-          Our analytics don&apos;t track individuals, so there&apos;s little to opt out of — but we
+          Our analytics don&apos;t track individuals, so there&apos;s little to opt out of, but we
           honor browser Do-Not-Track and Global Privacy Control (GPC) signals as an opt-out
           preference and don&apos;t attempt to work around them.
         </LegalP>
@@ -113,9 +113,9 @@ export default function CookiePolicyPage() {
 
       <LegalSection id="changes" heading="Changes to this policy">
         <LegalP>
-          If we add features that need additional cookies — for example, accounts in a future
-          release — we&apos;ll update this page and the &ldquo;Last updated&rdquo; date, and add any
-          consent controls the law requires before setting non-essential cookies.
+          If we add features that need additional cookies, for example accounts in a future release,
+          we&apos;ll update this page and the &ldquo;Last updated&rdquo; date, and add any consent
+          controls the law requires before setting non-essential cookies.
         </LegalP>
       </LegalSection>
     </LegalPage>

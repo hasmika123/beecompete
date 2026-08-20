@@ -14,3 +14,6 @@ README.md
 
 # Java side is formatted by its own toolchain (F2), not Prettier.
 apps/api/
+
+# Claude Code harness state (worktrees, local settings) — never format-checked.
+.claude/

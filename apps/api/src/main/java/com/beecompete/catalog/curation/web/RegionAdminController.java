@@ -72,11 +72,11 @@ public class RegionAdminController {
 		require(id);
 		if (regions.existsByParentId(id)) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT,
-					"region has child regions — remove or reparent them first");
+					"region has child regions; remove or reparent them first");
 		}
 		if (editionRegions.existsByRegionId(id)) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT,
-					"region is still tagged on one or more editions — untag it there first");
+					"region is still tagged on one or more editions; untag it there first");
 		}
 		regions.deleteById(id);
 	}
