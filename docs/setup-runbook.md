@@ -108,9 +108,10 @@ site still shows. The old GoDaddy box (runs a separate app, `dossier`) is left u
   admin behind Cloudflare Access + `ADMIN_API_TOKEN` (§5), Cloudflare **WAF + rate-limiting** (managed
   ruleset auto-on + Bot Fight Mode + one rate-limit rule on `/suggest-a-`), **UptimeRobot** on
   `beecompete.com/` (the API is private/BFF, so `/actuator/health` isn't public — the monitor polls the
-  homepage instead), and Sentry (above) are all live. Neon stays **free-tier** with
-  `scripts/backup-neon.sh` as the logical-backup net; **paid-tier PITR + a test restore are deferred to
-  R2** (no user data yet — trigger: prod content seeding or R2).
+  homepage instead), and Sentry (above) are all live. Neon was free-tier here; it moved to the
+  **Launch plan on 2026-08-20** after a second quota exhaustion (INCIDENT below). `scripts/backup-neon.sh`
+  remains the logical-backup net, but **instant restore / PITR is now cheap** ($0.20/GB-month on a
+  sub-1 GB database) and no longer has to wait for R2 — enable it and run one test restore.
 - **INCIDENT 2026-07-29 — Neon free-tier compute quota exhausted; DB down for days, monitoring blind.**
   Both stacks share one Neon account; three independent always-on loops kept BOTH computes from ever
   autosuspending (free tier ≈ 191.9 compute-h/mo; two 0.25-CU computes awake 24/7 ≈ 360): **(a)** the
@@ -125,6 +126,52 @@ site still shows. The old GoDaddy box (runs a separate app, `dossier`) is left u
   usage graph to confirm the burn profile; quota resets Aug 1 (or upgrade the plan to restore service
   sooner). With the fixes, idle burn should drop to a few compute-h/day — re-check the Neon usage graph
   mid-August.
+- **INCIDENT 2026-08-20 — free quota exhausted AGAIN; staging 502, every deploy failing.** The July
+  fixes were committed (`3c99410`) but **never deployed to prod**, which kept running `R1.2` with
+  `/actuator/health` @15 s + Hikari `minimum-idle: 2` and burned the whole month's quota on its own
+  (~180 compute-h — as predicted above, one compute nearly eats the free allowance). Liquibase then
+  could not connect, so the API never started, the container never went healthy, and
+  `up -d --wait` failed **every** staging deploy. Prod still served 200s off Next's data cache; only
+  staging's 502 was visible. **Deadlock:** the fix needs the DB, the DB needs quota. Resolved by
+  upgrading to **Launch** and re-running the failed deploy (`gh run rerun <id> --failed`).
+  ⚠ **Two prod burn causes are fixable ON THE BOX with no deploy** — worth knowing next time a deploy
+  is blocked: set `DB_POOL_MIN=0` in `~/beecompete-prod/.env` (R1.2's `application.yml` reads
+  `${DB_POOL_MIN:2}` and the api service has `env_file: [.env]`), and edit the healthcheck in
+  `~/beecompete-prod/docker-compose.prod.yml` to `/actuator/health/liveness` @30 s.
+
+### Neon cost controls (Launch plan, from 2026-08-20) — READ BEFORE CHANGING COMPUTE SETTINGS
+
+Launch is **pure usage-based: no base fee, no minimum.** $0.106/CU-hour compute · $0.35/GB-month
+storage · $0.20/GB-month instant restore · 10 branches included (we use 2), then $1.50/branch-month.
+
+**The free tier's 0.25 CU ceiling was an accidental cost cap — and it is gone.** Launch autoscales to
+**16 CU**, which pinned is ~$1.70/hour (~$1,240/month). Nothing stops that automatically: Neon's
+spending controls on Launch are **notifications, not a hard shutoff**. The only real cap is
+`autoscaling_limit_max_cu`, which Neon guarantees a compute will never exceed "even during traffic
+spikes". **Set it per compute** (Console → the compute → *Edit compute* → autoscaling range):
+
+| Autoscale max | Absolute worst case (pinned 24/7 all month) |
+|---|---|
+| 0.5 CU | ~$39/mo |
+| **1 CU** ← prod | **~$77/mo** |
+| 2 CU | ~$155/mo |
+| 16 CU (default — do NOT leave this) | ~$1,240/mo |
+
+Current settings: **prod 0.25–1 CU, staging 0.25–0.5 CU.** Worst case is then ~$116/mo in a scenario
+that cannot actually occur (it assumes zero suspension all month); realistic spend is **$4–8/mo**.
+
+**Cost here is driven by IDLE BURN, NOT TRAFFIC — internalize this, it is counter-intuitive.** Detail
+pages are ISR (`revalidate = 3600`), so 10 000 visitors to one page in an hour cost **one** query;
+Cloudflare fronts everything; the API is not publicly routable; captures go to Brevo, not Neon. A
+viral day costs cents. What cost ~$19/mo was a compute that never slept, with no traffic at all.
+- **The one traffic-scaling surface is `/competitions`** (+ `/competitions/[category]`) — `ƒ Dynamic`,
+  so every filtered search is a DB query. Put a **Cloudflare Cache Rule** on it (even 60 s collapses a
+  spike into one query/minute) **before flipping `SEARCH_INDEXING`** and inviting crawlers in. Cache
+  Rules are on the free CF plan and are separate from the single free rate-limit rule.
+- **Keep the `/api/healthz/db` monitor at 60 min, not 30.** Each hit wakes Neon ~5 min, so the
+  interval *is* a line item: 30 min ≈ $3.20/mo, 60 min ≈ $1.60/mo.
+- The golden rule from the July incident is unchanged and now costs money instead of causing an
+  outage: **never point a ≤5-min monitor, healthcheck, or cron at anything that touches the DB.**
 - **Still open before the public launch** (the R1-17 gate — `phase-1-plan.md`): privacy-counsel review of
   the legal pages + fill entity/governing-law + flip `LEGAL_REVIEW_PENDING`; the content gate (≥ 200
   seeded — start it with `cd tools/seeding && bash run-prod-submit.sh`, which tunnels to the internal
@@ -222,9 +269,12 @@ Staging is a **second Docker Compose stack on the same VPS**, *not* a separate s
 - **Outputs:** `staging.<domain>` reachable + private; staging `DATABASE_URL`; `staging` GH Environment.
 
 ## 5. Managed Postgres  *(R1)*
-1. Create a **Neon** project (free tier) → get the connection string.
+1. Create a **Neon** project → get the connection string. (We started free-tier and moved to
+   **Launch** on 2026-08-20 — see the cost-control rules above before sizing any compute.)
 2. Create separate databases/branches for **staging** and **production**.
-3. Before real users: upgrade to a **paid tier** with automated backups + **PITR**; run one **test restore**.
+3. Before real users: **PITR / instant restore on** + run one **test restore**. (Done at the plan
+   level 2026-08-20; the test restore is still outstanding.) **Set the autoscaling max on every
+   compute at creation time** — the default 16 CU is an unbounded bill.
 4. **Pick a Neon region close to the VPS** (Hetzner EU ↔ a Neon EU region) — cross-region DB latency compounds on every query.
 5. Capture **two** connection strings: the **pooled `-pooler` URL** (`DATABASE_URL`, for the app **including the job queue** — `FOR UPDATE SKIP LOCKED` is transaction-scoped, so it's pooler-safe) and the **direct URL** (`DIRECT_URL`, for **Liquibase migrations + any session-scoped ops** — advisory locks / LISTEN-NOTIFY, if ever used).
 6. **Tune HikariCP for serverless:** modest pool size; `max-lifetime`/`idle-timeout` under Neon's idle window; validation on; cold-start-tolerant `connection-timeout`.

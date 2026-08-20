@@ -28,7 +28,7 @@ competitions across ~11 categories (math, science, robotics, debate, …). Users
 | Frontend | **Next.js** (TypeScript, App Router, Tailwind v4) | `apps/web` — also acts as BFF; the API is never public |
 | Backend | **Spring Boot** (Java 21, Gradle) | `apps/api` — modular monolith (`accounts`, `catalog`, `discovery`, `journey`, `platform`) |
 | Shared UI | `packages/ui` (`@beecompete/ui`) | **All** shared components come from here — never inline SVGs / hand-rolled styles |
-| Database | **Postgres on Neon** (serverless, off-box) | Free tier. Staging + prod = separate branches. Migrations = **Liquibase, additive-only** (`0002`–`0013` so far) |
+| Database | **Postgres on Neon** (serverless, off-box) | **Launch plan** (usage-based, since 2026-08-20). Staging + prod = separate branches. Migrations = **Liquibase, additive-only** (`0002`–`0013` so far) |
 | Cache | Redis — **not yet in use** (R2) | Cache + rate-limit counters ONLY; never durable data (ADR 10) |
 | Auth (R2) | **Session-based** (Spring Session JDBC → Postgres) | **No JWT** ever (ADR 9) |
 | Jobs | Postgres job queue (`FOR UPDATE SKIP LOCKED`) | Never put must-not-lose jobs in Redis |
@@ -45,13 +45,13 @@ competitions across ~11 categories (math, science, robotics, debate, …). Users
 
 ## 3. Accounts & services inventory
 
-Every external account the project depends on. All free-tier unless noted.
+Every external account the project depends on. All free-tier unless noted — **Neon is now paid**.
 
 | Service | Used for | Cost | Watch out |
 |---|---|---|---|
 | **IONOS** | VPS M+ (4 GB, US East, Ubuntu 24.04, IP `74.208.212.158`) | **Paid monthly** | Must stay on the upgradeable **VPS+** line (not "Cloud VPS"). Upgrade in-place to L+ (8 GB) before co-hosting a 2nd app |
 | **Cloudflare** | DNS, CDN/WAF, rate-limiting, **Access** (admin lock), Web Analytics, **Email Routing** (support@ → Gmail) | Free | SSL mode = Full (strict). Only 1 free rate-limit rule (now on `/suggest-a-`; re-point to `/login` at R2). Never delete the MX/SPF/DKIM DNS records |
-| **Neon** | Postgres (staging + prod branches, one account) | Free (→ paid at R2) | **~192 compute-h/month shared quota** — see the golden rule in §7. Paid tier + PITR is mandatory at R2 |
+| **Neon** | Postgres (staging + prod branches, one account) | **Launch — usage-based, no base fee** | $0.106/CU-h · $0.35/GB-mo storage. **No quota wall any more — and no automatic spend cap either.** The ONLY hard cap is each compute's autoscale max (prod 0.25–1 CU, staging 0.25–0.5 CU). Never leave the 16 CU default: pinned that is ~$1,240/mo. Expect **$4–8/mo**. Full rules: `setup-runbook.md` → "Neon cost controls" |
 | **AWS** | S3 public-assets bucket (covers) + IAM user `beecompete-api-s3` | ~Free | Root MFA still TODO. Private submissions bucket comes at R2 |
 | **GitHub** | Repo, Actions CI/CD, GHCR images, Issues | Free (→ Pro ~$4/mo) | Repo is **public for now** — make private + Pro (branch protection) before launch |
 | **Brevo** | Email captures (digest/follow/host lists), transactional email (feedback → support@) | Free | Free tier caps daily sends (~300/day). API key must be `xkeysib-` (REST), NOT `xsmtpsib-` (SMTP) |
@@ -163,8 +163,11 @@ Keep the master list in a **password manager** — never in the repo or Download
 
 **🥇 Golden rule (from the July 2026 outage):** **never point any frequent (≤5-min) healthcheck,
 monitor, or cron at anything that touches the DB.** Each hit wakes Neon for ~5 min; a 5-min poll
-keeps compute awake 24/7 and burns the entire free-tier quota (~192 h/mo). Container healthchecks
-use `/actuator/health/liveness` (no DB); Hikari stays `minimum-idle: 0`.
+keeps compute awake 24/7. On the free tier that exhausted the quota and took the DB down (twice —
+July 29 and Aug 20); on Launch it silently bills instead, so the rule now protects the invoice rather
+than uptime. Container healthchecks use `/actuator/health/liveness` (no DB); Hikari stays
+`minimum-idle: 0`; the `/api/healthz/db` monitor runs at **60 min** (each hit wakes Neon ~5 min, so
+the interval is a line item: 30 min ≈ $3.20/mo vs 60 min ≈ $1.60/mo).
 
 ---
 
@@ -199,7 +202,7 @@ Nothing has a hard expiry date, but these can silently run out or lapse:
 
 | Item | Risk | Cadence |
 |---|---|---|
-| **Neon compute quota** | ~192 h/mo shared staging+prod; exhaustion = DB down with cached pages masking it | Check monthly (see §7) |
+| **Neon spend** | Usage-based, no quota wall. Cost is **idle burn, not traffic** — a compute that never sleeps is ~$19/mo; a viral day is cents. Capped only by each compute's autoscale max | Check the Neon usage graph monthly (see §7) |
 | **Domain renewal** | Site + email gone | Annual — keep auto-renew + valid card |
 | **IONOS billing** | VPS suspended | Monthly — keep payment method valid |
 | **TLS certificates** | Auto-renewed by Caddy (Let's Encrypt) | Zero-touch; only breaks if DNS is flipped grey-cloud/misrouted |
@@ -239,7 +242,7 @@ assume). It is a **second, new** monitor — never repoint the homepage one:
 - After the deploy, verify: bare URL → `401`, tokenized → `200`.
 
 **Before R2 (non-negotiable):** LLC + EIN + business bank account, **cyber-liability + E&O insurance
-bound**, Neon paid tier with PITR + one tested restore, counsel sign-off on the full COPPA consent flow.
+bound**, Neon PITR **enabled** (done at the plan level 2026-08-20) + one tested restore (still outstanding), counsel sign-off on the full COPPA consent flow.
 
 ---
 

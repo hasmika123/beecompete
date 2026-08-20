@@ -106,9 +106,12 @@ on a `main` push, prod on an `R*` tag (currently **R1.2**). Authoritative as-bui
 **R1-17 launch activation DONE (2026-07-18):** analytics live (Cloudflare Web Analytics + PostHog,
 cookieless / anonymous), Brevo captures live (digest verified end-to-end; double opt-in), **admin
 locked** behind Cloudflare Access + `ADMIN_API_TOKEN`, Cloudflare **WAF + rate-limiting** on,
-**UptimeRobot** monitoring `beecompete.com`, and **Sentry** live (web browser + SSR + API). Neon stays
-on the **free tier** with a logical-backup safety net (`scripts/backup-neon.sh`); paid-tier PITR is
-deferred to R2. **2026-07-29 quota incident:** always-on healthchecks/pool churn defeated Neon
+**UptimeRobot** monitoring `beecompete.com`, and **Sentry** live (web browser + SSR + API). Neon moved to the
+**Launch plan (2026-08-20)** after a second quota exhaustion; `scripts/backup-neon.sh` stays as the
+logical-backup net and PITR is now cheap enough to enable (no longer an R2 item). Launch has **no
+spend cap** — the only hard ceiling is each compute's autoscale max (prod 0.25–1 CU, staging
+0.25–0.5 CU; never the 16 CU default). Cost is **idle burn, not traffic**: see the "Neon cost
+controls" section in `setup-runbook.md` before changing any compute or monitor interval. **2026-07-29 quota incident:** always-on healthchecks/pool churn defeated Neon
 autosuspend and exhausted the free-tier compute quota while the homepage kept serving cached 200s —
 fixes + the `/api/healthz/db` monitoring probe are in `setup-runbook.md` (as-built INCIDENT bullet +
 §9.3). Never re-point a frequent (≤5 min) monitor or healthcheck at anything that touches the DB.
