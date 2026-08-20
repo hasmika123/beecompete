@@ -118,10 +118,10 @@ fixes + the `/api/healthz/db` monitoring probe are in `setup-runbook.md` (as-bui
 
 **Remaining before the site can go public (the rest of the R1-17 gate):**
 1. **Legal** — a privacy attorney must review the four legal pages (still DRAFTS; `LEGAL_REVIEW_PENDING`
-   drives the on-page "under review" notice). `OPERATING_ENTITY` is set
-   (**AutomoraLab LLC**, 2026-08-20); `GOVERNING_LAW_STATE` in `apps/web/src/lib/legal.ts` is still
-   null pending the state of formation, and `LEGAL_REVIEW_PENDING` flips to `false` only after
-   counsel signs off.
+   drives the on-page "under review" notice). `OPERATING_ENTITY`
+   (**AutomoraLab LLC**) and `GOVERNING_LAW_STATE` (**Georgia**) are both set in
+   `apps/web/src/lib/legal.ts` (2026-08-20); `LEGAL_REVIEW_PENDING` flips to `false` only after
+   counsel signs off — that is the last constant, and the only one that is not ours to decide.
 2. **Content gate** — seed ≥ 200 competitions across the ~10 categories (`docs/seeding/`; the S3
    extraction pipeline is in `tools/seeding/`).
 3. **Flip indexing** — set `SEARCH_INDEXING=on` in `~/beecompete-prod/.env` + recreate web, verify

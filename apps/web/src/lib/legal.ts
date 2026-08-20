@@ -10,7 +10,7 @@
 //
 // ┌─ R1-17 GO-LIVE CHECKLIST (everything the legal surface needs is in THIS file) ──────────────┐
 // │ 1. OPERATING_ENTITY   → DONE 2026-08-20: AutomoraLab LLC.                                   │
-// │ 2. GOVERNING_LAW_STATE → set to the state of formation (Terms governing-law clause).        │
+// │ 2. GOVERNING_LAW_STATE → DONE 2026-08-20: Georgia.                                          │
 // │ 3. LEGAL_REVIEW_PENDING → flip to false AFTER counsel signs off (drops the "Draft" notice). │
 // │ Then bump LEGAL_LAST_UPDATED. No page files need editing — they read these constants.       │
 // └─────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -25,11 +25,10 @@ export const LEGAL_CONTACT_EMAIL = 'support@beecompete.com';
  *  form for this entity, so nothing user-facing needs renaming. */
 export const OPERATING_ENTITY = 'AutomoraLab LLC';
 
-/** US state whose law governs the Terms and venues disputes. TODO(R1-17, checklist #2): set to
- *  AutomoraLab LLC's state of formation, e.g. 'Delaware'. STILL NULL — naming the entity does not
- *  settle this, and guessing it would put a wrong venue in a contract. Until it is set,
- *  governingLawJurisdiction() falls back to neutral wording so the clause is never blank or wrong. */
-export const GOVERNING_LAW_STATE: string | null = null;
+/** US state whose law governs the Terms and venues disputes — AutomoraLab LLC's state of
+ *  formation. Set 2026-08-20 (R1-17 checklist #2 ✔). The null fallback in
+ *  governingLawJurisdiction() stays for safety but is now unreachable in practice. */
+export const GOVERNING_LAW_STATE: string | null = 'Georgia';
 
 /** The jurisdiction phrase for the Terms' governing-law clause. Resolves to the concrete state once
  *  GOVERNING_LAW_STATE is set; otherwise the honest placeholder. */
