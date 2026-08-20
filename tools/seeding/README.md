@@ -147,15 +147,32 @@ cp .env.example .env   # fill in as needed
 
 Secrets come from env only — nothing is committed.
 
+⚠ **Nothing auto-loads `.env` when you invoke the tool directly.** `src/config.ts` reads
+`process.env` and no dotenv is installed, so `npx tsx src/index.ts …` silently sees an unset key and
+falls back to the **offline stub** — which looks like a successful run against a fixture rather than
+an error. The npm scripts pass `--env-file-if-exists=.env` for you, so prefer them:
+
+```bash
+npm run seed -- --dry-run --input https://example.org/some-competition
+```
+
+Invoking `tsx` yourself? Load the file explicitly:
+`node --env-file=.env --import tsx src/index.ts …`
+
 ## Running it
 
 **Dry-run against the bundled fixture (offline, no key, no network, no POST):**
 
 ```bash
 npm run dry-run
-# or:
-npx tsx src/index.ts --dry-run --input fixtures/sample-competition.html
+# or, forcing the stub yourself:
+npx tsx src/index.ts --dry-run --offline --input fixtures/sample-competition.html
 ```
+
+The script passes `--offline` explicitly so it stays a deterministic smoke test whether or not a key
+is configured. It used to be offline only *by accident* — nothing loaded `.env`, so the key was
+always absent; once loading was fixed, an invalid or expired key turned this fixture check into a
+live 401.
 
 **Dry-run a live page (uses the LLM if `ANTHROPIC_API_KEY` is set):**
 
