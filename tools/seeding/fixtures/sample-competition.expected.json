@@ -24,8 +24,27 @@
       "topics": ["algebra", "number theory", "geometry", "combinatorics"],
       "calculator_allowed": false,
       "proof_based": false
-    }
+    },
+    "edition": {
+      "cycleLabel": "2026",
+      "status": "OPEN",
+      "scopeLevel": "NATIONAL",
+      "registrationUrl": "https://novamath.example.org/register",
+      "prizeSummary": "Certificates and medals for top scorers"
+    },
+    "keyDates": [
+      {
+        "type": "REG_CLOSE",
+        "startsAt": "2026-11-01T03:59:00Z",
+        "timezone": "America/New_York"
+      },
+      {
+        "type": "RESULTS",
+        "label": "Winners announced",
+        "startsAt": null
+      }
+    ]
   },
   "modelConfidence": 0.9,
-  "reviewerNotes": "Grades 6-8 => minGrade 6, maxGrade 8. Online proctored exam => VIRTUAL + evaluationType exam. No entry fee => FREE. description intentionally omitted for the curator to author (S4)."
+  "reviewerNotes": "Grades 6-8 => minGrade 6, maxGrade 8. Online proctored exam => VIRTUAL + evaluationType exam. No entry fee => FREE. description intentionally omitted for the curator to author (S4). Edition 2026 is OPEN; results date is announced but undated on the page, so RESULTS is TBD (startsAt null) rather than estimated."
 }

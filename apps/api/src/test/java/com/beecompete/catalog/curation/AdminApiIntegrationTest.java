@@ -490,6 +490,113 @@ class AdminApiIntegrationTest {
 	}
 
 	/** A minimal competition JSON that attributes the organizer by NAME (resolve-or-create path). */
+	@Test
+	@Order(8)
+	void importApproveCreatesTheFirstEditionAndKeyDates() throws Exception {
+		// NAMING: these fixtures must not resemble CatalogSearchIntegrationTest's isolation marker
+		// ("r15seed"). That suite scopes every assertion with q=<marker> and search is trigram-fuzzy
+		// (pg_trgm word similarity), so a competition called e.g. "Seeded Open" in this shared
+		// database silently joins its result sets and breaks four of its tests. Keep these names
+		// trigram-distant from that marker.
+		String categories = mvc.perform(withToken(get("/api/v1/admin/categories")))
+				.andReturn().getResponse().getContentAsString();
+		String mathId = findBySlug(categories, "math");
+
+		// S3 v1: the payload carries the first edition + typed key dates alongside the competition
+		// fields. DELIBERATELY incomplete by admin-form standards - no organizerOrgId, summary,
+		// description, prize, registrationUrl or region. Those are @AssertTrue rules on
+		// CompetitionWithEditionRequest and must NOT reach the import path, or a competition page that
+		// simply doesn't state a prize would be unapprovable. This asserts the leniency, not just the
+		// happy path - if someone later validates the wrapper here, this test is what fails.
+		String submission = """
+				{"payload": {"slug": "import-edition-probe", "name": "Import Edition Probe", "categoryId": "%s",
+				             "organizerName": "Probe Org",
+				             "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL",
+				             "entryPathway": "INDIVIDUAL", "costType": "FREE", "recurrence": "ANNUAL",
+				             "edition": {"cycleLabel": "2026", "status": "OPEN", "scopeLevel": "NATIONAL"},
+				             "keyDates": [
+				               {"type": "REG_CLOSE", "startsAt": "2026-11-01T04:59:00Z"},
+				               {"type": "RESULTS", "label": "Winners announced"}]},
+				 "sourceUrl": "https://seeded.example.org", "confidence": 0.72}
+				""".formatted(mathId);
+		String recordJson = mvc.perform(withToken(post("/api/v1/admin/import-records"))
+						.contentType("application/json").content(submission))
+				.andExpect(status().isCreated())
+				.andReturn().getResponse().getContentAsString();
+		String recordId = mapper.readTree(recordJson).get("id").asText();
+
+		mvc.perform(withToken(post("/api/v1/admin/import-records/" + recordId + "/approve")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status", is("APPROVED")));
+
+		String compJson = mvc.perform(withToken(get("/api/v1/admin/competitions").param("query", "Import Edition Probe")))
+				.andExpect(jsonPath("$.content", hasSize(1)))
+				.andExpect(jsonPath("$.content[0].provenanceSource", is("IMPORT")))
+				.andReturn().getResponse().getContentAsString();
+		String compId = mapper.readTree(compJson).get("content").get(0).get("id").asText();
+
+		// The edition and both typed key dates were created by the same approve.
+		String editions = mvc.perform(withToken(get("/api/v1/admin/competitions/" + compId + "/editions")))
+				.andExpect(jsonPath("$", hasSize(1)))
+				.andExpect(jsonPath("$[0].cycleLabel", is("2026")))
+				.andReturn().getResponse().getContentAsString();
+		String editionId = mapper.readTree(editions).get(0).get("id").asText();
+		mvc.perform(withToken(get("/api/v1/admin/editions/" + editionId + "/key-dates")))
+				.andExpect(jsonPath("$", hasSize(2)))
+				.andExpect(jsonPath("$[0].type", is("REG_CLOSE")))
+				// TBD row (startsAt null, R1-18) survives the round trip and sorts last.
+				.andExpect(jsonPath("$[1].type", is("RESULTS")))
+				.andExpect(jsonPath("$[1].startsAt", nullValue()));
+
+		// THE POINT: the approved listing is immediately public. The readiness gate is
+		// EXISTS(edition) (domain-model 8a), so before this change every approved import was an
+		// invisible zombie - a seeding run of hundreds would have published nothing.
+		mvc.perform(get("/api/v1/competitions/import-edition-probe"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.editions", hasSize(1)));
+
+		// Key dates without an edition have nothing to attach to: refuse rather than silently drop
+		// dates the curator believed they were approving.
+		String orphanDates = """
+				{"payload": {"slug": "orphan-dates", "name": "Orphan Dates", "categoryId": "%s",
+				             "organizerName": "Probe Org",
+				             "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL",
+				             "entryPathway": "INDIVIDUAL", "costType": "FREE", "recurrence": "ANNUAL",
+				             "keyDates": [{"type": "REG_CLOSE"}]},
+				 "confidence": 0.40}
+				""".formatted(mathId);
+		String orphanJson = mvc.perform(withToken(post("/api/v1/admin/import-records"))
+						.contentType("application/json").content(orphanDates))
+				.andReturn().getResponse().getContentAsString();
+		String orphanId = mapper.readTree(orphanJson).get("id").asText();
+		mvc.perform(withToken(post("/api/v1/admin/import-records/" + orphanId + "/approve")))
+				.andExpect(status().isUnprocessableEntity());
+		// …and the record is still reviewable rather than burned.
+		mvc.perform(withToken(get("/api/v1/admin/import-records/" + orphanId)))
+				.andExpect(jsonPath("$.status", is("PENDING")));
+
+		// A malformed edition fails the approve too - EditionRequest's own rules still apply (an
+		// entry fee needs a currency), it is only the wrapper's admin-form policy we skip.
+		String badEdition = """
+				{"payload": {"slug": "bad-edition", "name": "Bad Edition", "categoryId": "%s",
+				             "organizerName": "Probe Org",
+				             "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL",
+				             "entryPathway": "INDIVIDUAL", "costType": "FREE", "recurrence": "ANNUAL",
+				             "edition": {"cycleLabel": "2026", "status": "OPEN", "scopeLevel": "NATIONAL",
+				                         "entryFee": 25.00}},
+				 "confidence": 0.40}
+				""".formatted(mathId);
+		String badJson = mvc.perform(withToken(post("/api/v1/admin/import-records"))
+						.contentType("application/json").content(badEdition))
+				.andReturn().getResponse().getContentAsString();
+		String badId = mapper.readTree(badJson).get("id").asText();
+		mvc.perform(withToken(post("/api/v1/admin/import-records/" + badId + "/approve")))
+				.andExpect(status().isUnprocessableEntity());
+		// Atomicity: the failed edition took the competition with it - no zombie left behind.
+		mvc.perform(withToken(get("/api/v1/admin/competitions").param("query", "Bad Edition")))
+				.andExpect(jsonPath("$.content", hasSize(0)));
+	}
+
 	private String byName(String slug, String name, String catId, String organizerName, String officialUrl,
 			Boolean confirmNewOrganizer) {
 		StringBuilder sb = new StringBuilder();

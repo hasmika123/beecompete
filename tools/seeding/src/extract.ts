@@ -125,6 +125,11 @@ export function normalize(raw: unknown, sourceUrl: string): Extraction {
     categoryId,
     description: null, // never carry model prose — S4 writes our own
     officialUrl: (payloadRaw.officialUrl as string | undefined) ?? sourceUrl,
+    // The edition/key-date free text is model output from an untrusted page like everything
+    // else, so it gets the same M4 treatment. Spreading `rest` would otherwise smuggle
+    // unsanitized prose in through the newest fields.
+    ...(rest.edition != null ? { edition: sanitizeEdition(rest.edition) } : {}),
+    ...(Array.isArray(rest.keyDates) ? { keyDates: sanitizeKeyDates(rest.keyDates) } : {}),
   } as Extraction['payload'];
 
   const modelConfidence = clampUnit(obj.modelConfidence);
@@ -133,6 +138,26 @@ export function normalize(raw: unknown, sourceUrl: string): Extraction {
     ...(modelConfidence !== undefined ? { modelConfidence } : {}),
     ...(typeof obj.reviewerNotes === 'string' ? { reviewerNotes: obj.reviewerNotes } : {}),
   };
+}
+
+/** Sanitizes the edition's free-text fields; every other key passes through untouched. */
+function sanitizeEdition(edition: unknown): unknown {
+  if (typeof edition !== 'object' || edition === null) return edition;
+  const e = edition as Record<string, unknown>;
+  return {
+    ...e,
+    cycleLabel: sanitizeIfString(e.cycleLabel),
+    prizeSummary: sanitizeIfString(e.prizeSummary),
+  };
+}
+
+/** Same for each key date's label — the only free text on a timeline row. */
+function sanitizeKeyDates(rows: unknown[]): unknown[] {
+  return rows.map((row) => {
+    if (typeof row !== 'object' || row === null) return row;
+    const r = row as Record<string, unknown>;
+    return { ...r, label: sanitizeIfString(r.label) };
+  });
 }
 
 /** Strips `<`, `>`, and ASCII control characters from a string (M4). */

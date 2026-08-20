@@ -2,10 +2,13 @@ import { CATEGORY_SLUGS } from './categories.ts';
 import {
   COST_TYPES,
   DELIVERIES,
+  EDITION_STATUSES,
   ENTRY_PATHWAYS,
   EVALUATION_TOKENS,
+  KEY_DATE_TYPES,
   PARTICIPATION_MODES,
   RECURRENCES,
+  SCOPE_LEVELS,
   type SeedHints,
 } from './types.ts';
 
@@ -15,6 +18,8 @@ import {
  *   1. FACTS ONLY — the model records dates/fees/eligibility/format, never rewrites marketing prose.
  *   2. NO original description — `description` stays null (a draft blurb is S4 curator work; facts
  *      aren't copyrightable but prose is, so we never paste theirs).
+ *   3. TBD BEATS A GUESS — an unknown date is emitted as null, never estimated. A wrong deadline
+ *      on a minors-facing catalog can cost a student a real entry.
  */
 export function buildSystemPrompt(): string {
   return `You are a data-extraction assistant for BeeCompete, a catalog of K-12 academic competitions.
@@ -28,7 +33,7 @@ URL than the site the text came from. Extract facts only.
 
 Return ONLY a JSON object with this exact top-level shape (no markdown, no commentary):
 {
-  "payload": { ...spine fields below... },
+  "payload": { ...spine fields below, plus "edition" and "keyDates"... },
   "modelConfidence": <number 0..1>,
   "reviewerNotes": "<short notes on anything uncertain or missing, for the human reviewer>"
 }
@@ -64,12 +69,51 @@ Return ONLY a JSON object with this exact top-level shape (no markdown, no comme
   word_limit integer, genres string[]; robotics: league/kit_platform/game_title strings).
   Only include a key when the page actually states the fact. Never guess.
 
+## edition + key dates (the competition's CURRENT or NEXT running)
+A listing is only useful with a running attached, so also fill these INSIDE "payload":
+- edition (object|null): the current/upcoming running described by the page. Omit (null) ONLY if the
+  page describes no identifiable running at all — do not invent one.
+  - cycleLabel (string, REQUIRED if edition present): the running's label exactly as the page frames
+    it, e.g. "2026" or "2025-26". If the page names no cycle, use the calendar year its deadline
+    falls in. If you cannot determine even that, set edition to null and say so in reviewerNotes.
+  - status (REQUIRED if edition present): one of ${EDITION_STATUSES.join(', ')}. OPEN if registration
+    is open now, CLOSED if it has passed, UPCOMING if announced but not yet open. When unclear use
+    UPCOMING and note it.
+  - scopeLevel (REQUIRED if edition present): one of ${SCOPE_LEVELS.join(', ')} — the geographic reach
+    of THIS running. Default NATIONAL for a country-wide competition; VIRTUAL only when the running
+    itself is online-only rather than merely allowing online entry.
+  - registrationUrl (string|null): the page you actually register on, if stated.
+  - entryFee (number|null) + currency (3-letter ISO, e.g. "USD"): REQUIRED TOGETHER — never emit a
+    fee without its currency. Omit both when the competition is free or the fee is unstated.
+  - prizeSummary (string|null): a SHORT factual phrase, e.g. "Medals and a $500 scholarship". Not a
+    sentence copied from the page.
+  - prizeValue (number|null) + prizeCurrency: only when a single headline cash value is stated.
+  - ageCutoffDate (string|null): ISO yyyy-mm-dd, only if the page states an eligibility cutoff date.
+- keyDates (array|null): the running's timeline. One entry per milestone the page mentions:
+  - type (REQUIRED): one of ${KEY_DATE_TYPES.join(', ')}.
+  - startsAt (ISO-8601 instant|null), endsAt (|null), timezone (IANA, e.g. "America/New_York"|null),
+    label (string|null, only for CUSTOM or to name an unusual milestone).
+
+### DATE RULES — read carefully, these matter more than completeness
+- **A milestone you know exists but cannot date MUST be emitted with startsAt: null.** That is the
+  supported "date TBD" encoding, not a failure. "Registration opens in the fall" => a REG_OPEN row
+  with startsAt null.
+- **NEVER estimate, infer from last year, or round a date.** If the page says "early March" with no
+  day, that is TBD. A plausible-looking wrong deadline is far worse than an honest blank: a student
+  who trusts it misses the real one.
+- Only emit a date you can read off the page. If the page gives a date with no year, and the year is
+  not unambiguous from context, treat it as TBD.
+- If no timezone is stated, leave timezone null rather than assuming one.
+- Emit a REG_CLOSE or SUBMISSION_DUE row whenever the page implies a closing date exists, even when
+  the date itself is TBD — that row is what the public card and search read as the deadline.
+
 ## rules
 - Output valid JSON only. Use null (not empty strings) for unknown scalar fields; omit unknown attribute keys.
 - Do NOT copy sentences from the page. Facts and short factual tags only.
 - If a required field genuinely can't be determined, still output your best factual inference and
   explain the uncertainty in reviewerNotes and lower modelConfidence.
-- modelConfidence reflects how well the page supported a complete, unambiguous extraction.`;
+- modelConfidence reflects how well the page supported a complete, unambiguous extraction.
+- Emitting TBD dates does NOT lower your confidence: an honest null is a correct extraction.`;
 }
 
 export function buildUserPrompt(sourceUrl: string, pageText: string, hints?: SeedHints): string {

@@ -5,11 +5,17 @@ import { CATEGORY_IDS, CATEGORY_TEMPLATES, type CategorySlug } from './categorie
 import {
   COST_TYPES,
   DELIVERIES,
+  EDITION_STATUSES,
   ENTRY_PATHWAYS,
   EVALUATION_TOKENS,
+  KEY_DATE_TYPES,
   PARTICIPATION_MODES,
   RECURRENCES,
+  SCOPE_LEVELS,
   type CompetitionPayload,
+  type EditionPayload,
+  type KeyDatePayload,
+  type SeedPayload,
 } from './types.ts';
 
 export interface ValidationResult {
@@ -41,6 +47,15 @@ const MIN_GRADE = -1; // Pre-K
 const MAX_GRADE = 12;
 /** Server-side @Size cap on officialUrl / logo (CompetitionRequest) — mirrored here (M2). */
 const MAX_URL_LENGTH = 1000;
+/** Server @Size caps on the edition + key-date fields (EditionRequest / FirstEditionKeyDate). */
+const MAX_CYCLE_LABEL = 60;
+const MAX_PRIZE_SUMMARY = 500;
+const MAX_KEY_DATE_LABEL = 200;
+const MAX_TIMEZONE = 60;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const ISO_CURRENCY = /^[A-Z]{3}$/;
+/** The card + search deadline reads REG_CLOSE, falling back to SUBMISSION_DUE (blueprint #31). */
+const DEADLINE_TYPES = ['REG_CLOSE', 'SUBMISSION_DUE'];
 
 /**
  * Validates a payload two ways:
@@ -48,14 +63,145 @@ const MAX_URL_LENGTH = 1000;
  *      schema apps/api re-checks on approve, so passing here means it won't bounce there.
  *   2. Spine sanity: required fields + TYPES (L3 — wrong-typed fields are errors, not crashes),
  *      enum tokens, grade encoding, age/team ranges, and http(s) URL fields ≤1000 chars (M2).
+ *   3. The optional first `edition` + its `keyDates` (S3 v1), against the same rules the server
+ *      applies to `EditionRequest`/`FirstEditionKeyDate` on approve.
  * This is a pre-flight gate; the SERVER remains the source of truth (Bean Validation on approve).
  */
-export function validatePayload(payload: CompetitionPayload): ValidationResult {
+export function validatePayload(payload: SeedPayload): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
   validateSpine(payload, errors, warnings);
   errors.push(...validateAttributes(payload));
+  validateEdition(payload, errors, warnings);
   return { ok: errors.length === 0, errors, warnings };
+}
+
+/**
+ * The first edition + its timeline. Mirrors the server rules that DO apply to an import
+ * (EditionRequest's own @NotNull/@Size/@Pattern/@AssertTrue set) — deliberately NOT the admin
+ * form's completeness policy, which lives on CompetitionWithEditionRequest and would reject a
+ * page that simply states no prize. Everything that policy would have caught is a WARNING here:
+ * the curator decides, the pipeline doesn't block.
+ */
+function validateEdition(p: SeedPayload, errors: string[], warnings: string[]): void {
+  const dates = p.keyDates;
+  if (dates != null && !Array.isArray(dates)) {
+    errors.push('keyDates must be an array');
+    return;
+  }
+  if (p.edition == null) {
+    // Same rule the approve path enforces: key dates hang off an edition, so dates without one
+    // would be silently dropped server-side. Catch it here instead of at approve.
+    if (dates && dates.length > 0) {
+      errors.push('keyDates present without an edition — key dates belong to an edition');
+    } else {
+      warnings.push('no edition extracted — the listing stays hidden until a curator adds one');
+    }
+    return;
+  }
+
+  const e: EditionPayload = p.edition;
+  if (typeof e.cycleLabel !== 'string' || e.cycleLabel.trim() === '') {
+    errors.push('edition.cycleLabel is required');
+  } else if (e.cycleLabel.length > MAX_CYCLE_LABEL) {
+    errors.push(`edition.cycleLabel exceeds ${MAX_CYCLE_LABEL} chars`);
+  }
+  requireEnum(errors, 'edition.status', e.status, EDITION_STATUSES);
+  requireEnum(errors, 'edition.scopeLevel', e.scopeLevel, SCOPE_LEVELS);
+  if (e.registrationUrl != null) {
+    checkHttpUrl(errors, 'edition.registrationUrl', e.registrationUrl);
+  }
+  checkNumberType(errors, 'edition.entryFee', e.entryFee);
+  checkNumberType(errors, 'edition.prizeValue', e.prizeValue);
+  if (isNum(e.entryFee) && e.entryFee < 0) errors.push('edition.entryFee must be >= 0');
+  if (isNum(e.prizeValue) && e.prizeValue < 0) errors.push('edition.prizeValue must be >= 0');
+  // Server @AssertTrue: a money amount without its currency is rejected on approve.
+  if (isNum(e.entryFee) && !e.currency) errors.push('edition.entryFee needs edition.currency');
+  if (isNum(e.prizeValue) && !e.prizeCurrency) {
+    errors.push('edition.prizeValue needs edition.prizeCurrency');
+  }
+  checkCurrency(errors, 'edition.currency', e.currency);
+  checkCurrency(errors, 'edition.prizeCurrency', e.prizeCurrency);
+  if (typeof e.prizeSummary === 'string' && e.prizeSummary.length > MAX_PRIZE_SUMMARY) {
+    errors.push(`edition.prizeSummary exceeds ${MAX_PRIZE_SUMMARY} chars`);
+  }
+  if (e.ageCutoffDate != null && !ISO_DATE.test(String(e.ageCutoffDate))) {
+    errors.push('edition.ageCutoffDate must be an ISO date (yyyy-mm-dd)');
+  }
+
+  // Cost/fee coherence. The server can't catch this for imports (the rule lives on the admin
+  // wrapper), and it is the kind of contradiction a curator must see rather than inherit.
+  if (p.costType === 'FREE' && isNum(e.entryFee) && e.entryFee > 0) {
+    warnings.push(`costType is FREE but edition.entryFee is ${e.entryFee}`);
+  }
+  if (p.costType === 'PAID' && !isNum(e.entryFee)) {
+    warnings.push('costType is PAID but no entry fee was extracted');
+  }
+
+  validateKeyDates(dates ?? [], errors, warnings);
+}
+
+function validateKeyDates(dates: KeyDatePayload[], errors: string[], warnings: string[]): void {
+  dates.forEach((d, i) => {
+    const at = `keyDates[${i}]`;
+    if (d == null || typeof d !== 'object') {
+      errors.push(`${at} must be an object`);
+      return;
+    }
+    requireEnum(errors, `${at}.type`, d.type, KEY_DATE_TYPES);
+    if (typeof d.label === 'string' && d.label.length > MAX_KEY_DATE_LABEL) {
+      errors.push(`${at}.label exceeds ${MAX_KEY_DATE_LABEL} chars`);
+    }
+    if (typeof d.timezone === 'string' && d.timezone.length > MAX_TIMEZONE) {
+      errors.push(`${at}.timezone exceeds ${MAX_TIMEZONE} chars`);
+    }
+    const start = checkInstant(errors, `${at}.startsAt`, d.startsAt);
+    const end = checkInstant(errors, `${at}.endsAt`, d.endsAt);
+    // Server @AssertTrue: an endsAt without a startsAt, or before it, is rejected.
+    if (d.endsAt != null && d.startsAt == null) {
+      errors.push(`${at}.endsAt requires a startsAt`);
+    } else if (start != null && end != null && end <= start) {
+      errors.push(`${at}.endsAt must be after startsAt`);
+    }
+  });
+
+  const typed = dates.filter((d) => d && typeof d.type === 'string');
+  if (!typed.some((d) => DEADLINE_TYPES.includes(d.type))) {
+    // Not fatal — plenty of pages genuinely announce nothing yet — but the public card and
+    // search read their deadline from these two types, so the listing will show none.
+    warnings.push('no REG_CLOSE or SUBMISSION_DUE key date — the listing will show no deadline');
+  }
+  if (typed.length > 0 && typed.every((d) => d.startsAt == null)) {
+    // Expected and CORRECT for a page that announces milestones without dates (TBD beats a
+    // guess), but it is exactly the row a curator should chase, so surface it.
+    warnings.push('every key date is TBD (no dates on the page) — curator lookup needed');
+  }
+}
+
+/** Returns the parsed epoch ms, or null when absent/invalid (the error is recorded). */
+function checkInstant(
+  errors: string[],
+  field: string,
+  value: string | null | undefined,
+): number | null {
+  if (value == null) return null;
+  if (typeof value !== 'string') {
+    errors.push(`${field} must be an ISO-8601 string or null`);
+    return null;
+  }
+  const ms = Date.parse(value);
+  if (Number.isNaN(ms)) {
+    errors.push(`${field} is not a valid ISO-8601 instant (got ${value})`);
+    return null;
+  }
+  return ms;
+}
+
+function checkCurrency(errors: string[], field: string, value: string | null | undefined): void {
+  if (value == null) return;
+  if (typeof value !== 'string' || !ISO_CURRENCY.test(value)) {
+    errors.push(`${field} must be a 3-letter uppercase ISO code (got ${String(value)})`);
+  }
 }
 
 function validateSpine(p: CompetitionPayload, errors: string[], warnings: string[]): void {
