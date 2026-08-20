@@ -272,7 +272,9 @@ The site is live but `noindex`. Three blockers, in any order:
 
 1. **Legal (hard blocker)**
    - Privacy attorney reviews the 4 draft pages (Privacy, Terms, Cookies, Affiliate Disclosure) — especially the COPPA posture.
-   - Form the **LLC**, then in `apps/web/src/lib/legal.ts`: set `OPERATING_ENTITY`, `GOVERNING_LAW_STATE`, flip `LEGAL_REVIEW_PENDING → false`, bump `LEGAL_LAST_UPDATED`.
+   - In `apps/web/src/lib/legal.ts`: `OPERATING_ENTITY` = **AutomoraLab LLC** ✔ and
+     `GOVERNING_LAW_STATE` = **Georgia** ✔ (both 2026-08-20). **Only remaining constant:** flip
+     `LEGAL_REVIEW_PENDING → false` after counsel signs off, and bump `LEGAL_LAST_UPDATED`.
 2. **Content gate** — **≥ 200 competitions live** across the ~11 categories (≥ 15 each for majors), every listing with a verified current/upcoming Edition, top ~50 fully curated.
 3. **Indexing flip** — set `SEARCH_INDEXING=on` in `~/beecompete-prod/.env` → recreate web → verify `robots.txt` + a page shows `index,follow` → confirm staging still blocks → submit `sitemap.xml` to Google Search Console + Bing.
 
