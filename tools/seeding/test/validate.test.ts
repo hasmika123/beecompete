@@ -6,12 +6,12 @@ import { scoreConfidence } from '../src/confidence.ts';
 import { normalize, sanitizeText } from '../src/extract.ts';
 import { compareHints } from '../src/hints.ts';
 import { dedupeByUrl } from '../src/input.ts';
-import type { CompetitionPayload, Extraction, SeedHints } from '../src/types.ts';
+import type { CompetitionPayload, Extraction, SeedHints, SeedPayload } from '../src/types.ts';
 import { validatePayload } from '../src/validate.ts';
 
 const fixtureUrl = new URL('../fixtures/sample-competition.expected.json', import.meta.url);
 
-async function loadGoodPayload(): Promise<CompetitionPayload> {
+async function loadGoodPayload(): Promise<SeedPayload> {
   const raw = JSON.parse(await readFile(fileURLToPath(fixtureUrl), 'utf8'));
   return normalize(raw, 'https://novamath.example.org').payload;
 }
@@ -303,4 +303,147 @@ test('compareHints flags an organizer disagreement for the curator', async () =>
     warnings.some((w) => w.includes('organizer mismatch')),
     `expected an organizer mismatch, got: ${warnings.join(' | ')}`,
   );
+});
+
+// ---------------------------------------------------------------------------
+// S3 v1 — first edition + key dates
+// ---------------------------------------------------------------------------
+
+test('the fixture carries a valid edition + key dates, including a TBD row', async () => {
+  const payload = await loadGoodPayload();
+  const result = validatePayload(payload);
+  assert.equal(result.ok, true, `expected valid, got: ${result.errors.join(' | ')}`);
+  assert.equal(payload.edition?.cycleLabel, '2026');
+  // The undated RESULTS row survives normalize as an explicit null — that is the TBD encoding
+  // (R1-18), not a dropped field.
+  const results = payload.keyDates?.find((d) => d.type === 'RESULTS');
+  assert.equal(results?.startsAt ?? null, null);
+  assert.equal(results?.label, 'Winners announced');
+});
+
+test('key dates without an edition are an error, not a silent drop', async () => {
+  const payload = await loadGoodPayload();
+  delete payload.edition;
+  const result = validatePayload(payload);
+  assert.equal(result.ok, false);
+  assert.ok(
+    result.errors.some((e) => e.includes('keyDates present without an edition')),
+    `expected the orphan-dates error, got: ${result.errors.join(' | ')}`,
+  );
+});
+
+test('no edition at all is a warning — the listing would stay hidden', async () => {
+  const payload = await loadGoodPayload();
+  delete payload.edition;
+  delete payload.keyDates;
+  const result = validatePayload(payload);
+  assert.equal(result.ok, true); // not fatal: a curator can add the edition at S4
+  assert.ok(
+    result.warnings.some((w) => w.includes('no edition extracted')),
+    `expected the hidden-listing warning, got: ${result.warnings.join(' | ')}`,
+  );
+});
+
+test('edition enums, money pairing and caps mirror the server rules', async () => {
+  const payload = await loadGoodPayload();
+  payload.edition = {
+    cycleLabel: '',
+    status: 'SOMEDAY' as never,
+    scopeLevel: 'PLANETARY' as never,
+    entryFee: 25,
+    prizeValue: 500,
+    prizeCurrency: 'dollars',
+  };
+  const { ok, errors } = validatePayload(payload);
+  assert.equal(ok, false);
+  for (const expected of [
+    'edition.cycleLabel is required',
+    'edition.status must be one of',
+    'edition.scopeLevel must be one of',
+    'edition.entryFee needs edition.currency',
+    'edition.prizeCurrency must be a 3-letter uppercase ISO code',
+  ]) {
+    assert.ok(
+      errors.some((e) => e.includes(expected)),
+      `missing "${expected}" in: ${errors.join(' | ')}`,
+    );
+  }
+});
+
+test('key-date instants must parse, and endsAt requires a startsAt', async () => {
+  const payload = await loadGoodPayload();
+  payload.keyDates = [
+    { type: 'REG_CLOSE', startsAt: 'next tuesday' },
+    { type: 'RESULTS', endsAt: '2026-12-01T00:00:00Z' },
+    { type: 'NOT_A_TYPE' as never },
+  ];
+  const { ok, errors } = validatePayload(payload);
+  assert.equal(ok, false);
+  assert.ok(errors.some((e) => e.includes('keyDates[0].startsAt is not a valid ISO-8601 instant')));
+  assert.ok(errors.some((e) => e.includes('keyDates[1].endsAt requires a startsAt')));
+  assert.ok(errors.some((e) => e.includes('keyDates[2].type must be one of')));
+});
+
+test('an all-TBD timeline is valid but flagged for curator lookup', async () => {
+  const payload = await loadGoodPayload();
+  payload.keyDates = [{ type: 'REG_CLOSE' }, { type: 'RESULTS' }];
+  const { ok, warnings } = validatePayload(payload);
+  // TBD is the CORRECT output for an undated page — never an error, or the extractor would be
+  // pushed toward guessing deadlines.
+  assert.equal(ok, true);
+  assert.ok(
+    warnings.some((w) => w.includes('every key date is TBD')),
+    `expected the all-TBD warning, got: ${warnings.join(' | ')}`,
+  );
+});
+
+test('a timeline with no deadline row warns that the card will show none', async () => {
+  const payload = await loadGoodPayload();
+  payload.keyDates = [{ type: 'ROUND_START', startsAt: '2026-03-01T00:00:00Z' }];
+  const { ok, warnings } = validatePayload(payload);
+  assert.equal(ok, true);
+  assert.ok(
+    warnings.some((w) => w.includes('no REG_CLOSE or SUBMISSION_DUE')),
+    `expected the missing-deadline warning, got: ${warnings.join(' | ')}`,
+  );
+});
+
+test('a FREE competition charging a fee is surfaced as a contradiction', async () => {
+  const payload = await loadGoodPayload(); // costType FREE
+  payload.edition = {
+    cycleLabel: '2026',
+    status: 'OPEN',
+    scopeLevel: 'NATIONAL',
+    entryFee: 40,
+    currency: 'USD',
+  };
+  const { ok, warnings } = validatePayload(payload);
+  assert.equal(ok, true); // the server can't catch this for imports, so we warn rather than block
+  assert.ok(
+    warnings.some((w) => w.includes('costType is FREE but edition.entryFee is 40')),
+    `expected the free-vs-fee warning, got: ${warnings.join(' | ')}`,
+  );
+});
+
+test('edition + key-date free text is sanitized like every other field (M4)', async () => {
+  const extraction = normalize(
+    {
+      payload: {
+        slug: 'x',
+        name: 'X',
+        categorySlug: 'math',
+        edition: {
+          cycleLabel: '2026<script>',
+          status: 'OPEN',
+          scopeLevel: 'NATIONAL',
+          prizeSummary: 'a <b>prize',
+        },
+        keyDates: [{ type: 'RESULTS', label: 'winners <em>announced' }],
+      },
+    },
+    'https://example.org',
+  );
+  assert.equal(extraction.payload.edition?.cycleLabel, '2026script');
+  assert.equal(extraction.payload.edition?.prizeSummary, 'a bprize');
+  assert.equal(extraction.payload.keyDates?.[0]?.label, 'winners emannounced');
 });

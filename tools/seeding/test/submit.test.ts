@@ -47,6 +47,31 @@ const COMPETITION_REQUEST_FIELDS = new Set([
   'attributes',
 ]);
 
+/**
+ * The two seeding EXTRAS the payload carries beyond CompetitionRequest (S3 v1). The approve path
+ * splits these back out before mapping the competition half, so they are contract too — if the
+ * server ever renames them, this test is the tripwire.
+ */
+const SEED_PAYLOAD_EXTRAS = new Set(['edition', 'keyDates']);
+
+/** apps/api `EditionRequest` — the fields the pipeline may emit (advancesToEditionId is curator-only). */
+const EDITION_REQUEST_FIELDS = new Set([
+  'cycleLabel',
+  'status',
+  'scopeLevel',
+  'registrationUrl',
+  'entryFee',
+  'currency',
+  'ageCutoffDate',
+  'prizeSummary',
+  'prizeValue',
+  'prizeCurrency',
+  'attributes',
+]);
+
+/** apps/api `CompetitionWithEditionRequest.FirstEditionKeyDate`. */
+const KEY_DATE_FIELDS = new Set(['type', 'label', 'startsAt', 'endsAt', 'timezone']);
+
 const UPPER = /^[A-Z_]+$/;
 
 test('submitToImportQueue POSTs the exact ImportSubmission contract shape', async () => {
@@ -114,10 +139,14 @@ test('submitToImportQueue POSTs the exact ImportSubmission contract shape', asyn
     assert.ok(typeof confidence === 'number' && confidence >= 0 && confidence <= 1);
     assert.equal(Math.round(confidence * 100) / 100, confidence, 'confidence has ≤2 decimals');
 
-    // payload: a strict subset of CompetitionRequest's fields — no categorySlug, no extras.
+    // payload: CompetitionRequest's fields plus the two declared seeding extras — no
+    // categorySlug, nothing undeclared.
     const payload = captured.body.payload as Record<string, unknown>;
     for (const key of Object.keys(payload)) {
-      assert.ok(COMPETITION_REQUEST_FIELDS.has(key), `unexpected payload field "${key}"`);
+      assert.ok(
+        COMPETITION_REQUEST_FIELDS.has(key) || SEED_PAYLOAD_EXTRAS.has(key),
+        `unexpected payload field "${key}"`,
+      );
     }
     assert.equal(payload.categorySlug, undefined);
     assert.equal(payload.description, null);
@@ -143,6 +172,39 @@ test('submitToImportQueue POSTs the exact ImportSubmission contract shape', asyn
     for (const token of evaluationType) {
       assert.equal(token, token.toLowerCase(), 'evaluationType tokens are lowercase');
     }
+
+    // --- the first edition (S3 v1) ---
+    const edition = payload.edition as Record<string, unknown>;
+    assert.ok(edition, 'the fixture carries an edition');
+    for (const key of Object.keys(edition)) {
+      assert.ok(EDITION_REQUEST_FIELDS.has(key), `unexpected edition field "${key}"`);
+    }
+    // Jackson binds these case-sensitively into EditionStatus / ScopeLevel on approve.
+    for (const field of ['status', 'scopeLevel']) {
+      assert.ok(
+        typeof edition[field] === 'string' && UPPER.test(edition[field] as string),
+        `edition.${field} must be an UPPERCASE enum constant (got ${String(edition[field])})`,
+      );
+    }
+    assert.equal(typeof edition.cycleLabel, 'string');
+
+    // --- the timeline ---
+    const keyDates = payload.keyDates as Record<string, unknown>[];
+    assert.ok(Array.isArray(keyDates) && keyDates.length > 0, 'the fixture carries key dates');
+    for (const row of keyDates) {
+      for (const key of Object.keys(row)) {
+        assert.ok(KEY_DATE_FIELDS.has(key), `unexpected key-date field "${key}"`);
+      }
+      assert.ok(
+        typeof row.type === 'string' && UPPER.test(row.type),
+        `key date type must be an UPPERCASE enum constant (got ${String(row.type)})`,
+      );
+    }
+    // A TBD row must reach the server as an EXPLICIT null, not a dropped key: both decode to
+    // "date unknown", but asserting the null keeps the honest-blank contract visible here.
+    const tbd = keyDates.find((d) => d.type === 'RESULTS');
+    assert.ok(tbd, 'the fixture keeps an undated RESULTS row');
+    assert.equal(tbd.startsAt, null, 'an undated milestone serializes as null, not omitted');
   } finally {
     server.close();
   }

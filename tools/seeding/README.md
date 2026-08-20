@@ -1,13 +1,19 @@
-# S3 — AI-assisted extraction pipeline v0
+# S3 — AI-assisted extraction pipeline v1
 
 A standalone command-line tool that turns a competition's **official web page** into a validated
 BeeCompete catalog record and drops it into the **R1-3 import-review queue** for a human curator to
 approve (that review is **S4**). This is the seeding tooling from `docs/phase-1-plan.md` → "Data
 seeding & catalog readiness", task **S3**.
 
-> **v0 scope:** correctness and a clean, testable shape over breadth. It extracts the **Competition
-> Spine + category `attributes`** only. Editions, key dates, and resources are added later by
-> curators (separate admin endpoints). It never publishes anything — everything lands **PENDING**.
+> **v1 scope:** the **Competition Spine + category `attributes`**, plus the competition's **first
+> Edition and its typed key dates**. Resources are still curator work. It never publishes
+> anything — everything lands **PENDING**.
+>
+> **Why the edition moved in-scope (v0 → v1).** Public visibility is gated on
+> `EXISTS(edition)` (domain-model §8a), so a v0 approve produced an invisible **zombie listing**
+> — fine for a handful, fatal for a seeding run of hundreds, which would have published nothing.
+> Approve now creates competition + edition + key dates in ONE transaction, so one approve yields
+> a live listing. It also removes the slowest part of S4: re-typing dates a curator already read.
 
 ## Why it lives here (and not in the workspace)
 
@@ -21,9 +27,10 @@ never destabilize the web/api pipelines. It has its own `package.json` and local
   --input URL ─┐
                ├─▶ fetch ──▶ extract (LLM) ──▶ validate ──▶ score ──▶ submit ──▶ R1-3 import queue
   --input .html┘   robots     Spine + attrs     schema +    0..1     POST         (PENDING)
-  --batch .csv     UA/timeout  (facts only)      spine       conf    X-Admin-Token       │
-                                                  sanity                                  ▼
-                                                                            S4: human review/approve
+  --batch .csv     UA/timeout  + edition +      spine +     conf    X-Admin-Token       │
+                   (facts only) key dates       edition                                  ▼
+                                                 sanity              S4: review → approve creates
+                                                                     competition + edition + dates
 ```
 
 0. **dedup** (`src/input.ts`) — a batch is first collapsed by URL: umbrella programs list the same
@@ -76,6 +83,48 @@ never destabilize the web/api pipelines. It has its own `package.json` and local
    provenance link a curator clicks). The server stores it PENDING with
    `provenance.source = import` + our confidence. **Validation is re-run server-side on approve**,
    not at ingress — garbage may enter the queue, only reviewed data leaves it.
+
+## Edition + key dates (v1)
+
+The extraction also fills two keys **inside `payload`**, alongside the competition fields:
+
+- **`edition`** — the current/upcoming running. Only `cycleLabel`, `status` and `scopeLevel` are
+  required (the server's `EditionRequest` rules); `registrationUrl`, fee, prize and `ageCutoffDate`
+  are filled when the page states them. Omitted entirely when the page describes no identifiable
+  running — we don't invent one.
+- **`keyDates`** — typed timeline rows (`REG_OPEN`, `REG_CLOSE`, `ROUND_START`, `SUBMISSION_DUE`,
+  `RESULTS`, `CUSTOM`).
+
+On approve the server splits these back out and creates competition + edition + key dates in one
+transaction (`ImportQueueController` → `ListingCurationService`).
+
+### TBD beats a guess — the rule that matters most here
+
+`startsAt: null` means **"this milestone exists, the date is not yet known"** (R1-18). The prompt
+requires that encoding whenever a date can't be read straight off the page — "registration opens in
+the fall", "early March", a date with an ambiguous year. **Estimating, or carrying last year's date
+forward, is forbidden.**
+
+This is a safety rule, not a tidiness one: BeeCompete is minors-facing, and a plausible-looking wrong
+deadline is worse than a visible blank — a student who trusts it misses the real one. An honest TBD
+row still does its job, because the card and search read the *presence* of a `REG_CLOSE` /
+`SUBMISSION_DUE` row. Emitting TBD is explicitly told not to lower model confidence, so the scoring
+can't nudge the extractor toward guessing.
+
+Validation reinforces it: an all-TBD timeline is **valid** and merely warns
+(`every key date is TBD — curator lookup needed`), never an error.
+
+### Deliberately lenient — and why the server agrees
+
+The admin CREATE form demands organizer, summary, description, registration URL, prize and a region
+(`CompetitionWithEditionRequest`'s `@AssertTrue` set). **None of those apply to an import**, because
+a competition's own page routinely states no prize or fee, and applying them would make most
+extracted rows unapprovable. The approve path therefore validates the request's *parts*
+(`CompetitionRequest`, `EditionRequest`, each key date) and never the wrapper.
+
+What that policy would have caught surfaces as a **curator warning** instead — no deadline row, an
+all-TBD timeline, `costType: FREE` alongside a non-zero fee, no edition at all. The curator decides;
+the pipeline doesn't block.
 
 ## Setup
 
@@ -157,8 +206,10 @@ penalty-only confidence; permissive templates accept extra keys; and `normalize`
 distiller, the robots evaluator (incl. exact UA-token matching), the private-address guard, and the
 CSV URL reader. `test/submit.test.ts` is the **contract test**: it captures the actual POST body
 against a local HTTP server and asserts the exact `ImportSubmission` shape, the
-`CompetitionRequest` field set, and enum casing (UPPERCASE spine enums, lowercase
-`evaluationType` tokens).
+`CompetitionRequest` field set plus the two declared extras (`edition`, `keyDates`), the
+`EditionRequest` / `FirstEditionKeyDate` field sets, enum casing (UPPERCASE spine, edition and
+key-date enums; lowercase `evaluationType` tokens), and that an undated milestone serializes as
+an explicit `null` rather than a dropped key.
 
 ## Confidence scoring
 
@@ -216,7 +267,13 @@ blast radius of a hostile page a flagged, low-confidence PENDING row a curator i
   a server-side fetcher would need resolution-time checks.
 - **HTML→text** is a regex distiller, not a DOM/readability extractor; JS-rendered pages won't
   yield text (v0 fetches static HTML only).
-- **Single-page** extraction — no multi-page crawl/merge (rules + FAQ + dates pages) yet.
+- **Single-page** extraction — no multi-page crawl/merge (rules + FAQ + dates pages) yet. This
+  bites hardest on **dates**, which competitions often park on a separate "key dates" page; the
+  result is an honest TBD row rather than a wrong date, but it does mean more curator lookups.
+- **Regions are not extracted.** `EditionRegion` is a UUID join the tool can't resolve, so a
+  seeded edition starts untagged and a curator assigns regions at S4. `scopeLevel` (the
+  edition's own reach) IS extracted.
+- **No second/future editions** — only the first. Later runnings use the per-edition admin create.
 - **Batch rows sharing a URL are deduped** (first occurrence wins, count logged; dedup runs before
   `--limit`, so "top N" means N distinct pages). Umbrella programs listed on several master-index
   rows — AMC 8/10/12 → one `maa.org` page; Scholastic Art + Writing → one `artandwriting.org`
