@@ -9,7 +9,7 @@
 > share, the four (draft) legal pages, privacy-first analytics, Brevo captures (digest / follow / host +
 > feedback), and a WCAG 2.1 AA a11y pass. **As-built detail lives in `architecture.md` §10a/§13a–§13c
 > and `domain-model.md` §3b/§3f/§8/§8a — not re-logged here.**
-> **S2/S3 seeding done:** the 284-competition master index (`docs/seeding/`) + the S3 extraction pipeline
+> **S2/S3 seeding done:** the 448-competition master index (`docs/seeding/`, incl. the 2026-07-29 S2b/S2c extensions) + the S3 extraction pipeline
 > (`tools/seeding/`); S4 curation (the ≥ 200-live content gate) is the remaining seeding work.
 > **Deployed:** IONOS VPS behind a shared edge Caddy, build-once-promote (staging on a `main` push, prod
 > on an `R*` tag; currently **R1.2**) — see `setup-runbook.md` "Current deployment — AS BUILT".
@@ -180,7 +180,23 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
        formed (the "legal foundation done" item — setup-runbook §1b).
     3. **Flip `LEGAL_REVIEW_PENDING` → `false`** after #1–#2 — drops the on-page "Draft — under review" banner.
   - **📚 Content gate** — ≥ 200 competitions live across the ~10 categories (S4 seeding; see "Data seeding
-    & catalog readiness" below). As blocking as any code item.
+    & catalog readiness" below). As blocking as any code item. **Two steps, in order:**
+    1. **Run the S3 import** (fills the review queue — one command, ~1–2 h unattended, a few $ of LLM):
+       ```bash
+       cd tools/seeding && bash run-prod-submit.sh
+       ```
+       Why it's a manual step: the prod API is **not publicly reachable** (Caddy only exposes web; the
+       API lives on the internal Docker network), so the script opens a socat relay + SSH tunnel to the
+       VPS, reads `ADMIN_API_TOKEN` from `/home/deploy/beecompete-prod/.env` at runtime, and POSTs the
+       342-row master index into the R1-3 queue. It needs `ANTHROPIC_API_KEY` in `tools/seeding/.env`
+       and the `~/.ssh/beecompete_admin` key. It's **rerun-safe** (skips URLs already PENDING) and
+       **health-gates first** — if the prod DB is down (e.g. the Neon free-tier compute quota is spent)
+       it aborts with a message instead of half-importing. Everything lands **PENDING**; nothing
+       publishes. A handful of sites bot-block the fetcher (VEX, CyberPatriot, AAPT) and are listed in
+       the run log for manual entry. Full recipe + gotchas: `tools/seeding/README.md`.
+    2. **Curate in `/admin/import-records`** — review/edit/approve each record, **write our own
+       description** (never paste theirs), assign the organizer, and add an Edition with verified dates.
+       That approval step is what actually makes a listing live and counts toward the ≥ 200.
   - **🔎 Flip indexing** — the site is `noindex` until: set `SEARCH_INDEXING=on` in `~/beecompete-prod/.env`
     + recreate web, verify `robots.txt` serves the allow ruleset + a page emits `index, follow`, confirm
     staging still serves `Disallow: /`, then submit `sitemap.xml` to Google + Bing.
