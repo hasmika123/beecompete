@@ -22,7 +22,7 @@ export async function subscribeDigest(_prev: FormState, form: FormData): Promise
   return captureToList(form, {
     list: 'digest',
     attributes,
-    notReady: 'Signups open soon — the weekly digest is almost ready. Check back shortly!',
+    notReady: 'Signups open soon. The weekly digest is almost ready. Check back shortly!',
     confirm: 'Almost there! Check your inbox and confirm your email to start getting the digest.',
     done: 'You’re in! Watch for your first weekly digest soon.',
   });

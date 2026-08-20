@@ -71,7 +71,7 @@ export default async function ImportRecordsPage({
           },
           {
             header: 'Confidence',
-            cell: (r) => <span className="text-muted">{r.confidence ?? '—'}</span>,
+            cell: (r) => <span className="text-muted">{r.confidence ?? '–'}</span>,
           },
           { header: 'Status', cell: (r) => <ReviewStatusBadge status={r.status} /> },
           {

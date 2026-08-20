@@ -86,7 +86,7 @@ export function RegionPicker({
 
   if (regions.length === 0) {
     return (
-      <p className="text-sm text-muted">No regions defined yet — add them under Regions first.</p>
+      <p className="text-sm text-muted">No regions defined yet. Add them under Regions first.</p>
     );
   }
 
@@ -199,7 +199,7 @@ export function RegionPicker({
         )}
       </div>
       <p className="text-xs text-muted">
-        {selectedIds.length} selected{selectedIds.length === 0 ? ' — pick at least one' : ''}
+        {selectedIds.length} selected{selectedIds.length === 0 ? ', pick at least one' : ''}
       </p>
     </fieldset>
   );

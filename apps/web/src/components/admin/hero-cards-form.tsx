@@ -42,8 +42,8 @@ export function HeroCardsForm({ cards }: { cards: HeroCard[] }) {
       {state.error && <Alert tone="danger">{state.error}</Alert>}
 
       <p className="text-sm text-muted">
-        These render on the landing hero — one large main card plus two decorative satellites.
-        Images upload straight to storage; the satellites are optional.
+        These render on the landing hero: one large main card plus two decorative satellites. Images
+        upload straight to storage; the satellites are optional.
       </p>
 
       {/* Main — full width; image beside its fields on wider screens. */}
@@ -51,7 +51,7 @@ export function HeroCardsForm({ cards }: { cards: HeroCard[] }) {
         <header className="mb-3">
           <h3 className="text-sm font-semibold text-foreground">Main card</h3>
           <p className="text-xs text-muted">
-            The large hero image — links to a destination; a hover reveals the description over it.
+            The large hero image. Links to a destination; a hover reveals the description over it.
           </p>
         </header>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -75,7 +75,7 @@ export function HeroCardsForm({ cards }: { cards: HeroCard[] }) {
             </FormField>
             <FormField
               label="Link URL"
-              hint="where the card goes when clicked — a path like /competitions or a full URL"
+              hint="where the card goes when clicked: a path like /competitions or a full URL"
             >
               <Input name="MAIN_linkUrl" defaultValue={main?.linkUrl ?? ''} maxLength={1000} />
             </FormField>
@@ -102,7 +102,7 @@ export function HeroCardsForm({ cards }: { cards: HeroCard[] }) {
             >
               <header className="mb-3">
                 <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-                <p className="text-xs text-muted">Decorative image only — optional.</p>
+                <p className="text-xs text-muted">Decorative image only, optional.</p>
               </header>
               <div className="grid gap-4">
                 <ImageUpload

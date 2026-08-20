@@ -94,7 +94,7 @@ export function SuggestCorrectionForm({
     return (
       <FormResult
         ok
-        message={`Thanks — your correction was sent to our curators for review${
+        message={`Thanks! Your correction was sent to our curators for review${
           subjectName ? ` (${subjectName})` : ''
         }. Nothing changes until a human checks it.`}
       />

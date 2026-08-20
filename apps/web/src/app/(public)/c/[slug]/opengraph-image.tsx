@@ -20,7 +20,7 @@ export async function generateImageMetadata({ params }: { params: Promise<{ slug
   let alt = 'Competition on BeeCompete';
   try {
     const c = await fetchCompetition(slug);
-    alt = `${c.name} — on BeeCompete`;
+    alt = `${c.name} on BeeCompete`;
   } catch {
     // keep the generic alt
   }

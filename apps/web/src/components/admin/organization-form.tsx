@@ -31,7 +31,7 @@ export function OrganizationForm({ organization }: { organization?: Organization
           defaultValue={organization?.type ?? 'HOST'}
         />
       </FormField>
-      <FormField label="Domain" hint="e.g. maa.org — anchors host verification later.">
+      <FormField label="Domain" hint="e.g. maa.org; anchors host verification later.">
         <Input name="domain" defaultValue={organization?.domain ?? ''} maxLength={255} />
       </FormField>
       <div>

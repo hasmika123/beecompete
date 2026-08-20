@@ -297,7 +297,8 @@ tooling + audit log) → Phase 2+ (dedup DQ4, conflict resolution DQ5) → Phase
   public `covers/` prefix (the only prefix the bucket policy exposes for read), with a paste-a-URL
   fallback; no new endpoint or bucket-policy change. (`ImageUpload` gained `onChange`/`setLabel` and a
   `min-w-0` fix so a long image URL can't blow out a grid column.)
-- **Value-prop section (M36, 2026-07-16):** the Landing "Competing changes what's possible" block is
+- **Value-prop section (M36, 2026-07-16 — ⚠ NO LONGER RENDERED, see below):** the Landing
+  "Competing changes what's possible" block was
   admin-managed — two `ValuePropCard`s (image + link + label) and two `LandingStat`s (value + label +
   source), each a position-keyed upsert like `HeroCard` (`GET`/`PUT /value-prop-cards/{slot}` +
   `/landing-stats/{slot}`; slot = `PRIMARY|SECONDARY`). The `/admin/landing` editor is **one form, one
@@ -307,6 +308,12 @@ tooling + audit log) → Phase 2+ (dedup DQ4, conflict resolution DQ5) → Phase
   (additive). **Cache note:** the public landing fetch caches for an hour, so every landing-content
   save action (`saveValueProp`, `saveHeroCards`, `setFeaturedSlots`) now `revalidatePath('/')` (via
   `revalidateLanding()`) so edits show on the live page immediately, not up to an hour later.
+  ⚠ **Orphaned 2026-08-15** (page-blueprints #38/#39): the landing hero no longer renders
+  `HeroCard`s and the value-prop section was removed from the page entirely. The `HeroCard`,
+  `ValuePropCard` and `LandingStat` entities, their admin forms, their admin endpoints and their
+  `/landing` payload fields all still exist but drive **nothing on the public site** — an admin can
+  still edit content that renders nowhere. Removing that surface touches the schema, so it is a
+  full-loop change and is tracked as a follow-up rather than done inline.
 - **Deferred (PR C):** inline row-edit for FAQ/Resource (add+delete today). **`@Version` is not sent**
   on admin PUTs yet, so concurrent edits last-write-win rather than 409 — acceptable for a single
   curator at R1; revisit with RBAC (R2-7).

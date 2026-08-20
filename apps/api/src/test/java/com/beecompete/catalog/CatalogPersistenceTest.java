@@ -166,7 +166,7 @@ class CatalogPersistenceTest {
 		resources.save(guide);
 
 		faqs.save(new CompetitionFaq(amc, "Can homeschoolers enter?",
-				"Yes — through a registered testing site.", (short) 0));
+				"Yes, through a registered testing site.", (short) 0));
 
 		corrections.save(new CorrectionProposal(CorrectionSubjectType.COMPETITION, amc.getId(),
 				Map.of("official_url", "https://maa.org/amc")));

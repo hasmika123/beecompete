@@ -48,10 +48,10 @@ export function CategoryCreateForm({ allCategories }: { allCategories: Category[
           <Select
             name="parentId"
             options={[
-              { value: '', label: '— none (top level) —' },
+              { value: '', label: 'None (top level)' },
               ...allCategories.map((c) => ({ value: c.id, label: c.name })),
             ]}
-            placeholder="— none (top level) —"
+            placeholder="None (top level)"
             searchable
           />
         </FormField>

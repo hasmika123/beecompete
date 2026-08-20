@@ -32,7 +32,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: absoluteUrl('/'), changeFrequency: 'daily', priority: 1 },
     { url: absoluteUrl('/competitions'), changeFrequency: 'daily', priority: 0.9 },
     { url: absoluteUrl('/categories'), changeFrequency: 'weekly', priority: 0.6 },
-    { url: absoluteUrl('/how-it-works'), changeFrequency: 'monthly', priority: 0.4 },
+    // /how-it-works was discarded (#66) and its replacement, /articles, is a noindex coming-soon
+    // stub — so nothing takes this slot. Add /articles here only when it has real content, or the
+    // sitemap advertises an empty page to crawlers.
     // Legal pages (R1-12) — low priority, rarely change; no lastmod (a perpetually-"now" value
     // on a slow-changing page is exactly what makes Google distrust lastmod site-wide).
     ...LEGAL_PAGES.map((p) => ({

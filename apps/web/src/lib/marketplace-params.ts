@@ -176,9 +176,14 @@ export function activeChips(
     (params.minGrade !== undefined || params.maxGrade !== undefined) &&
     activeBand(params) === undefined
   ) {
+    // A single grade (min === max) is its own label — the landing hero's grade quick-links (#41)
+    // point at exactly this shape, and the range form would render them as "Grades 7–7".
+    const singleGrade = params.minGrade !== undefined && params.minGrade === params.maxGrade;
     chips.push({
       key: 'grade',
-      label: `Grades ${params.minGrade ?? '…'}–${params.maxGrade ?? '…'}`,
+      label: singleGrade
+        ? `Grade ${params.minGrade}`
+        : `Grades ${params.minGrade ?? '…'}–${params.maxGrade ?? '…'}`,
       href: marketplaceHref(path, params, { minGrade: undefined, maxGrade: undefined }),
     });
   }

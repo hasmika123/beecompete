@@ -28,7 +28,7 @@ export function generateMetadata(): Metadata {
   return pageMetadata({
     title: 'Affiliate Disclosure',
     description:
-      'Some prep-resource links on BeeCompete are affiliate links — we may earn a small commission at no extra cost to you. It never affects which competitions we list or how we rank them.',
+      'Some prep-resource links on BeeCompete are affiliate links, so we may earn a small commission at no extra cost to you. It never affects which competitions we list or how we rank them.',
     path: '/affiliate-disclosure',
   });
 }
@@ -39,14 +39,14 @@ export default function AffiliateDisclosurePage() {
       title="Affiliate Disclosure"
       icon={Handshake}
       currentPath="/affiliate-disclosure"
-      summary="We want to be upfront: some resource links on BeeCompete are affiliate links. Here’s exactly what that means — and the line we never cross."
+      summary="We want to be upfront: some resource links on BeeCompete are affiliate links. Here’s exactly what that means, and the line we never cross."
       sections={SECTIONS}
     >
       <LegalSection id="summary" heading="The short version">
         <LegalP>
           Some of the prep-resource links on BeeCompete are{' '}
           <strong className="font-medium text-foreground">affiliate links</strong>. If you click one
-          and buy something, we may earn a small commission —{' '}
+          and buy something, we may earn a small commission,{' '}
           <strong className="font-medium text-foreground">at no extra cost to you</strong>. This{' '}
           <strong className="font-medium text-foreground">never</strong> affects which competitions
           we list, how we rank them, or what we write about them.
@@ -57,7 +57,7 @@ export default function AffiliateDisclosurePage() {
         <LegalP>
           An affiliate link is a normal link with a tracking tag that tells a retailer (for example,
           a bookstore) that a purchase came from us. If you buy after clicking, the retailer pays us
-          a small referral commission. You pay the same price you would have anyway — the commission
+          a small referral commission. You pay the same price you would have anyway; the commission
           comes out of the retailer&apos;s margin, not your pocket.
         </LegalP>
       </LegalSection>
@@ -76,7 +76,7 @@ export default function AffiliateDisclosurePage() {
           </LegalLI>
           <LegalLI>
             Links that send you to a competition&apos;s official site to register are{' '}
-            <strong className="font-medium text-foreground">not</strong> affiliate links — we make
+            <strong className="font-medium text-foreground">not</strong> affiliate links. We make
             nothing from them.
           </LegalLI>
         </LegalList>
@@ -84,8 +84,8 @@ export default function AffiliateDisclosurePage() {
 
       <LegalSection id="promise" heading="Our promise: commissions never influence our listings">
         <LegalP>
-          Our catalog is curated on the merits — relevance, quality, and accuracy — full stop.
-          Whether or not a resource earns us a commission plays{' '}
+          Our catalog is curated on the merits: relevance, quality, and accuracy. Full stop. Whether
+          or not a resource earns us a commission plays{' '}
           <strong className="font-medium text-foreground">no part</strong> in:
         </LegalP>
         <LegalList>

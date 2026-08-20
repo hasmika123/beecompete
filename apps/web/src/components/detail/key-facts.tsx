@@ -1,68 +1,44 @@
-import { gradeLabel } from '@/lib/catalog-display';
+import { Group } from '@/components/detail/definition-grid';
 import {
-  costLabel,
+  ELIGIBILITY_ATTR_LABELS,
+  ageLabel,
   currentEdition,
-  deliveryLabel,
   evaluationLabel,
-  participationLabel,
   pathwayLabel,
   recurrenceLabel,
+  renderAttrValue,
 } from '@/lib/detail-display';
+import type { AttrRow } from '@/lib/detail-display';
 import type { CompetitionDetail } from '@/lib/catalog-types';
 
-// "Key Facts & Details" tab (blueprints Page 3.3a): the standardized Spine layout, identical
-// across every competition, plus the category-specific attributes rendered from the JSONB bag.
-// The bag has no per-template field labels wired at R1, so keys are humanized generically;
-// template-driven labels are a later refinement.
+// "Details" tab (blueprints Page 3.3a, regrouped by #82, trimmed by #106): two DESIGNED
+// sub-sections —
+//   Eligibility        → who may enter: age (+ cutoff), entry pathway, and the standard
+//                        eligibility JSONB keys (citizenship etc., domain-model 2026-07-08)
+//   Format & judging   → team size, evaluation, recurrence
+// The free-form "{Category} details" attribute dump moved to the About tab (#106), which is the
+// overflow bin now — this tab holds only groups we actually designed. The row helpers and the
+// eligibility key list live in lib/detail-display (both tabs read the bag).
+// Grades/Cost/Format/Delivery are deliberately ABSENT (owner #81/#82) — they live in the
+// At-a-glance strip, which owns the scan. "How to enter" appears here under Eligibility AND at
+// the Register button (#82): pathway is both an eligibility fact and a decision-point fact —
+// that is the approved, deliberate repetition.
 
-interface Row {
-  label: string;
-  value: string;
-}
-
-function humanizeKey(key: string): string {
-  return key
-    .replace(/[_-]+/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-    .trim();
-}
-
-function renderValue(value: unknown): string | null {
-  if (value == null || value === '') return null;
-  if (Array.isArray(value)) {
-    const parts = value.map(renderValue).filter(Boolean);
-    return parts.length ? parts.join(', ') : null;
-  }
-  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-  if (typeof value === 'object') return null; // skip nested objects at R1
-  return String(value);
-}
-
-function spineRows(competition: CompetitionDetail): Row[] {
+function eligibilityRows(competition: CompetitionDetail): AttrRow[] {
   const edition = currentEdition(competition.editions);
-  const rows: Row[] = [
-    {
-      label: 'Grades',
-      value: gradeLabel(competition.minGrade, competition.maxGrade) ?? 'All grades',
-    },
-  ];
-  if (competition.minAge != null || competition.maxAge != null) {
-    const { minAge, maxAge } = competition;
-    const ageValue =
-      minAge != null && maxAge != null
-        ? `${minAge}–${maxAge}`
-        : maxAge != null
-          ? `Up to ${maxAge}`
-          : `${minAge}+`;
-    rows.push({ label: 'Age', value: ageValue });
+  const rows: AttrRow[] = [];
+  const age = ageLabel(competition, edition);
+  if (age) rows.push({ label: 'Age', value: age });
+  rows.push({ label: 'How to enter', value: pathwayLabel(competition.entryPathway) });
+  for (const [key, label] of Object.entries(ELIGIBILITY_ATTR_LABELS)) {
+    const value = renderAttrValue(competition.attributes?.[key]);
+    if (value != null) rows.push({ label, value });
   }
-  rows.push(
-    { label: 'Format', value: participationLabel(competition.participationMode) },
-    { label: 'How to enter', value: pathwayLabel(competition.entryPathway) },
-    { label: 'Delivery', value: deliveryLabel(competition.delivery) },
-    { label: 'Cost', value: costLabel(competition, edition) },
-    { label: 'Recurrence', value: recurrenceLabel(competition.recurrence) },
-  );
+  return rows;
+}
+
+function formatRows(competition: CompetitionDetail): AttrRow[] {
+  const rows: AttrRow[] = [];
   if (
     (competition.participationMode === 'team' || competition.participationMode === 'both') &&
     (competition.teamSizeMin != null || competition.teamSizeMax != null)
@@ -82,41 +58,15 @@ function spineRows(competition: CompetitionDetail): Row[] {
       value: competition.evaluationType.map(evaluationLabel).join(', '),
     });
   }
+  rows.push({ label: 'Recurrence', value: recurrenceLabel(competition.recurrence) });
   return rows;
 }
 
-function DefinitionGrid({ rows }: { rows: Row[] }) {
-  return (
-    <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
-      {rows.map((row) => (
-        <div key={row.label} className="flex justify-between gap-4 border-b border-border/60 pb-2">
-          <dt className="text-sm text-muted">{row.label}</dt>
-          <dd className="text-right text-sm font-medium text-foreground">{row.value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
 export function KeyFacts({ competition }: { competition: CompetitionDetail }) {
-  const attributeRows: Row[] = Object.entries(competition.attributes ?? {})
-    .map(([key, value]) => ({ label: humanizeKey(key), value: renderValue(value) }))
-    .filter((r): r is Row => r.value != null);
-
   return (
     <div className="grid gap-6">
-      <DefinitionGrid rows={spineRows(competition)} />
-      {attributeRows.length > 0 && (
-        <div className="grid gap-3">
-          {/* h2 (not h3): this is the first heading in the main column after the page h1, and its
-              sibling sections (Prep resources, Related, Key dates) are h2 — an h3 here skips a
-              level (WCAG 1.3.1). Level is independent of the small visual size. */}
-          <h2 className="text-sm font-semibold text-foreground">
-            {competition.category.name} details
-          </h2>
-          <DefinitionGrid rows={attributeRows} />
-        </div>
-      )}
+      <Group title="Eligibility" rows={eligibilityRows(competition)} />
+      <Group title="Format & judging" rows={formatRows(competition)} />
     </div>
   );
 }

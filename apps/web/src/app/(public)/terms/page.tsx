@@ -50,7 +50,7 @@ export default function TermsOfUsePage() {
       title="Terms of Use"
       icon={Scales}
       currentPath="/terms"
-      summary="These terms govern your use of BeeCompete, a free catalog that helps you discover K-12 academic competitions run by other organizations. Please read them — by using the site, you agree to them."
+      summary="These terms govern your use of BeeCompete, a free catalog that helps you discover K-12 academic competitions run by other organizations. Please read them: by using the site, you agree to them."
       sections={SECTIONS}
     >
       <LegalSection id="acceptance" heading="Agreement to these terms">
@@ -92,14 +92,14 @@ export default function TermsOfUsePage() {
           BeeCompete is a browse-only service that doesn&apos;t currently offer accounts and
           doesn&apos;t require you to provide personal information to use it. It&apos;s intended for
           students, families, and educators. If you are under 18, we encourage you to use BeeCompete
-          together with a parent, guardian, or teacher — and always involve them before registering
+          together with a parent, guardian, or teacher, and always involve them before registering
           for anything or spending money on an organizer&apos;s site.
         </LegalP>
       </LegalSection>
 
       <LegalSection id="listings" heading="Accuracy of listings & beta status">
         <LegalP>
-          We work hard to keep listings accurate — a real person reviews each one — but details like
+          We work hard to keep listings accurate (a real person reviews each one), but details like
           dates, fees, eligibility, and rules are set by the organizers and can change at any time.
           BeeCompete is also in <strong className="font-medium text-foreground">beta</strong>, so
           the catalog is still growing and information may be incomplete or out of date.
@@ -116,7 +116,7 @@ export default function TermsOfUsePage() {
 
       <LegalSection id="third-parties" heading="Organizer sites, links & resources">
         <LegalP>
-          BeeCompete links to third-party websites — organizers&apos; official pages and prep
+          BeeCompete links to third-party websites: organizers&apos; official pages and prep
           resources. We don&apos;t control those sites and aren&apos;t responsible for their
           content, accuracy, products, or practices. Your use of a third-party site is governed by
           that site&apos;s own terms and privacy policy, not ours.
@@ -126,7 +126,7 @@ export default function TermsOfUsePage() {
       <LegalSection id="affiliate" heading="Affiliate links">
         <LegalP>
           Some resource links on BeeCompete are affiliate links, which means we may earn a small
-          commission if you buy through them — at no extra cost to you. This never affects which
+          commission if you buy through them, at no extra cost to you. This never affects which
           competitions we list or how we present them. See our full{' '}
           <LegalLink href="/affiliate-disclosure">Affiliate Disclosure</LegalLink> for details.
         </LegalP>
@@ -189,8 +189,8 @@ export default function TermsOfUsePage() {
       <LegalSection id="liability" heading="Limitation of liability">
         <LegalP>
           To the fullest extent permitted by law, BeeCompete will not be liable for any indirect,
-          incidental, consequential, or special damages, or for any loss arising from your use of —
-          or inability to use — the site, your reliance on any listing, or your dealings with any
+          incidental, consequential, or special damages, or for any loss arising from your use of,
+          or inability to use, the site, your reliance on any listing, or your dealings with any
           organizer or third-party site. Some jurisdictions don&apos;t allow certain limitations, so
           parts of this section may not apply to you.
         </LegalP>

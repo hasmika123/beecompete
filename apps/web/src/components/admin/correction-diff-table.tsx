@@ -2,7 +2,7 @@
 // client component (pending proposals) AND directly by the server page (read-only reviewed view).
 
 const show = (value: unknown) =>
-  value === null || value === undefined ? '—' : JSON.stringify(value);
+  value === null || value === undefined ? '–' : JSON.stringify(value);
 
 export function CorrectionDiffTable({
   payload,

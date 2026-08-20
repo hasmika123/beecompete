@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     default: 'BeeCompete',
     template: '%s · BeeCompete',
   },
-  description: 'BeeCompete — a marketplace for K-12 academic competitions. (Skeleton build.)',
+  description: 'BeeCompete: a marketplace for K-12 academic competitions. (Skeleton build.)',
   // No public indexing until the R1 launch gate.
   robots: { index: false, follow: false },
 };

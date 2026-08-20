@@ -17,7 +17,7 @@ export const CATEGORY_CONTENT: CategoryContent[] = [
     name: 'Math',
     oneLiner: 'Contests from school math leagues to national olympiads.',
     about:
-      'Math competitions span everything from friendly school-level leagues to the national olympiad pipeline. Most run annually with school-year registration windows, and many are the first competition a student ever enters. Formats range from timed multiple-choice exams to full proof-based rounds, so there is a fit for every level — from a 3rd grader who loves puzzles to a senior chasing an olympiad invite.',
+      'Math competitions span everything from friendly school-level leagues to the national olympiad pipeline. Most run annually with school-year registration windows, and many are the first competition a student ever enters. Formats range from timed multiple-choice exams to full proof-based rounds, so there is a fit for every level, from a 3rd grader who loves puzzles to a senior chasing an olympiad invite.',
   },
   {
     slug: 'science-engineering',
@@ -31,14 +31,14 @@ export const CATEGORY_CONTENT: CategoryContent[] = [
     name: 'Computer Science & Coding',
     oneLiner: 'Programming contests, hackathons, and app challenges.',
     about:
-      'Coding competitions range from algorithmic contests judged on speed and correctness to hackathons and app-building challenges judged on creativity and impact. Most accept beginners, many run online, and several offer year-round practice platforms — a low-friction way for a student to turn an interest in programming into a track record.',
+      'Coding competitions range from algorithmic contests judged on speed and correctness to hackathons and app-building challenges judged on creativity and impact. Most accept beginners, many run online, and several offer year-round practice platforms, a low-friction way for a student to turn an interest in programming into a track record.',
   },
   {
     slug: 'robotics',
     name: 'Robotics',
     oneLiner: 'Team robotics leagues and build-season challenges.',
     about:
-      'Robotics competitions are almost always team events built around a season: a game is announced, teams design and build robots, then compete at qualifiers that advance toward championship events. They reward engineering, programming, teamwork, and fundraising alike — and most leagues have entry levels spanning elementary through high school.',
+      'Robotics competitions are almost always team events built around a season: a game is announced, teams design and build robots, then compete at qualifiers that advance toward championship events. They reward engineering, programming, teamwork, and fundraising alike, and most leagues have entry levels spanning elementary through high school.',
   },
   {
     slug: 'debate-speech',
@@ -59,7 +59,7 @@ export const CATEGORY_CONTENT: CategoryContent[] = [
     name: 'Writing & Essay',
     oneLiner: 'Essay prizes, poetry, journalism, and creative writing.',
     about:
-      'Writing competitions span essay prizes on set topics, poetry and short fiction contests, and journalism awards. Most are individual, submission-based, and free to enter — one of the most accessible competition categories, with several nationally recognized awards that carry weight in admissions.',
+      'Writing competitions span essay prizes on set topics, poetry and short fiction contests, and journalism awards. Most are individual, submission-based, and free to enter, one of the most accessible competition categories, with several nationally recognized awards that carry weight in admissions.',
   },
   {
     slug: 'arts-music',
@@ -73,7 +73,7 @@ export const CATEGORY_CONTENT: CategoryContent[] = [
     name: 'Academic Bowl & Quiz',
     oneLiner: 'Quiz bowl, knowledge bowls, and buzzer competitions.',
     about:
-      'Academic bowl competitions are fast-paced team quiz events played on buzzers across every subject. Schools field teams for local and regional tournaments that qualify toward national championships — a great fit for broadly curious students who like playing as a team.',
+      'Academic bowl competitions are fast-paced team quiz events played on buzzers across every subject. Schools field teams for local and regional tournaments that qualify toward national championships, a great fit for broadly curious students who like playing as a team.',
   },
   {
     slug: 'history-geography-civics',
@@ -85,7 +85,7 @@ export const CATEGORY_CONTENT: CategoryContent[] = [
   {
     slug: 'other',
     name: 'Other',
-    oneLiner: 'Everything that does not fit a lane — yet.',
+    oneLiner: 'Everything that does not fit a lane yet.',
     about:
       'Competitions that span subjects or defy the usual categories: interdisciplinary challenges, general talent searches, and new formats we have not given a lane of their own yet.',
   },

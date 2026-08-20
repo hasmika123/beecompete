@@ -40,7 +40,7 @@ export default async function SuggestCorrectionPage({
         {/* Only echo the name on the validated path — otherwise a crafted ?name=… URL puts
             arbitrary text in the page copy (issue: untrusted query param reflected). */}
         Spotted a wrong date, fee, grade range, or link{valid && name ? ` on ${name}` : ''}? Tell us
-        what it should say — a curator reviews every suggestion before anything changes.
+        what it should say. A curator reviews every suggestion before anything changes.
       </p>
 
       <div className="mt-8">
@@ -48,7 +48,7 @@ export default async function SuggestCorrectionPage({
           <SuggestCorrectionForm subjectType={subjectType} subjectId={id} subjectName={name} />
         ) : (
           <p className="text-muted">
-            This page needs to know which listing you&apos;re correcting — please use the
+            This page needs to know which listing you&apos;re correcting. Please use the
             &ldquo;Suggest a correction&rdquo; link on a competition page
             {/* Detail pages arrive with R1-7; until then curators reach this via direct links. */}.{' '}
             <Link href="/" className="underline hover:text-foreground">

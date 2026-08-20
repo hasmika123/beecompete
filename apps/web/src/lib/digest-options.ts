@@ -1,5 +1,6 @@
 import type { SelectOption } from '@beecompete/ui';
 import { CATEGORY_CONTENT } from '@/lib/category-content';
+import { US_STATES } from '@/lib/us-states';
 
 // Static option lists for the weekly-digest preference questions (R1-15). Kept static (no API
 // call) so the DigestBand stays a drop-in with no props on Landing / How It Works / Categories.
@@ -30,57 +31,9 @@ export const CATEGORY_SLUG_OPTIONS: SelectOption[] = CATEGORY_CONTENT.filter(
   (c) => c.slug !== 'other',
 ).map((c) => ({ value: c.slug, label: c.name }));
 
-// US states + DC. Value = full name (stored to Brevo); the Select is searchable at this length.
-export const STATE_OPTIONS: SelectOption[] = [
-  'Alabama',
-  'Alaska',
-  'Arizona',
-  'Arkansas',
-  'California',
-  'Colorado',
-  'Connecticut',
-  'Delaware',
-  'District of Columbia',
-  'Florida',
-  'Georgia',
-  'Hawaii',
-  'Idaho',
-  'Illinois',
-  'Indiana',
-  'Iowa',
-  'Kansas',
-  'Kentucky',
-  'Louisiana',
-  'Maine',
-  'Maryland',
-  'Massachusetts',
-  'Michigan',
-  'Minnesota',
-  'Mississippi',
-  'Missouri',
-  'Montana',
-  'Nebraska',
-  'Nevada',
-  'New Hampshire',
-  'New Jersey',
-  'New Mexico',
-  'New York',
-  'North Carolina',
-  'North Dakota',
-  'Ohio',
-  'Oklahoma',
-  'Oregon',
-  'Pennsylvania',
-  'Rhode Island',
-  'South Carolina',
-  'South Dakota',
-  'Tennessee',
-  'Texas',
-  'Utah',
-  'Vermont',
-  'Virginia',
-  'Washington',
-  'West Virginia',
-  'Wisconsin',
-  'Wyoming',
-].map((s) => ({ value: s, label: s }));
+// US states + DC. Value = full NAME (stored verbatim to Brevo — unchanged by #76). Derived from
+// US_STATES so this picker and the card's abbreviated region label stay a single list.
+export const STATE_OPTIONS: SelectOption[] = US_STATES.map((s) => ({
+  value: s.name,
+  label: s.name,
+}));
