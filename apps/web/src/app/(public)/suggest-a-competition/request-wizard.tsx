@@ -15,7 +15,7 @@ import {
   cn,
 } from '@beecompete/ui';
 import { submitCompetitionRequest } from './actions';
-import { CATEGORY_SLUG_OPTIONS } from '@/lib/digest-options';
+import { CATEGORY_SLUG_OPTIONS } from '@/lib/category-options';
 import type { FormState } from '@/lib/admin-types';
 
 const INITIAL: FormState = { ok: false };

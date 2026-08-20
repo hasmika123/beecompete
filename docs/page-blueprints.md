@@ -256,20 +256,20 @@ in the `/landing` API payload, so that surface is now **orphaned** (same follow-
   section gap, which read as an unrelated band floating below rather than something a card opened.
 - **Interaction:** hover = card expands/grows.
 
-**5. Weekly digest signup** (→ R1-15) *(reframed — owner 2026-07-08)*
-- **Layout:** capture band branded as a **weekly personalized competitions digest** — heading
-  promises a weekly list of **new competitions matching the reader's preferences**; email input +
-  submit (Brevo).
-- **Flow:** subscribing asks 2–3 quick preference questions (grade, category/interests, region);
-  the weekly send lists new/matching competitions. *(Also segments the list for R2 activation.)*
-- **Heading sits on ONE line from md up** (owner 2026-08-15, #56) — it may wrap on phones only.
-  Two things together achieve that, and neither works alone: the wrapper went `max-w-2xl →
-  max-w-4xl` (the 672px cap, not the section, was breaking the line — the heading needs **737px**
-  at 30px), and the `text-3xl` step is held back to **lg**, because 30px only fits from lg's 896px
-  while 24px fits md's 640px. Re-measure both if this copy changes.
-- The preference selects' **"Personalize your digest (optional)" label is visually removed** (#56)
-  but kept as an **`sr-only` legend** — it is the fieldset's accessible name, and deleting it would
-  leave AT announcing an unlabelled group of three selects.
+**5. Weekly Digest signup** (→ R1-15) *(reframed — owner 2026-07-08; simplified — owner 2026-07-18)*
+- **Layout:** capture band branded as a **weekly competitions digest** — heading promises a weekly
+  list of **newly added and closing-soon competitions, curated by us**; email input + submit (Brevo).
+- **Flow:** the band asks for **email only** (lowest friction); submitting opens a **popup with
+  three optional preference questions** (grade / interest / state — owner 2026-07-26). Save, Skip,
+  and every dismissal path (Escape / backdrop / ✕) all complete the subscription — dismissing the
+  optional extra must not cancel the signup the visitor asked for; Skip and dismissal drop any
+  selected answers. The R1 digest remains **one curated send for every subscriber alike** — the
+  popup copy says preferences guide curators + future personalization (M26, Phase 2), never
+  promising a personalized send today. *(Technical constraint: with double opt-in the contact
+  doesn't exist until confirmation, so preferences must ride on the single subscribe call — the
+  popup sits before it, not after.)*
+- **Success:** inline, echoes the submitted address ("we sent a confirmation link to …") plus a
+  spam/promotions hint; confirming in the email lands on **§7** below.
 - **On Landing the band is hidden until a card opens it** (owner 2026-08-15, #57) and carries an
   **X to dismiss**. ⚠ It is still **always visible on How It Works**, which renders `<DigestBand />`
   with no props — `onClose` is optional precisely so that page is unaffected, and the X only appears
@@ -279,12 +279,26 @@ in the `/landing` API payload, so that surface is now **orphaned** (same follow-
   in the DOM, so the landing section opens the panel from the hash on mount **and** on
   `hashchange` — the latter covers clicking such a link while already on Landing, where there is no
   remount. Removing that hash handling silently breaks those links.
-- **Organizer early-access panel** (#57): same `CapturePanel` shell and same Brevo `host` list as
-  the detail page's host capture, but a **separate action** (`registerHostEarlyAccess`) because the
-  detail-page copy is written for claiming a specific listing, which is meaningless from Landing.
-  Asks for organization instead of grade/interest/state.
+- ⚠ The **#56 heading measurements no longer apply**: they were tuned to the long
+  "matched to your student" heading, which R1-15c replaced with the shorter curated-digest copy
+  that fits unaided. The `sr-only` "Personalize your digest (optional)" legend is likewise gone —
+  the three selects moved into the popup, where each has a real `FormField` label. Both notes are
+  kept here only so the removal reads as deliberate rather than as a regression.
+- **Organizer early-access panel** (#57): same `CapturePanel` shell, disclosed by the "For
+  Organizers" card. Backed by the **Host Waitlist** flow (`joinHostWaitlist`) — a broadcast
+  audience, deliberately distinct from a **Claim Request**, which is a form → admin inbox. Asks for
+  organization (→ `COMPANY`) instead of grade/interest/state.
 
-**6. Footer** — shared component.
+**6. Host waitlist signup** (→ H46, R1-15c)
+- **Layout:** capture band anchored `#hosts`, mirroring §5 but on the raised surface rather than the
+  gold band — heading offers **early access to host tools**; email input + submit (Brevo).
+- **Why:** the supply-side counterpart to §5 and the destination for the **"For Organizers"**
+  audience card (§4), which previously pointed at `/#digest` and dropped organizers onto the
+  parent-facing digest signup.
+- **Framing:** organizer consent microcopy, *not* the parent/16+ framing §5 uses — this audience is
+  adults acting for an organization.
+
+**7. Footer** — shared component.
 
 *Moved to the How It Works page (owner 2026-07-08): the demo video, the stats & imagery grid, and
 the How It Works timeline. Removed: the full-bleed Category highlight section (replaced by the
@@ -383,6 +397,8 @@ use **short labels** below sm (#109) and sit on **one row from ~344px up** (#113
 **4. Main content — right column (sidebar), top to bottom — sticky on desktop once scrolled**
 *(owner 2026-07-08: the Follow CTA is the page's conversion event; it never leaves view)*
 - **a. "Follow this Competition" button** — R1 = follow-by-email capture (→ M29); R2 = Save (→ M7).
+  Promises email **when the competition's dates are announced or updated** — deliberately *not*
+  per-deadline reminders, which need M30/X11 automation in Phase 2 (owner 2026-07-18).
 - **b. Vertical timeline** — panel heading **"Timeline · {cycle}"** (renamed from "Key dates",
   owner 2026-08-18, #84; past milestones show a **check marker + "(completed)"**, no strikethrough —
   strikethrough reads as *cancelled*, a passed milestone is *done*) — of the edition's key
@@ -393,7 +409,11 @@ use **short labels** below sm (#109) and sit on **one row from ~344px up** (#113
   verified …" · **"Listing maintained by BeeCompete Curation Team"** (flips to the host org after
   claim; locked wording — *maintained*, never *managed*).
 - **d. "Claim this Competition" button** (→ H46) — deliberately adjacent to the attribution line
-  ("maintained by BeeCompete" + "claim it" = the host-recruitment hook).
+  ("maintained by BeeCompete" + "claim it" = the host-recruitment hook). Reveals a short **Claim
+  Request form** — name · email · role · optional message, plus an optional "email me when host
+  tools are ready" checkbox (the only thing that joins the Host Waitlist). It **emails our admin
+  inbox**; it is not a list signup (owner 2026-07-18), because a claim is a 1:1 conversation that
+  needs context and gets a human reply. Verified ownership transfer remains **H1/DQ11, Phase 3**.
 - **e. "Suggest a Correction" button** (→ DQ6) — opens the correction form (task R1-3b).
 - **f. [R2] Social-proof counter** ("N students tracking this") — displayed **only above a
   cold-start threshold (~25)**; never shown below it (owner 2026-07-08).
@@ -498,6 +518,26 @@ Landing audience cards, so the digest capture is not lost — only this placemen
 - **Confirmation step** states what happens next ("our curation team reviews suggestions within
   X days") — closing that loop is what makes people submit.
 - Zero-results referrals prefill the first step from the logged query when possible (→ X20).
+
+---
+
+## Page 7: Subscription confirmed *(→ R1-15c, owner 2026-07-18; route `/subscribed/<flow>`)*
+
+*(job: close the double-opt-in loop — confirm the subscription actually took, and send them somewhere
+useful instead of dead-ending)*
+
+- **Reached only from a confirmation email.** Brevo redirects here after the subscriber clicks
+  confirm. Before R1-15c they were dropped on the bare site root with no feedback at all.
+- **One route, three flows:** `/subscribed/digest`, `/subscribed/follow`, `/subscribed/hosts`. The
+  DOI *redirect* is a per-API-call field, so all three share one Brevo template and still land
+  somewhere specific. An unknown flow slug 404s rather than claiming a subscription that may not
+  exist.
+- **Layout:** centered confirmation mark · heading · one line restating **what they subscribed to and
+  what happens next** · primary CTA into the catalog (or How It Works, for hosts) · secondary "back
+  to home". Built from existing page patterns — no new element types (owner 2026-07-18).
+- **Always `noindex`**, independent of the global `SEARCH_INDEXING` flag: a private transactional
+  endpoint has no business in search results.
+- **No claim variant** — a Claim Request emails the admin inbox and has no opt-in step to confirm.
 
 ---
 

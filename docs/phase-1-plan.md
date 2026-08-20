@@ -92,6 +92,9 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
   parents/educators/16+ with consent microcopy + Privacy link (COPPA-safe — a newsletter to a child
   would trigger consent); honeypot; **inert without Brevo env** (friendly "opening soon"). Single
   interest for R1 (multi is a later enhancement). Owner setup: setup-runbook §7a.
+  ⚠ **Superseded in part by R1-15c (2026-07-18):** the preference questions were removed and the
+  digest is now one curated send for everyone. The attribute-collection described above no longer
+  happens — see R1-15c below.
 - **R1-15b** — Listing-page captures (Brevo/queue-backed, no accounts needed): **per-competition follow-by-email** (M29), **"Request a Competition"** multi-step wizard form (page-blueprints Page 6) → curation queue (DQ15), **"Are you the organizer?" host-interest CTA** → host waitlist (H46).
   ✅ **Code done 2026-07-17.** Owner decisions (2026-07-17): follow + host captures use **Brevo lists**
   (no schema), and follow ships now with **parent/16+ framing + double opt-in** (COPPA-safe). Built:
@@ -103,6 +106,59 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
   request path (COPPA-clear). **Post-review fix:** migration `0013` adds `import_record.origin`
   (`PIPELINE`|`USER_REQUEST`) so public requests are badged in the admin queue + review header —
   curators never apply pipeline-grade trust to an unvetted submission. Owner setup: setup-runbook §7a.
+  ⚠ **Superseded in part by R1-15c (2026-07-18):** the host-interest capture split in two — a general
+  **Host Waitlist** list and a **Claim Request** form that emails the admin inbox instead of joining
+  a list. Follow is unchanged apart from softened copy. See R1-15c below.
+- **R1-15c** — **Subscription-flow split + light-mode default.** Owner decisions 2026-07-18.
+  ✅ **Code done 2026-07-18.** Four flows, deliberately distinct instead of three blended lists:
+  (1) **Weekly Digest** → digest list; (2) **Follow** → follow list; (3) **Host Waitlist** → its own
+  list (`BREVO_HOST_WAITLIST_LIST_ID`, legacy `BREVO_HOST_LIST_ID` still read as a fallback);
+  (4) **Claim Request** → a form emailing `HOST_CLAIM_EMAIL` (`admin@beecompete.com`), **not a
+  list** — a claim is a 1:1 support conversation needing context and a human reply, and a business
+  contact shouldn't land on a marketing list they never joined. Optional waitlist opt-in checkbox is
+  the one bridge between (3) and (4); it's best-effort so a list failure can't fail the claim.
+  - **Digest de-personalized** — the *promise* is one curated send for everyone; R1 sends are
+    hand-curated, so a weekly *personalized* promise wasn't deliverable. `lib/digest-options.ts` →
+    `lib/category-options.ts` (only the Request-a-Competition category picker survived).
+    **Rev 2026-07-26:** preference *collection* returned as a **popup after the email step**
+    (`lib/digest-preferences.ts` + Modal in the DigestBand): three optional selects, honestly
+    framed as curator insight + future personalization — the send stays generic. Save / Skip /
+    every dismissal completes the subscription (closing an optional extra must not cancel the
+    signup); Skip and dismissal drop selected answers (`intent=skip`). With DOI the contact doesn't
+    exist until confirmation, so preferences must ride the single subscribe call — hence popup
+    *before* the action fires, and a no-JS band submit degrades to email-only. `GRADE`/`INTEREST`/
+    `STATE` text attributes must exist in Brevo (setup-runbook §7a).
+  - **Follow copy softened** to "when this competition's dates are announced or updated" — automated
+    per-deadline reminders are M30/X11 in Phase 2.
+  - **Follow is multi-competition (append + dedupe).** A Brevo attribute has one slot per *contact*,
+    so following a second competition used to overwrite the first — silently un-mailing them about
+    it. `COMPETITION` now stores a delimiter-wrapped list (`|AMC 10|MATHCOUNTS|`, segment on
+    *contains* `|AMC 10|`) in a **text** attribute; *multiple-choice* was rejected because it needs
+    every competition pre-registered as an option, i.e. a sync job whose lag drops follow data.
+    `subscribeWithAttributeList` reads the contact first and branches: **not yet on this list** →
+    normal double opt-in (consent is per-list, so a digest subscriber's first follow still gets its
+    own consent record); **already confirmed on it** → `PUT` the appended value, deliberately
+    **sending no second confirmation email**; **already has that competition** → no write at all,
+    which is what makes double-submits and re-follows harmless. A failed read falls back to a plain
+    subscribe rather than dropping a real signup. Entries are capped so a runaway list can't exceed
+    Brevo's 10,000-char text limit. Pure encode/parse logic is unit-tested in
+    `lib/brevo-attribute-list.test.ts`.
+    ⚠ **Verify once against a real Brevo contact:** Brevo does **not** document what
+    `POST /contacts/doubleOptinConfirmation` does for an already-confirmed contact. The read-first
+    branch is designed to never call it in that state, but the "existing contact, new list" path
+    (digest subscriber's first follow) does — confirm it sends exactly one confirmation email.
+  - **Host waitlist band** added to the Landing (`#hosts`); the **"For Organizers" audience card no
+    longer points at `/#digest`**, which had been dropping organizers onto the parent-facing digest.
+  - **`/subscribed/[flow]` confirmation page** (page-blueprints Page 7) — DOI `redirectionUrl` is a
+    per-call field, so one Brevo template now lands each flow on its own page built from `SITE_URL`
+    (staging confirms land on staging). **`BREVO_DOI_REDIRECT_URL` removed** — one env var could
+    only ever point all three flows at the same place.
+  - **Capture UX:** success copy echoes the submitted address + a spam/promotions hint; emails
+    normalized to trimmed lowercase (case-variant duplicates were silently colliding in Brevo); the
+    honeypot's unconditional "check your inbox" now mirrors real per-flow copy.
+  - **Light mode is the default** regardless of OS `prefers-color-scheme` (`enableSystem={false}`);
+    the toggle and its persistence are unchanged, so an explicit dark choice still sticks.
+  - Owner setup: setup-runbook §7a.
 - **R1-16** — In-app **bug/feedback report**. (DQ7 precursor)
   ✅ **Code done 2026-07-17.** A lightweight `/feedback` page (noindex) + footer "Send Feedback"
   link (Contribute column): category (Bug/Idea/Content/Other) + message + optional reply email +

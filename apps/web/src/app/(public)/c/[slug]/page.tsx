@@ -8,7 +8,6 @@ import {
   Bell,
   CategoryCover,
   ExternalLink,
-  Flag,
   Pencil,
   ShareMenu,
   Users,
@@ -29,7 +28,8 @@ import { StickyBottomBar } from '@/components/detail/sticky-bottom-bar';
 import { StickyRail } from '@/components/detail/sticky-rail';
 import { EmailCaptureCta } from '@/components/detail/email-capture-cta';
 import { FollowPanel, FollowProvider, FollowTrigger } from '@/components/detail/follow-disclosure';
-import { followByEmail, registerHostInterest } from '@/components/detail/capture-actions';
+import { followByEmail } from '@/components/detail/capture-actions';
+import { ClaimListingCta } from '@/components/detail/claim-listing-cta';
 import { TrustPanel } from '@/components/detail/trust-panel';
 import { fetchCompetition } from '@/lib/catalog-api';
 import type { CompetitionDetail } from '@/lib/catalog-types';
@@ -468,25 +468,11 @@ export default async function CompetitionDetailPage({
               <div className="rounded-[var(--radius-panel)] border border-border bg-surface-raised p-5 max-lg:order-7">
                 <TrustPanel competition={competition} />
                 <div className="mt-4 grid gap-2 border-t border-border pt-4">
-                  <EmailCaptureCta
-                    action={registerHostInterest}
-                    competitionName={competition.name}
-                    label="Claim this competition"
-                    icon={<Flag aria-hidden="true" className="size-4" />}
-                    variant="secondary"
-                    submitLabel="Notify me"
-                    blurb="Are you the organizer? Host tools are on the way. Join the early-access list for this listing."
-                    consent={
-                      <>
-                        For competition organizers. We’ll email you about claiming this listing and
-                        host access. See our{' '}
-                        <Link href="/privacy" className="underline hover:text-foreground">
-                          Privacy Policy
-                        </Link>
-                        .
-                      </>
-                    }
-                  />
+                  {/* Claim is a FORM → admin inbox, not a list capture (R1-15c): it needs context
+                      and gets a human reply, and the glossary is explicit that a Claim Request
+                      "must never be answered by adding someone to a mailing list". Joining the
+                      Host Waitlist is an optional checkbox inside it. See claim-actions.ts. */}
+                  <ClaimListingCta competitionName={competition.name} />
                   <Link
                     href={correctionHref(competition)}
                     className={cn(

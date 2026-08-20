@@ -1,56 +1,102 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Button, FormResult, Honeypot, Input, Select } from '@beecompete/ui';
+import {
+  Button,
+  FormField,
+  FormResult,
+  Honeypot,
+  Input,
+  Modal,
+  Select,
+  buttonClasses,
+} from '@beecompete/ui';
 import { subscribeDigest } from './actions';
 import { CapturePanel } from '@/components/landing/capture-panel';
-import { GRADE_OPTIONS, INTEREST_OPTIONS, STATE_OPTIONS } from '@/lib/digest-options';
+import { GRADE_OPTIONS, INTEREST_OPTIONS, STATE_OPTIONS } from '@/lib/digest-preferences';
 import type { FormState } from '@/lib/admin-types';
 
 const INITIAL: FormState = { ok: false };
 
 /**
- * Weekly personalized digest capture band (Landing §5, reused on How It Works + Categories;
- * decision #9). R1-15: real Brevo capture + segmentation. Pitched to parents/educators/16+ (a
- * newsletter to a child would trigger COPPA); the 3 preference questions are optional and stored
- * as Brevo contact attributes. Inert until Brevo env is set — see actions.ts / lib/brevo.ts.
+ * Weekly Digest capture band (Landing §5, reused on How It Works + Categories; decision #9).
+ *
+ * TWO-STEP CAPTURE (owner 2026-07-26): the band itself asks for the email only — lowest possible
+ * friction — and submitting it opens a popup with the three OPTIONAL preference questions
+ * (grade / interest / state). The digest is ONE curated send for everyone (owner 2026-07-18);
+ * preferences are stored as Brevo attributes for curator insight + M26 (Phase 2) personalization,
+ * and the popup copy says exactly that. The heading must NOT promise a personalized digest — that
+ * promise moved to M26 (glossary, "Weekly Digest").
+ *
+ * WHY THE POPUP IS BEFORE THE SUBSCRIBE CALL, NOT AFTER: with double opt-in the Brevo contact
+ * doesn't exist until the confirmation email is clicked, so attributes can only ride along on the
+ * one subscribe call — there is no attach-later API path. Every way out of the popup (Save, Skip,
+ * Escape, backdrop, ✕) therefore fires that single call; dismissal subscribes email-only, because
+ * the visitor already clicked "Get the digest" and closing an optional extra must not cancel the
+ * thing they asked for. Only a hard tab-close while the popup is open loses the signup.
+ *
+ * The popup's inputs live in their OWN form: the shared Modal portals to document.body, so fields
+ * placed "inside" the band's form would be outside it in the DOM and never reach its FormData.
+ * Without JS the band form posts directly (email-only subscribe) — graceful degradation.
  *
  * `onClose` is passed ONLY by the landing page, where #57 made this band open on demand from the
- * audience cards. How It Works and Categories render it with no props and it stays permanently
- * visible there, exactly as before — do not make the prop required.
+ * audience cards; it is forwarded to CapturePanel, which renders the ✕ and the focus target. How It
+ * Works and Categories render this with no props and it stays permanently visible there — do not
+ * make the prop required. NOTE the two closes are different things: `onClose` dismisses the whole
+ * band, while `dismiss()` below closes only the preferences popup (and still subscribes).
+ *
+ * Still pitched to parents/educators/16+ — a marketing email to a child would trigger COPPA.
+ * Inert until Brevo env is set — see actions.ts / lib/brevo.ts.
  */
 export function DigestBand({ onClose }: { onClose?: () => void } = {}) {
   const [state, formAction, submitting] = useActionState(subscribeDigest, INITIAL);
+  const [email, setEmail] = useState('');
+  const [prefsOpen, setPrefsOpen] = useState(false);
+  const modalFormRef = useRef<HTMLFormElement>(null);
+  const skipRef = useRef<HTMLButtonElement>(null);
+
+  // JS path: intercept the band submit (after native email validation passes) and open the popup.
+  // Without JS this handler never runs and the form posts email-only via `action` — by design.
+  const onBandSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setEmail(String(new FormData(e.currentTarget).get('email') ?? ''));
+    setPrefsOpen(true);
+  };
+
+  // Escape / backdrop / ✕ — subscribe without preferences via the Skip submitter (its
+  // intent=skip value tells the action to drop any half-selected answers).
+  const dismiss = () => {
+    if (submitting) return;
+    if (skipRef.current) modalFormRef.current?.requestSubmit(skipRef.current);
+    else setPrefsOpen(false);
+  };
 
   return (
     <CapturePanel
       id="digest"
       headingId="digest-heading"
       onClose={onClose}
-      closeLabel="Close the weekly digest signup"
+      closeLabel="Close the Weekly Digest signup"
     >
       <>
-        {/* One line from md up (#56). Both halves of this are needed: `whitespace-nowrap` alone
-            would overflow, and the size step alone would still wrap. 30px needs 737px, which only
-            fits from lg (896px available); 24px needs 590px, which fits md's 640px — so the 3xl
-            step is held back to lg. Below md it wraps by design, per the owner: phones may split
-            it. Re-measure both numbers if this copy ever changes. */}
-        <h2
-          id="digest-heading"
-          className="font-display text-2xl text-foreground md:whitespace-nowrap lg:text-3xl"
-        >
-          New competitions, <em>matched to your student</em>, every week
+        {/* No whitespace-nowrap tuning here (unlike the pre-R1-15c heading): that copy was the
+            long "matched to your student" variant and needed measured breakpoints to hold one
+            line. This heading is short enough to fit unaided — re-measure only if it grows. */}
+        <h2 id="digest-heading" className="font-display text-2xl text-foreground sm:text-3xl">
+          New competitions, <em>every week</em>
         </h2>
+        {/* max-w-2xl on the copy, not the container: CapturePanel centres children in a max-w-4xl
+            column (sized for the old long heading), which is too wide a measure for body text. */}
         <p className="max-w-2xl text-sm text-muted">
-          One short email a week with new and closing-soon competitions that fit your student&apos;s
-          grade and interests. No spam, unsubscribe anytime.
+          One short email a week with newly added and closing-soon competitions, hand-picked by our
+          curators. No spam, unsubscribe anytime.
         </p>
 
         {state.ok ? (
           <FormResult
             ok
-            message={state.error ?? 'You’re in! Watch for your first weekly digest soon.'}
+            message={state.error ?? 'You’re in! Watch for your first Weekly Digest soon.'}
             className="mt-2 w-full max-w-md text-left"
           />
         ) : (
@@ -61,37 +107,12 @@ export function DigestBand({ onClose }: { onClose?: () => void } = {}) {
               errorTone="info"
               className="w-full max-w-md text-left"
             />
-            <form action={formAction} className="mt-1 grid w-full max-w-xl gap-3">
+            <form
+              action={formAction}
+              onSubmit={onBandSubmit}
+              className="mt-1 grid w-full max-w-md gap-3"
+            >
               <Honeypot />
-
-              {/* Optional preferences → Brevo segmentation. */}
-              <fieldset className="grid gap-2 text-left">
-                {/* Legend hidden VISUALLY only (#56 removed the on-screen text), not deleted: it
-                    is the fieldset's accessible name, so dropping it would leave AT announcing an
-                    unlabelled group of three selects. Each Select keeps its own aria-label, but
-                    the group still needs to say what the three are for. */}
-                <legend className="sr-only">Personalize your digest (optional)</legend>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <Select
-                    name="grade"
-                    options={GRADE_OPTIONS}
-                    placeholder="Grade"
-                    aria-label="Your student’s grade"
-                  />
-                  <Select
-                    name="interest"
-                    options={INTEREST_OPTIONS}
-                    placeholder="Interest"
-                    aria-label="Subject interest"
-                  />
-                  <Select
-                    name="state"
-                    options={STATE_OPTIONS}
-                    placeholder="State"
-                    aria-label="Your state"
-                  />
-                </div>
-              </fieldset>
 
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
@@ -110,8 +131,8 @@ export function DigestBand({ onClose }: { onClose?: () => void } = {}) {
             </form>
 
             <p className="max-w-md text-xs text-muted">
-              For parents, educators, and students 16+. We’ll send the weekly digest and nothing
-              else. Unsubscribe anytime. See our{' '}
+              For parents, educators, and students 16+. We’ll send the Weekly Digest and nothing
+              else — unsubscribe anytime. See our{' '}
               <Link
                 href="/privacy"
                 className="font-medium text-foreground underline underline-offset-2 hover:text-brand-gold"
@@ -120,6 +141,61 @@ export function DigestBand({ onClose }: { onClose?: () => void } = {}) {
               </Link>
               .
             </p>
+
+            <Modal
+              open={prefsOpen}
+              onClose={dismiss}
+              title="Make your digest more relevant"
+              description="Optional — helps our curators know who they’re picking for, and powers personalized picks when they arrive. Skip if you’d rather not say."
+            >
+              {/* Any submit closes the popup immediately; pending / success / error all render in
+                  the band, so feedback has one home. */}
+              <form
+                ref={modalFormRef}
+                action={formAction}
+                onSubmit={() => setPrefsOpen(false)}
+                className="grid gap-4"
+              >
+                <Honeypot />
+                <input type="hidden" name="email" value={email} />
+
+                <FormField label="Your student’s grade">
+                  <Select name="grade" options={GRADE_OPTIONS} placeholder="Select a grade…" />
+                </FormField>
+                <FormField label="Subject interest">
+                  <Select
+                    name="interest"
+                    options={INTEREST_OPTIONS}
+                    placeholder="Select a subject…"
+                  />
+                </FormField>
+                <FormField label="Your state">
+                  <Select name="state" options={STATE_OPTIONS} placeholder="Select a state…" />
+                </FormField>
+
+                <div className="mt-1 flex flex-col-reverse justify-end gap-2 sm:flex-row">
+                  {/* Native button (not <Button>): dismiss() needs a ref to it as the submitter,
+                      and the shared Button doesn't forward refs. */}
+                  <button
+                    ref={skipRef}
+                    type="submit"
+                    name="intent"
+                    value="skip"
+                    disabled={submitting}
+                    className={buttonClasses({ variant: 'ghost' })}
+                  >
+                    Skip for now
+                  </button>
+                  <Button type="submit" disabled={submitting}>
+                    Save &amp; subscribe
+                  </Button>
+                </div>
+
+                <p className="text-xs text-muted">
+                  Either way, we’ll send a confirmation email to {email || 'your address'} first.
+                </p>
+              </form>
+            </Modal>
           </>
         )}
       </>

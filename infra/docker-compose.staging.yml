@@ -51,15 +51,19 @@ services:
       POSTHOG_KEY: ${POSTHOG_KEY:-}
       POSTHOG_HOST: ${POSTHOG_HOST:-}
       CF_WEB_ANALYTICS_TOKEN: ${CF_WEB_ANALYTICS_TOKEN:-}
-      # Listing-page email captures via Brevo (R1-15 digest · R1-15b follow + host). Server-only;
-      # each is inert unless its list id is set. Use separate staging lists if you enable them,
-      # so test signups don't hit the prod lists.
+      # Email subscription flows via Brevo (R1-15 digest · R1-15b follow · R1-15c host + claim).
+      # Server-only; each is inert unless its list id is set. Use separate staging lists if you
+      # enable them, so test signups don't hit the prod lists. No BREVO_DOI_REDIRECT_URL — the
+      # post-confirm landing is per-flow and derived from SITE_URL, so a staging confirmation
+      # lands on staging automatically (see lib/brevo-capture.ts).
       BREVO_API_KEY: ${BREVO_API_KEY:-}
       BREVO_DIGEST_LIST_ID: ${BREVO_DIGEST_LIST_ID:-}
       BREVO_FOLLOW_LIST_ID: ${BREVO_FOLLOW_LIST_ID:-}
+      BREVO_HOST_WAITLIST_LIST_ID: ${BREVO_HOST_WAITLIST_LIST_ID:-}
       BREVO_HOST_LIST_ID: ${BREVO_HOST_LIST_ID:-}
       BREVO_DOI_TEMPLATE_ID: ${BREVO_DOI_TEMPLATE_ID:-}
-      BREVO_DOI_REDIRECT_URL: ${BREVO_DOI_REDIRECT_URL:-}
+      # "Claim this competition" → this inbox (transactional, not a list).
+      HOST_CLAIM_EMAIL: ${HOST_CLAIM_EMAIL:-}
       # In-app feedback (R1-16) → support@ via Brevo transactional mail. Verified sender required.
       BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL:-}
       BREVO_SENDER_NAME: ${BREVO_SENDER_NAME:-}

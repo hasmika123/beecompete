@@ -4,7 +4,7 @@ import { useActionState } from 'react';
 import Link from 'next/link';
 import { Button, FormResult, Honeypot, Input } from '@beecompete/ui';
 import { CapturePanel } from './capture-panel';
-import { registerHostEarlyAccess } from './host-actions';
+import { joinHostWaitlist } from '@/components/host-waitlist/actions';
 import type { FormState } from '@/lib/admin-types';
 
 const INITIAL: FormState = { ok: false };
@@ -18,7 +18,7 @@ const INITIAL: FormState = { ok: false };
  * cards, so `onClose` is required rather than optional.
  */
 export function HostBand({ onClose }: { onClose: () => void }) {
-  const [state, formAction, submitting] = useActionState(registerHostEarlyAccess, INITIAL);
+  const [state, formAction, submitting] = useActionState(joinHostWaitlist, INITIAL);
 
   return (
     <CapturePanel

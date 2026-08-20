@@ -1,0 +1,43 @@
+import type { SelectOption } from '@beecompete/ui';
+import { CATEGORY_CONTENT } from '@/lib/category-content';
+import { US_STATES } from '@/lib/us-states';
+
+// Option lists for the Weekly Digest's OPTIONAL preference questions, asked in a popup AFTER the
+// email is entered (owner 2026-07-26) — the R1-15c band itself stays email-only. Answers are
+// stored verbatim as Brevo contact attributes (GRADE / INTEREST / STATE): they don't change the R1
+// send (one curated email for everyone) but give curators audience insight now and feed the M26
+// personalized-digest segmentation in Phase 2 without re-collecting.
+//
+// Kept static (no API call) so the DigestBand stays a drop-in with no props on Landing /
+// How It Works / Categories. Human-readable values so the list is usable in Brevo without a
+// lookup table. (Restored from the pre-R1-15c digest-options.ts — see git history.)
+//
+// The slug-valued category picker for Request-a-Competition lives in category-options.ts — the
+// other half of the old digest-options.ts, split out when the digest stopped being personalized.
+
+// Grade encoding lives server-side (Pre-K −1 … 12); for the digest we only need a friendly label
+// that a parent recognizes, so we store the label string.
+export const GRADE_OPTIONS: SelectOption[] = [
+  { value: 'Pre-K', label: 'Pre-K' },
+  { value: 'Kindergarten', label: 'Kindergarten' },
+  ...Array.from({ length: 12 }, (_, i) => {
+    const g = i + 1;
+    const suffix = g === 1 ? 'st' : g === 2 ? 'nd' : g === 3 ? 'rd' : 'th';
+    return { value: `${g}${suffix} grade`, label: `${g}${suffix} grade` };
+  }),
+];
+
+// Interests = the launch categories (minus the `other` fallback). Value = display name so the
+// Brevo attribute reads cleanly. (The slug-valued variant lives in category-options.ts.)
+export const INTEREST_OPTIONS: SelectOption[] = CATEGORY_CONTENT.filter(
+  (c) => c.slug !== 'other',
+).map((c) => ({ value: c.name, label: c.name }));
+
+// US states + DC. Value = full NAME (stored verbatim to Brevo); the Select is searchable at this
+// length. DERIVED from US_STATES (not a second hardcoded list) so this picker and the card's
+// abbreviated region label can never drift apart — kept from the landing-redesign side of the
+// R1-15c merge, which introduced us-states.ts as the single source.
+export const STATE_OPTIONS: SelectOption[] = US_STATES.map((s) => ({
+  value: s.name,
+  label: s.name,
+}));
