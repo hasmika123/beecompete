@@ -135,6 +135,59 @@ Keep the master list in a **password manager** — never in the repo or Download
 | Deferred/backlog items | `docs/sweep-remediation-plan.md` |
 | Traffic / product analytics | Cloudflare Web Analytics + PostHog |
 
+### Traffic baseline & scraping signals
+
+⚠ **Capture the baseline BEFORE flipping `SEARCH_INDEXING`.** Once the site is indexable, a traffic
+spike can mean Google discovered you, the launch worked, or someone is cloning the catalog — and
+without a "before" number all three look identical. On Neon's usage-based billing the same event
+that means *it's working* also moves the bill, so this is a cost signal as much as a security one.
+
+The curated catalog **is** the product: anyone can visit an organizer's site, but nobody else has the
+normalized set. That is exactly what makes it worth taking.
+
+**Baseline — one sitting, while traffic is still near zero:**
+
+| Capture | Where | Why it matters later |
+|---|---|---|
+| Requests/day + unique visitors | Cloudflare → Analytics & Logs | The denominator for everything below |
+| Top paths | Cloudflare / PostHog | Post-launch shape is compared against this |
+| Traffic by **ASN** and country | Cloudflare → Traffic | Readers come from consumer ISPs; scrapers cluster in datacenter ASNs (AWS, Hetzner, DigitalOcean, OVH) |
+| Bot vs human split | Cloudflare bot score | Bot Fight Mode is already on — know what it's catching now |
+| **Neon compute-hours/day** | Neon usage graph | The bluntest scraping alarm you have |
+| Ratio of `/competitions` to `/c/*` hits | Cloudflare top paths | Humans browse then read a few; scrapers enumerate everything once |
+
+**Weekly after launch (~5 minutes):**
+
+1. **Neon compute-hours/day.** Unexplained compute = requests missing Next's data cache. Because
+   `searchCompetitions` caches each *distinct* query for an hour, repeated traffic is nearly free —
+   so a rise means someone is generating NEW filter combinations. That is the enumeration signature.
+2. **Cloudflare traffic by ASN.** A datacenter ASN in your top sources is not a reader.
+3. **Top-path distribution.** Humans produce a long tail with repeats and a popular head. A *flat*
+   distribution across `/c/*` — every listing hit once, often in slug order — is enumeration.
+4. **Requests per visitor.** One "visitor" pulling hundreds of pages is not a visitor.
+5. **PostHog pageviews vs Cloudflare requests.** The most useful signal you have, and it is free:
+   PostHog only counts clients that execute JS, Cloudflare counts every request. Scrapers do not run
+   the analytics bundle. A widening gap between the two is bots, without any extra tooling.
+   *(Expect a permanent baseline gap — DNT/GPC visitors are excluded too — hence: track the trend.)*
+
+**If the signals fire:** re-point the single free Cloudflare rate-limit rule from `/suggest-a-` (a
+form nobody has abused) to `/c/*`, where the value actually sits. If one rule proves too few,
+Cloudflare Pro ($20/mo) buys more — weigh that against the Neon compute the scraping is costing;
+below ~$20/mo of excess compute it is cheaper to absorb it.
+
+**What NOT to do:**
+- **Don't block on user-agent** — trivially spoofed, and it breaks legitimate crawlers first.
+- **Don't blanket-block datacenter ASNs** — that is also where link unfurls, previews, and uptime
+  checks come from.
+- **Don't harden the API against enumeration by capping pagination/facets** without measuring first;
+  it degrades real browsing to defend against a threat you have not confirmed.
+- **Don't expect prevention.** Public data on a public site has a hard ceiling on protection. The
+  goal is to raise the cost, protect the DB and the invoice, and *know when it is happening* —
+  not to make it impossible.
+
+⚠ Do **not** let a scraping response break crawlability: Google and Bing indexing the catalog is the
+entire launch strategy. Any rule that cannot tell Googlebot from a cloner costs more than it saves.
+
 ---
 
 ## 7. Recurring tasks
