@@ -4,9 +4,11 @@ name: Deploy — production
 # or manual dispatch. It promotes the EXACT image already validated on staging (build
 # once, promote) — no rebuild — then refreshes the prod Compose stack + health-checks it.
 #
-# ⚠ Tag only commits that actually deployed to staging: a docs-only merge builds no image
-# (deploy-staging paths-ignore), so tagging one makes the promote fail with "manifest
-# unknown" — tag the latest code commit instead.
+# Tagging a docs-only merge is SAFE: it builds no image (deploy-staging paths-ignore), so
+# promote walks back to the nearest ancestor that does have one. That skip is only allowed
+# across commits touching **.md / docs/** / .claude/** — exactly the paths that build no
+# image — so the promoted artifact is provably identical to the tagged tree. A code commit
+# with no image (failed or missing build) is NEVER skipped; it fails loudly instead.
 on:
   push:
     tags: ['R*']
@@ -37,6 +39,10 @@ jobs:
       # Needed to resolve the tag: for ANNOTATED tags (git tag -a / GitHub Releases UI),
       # GITHUB_SHA is the tag OBJECT sha, not the commit — images are tagged by commit.
       - uses: actions/checkout@v4
+        with:
+          # Full history: resolving a release tag may need to walk back over docs-only
+          # commits (see the meta step). A depth-1 checkout has no ancestors to walk.
+          fetch-depth: 0
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -57,7 +63,42 @@ jobs:
             echo "release=manual-${{ github.run_id }}" >> "$GITHUB_OUTPUT"
           else
             commit=$(git rev-parse "${GITHUB_REF_NAME}^{commit}")
-            echo "tag=${commit::12}" >> "$GITHUB_OUTPUT"
+            # Walk back to the nearest ancestor that actually HAS images. Tagging main's HEAD
+            # when that HEAD is a docs merge used to die on a bare "not found" (2026-08-20).
+            sha="$commit"; resolved=""; hops=0
+            for _ in $(seq 1 20); do
+              short="${sha:0:12}"
+              img() { docker buildx imagetools inspect "ghcr.io/${{ github.repository }}-$1:$2" >/dev/null 2>&1; }
+              if img web "$short" && img api "$short"; then
+                resolved="$short"; break
+              fi
+              # No image. Only skip this commit if EVERY path it touched is one that builds no
+              # image anyway — then the parent's image is byte-identical to this tree. Otherwise
+              # a build failed or never ran, and silently shipping older code than the tag claims
+              # would be far worse than stopping here.
+              if ! changed=$(git diff --name-only "$sha^" "$sha" 2>/dev/null) || [ -z "$changed" ]; then
+                echo "::error::No image for $short and its diff is unavailable (root commit?). Stopping."; exit 1
+              fi
+              while IFS= read -r f; do
+                case "$f" in
+                  *.md|docs/*|.claude/*) ;;
+                  *) echo "::error::No image for $short, but it changed '$f' — a deployable path."
+                     echo "::error::That means its build failed or never ran. Fix or rebuild that"
+                     echo "::error::commit; refusing to promote an older image than the tag names."
+                     exit 1 ;;
+                esac
+              done <<< "$changed"
+              echo "no image for $short (docs-only commit) — walking back to its parent"
+              sha=$(git rev-parse "$sha^"); hops=$((hops+1))
+            done
+            if [ -z "$resolved" ]; then
+              echo "::error::No image found within 20 commits of ${GITHUB_REF_NAME}."; exit 1
+            fi
+            if [ "$hops" -gt 0 ]; then
+              echo "::notice::${GITHUB_REF_NAME} -> $resolved (walked back $hops docs-only commit(s) from ${commit:0:12})"
+              echo "**Promoted \`$resolved\`**, $hops docs-only commit(s) behind tag \`${GITHUB_REF_NAME}\` (\`${commit:0:12}\`) — those commits build no image, so the artifact is identical." >> "$GITHUB_STEP_SUMMARY"
+            fi
+            echo "tag=$resolved" >> "$GITHUB_OUTPUT"
             echo "release=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
           fi
 
