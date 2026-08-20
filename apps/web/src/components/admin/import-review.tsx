@@ -14,6 +14,7 @@ import {
   useConfirm,
   useToast,
 } from '@beecompete/ui';
+import { ImportEditionPanel } from '@/components/admin/import-edition-panel';
 import {
   approveImport,
   rejectImport,
@@ -228,6 +229,11 @@ export function ImportReview({
           </div>
         )}
       </div>
+
+      {/* Edition + timeline (S3 v1). Sits above the JSON on purpose: approve now creates the
+          edition and its key dates, so these are decisions the curator must make BEFORE
+          approving — reading them out of the raw payload below is not a review. */}
+      <ImportEditionPanel payload={parsed} onPatch={patchPayload} />
 
       <form action={formAction} className="grid gap-3">
         {/* The controlled payload text is what the server action reads. */}
