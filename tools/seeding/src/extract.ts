@@ -40,8 +40,25 @@ async function anthropicExtract(input: ExtractInput, config: Config): Promise<Ex
   try {
     message = await client.messages.create({
       model: config.anthropicModel,
-      max_tokens: 2048,
-      system: buildSystemPrompt(),
+      // Generous on purpose: max_tokens is a CAP, not a reservation — you are billed for tokens
+      // actually generated, so headroom is free. 2048 was set before the payload carried the
+      // edition + keyDates (S3 v1) and silently truncated real pages mid-JSON.
+      max_tokens: 8192,
+      // Cached: the system prompt is byte-identical on every extraction (no per-page
+      // interpolation), so across a 400+ page batch it would otherwise be re-billed in full each
+      // time. A breakpoint here bills it at ~0.1x on every call after the first. The per-page text
+      // stays in the user turn, AFTER this prefix — putting anything page-specific above it would
+      // change the prefix bytes and defeat the cache entirely.
+      //
+      // Default 5-minute TTL is deliberate: a batch run extracts a page every few seconds, so the
+      // entry never goes cold, and the 1h TTL's 2x write premium would not pay for itself.
+      system: [
+        {
+          type: 'text',
+          text: buildSystemPrompt(),
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
       messages: [
         { role: 'user', content: buildUserPrompt(input.sourceUrl, input.pageText, input.hints) },
       ],
@@ -56,6 +73,20 @@ async function anthropicExtract(input: ExtractInput, config: Config): Promise<Ex
     }
     throw err;
   }
+  // Truncation check BEFORE parsing. A cut-off response is still valid text, so JSON.parse
+  // reports a position-N syntax error that reads like a model formatting bug — the actual cause
+  // is the token cap. Say so instead of making the next person debug the prompt.
+  if (message.stop_reason === 'max_tokens') {
+    throw new Error(
+      `extraction was truncated at the ${message.usage.output_tokens}-token cap — the JSON is ` +
+        'incomplete. Raise max_tokens in extract.ts (or extract a shorter page).',
+    );
+  }
+  // Without this, a refusal surfaces as the same confusing JSON parse error as a truncation.
+  if (message.stop_reason === 'refusal') {
+    throw new Error('the model declined to extract this page (stop_reason: refusal)');
+  }
+
   const text = message.content
     .filter((block): block is Anthropic.TextBlock => block.type === 'text')
     .map((block) => block.text)
