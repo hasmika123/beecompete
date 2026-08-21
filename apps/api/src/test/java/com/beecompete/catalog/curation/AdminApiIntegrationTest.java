@@ -1,5 +1,6 @@
 package com.beecompete.catalog.curation;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -595,6 +596,107 @@ class AdminApiIntegrationTest {
 		// Atomicity: the failed edition took the competition with it - no zombie left behind.
 		mvc.perform(withToken(get("/api/v1/admin/competitions").param("query", "Bad Edition")))
 				.andExpect(jsonPath("$.content", hasSize(0)));
+	}
+
+	/**
+	 * The import QUEUE surface the admin review screen drives: filter/sort/search, per-tab counts, the
+	 * duplicate-slug flag, approving with regions, and bulk review's per-record (never all-or-nothing)
+	 * outcome. Runs last so it can lean on the rows earlier tests left behind.
+	 */
+	@Test
+	@Order(9)
+	void importQueueFiltersSortsAndReviewsInBulk() throws Exception {
+		String categories = mvc.perform(withToken(get("/api/v1/admin/categories")))
+				.andReturn().getResponse().getContentAsString();
+		String mathId = findBySlug(categories, "math");
+		String regionJson = mvc.perform(withToken(post("/api/v1/admin/regions")).contentType("application/json")
+						.content("{\"level\": \"STATE\", \"name\": \"Queue State\", \"code\": \"QS\"}"))
+				.andReturn().getResponse().getContentAsString();
+		String regionId = mapper.readTree(regionJson).get("id").asText();
+
+		String withRegion = queue("queue-alpha", "Queue Alpha", mathId, 0.91,
+				", \"edition\": {\"cycleLabel\": \"2026\", \"status\": \"OPEN\", \"scopeLevel\": \"STATE\"}"
+						+ ", \"regionIds\": [\"" + regionId + "\"]");
+		// An uppercase, spaced slug fails CompetitionRequest's kebab-case @Pattern on approve — a
+		// realistic unapprovable extraction, and the reason bulk can't be all-or-nothing.
+		String junk = queue("Queue Junk", "Queue Junk", mathId, 0.12, "");
+		// Collides with the listing @Order(4) created from the MATHCOUNTS extraction.
+		String duplicate = queue("mathcounts", "Queue Duplicate", mathId, 0.44, "");
+
+		// Search reaches inside the JSONB payload (name/slug/organizer), which is the only place a
+		// queued row's identity lives.
+		mvc.perform(withToken(get("/api/v1/admin/import-records")).param("query", "Queue Alpha"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.content", hasSize(1)))
+				.andExpect(jsonPath("$.content[0].payload.slug", is("queue-alpha")));
+		// Sorting by confidence is likewise a payload-adjacent column the default order can't give.
+		mvc.perform(withToken(get("/api/v1/admin/import-records")).param("query", "Queue")
+						.param("sort", "CONFIDENCE").param("desc", "true"))
+				.andExpect(jsonPath("$.content[0].payload.slug", is("queue-alpha")));
+		mvc.perform(withToken(get("/api/v1/admin/import-records")).param("query", "Queue")
+						.param("origin", "USER_REQUEST"))
+				.andExpect(jsonPath("$.content", hasSize(0)));
+		mvc.perform(withToken(get("/api/v1/admin/import-records/counts")))
+				.andExpect(jsonPath("$.PENDING", notNullValue()))
+				.andExpect(jsonPath("$.APPROVED", notNullValue()))
+				.andExpect(jsonPath("$.REJECTED", notNullValue()));
+
+		// The duplicate flag warns BEFORE the curator fills in a form they can't save.
+		mvc.perform(withToken(get("/api/v1/admin/import-records/" + duplicate)))
+				.andExpect(jsonPath("$.duplicateCompetitionId", notNullValue()));
+		mvc.perform(withToken(get("/api/v1/admin/import-records/" + withRegion)))
+				.andExpect(jsonPath("$.duplicateCompetitionId", nullValue()));
+
+		// Bulk approve: the good row lands, the unparseable and the colliding ones report their own
+		// errors and stay PENDING. One bad extraction must not discard the batch around it.
+		String bulk = mvc.perform(withToken(post("/api/v1/admin/import-records/bulk"))
+						.contentType("application/json")
+						.content("{\"action\": \"APPROVE\", \"ids\": [\"" + withRegion + "\", \"" + junk
+								+ "\", \"" + duplicate + "\"]}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.succeeded", is(1)))
+				.andExpect(jsonPath("$.failed", is(2)))
+				.andReturn().getResponse().getContentAsString();
+		assertThat(bulk).contains("\"ok\":false");
+		mvc.perform(withToken(get("/api/v1/admin/import-records/" + junk)))
+				.andExpect(jsonPath("$.status", is("PENDING")));
+
+		// regionIds on the payload tag the created edition (they used to be dropped on approve).
+		String created = mvc.perform(withToken(get("/api/v1/admin/competitions").param("query", "Queue Alpha")))
+				.andReturn().getResponse().getContentAsString();
+		String competitionId = mapper.readTree(created).get("content").get(0).get("id").asText();
+		String editions = mvc.perform(withToken(get("/api/v1/admin/competitions/" + competitionId + "/editions")))
+				.andReturn().getResponse().getContentAsString();
+		String editionId = mapper.readTree(editions).get(0).get("id").asText();
+		mvc.perform(withToken(get("/api/v1/admin/editions/" + editionId + "/regions")))
+				.andExpect(jsonPath("$", hasSize(1)))
+				.andExpect(jsonPath("$[0]", is(regionId)));
+
+		// Bulk reject carries one shared note, and rejecting an already-reviewed row is reported
+		// rather than throwing the whole request away.
+		mvc.perform(withToken(post("/api/v1/admin/import-records/bulk")).contentType("application/json")
+						.content("{\"action\": \"REJECT\", \"note\": \"bad source\", \"ids\": [\"" + junk
+								+ "\", \"" + withRegion + "\"]}"))
+				.andExpect(jsonPath("$.succeeded", is(1)))
+				.andExpect(jsonPath("$.failed", is(1)));
+		mvc.perform(withToken(get("/api/v1/admin/import-records/" + junk)))
+				.andExpect(jsonPath("$.status", is("REJECTED")))
+				.andExpect(jsonPath("$.note", is("bad source")));
+	}
+
+	/** Queues one PENDING record with the given slug/name/confidence plus any extra payload keys. */
+	private String queue(String slug, String name, String categoryId, double confidence, String extraPayload)
+			throws Exception {
+		String body = ("{\"payload\": {\"slug\": \"%s\", \"name\": \"%s\", \"categoryId\": \"%s\","
+				+ " \"organizerName\": \"Queue Org\", \"participationMode\": \"INDIVIDUAL\","
+				+ " \"delivery\": \"VIRTUAL\", \"entryPathway\": \"INDIVIDUAL\", \"costType\": \"FREE\","
+				+ " \"recurrence\": \"ANNUAL\"%s}, \"confidence\": %s}")
+						.formatted(slug, name, categoryId, extraPayload, confidence);
+		String json = mvc.perform(withToken(post("/api/v1/admin/import-records"))
+						.contentType("application/json").content(body))
+				.andExpect(status().isCreated())
+				.andReturn().getResponse().getContentAsString();
+		return mapper.readTree(json).get("id").asText();
 	}
 
 	private String byName(String slug, String name, String catId, String organizerName, String officialUrl,

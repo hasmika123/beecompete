@@ -29,6 +29,8 @@ import { enumLabel, enumOptions } from '@/components/admin/enum-labels';
 import { GRADE_VALUES, gradeName } from '@/lib/catalog-display';
 import { uploadCoverImage } from '@/lib/cover-upload';
 import { createCompetition, updateCompetition } from '@/app/admin/competitions/actions';
+import { approveImportFromForm } from '@/app/admin/import-records/actions';
+import { CREATE_ORGANIZER_SENTINEL, type ImportSeed } from '@/lib/import-seed';
 import { DEFAULT_TIMEZONE } from '@/lib/dates';
 import {
   ADMIN_TIMEZONES,
@@ -84,29 +86,64 @@ interface StepDef {
   label: string;
   meta: string;
   content: ReactNode;
-  /** Present only on the edit page (e.g. category attributes) — hidden from the create flow. */
-  editOnly?: boolean;
-  /** Present only on the create flow (the first-edition block) — hidden from the edit page. */
-  createOnly?: boolean;
+  /** Hidden from the create flow (e.g. category attributes, which need a saved category). */
+  hideOnCreate?: boolean;
+  /** Hidden from the edit page (the first-edition block — later years use the Editions tab). */
+  hideOnEdit?: boolean;
 }
+
+/**
+ * Which write path this form is driving.
+ *
+ * `import` is the review surface for a queued extraction (R1-3): the same fields as `create`,
+ * pre-filled from the payload, submitting an approve override instead of a create. It is
+ * deliberately NOT a stricter create — the server keeps the import path lenient on purpose (a
+ * competition's own page routinely states no prize or fee), so the completeness ring here advises
+ * and only the fields the server actually demands can block approval.
+ */
+export type CompetitionFormMode = 'create' | 'edit' | 'import';
+
+/** The server-required minimum on the import path — everything else is advice, not a gate. */
+const IMPORT_BLOCKING_KEYS = ['name', 'slug', 'category', 'organizer'];
+
+/** Case- and whitespace-insensitive org-name key — mirrors the server's normalize on resolve. */
+const orgNameKey = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
 
 export function CompetitionForm({
   competition,
+  mode = competition ? 'edit' : 'create',
+  importRecordId,
+  seed,
+  organizerMatches = [],
   categories,
   organizations,
   templates = [],
   regions = [],
 }: {
   competition?: Competition;
+  /** Defaults to edit/create from `competition`; import review passes it explicitly. */
+  mode?: CompetitionFormMode;
+  /** Import mode only — the record whose approve this form submits. */
+  importRecordId?: string;
+  /** Import mode only — the extracted payload read into form values (lib/import-seed). */
+  seed?: ImportSeed;
+  /** Import mode only — organizations matching the extracted organizer name (fetched server-side). */
+  organizerMatches?: Organization[];
   categories: Category[];
   organizations: Organization[];
   /** Every category template — the attributes section renders the SELECTED category's schema. */
   templates?: CategoryTemplate[];
-  /** Region options for the first-edition region picker (create flow). */
+  /** Region options for the first-edition region picker (create + import flows). */
   regions?: Region[];
 }) {
-  const editing = competition !== undefined;
-  const action = editing ? updateCompetition.bind(null, competition.id) : createCompetition;
+  const editing = mode === 'edit';
+  const importing = mode === 'import';
+  const action =
+    editing && competition
+      ? updateCompetition.bind(null, competition.id)
+      : importing && importRecordId
+        ? approveImportFromForm.bind(null, importRecordId)
+        : createCompetition;
   const [state, formAction, pending] = useActionState(action, INITIAL);
   const { toast } = useToast();
 
@@ -114,12 +151,45 @@ export function CompetitionForm({
     if (state.ok) toast({ title: 'Saved', tone: 'success' });
   }, [state.ok, toast]);
 
-  const c = competition;
+  // Initial values come from the saved competition (edit) or the extracted payload (import). The
+  // seed is a Partial by construction — an extraction states what the page stated, nothing more.
+  const c: Partial<Competition> | undefined = competition ?? seed?.competition;
+  const editionSeed = seed?.edition ?? null;
+
+  // Resolve-or-create, decided here rather than left to the server: when an org already carries the
+  // extracted name the server REUSES it, so offering "create it" would be a lie about what approve
+  // does. An exact match is preselected instead, and the create option only appears when there is
+  // genuinely nothing to reuse. An archived same-name org is a hard 422 on approve — warn, don't hide.
+  const extractedOrganizer = seed?.organizerName ?? null;
+  const organizerNameMatches = extractedOrganizer
+    ? organizerMatches.filter((o) => orgNameKey(o.name) === orgNameKey(extractedOrganizer))
+    : [];
+  const exactOrganizer = organizerNameMatches.find((o) => !o.archivedAt);
+  const archivedOrganizer = exactOrganizer ? undefined : organizerNameMatches[0];
   const categoryOptions = categories.map((cat) => ({ value: cat.id, label: cat.name }));
   const orgOptions = organizations.map((o) => ({ value: o.id, label: o.name }));
-  // Organizer is mandatory now (both create and edit) — no "— none —" escape hatch. The server
-  // rejects an empty organizer, and every listing carries one after migration 0012.
-  const orgSelectOptions = [...orgOptions, { value: ADD_ORG, label: '+ Add organization…' }];
+  // Organizer is mandatory now (create, edit and import alike) — no "— none —" escape hatch. The
+  // server rejects an empty organizer, and every listing carries one after migration 0012.
+  //
+  // Import adds ONE option rather than a second control: "create the organization the page named".
+  // That is the resolve-or-create decision the queue has always required, folded into the same
+  // Organizer dropdown a curator already knows — see CREATE_ORGANIZER_SENTINEL.
+  const orgSelectOptions = [
+    ...orgOptions,
+    // The matched org may sit outside the first page of organizations the picker was given.
+    ...(exactOrganizer && !orgOptions.some((o) => o.value === exactOrganizer.id)
+      ? [{ value: exactOrganizer.id, label: exactOrganizer.name }]
+      : []),
+    ...(importing && extractedOrganizer && !exactOrganizer
+      ? [
+          {
+            value: CREATE_ORGANIZER_SENTINEL,
+            label: `+ Create “${extractedOrganizer}” (as extracted)`,
+          },
+        ]
+      : []),
+    { value: ADD_ORG, label: '+ Add organization…' },
+  ];
 
   // Team size only applies to team/both participation — gate the inputs (disabled fields aren't
   // submitted, so INDIVIDUAL never posts a stray team size).
@@ -133,7 +203,7 @@ export function CompetitionForm({
 
   // Delivery + scope feed the region picker's soft assist (item 22) — controlled for that only.
   const [delivery, setDelivery] = useState(c?.delivery ?? 'IN_PERSON');
-  const [scopeLevel, setScopeLevel] = useState('NATIONAL');
+  const [scopeLevel, setScopeLevel] = useState(editionSeed?.scopeLevel ?? 'NATIONAL');
 
   // First-edition typed key dates (item 21, create only): repeatable rows posted as indexed
   // fields (keydate_0_type…). Per row, "Date TBD" records the milestone without a date (R1-18) —
@@ -156,7 +226,13 @@ export function CompetitionForm({
     tbd: false,
     label: '',
   });
-  const [keyDateRows, setKeyDateRows] = useState<KeyDateRow[]>([emptyKeyDateRow(0, 'REG_CLOSE')]);
+  // Import starts from the extracted timeline (already read into wall-clock rows in their own
+  // zones); create/edit start with one empty deadline row.
+  const [keyDateRows, setKeyDateRows] = useState<KeyDateRow[]>(() =>
+    seed && seed.keyDates.length > 0
+      ? seed.keyDates.map((row, i) => ({ key: i, ...row }))
+      : [emptyKeyDateRow(0, 'REG_CLOSE')],
+  );
   const patchKeyDateRow = (key: number, patch: Partial<KeyDateRow>) =>
     setKeyDateRows((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
   const addKeyDateRow = () =>
@@ -169,8 +245,14 @@ export function CompetitionForm({
 
   // Controlled selections — feed both the form post and the required-field ring.
   const [categoryId, setCategoryId] = useState(c?.categoryId ?? '');
-  const [organizerOrgId, setOrganizerOrgId] = useState(c?.organizerOrgId ?? '');
-  const [regionIds, setRegionIds] = useState<string[]>([]);
+  // Import preselects the extracted organizer's intent: a resolved id if the payload carried one,
+  // otherwise "create the named org". Either way the curator can override it in the dropdown.
+  const [organizerOrgId, setOrganizerOrgId] = useState(
+    c?.organizerOrgId ??
+      exactOrganizer?.id ??
+      (importing && extractedOrganizer ? CREATE_ORGANIZER_SENTINEL : ''),
+  );
+  const [regionIds, setRegionIds] = useState<string[]>(seed?.regionIds ?? []);
   const toggleRegion = (id: string) =>
     setRegionIds((prev) => (prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]));
 
@@ -214,7 +296,9 @@ export function CompetitionForm({
   // Edit mode: the slug is permanent (SEO) — never auto-change it, so treat it as already "dirty".
   const [name, setName] = useState(c?.name ?? '');
   const [slug, setSlug] = useState(c?.slug ?? '');
-  const [slugDirty, setSlugDirty] = useState(editing);
+  // Auto-mirror only while creating: an edit keeps its permanent slug, and an import already has
+  // the slug the extractor derived — retyping the name must not silently change either.
+  const [slugDirty, setSlugDirty] = useState(mode !== 'create');
 
   // --- required-field tracking (drives the completion ring; server stays the real gate) ---
   // Text fields stay uncontrolled (defaultValue) with a change listener recording only whether
@@ -223,11 +307,11 @@ export function CompetitionForm({
     summary: Boolean(c?.summary),
     description: Boolean(c?.description),
     officialUrl: Boolean(c?.officialUrl),
-    cycleLabel: false,
-    registrationUrl: false,
-    entryFee: false,
-    currency: false,
-    prizeSummary: false,
+    cycleLabel: Boolean(editionSeed?.cycleLabel),
+    registrationUrl: Boolean(editionSeed?.registrationUrl),
+    entryFee: Boolean(editionSeed?.entryFee),
+    currency: Boolean(editionSeed?.currency),
+    prizeSummary: Boolean(editionSeed?.prizeSummary),
   });
   type FilledKey = keyof typeof filled;
   const mark = (key: FilledKey) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -264,6 +348,8 @@ export function CompetitionForm({
   );
   // Create front-loads everything the public card/detail shows (item 5/9): the listing is
   // complete-by-default. Edit keeps only the base spine required, so legacy listings still save.
+  // Import uses the SAME full checklist as create, but only to SHOW what a curator would have to
+  // chase — see `blockingFields` below for what actually gates the button.
   const requiredFields = editing
     ? [
         { key: 'name', label: 'Name', stepId: 'basics', ok: name.trim() !== '' },
@@ -300,8 +386,18 @@ export function CompetitionForm({
   const totalRequired = requiredFields.length;
   const allComplete = filledCount === totalRequired;
   const remaining = requiredFields.filter((r) => !r.ok);
+  // What may actually block submit. On import that is only what the server itself refuses —
+  // demanding the create form's full completeness here would make most real extractions
+  // unapprovable (the API keeps the import path lenient for exactly this reason), which is how an
+  // "improved" review screen would quietly halt seeding.
+  const blockingFields = importing
+    ? requiredFields.filter((r) => IMPORT_BLOCKING_KEYS.includes(r.key))
+    : requiredFields;
+  const blockingRemaining = blockingFields.filter((r) => !r.ok);
+  const submittable = blockingRemaining.length === 0 && eligibilityValid;
   // On create every listed field carries a visible asterisk; on edit only the spine fields
-  // (name/slug/category/organizer) do — organizer is now mandatory in edit mode too.
+  // (name/slug/category/organizer) do — organizer is now mandatory in edit mode too. Import shows
+  // the same asterisks as create (they mark a complete listing), while still allowing approve.
   const req = !editing;
 
   // --- step content (written once; laid out as a stepper on create, stacked sections on edit) ---
@@ -342,6 +438,15 @@ export function CompetitionForm({
               }}
             />
           </FormField>
+          {/* An archived org holding the extracted name makes approve a 422 — the curator has to
+              restore it or choose another, and finding that out only on submit wastes the review. */}
+          {importing && archivedOrganizer && (
+            <Alert tone="warning" className="sm:col-span-2">
+              An <b>archived</b> organization is already called “{archivedOrganizer.name}”. Restore
+              it or pick a different organizer — approving with the extracted name will fail while
+              it stays archived.
+            </Alert>
+          )}
           <FormField label="Category" required>
             <Select
               name="categoryId"
@@ -354,7 +459,13 @@ export function CompetitionForm({
           <FormField
             label="Organizer"
             required
-            hint="the organization the verified seal attaches to."
+            hint={
+              importing && extractedOrganizer
+                ? exactOrganizer
+                  ? `The page named “${extractedOrganizer}”, which matches this existing organization — it will be reused, not duplicated.`
+                  : `The page named “${extractedOrganizer}”. No existing organization matches, so approving creates one (CURATED / host).`
+                : 'the organization the verified seal attaches to.'
+            }
           >
             <Select
               name="organizerOrgId"
@@ -583,7 +694,7 @@ export function CompetitionForm({
       id: 'attributes',
       label: 'Category details',
       meta: 'Template fields',
-      editOnly: true,
+      hideOnCreate: true,
       content: (
         <div className="grid gap-4">
           <p className="text-xs text-muted">
@@ -648,25 +759,36 @@ export function CompetitionForm({
         </div>
       ),
     },
-    // First edition (create only): a competition needs a running to be publicly visible (the
+    // First edition (create + import): a competition needs a running to be publicly visible (the
     // readiness gate). The card-facing facts (prize, region, deadline) are captured here so a new
-    // listing is complete-by-default — one atomic create.
+    // listing is complete-by-default — one atomic create, and one atomic approve.
     {
       id: 'edition',
       label: 'First edition',
       meta: 'The year’s running',
-      createOnly: true,
+      hideOnEdit: true,
       content: (
         <div className="grid gap-4">
           <p className="text-xs text-muted">
             The current year’s running, needed for the listing to go live. Later years are added on
             the Editions tab.
           </p>
+          {/* Import only: the cycle label is what decides whether an edition exists at all, so an
+              empty one has to say what that costs. Extractions of pages that describe no running
+              are legitimate — they just leave a listing the readiness gate hides. */}
+          {importing && !filled.cycleLabel && (
+            <Alert tone="warning">
+              With no <b>cycle label</b> this approves the competition <b>without an edition</b>.
+              The listing is then published but invisible (the readiness gate hides a competition
+              with no running), and the dates and regions below are not saved. Add the year here, or
+              approve now and create the edition on the listing afterwards.
+            </Alert>
+          )}
           <div className="grid gap-4 sm:grid-cols-3">
             <FormField label="Cycle label" required hint="e.g. 2026">
               <Input
                 name="edition_cycleLabel"
-                defaultValue=""
+                defaultValue={editionSeed?.cycleLabel ?? ''}
                 maxLength={60}
                 onChange={mark('cycleLabel')}
               />
@@ -675,7 +797,7 @@ export function CompetitionForm({
               <Select
                 name="edition_status"
                 options={enumOptions(EDITION_STATUSES)}
-                defaultValue="UPCOMING"
+                defaultValue={editionSeed?.status ?? 'UPCOMING'}
               />
             </FormField>
             <FormField label="Scope level">
@@ -695,7 +817,7 @@ export function CompetitionForm({
                 name="edition_registrationUrl"
                 type="url"
                 inputMode="url"
-                defaultValue=""
+                defaultValue={editionSeed?.registrationUrl ?? ''}
                 maxLength={1000}
                 placeholder="https://…"
                 onChange={mark('registrationUrl')}
@@ -711,7 +833,7 @@ export function CompetitionForm({
                     step="0.01"
                     min={0}
                     max={100000}
-                    defaultValue=""
+                    defaultValue={editionSeed?.entryFee ?? ''}
                     placeholder="0.00"
                     onChange={mark('entryFee')}
                   />
@@ -719,7 +841,7 @@ export function CompetitionForm({
                 <FormField label="Currency" required hint="ISO, e.g. USD">
                   <Input
                     name="edition_currency"
-                    defaultValue=""
+                    defaultValue={editionSeed?.currency ?? ''}
                     maxLength={3}
                     pattern="[A-Za-z]{3}"
                     placeholder="USD"
@@ -737,7 +859,7 @@ export function CompetitionForm({
           >
             <Input
               name="edition_prizeSummary"
-              defaultValue=""
+              defaultValue={editionSeed?.prizeSummary ?? ''}
               maxLength={500}
               onChange={mark('prizeSummary')}
             />
@@ -866,7 +988,7 @@ export function CompetitionForm({
     return (
       <form action={formAction} className="grid max-w-3xl gap-8">
         {stepDefs
-          .filter((s) => !s.createOnly)
+          .filter((s) => !s.hideOnEdit)
           .map((s) => (
             <FormSection key={s.id} title={s.label}>
               {s.content}
@@ -889,8 +1011,8 @@ export function CompetitionForm({
     );
   }
 
-  // --- create mode: vertical stepper + a form-wide required-fields completion ring ---
-  const steps = stepDefs.filter((s) => !s.editOnly);
+  // --- create + import: vertical stepper + a form-wide completion ring ---
+  const steps = stepDefs.filter((s) => !(s.hideOnCreate && mode === 'create'));
   const activeStepDef = steps.find((s) => s.id === activeStepId) ?? steps[0];
   if (!activeStepDef) return null; // steps always has ≥1 entry — this just narrows the type
   const activeIndex = steps.indexOf(activeStepDef);
@@ -913,24 +1035,33 @@ export function CompetitionForm({
     <div>
       {/* Header — back link + title on the left; the completion ring aligns to the back-link line
           on the right (items-start), so the stepper + form grid below start just beneath the ring
-          card. */}
-      <div className="mb-5 flex items-start justify-between gap-4">
-        <div>
-          <Link
-            href="/admin/competitions"
-            className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
-          >
-            <ArrowLeft aria-hidden="true" className="size-4" /> Competitions
-          </Link>
-          <h1 className="mt-2 font-display text-2xl text-foreground">New competition</h1>
-        </div>
+          card. Import review supplies its own page header (source, confidence, tabs), so only the
+          ring is rendered there. */}
+      <div
+        className={cn('mb-5 flex items-start gap-4', importing ? 'justify-end' : 'justify-between')}
+      >
+        {!importing && (
+          <div>
+            <Link
+              href="/admin/competitions"
+              className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
+            >
+              <ArrowLeft aria-hidden="true" className="size-4" /> Competitions
+            </Link>
+            <h1 className="mt-2 font-display text-2xl text-foreground">New competition</h1>
+          </div>
+        )}
         <div className="flex shrink-0 items-center gap-3.5 self-start rounded-[var(--radius-panel)] border border-border bg-surface-raised px-4 py-3.5 shadow-[var(--shadow-lift)]">
           <ProgressRing
             size={72}
             thickness={7}
             value={filledCount}
             max={totalRequired}
-            label={`${filledCount} of ${totalRequired} required fields complete`}
+            label={
+              importing
+                ? `${filledCount} of ${totalRequired} listing-completeness fields filled`
+                : `${filledCount} of ${totalRequired} required fields complete`
+            }
           >
             {allComplete ? (
               <Check weight="bold" className="size-7 text-success" />
@@ -943,12 +1074,20 @@ export function CompetitionForm({
           </ProgressRing>
           <div className="text-sm">
             <div className="font-semibold text-foreground">
-              {allComplete ? 'Ready to create' : 'Almost ready'}
+              {allComplete
+                ? importing
+                  ? 'Complete listing'
+                  : 'Ready to create'
+                : importing
+                  ? 'Gaps to fill in'
+                  : 'Almost ready'}
             </div>
             <div className="mt-0.5 text-xs text-muted">
               {allComplete
                 ? 'All required fields filled'
-                : `${remaining.length} required field${remaining.length === 1 ? '' : 's'} left`}
+                : importing
+                  ? `${remaining.length} field${remaining.length === 1 ? '' : 's'} the page didn’t give us`
+                  : `${remaining.length} required field${remaining.length === 1 ? '' : 's'} left`}
             </div>
             {!allComplete && nextRemaining && (
               <button
@@ -965,6 +1104,15 @@ export function CompetitionForm({
       </div>
 
       <form action={formAction}>
+        {/* Import review round-trip: the payload keys this form has no control for, and the
+            organizer name behind the "create as extracted" option. Both are read back by
+            buildImportApprovalPayload so approving can never quietly drop what was extracted. */}
+        {importing && seed && (
+          <>
+            <input type="hidden" name="import_extras" value={JSON.stringify(seed.extras)} />
+            <input type="hidden" name="import_organizerName" value={seed.organizerName ?? ''} />
+          </>
+        )}
         <div className="grid gap-6 md:grid-cols-[236px_1fr] md:items-start">
           <Stepper
             steps={stepperSteps}
@@ -1010,18 +1158,38 @@ export function CompetitionForm({
         </div>
 
         {/* Sticky save bar — Create gates on the completion ring; the server re-validates regardless. */}
+        {/* Sticky save bar. Create gates on the whole completion ring; import gates only on what
+            the server refuses, and says out loud what an incomplete approve produces. The server
+            re-validates either way. */}
         <div className="sticky bottom-0 z-10 mt-4 flex flex-wrap items-center gap-3 border-t border-border bg-background py-3">
-          <Button
-            type="submit"
-            variant="brand"
-            disabled={pending || !allComplete || !eligibilityValid}
-          >
-            {pending ? 'Creating…' : 'Create competition'}
+          <Button type="submit" variant="brand" disabled={pending || !submittable}>
+            {importing
+              ? pending
+                ? 'Approving…'
+                : 'Approve & create'
+              : pending
+                ? 'Creating…'
+                : 'Create competition'}
           </Button>
-          {!allComplete ? (
-            <span className="text-xs text-muted">
-              {remaining.length} required field{remaining.length === 1 ? '' : 's'} left
-            </span>
+          {blockingRemaining.length > 0 ? (
+            importing ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const first = blockingRemaining[0];
+                  if (first) setActiveStepId(first.stepId);
+                }}
+                className="text-xs font-medium text-danger hover:underline"
+              >
+                Needs {blockingRemaining.map((r) => r.label.toLowerCase()).join(', ')} before it can
+                be approved
+              </button>
+            ) : (
+              <span className="text-xs text-muted">
+                {blockingRemaining.length} required field
+                {blockingRemaining.length === 1 ? '' : 's'} left
+              </span>
+            )
           ) : !eligibilityValid ? (
             <button
               type="button"
@@ -1030,6 +1198,11 @@ export function CompetitionForm({
             >
               Fix the errors in Format &amp; eligibility to continue
             </button>
+          ) : importing && !allComplete ? (
+            <span className="text-xs text-muted">
+              {remaining.length} field{remaining.length === 1 ? '' : 's'} still empty — you can
+              approve anyway and fill them in on the listing.
+            </span>
           ) : null}
           {state.error && (
             <Alert tone="danger" className="min-w-0 flex-1">

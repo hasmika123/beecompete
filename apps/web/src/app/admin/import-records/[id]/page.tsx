@@ -2,11 +2,20 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
+import { ImportRecordMeta } from '@/components/admin/import-record-meta';
 import { ImportReview } from '@/components/admin/import-review';
 import { ReviewOutcome } from '@/components/admin/review-outcome';
-import { ImportOriginBadge } from '@/components/admin/status-badges';
 import { AdminApiError, adminFetch } from '@/lib/admin-api';
-import type { ImportRecord, Organization, Page } from '@/lib/admin-types';
+import { importSeedWarnings, splitImportPayload } from '@/lib/import-seed';
+import type {
+  Category,
+  CategoryTemplate,
+  Competition,
+  ImportRecord,
+  Organization,
+  Page,
+  Region,
+} from '@/lib/admin-types';
 
 /** Fetches by id (any status) — deep links + back-after-decision always resolve; reviewed
  * records render a read-only outcome panel instead of the review form. */
@@ -19,71 +28,15 @@ export default async function ReviewImportPage({ params }: { params: Promise<{ i
     if (e instanceof AdminApiError && e.status === 404) notFound();
     throw e;
   }
-  const pending = record.status === 'PENDING';
 
-  // Resolve-or-create: pre-fetch organizations matching the extracted organizerName so the review
-  // panel can show "will be reused" vs "will be created" without a client round-trip. Only when the
-  // payload names an organizer but hasn't already been resolved to an org id.
-  const payload = record.payload as Record<string, unknown>;
-  const organizerName = typeof payload.organizerName === 'string' ? payload.organizerName : null;
-  const organizerOrgId = typeof payload.organizerOrgId === 'string' ? payload.organizerOrgId : null;
-  let organizerMatches: Organization[] = [];
-  if (pending && organizerName && !organizerOrgId) {
-    try {
-      const orgs = await adminFetch<Page<Organization>>(
-        `/organizations?query=${encodeURIComponent(organizerName)}&size=10`,
-      );
-      organizerMatches = orgs.content;
-    } catch {
-      // Non-fatal — the panel falls back to "a new organization will be created".
-    }
-  }
-
-  return (
-    <>
-      <Link
-        href="/admin/import-records"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
-      >
-        <ArrowLeft aria-hidden="true" className="size-4" /> Import queue
-      </Link>
-      <PageHeader title={pending ? 'Review import' : 'Import record'} />
-      {pending ? (
-        <ImportReview record={record} initialOrganizerMatches={organizerMatches} />
-      ) : (
+  if (record.status !== 'PENDING') {
+    return (
+      <>
+        <BackLink />
+        <PageHeader title="Import record" />
         <div className="grid gap-6">
           <ReviewOutcome status={record.status} note={record.note} reviewedAt={record.reviewedAt} />
-          <dl className="grid gap-1 text-sm">
-            {/* Origin survives review (the approve path overwrites the note, so this is the only
-                remaining user-request-vs-pipeline signal on reviewed records). */}
-            <div className="flex items-center gap-2">
-              <dt className="text-muted">Origin:</dt>
-              <dd>
-                <ImportOriginBadge origin={record.origin} />
-              </dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="text-muted">Source:</dt>
-              <dd>
-                {record.sourceUrl ? (
-                  <a
-                    href={record.sourceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:underline"
-                  >
-                    {record.sourceUrl}
-                  </a>
-                ) : (
-                  '–'
-                )}
-              </dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="text-muted">Confidence:</dt>
-              <dd>{record.confidence ?? '–'}</dd>
-            </div>
-          </dl>
+          <ImportRecordMeta record={record} />
           <div>
             <h2 className="mb-2 text-sm font-semibold text-foreground">
               Payload as reviewed{record.status === 'APPROVED' ? ' (created the competition)' : ''}
@@ -93,7 +46,83 @@ export default async function ReviewImportPage({ params }: { params: Promise<{ i
             </pre>
           </div>
         </div>
-      )}
+      </>
+    );
+  }
+
+  // Read the extraction into form values server-side: the mapping is pure, so doing it here keeps
+  // the client component free of payload-shape logic and the seed ships with the HTML.
+  const seed = splitImportPayload(record.payload);
+  const warnings = importSeedWarnings(record.payload, seed);
+
+  // Everything the competition form needs, plus the two lookups only review needs: organizations
+  // matching the extracted organizer name (the raw tab's resolve-or-create panel), and the listing
+  // already holding this slug, if any. Fetched in parallel — the review screen is one round trip.
+  const [categories, templates, organizations, regions, organizerMatches, duplicate] =
+    await Promise.all([
+      adminFetch<Category[]>('/categories'),
+      adminFetch<CategoryTemplate[]>('/categories/templates'),
+      adminFetch<Page<Organization>>('/organizations?size=200'),
+      adminFetch<Region[]>('/regions'),
+      findOrganizerMatches(seed.organizerName),
+      findDuplicate(record.duplicateCompetitionId),
+    ]);
+
+  return (
+    <>
+      <BackLink />
+      <PageHeader
+        title="Review import"
+        description="The listing form, pre-filled from the extraction. Approving creates the competition."
+      />
+      <ImportReview
+        record={record}
+        seed={seed}
+        warnings={warnings}
+        duplicate={duplicate}
+        categories={categories}
+        organizations={organizations.content}
+        templates={templates}
+        regions={regions}
+        initialOrganizerMatches={organizerMatches}
+      />
     </>
   );
+}
+
+function BackLink() {
+  return (
+    <Link
+      href="/admin/import-records"
+      className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
+    >
+      <ArrowLeft aria-hidden="true" className="size-4" /> Import queue
+    </Link>
+  );
+}
+
+/** Non-fatal on failure — the raw tab falls back to "a new organization will be created". */
+async function findOrganizerMatches(name: string | null): Promise<Organization[]> {
+  if (!name) return [];
+  try {
+    const orgs = await adminFetch<Page<Organization>>(
+      `/organizations?query=${encodeURIComponent(name)}&size=10`,
+    );
+    return orgs.content;
+  } catch {
+    return [];
+  }
+}
+
+/** Names the listing that already holds this payload's slug, so the warning can link to it. */
+async function findDuplicate(
+  competitionId: string | null,
+): Promise<{ id: string; name: string } | null> {
+  if (!competitionId) return null;
+  try {
+    const existing = await adminFetch<Competition>(`/competitions/${competitionId}`);
+    return { id: existing.id, name: existing.name };
+  } catch {
+    return null;
+  }
 }

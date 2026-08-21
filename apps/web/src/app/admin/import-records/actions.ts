@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { adminFetch } from '@/lib/admin-api';
-import type { FormState, Organization, Page } from '@/lib/admin-types';
+import { buildImportApprovalPayload } from '@/lib/competition-payload';
+import type { BulkReviewResponse, FormState, Organization, Page } from '@/lib/admin-types';
 
 /**
  * Live organizer lookup for the import-review org panel (resolve-or-create): the curator can search
@@ -19,7 +20,7 @@ export async function searchOrganizations(query: string): Promise<Organization[]
   return page.content;
 }
 
-/** Approve, optionally with an edited payload (the curator's "edit then approve"). Redirects on success. */
+/** Approve, optionally with an edited payload (the raw-JSON tab's "edit then approve"). Redirects on success. */
 export async function approveImport(
   id: string,
   _prev: FormState,
@@ -46,7 +47,51 @@ export async function approveImport(
   redirect('/admin/import-records');
 }
 
+/**
+ * Approve from the FULL competition form (the default review surface): the edited fields are
+ * rebuilt into a payload and sent as the approve override, so reviewing an extraction is the same
+ * gesture as adding a competition by hand. See {@link buildImportApprovalPayload} for what the
+ * form's values do and don't cover.
+ */
+export async function approveImportFromForm(
+  id: string,
+  _prev: FormState,
+  form: FormData,
+): Promise<FormState> {
+  let payload: Record<string, unknown>;
+  try {
+    payload = buildImportApprovalPayload(form);
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'the form could not be read' };
+  }
+  try {
+    await adminFetch(`/import-records/${id}/approve`, { method: 'POST', body: payload });
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'approve failed' };
+  }
+  revalidatePath('/admin/import-records');
+  redirect('/admin/import-records');
+}
+
 export async function rejectImport(id: string, note: string): Promise<void> {
   await adminFetch(`/import-records/${id}/reject`, { method: 'POST', body: { note } });
   revalidatePath('/admin/import-records');
+}
+
+/**
+ * Review many selected records at once. Never all-or-nothing: the API decides each record in its
+ * own transaction and reports per-id outcomes, which the queue renders — one unapprovable
+ * extraction must not discard the rows either side of it.
+ */
+export async function bulkReviewImports(
+  ids: string[],
+  action: 'APPROVE' | 'REJECT',
+  note: string,
+): Promise<BulkReviewResponse> {
+  const result = await adminFetch<BulkReviewResponse>('/import-records/bulk', {
+    method: 'POST',
+    body: { ids, action, note: note.trim() === '' ? null : note.trim() },
+  });
+  revalidatePath('/admin/import-records');
+  return result;
 }

@@ -25,6 +25,22 @@ that the extraction pipeline and curators work down, in rank order, until the R1
 2. **S4 (curation)** reviews/approves every imported record before publish. The `rank_composite`
    ordering means curators spend their first, freshest passes on the highest-demand competitions —
    the **top ~50 by expected search volume** that carry the R1 SEO thesis.
+   **The review surface is `/admin/import-records` (rebuilt 2026-08-21, architecture.md §13a).**
+   Opening a record shows the **same form used to add a competition by hand**, pre-filled from the
+   extraction — spine, first edition, timeline, regions and category attributes — with the raw
+   payload one tab away for anything the form has no field for. What matters for planning a run:
+   - The queue **lists what's missing before you open a row** — category, organizer, edition cycle,
+     the deadline the public card would show, a confidence meter, and a **"slug taken"** flag for
+     rows that would collide with a live listing. Filter by origin, search the payload
+     (name/slug/organizer/source URL), and sort by confidence to work the weakest extractions first
+     (or the strongest, for a fast bulk pass).
+   - **Bulk approve/reject** decides many selected rows at once. Each is decided independently, so a
+     bad one can't take the batch with it; failures come back named and stay pending. Use it for a
+     run whose extractions are uniformly good, or to clear a bad source in one gesture — it skips
+     the per-record form by design.
+   - Approving stays **lenient on purpose**: an extraction can only state what the page stated, so
+     only name/slug/category/organizer block approval. The completeness ring shows what a full
+     listing would still need, and says so without blocking.
 3. The columns here are **hints, not truth**. S3 re-extracts from the official page and S4 verifies;
    anything marked `unknown` here is simply left for the pipeline to fill. **Never treat a value in
    this file as verified** — it is a starting point for the demand ranking, not curated data.

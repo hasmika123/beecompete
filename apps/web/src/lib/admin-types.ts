@@ -191,6 +191,30 @@ export interface ImportRecord {
   note: string | null;
   reviewedAt: string | null;
   createdAt: string;
+  /**
+   * The live competition already holding this payload's slug, if any — approving would collide.
+   * Computed per page by the API (one lookup, not one per row); archived listings count, because a
+   * slug stays taken after archive (D7).
+   */
+  duplicateCompetitionId: string | null;
+}
+
+/** Sort orders the import queue offers — mirrors the API's ImportRecordSort enum. */
+export const IMPORT_SORTS = ['CREATED_AT', 'CONFIDENCE', 'NAME', 'SOURCE_URL'] as const;
+export type ImportSort = (typeof IMPORT_SORTS)[number];
+
+export interface BulkOutcome {
+  id: string;
+  ok: boolean;
+  status: string | null;
+  error: string | null;
+}
+
+/** Always a 200 with per-id results — bulk review is deliberately not all-or-nothing. */
+export interface BulkReviewResponse {
+  succeeded: number;
+  failed: number;
+  results: BulkOutcome[];
 }
 
 export const CORRECTION_SUBJECT_TYPES = ['COMPETITION', 'EDITION', 'RESOURCE'] as const;
