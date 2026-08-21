@@ -123,6 +123,32 @@ export function zonedWallClockToInstant(local: string, timeZone: string): string
   return new Date(ts).toISOString();
 }
 
+/**
+ * The inverse of {@link zonedWallClockToInstant}: a stored UTC instant → the wall clock a form
+ * should show for it in the given zone, as "YYYY-MM-DDTHH:mm". Used to seed the admin key-date
+ * rows from an extracted import payload, so what the curator edits round-trips back to the same
+ * instant. Returns null for a missing or unparseable instant (a TBD milestone).
+ */
+export function instantToZonedWallClock(
+  iso: string | null | undefined,
+  timeZone: string,
+): string | null {
+  if (!iso) return null;
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) return null;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date(ms));
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
+}
+
 /** "Mar 3, 2026, 7:00 PM EST" — full date + time + zone abbreviation, in the zone. */
 export function formatInZone(iso: string, timeZone?: string | null): string {
   return new Date(iso).toLocaleString('en-US', {

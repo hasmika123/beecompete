@@ -2,6 +2,7 @@ package com.beecompete.catalog.repository;
 
 import com.beecompete.catalog.domain.Competition;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -18,6 +19,13 @@ public interface CompetitionRepository extends JpaRepository<Competition, UUID> 
 
 	/** Admin list search (R1-3) — a plain contains match; the public FTS search is CompetitionSearchService. */
 	Page<Competition> findByNameContainingIgnoreCase(String name, Pageable pageable);
+
+	/**
+	 * Bulk slug lookup for the import queue's duplicate flag (one query per page, not one per row).
+	 * Archived listings are INCLUDED deliberately: a slug is permanent (D7 keeps it on archive), so
+	 * approving over one still collides — the curator needs to see it.
+	 */
+	List<Competition> findBySlugIn(Collection<String> slugs);
 
 	/**
 	 * Live catalog size for public labels (landing "N more competitions", How-It-Works stats) —

@@ -314,6 +314,48 @@ tooling + audit log) → Phase 2+ (dedup DQ4, conflict resolution DQ5) → Phase
   `/landing` payload fields all still exist but drive **nothing on the public site** — an admin can
   still edit content that renders nowhere. Removing that surface touches the schema, so it is a
   full-loop change and is tracked as a follow-up rather than done inline.
+- **Import queue — review surface rebuild (2026-08-21):** reviewing a queued extraction used to mean
+  editing its raw JSON. It now opens the **same competition form used to add a listing by hand**,
+  pre-filled from the payload, on a `mode="import"` branch of `competition-form.tsx` (create's
+  stepper + completion ring; the category-attributes step and the first-edition step are both
+  visible). Submitting rebuilds the payload from the form and POSTs it as the approve **override**
+  the queue already supported (`approveImportFromForm` → `buildImportApprovalPayload`), so no new
+  write path exists.
+  - **The lenient/strict split is preserved deliberately.** The ring shows the create form's FULL
+    completeness checklist, but only what the server itself refuses (name, slug, category,
+    organizer) can block **Approve & create** — applying `CompetitionWithEditionRequest`'s admin
+    completeness policy here would make most real extractions unapprovable and silently halt
+    seeding. Incomplete approvals say what they'll produce instead of being blocked.
+  - **Nothing is dropped by round-tripping.** `lib/import-seed.ts` reads the untrusted payload into
+    form values (wrong-shaped values dropped, never coerced; key dates read as wall clock in their
+    OWN zone, UTC when the row has none, so a date-only extraction keeps its calendar day) and sets
+    **every key the form has no control for** aside as `extras`, carried through a hidden field and
+    re-merged under the form's values on approve. It also derives the advisory warnings shown above
+    the form (no category/organizer/edition, no deadline, all-TBD, rows with an unusable type).
+  - **Organizer resolve-or-create folded into the one dropdown**: the extracted name appears as a
+    `+ Create “…”` option (`CREATE_ORGANIZER_SENTINEL`), swapped for
+    `organizerName` + `confirmNewOrganizer` at submit. An already-resolved `organizerOrgId`
+    preselects.
+  - **Regions on approve:** the approve path now accepts a `regionIds` payload key (alongside
+    `edition`/`keyDates`) and passes it to `ListingCurationService`, which always supported it —
+    imports previously created editions with no region tags. Present without an `edition` is a 422,
+    same rule as `keyDates`.
+  - **Raw payload stays** as a second tab (`import-raw-payload-form.tsx`) for keys with no field and
+    malformed extractions. The two tabs are **independent edits, not two views of one state** — a
+    live bind between typed fields and free-text JSON is where silent-revert bugs live, and this is
+    the one screen where a silent data change is unacceptable. Reject moved out of both tabs into a
+    shared `ImportRejectPanel`.
+  - **Queue list** (`import-queue-table.tsx` + `lib/import-queue.ts`): status tabs carry **counts**
+    (`GET /import-records/counts`), plus origin filter, search over the payload
+    (name/slug/organizer/source URL), whole-ordering **sort** in one URL param, and triage columns
+    read out of the payload — category, organizer, edition cycle, the deadline the public card
+    *would* show (REG_CLOSE → SUBMISSION_DUE, blueprint #31), a confidence meter, and a **"slug
+    taken"** badge. Filtering/sorting is a native-SQL repository fragment (`ImportRecordSearch`)
+    because both live inside the JSONB payload; the sort key is a Java enum, never caller text.
+  - **Bulk review** (`POST /import-records/bulk`, `ImportReviewService`): each record is decided in
+    its **own transaction** (`REQUIRES_NEW`) and reports its own outcome, so one unapprovable row
+    can't discard the batch around it. The response is always 200 with per-id results; the UI lists
+    failures back, named and linked, rather than losing them in a toast. Capped at 100 ids.
 - **Deferred (PR C):** inline row-edit for FAQ/Resource (add+delete today). **`@Version` is not sent**
   on admin PUTs yet, so concurrent edits last-write-win rather than 409 — acceptable for a single
   curator at R1; revisit with RBAC (R2-7).
