@@ -34,8 +34,91 @@ export async function extract(
   return { extraction: await anthropicExtract(input, config), backend: 'anthropic' };
 }
 
-async function anthropicExtract(input: ExtractInput, config: Config): Promise<Extraction> {
-  const client = new Anthropic({ apiKey: config.anthropicApiKey });
+/**
+ * Transport-level retries, handled by the SDK (connection drops, timeouts, 429, 5xx) with its own
+ * exponential backoff and jitter. The default is 2, which a 50-page batch already exhausted twice
+ * — both pages were lost to a bare "Connection error." after the fetch had already succeeded.
+ * A re-ask is far cheaper than re-running a batch, and a genuinely dead endpoint still fails, just
+ * a few seconds later.
+ */
+const SDK_MAX_RETRIES = 5;
+
+/**
+ * Re-rolls when the model returns something that is not parseable JSON. Distinct from the SDK
+ * retries above: nothing is wrong with the transport, the model just formatted badly — in the
+ * 50-page batch one page came back with a bare `"delivery": VIRTUAL,` (an unquoted enum) and the
+ * whole record was lost to a single character. Sampling is non-deterministic, so simply asking
+ * again usually lands, and the retry says what went wrong to make that likelier still.
+ */
+const MAX_PARSE_ATTEMPTS = 3;
+
+/** The subset of the SDK surface this module uses — lets tests drive the retry loop with a fake. */
+export interface MessageCreator {
+  messages: {
+    create(body: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message>;
+  };
+}
+
+/**
+ * True for failures that mean "the model's output was not well-formed", which a re-roll can fix.
+ *
+ * Deliberately narrow. A wrong-but-parseable answer — an unknown `categorySlug`, a missing one —
+ * is the model's considered response, not a formatting slip; re-rolling it burns tokens to paper
+ * over a prompt problem someone should see. Only shape failures are retried.
+ */
+export function isMalformedOutputError(err: unknown): boolean {
+  if (err instanceof SyntaxError) return true; // JSON.parse
+  const message = err instanceof Error ? err.message : '';
+  return (
+    message === 'no JSON object found in extraction response' ||
+    message === 'extraction is not a JSON object'
+  );
+}
+
+export async function anthropicExtract(
+  input: ExtractInput,
+  config: Config,
+  client: MessageCreator = new Anthropic({
+    apiKey: config.anthropicApiKey,
+    maxRetries: SDK_MAX_RETRIES,
+  }),
+): Promise<Extraction> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= MAX_PARSE_ATTEMPTS; attempt++) {
+    const text = await callModel(input, config, client, attempt > 1 ? lastError : undefined);
+    try {
+      return normalize(parseJsonObject(text), input.sourceUrl);
+    } catch (err) {
+      // A malformed response is worth another sample; anything else is a real answer we should
+      // surface immediately rather than pay for twice.
+      if (!isMalformedOutputError(err)) throw err;
+      lastError = err;
+      if (attempt < MAX_PARSE_ATTEMPTS) {
+        // Never silent: a retry that always fires means the prompt drifted, and that should be
+        // visible in the run log rather than hidden behind an eventual success.
+        process.stderr.write(
+          `  unparseable extraction for ${input.sourceUrl} ` +
+            `(attempt ${attempt}/${MAX_PARSE_ATTEMPTS}): ${(err as Error).message} — re-asking
+`,
+        );
+      }
+    }
+  }
+
+  throw new Error(
+    `the model returned unparseable JSON ${MAX_PARSE_ATTEMPTS} times for ${input.sourceUrl}; ` +
+      `last error: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
+  );
+}
+
+/** One request/response round trip. Returns the response text; throws on unusable stop reasons. */
+async function callModel(
+  input: ExtractInput,
+  config: Config,
+  client: MessageCreator,
+  previousFailure: unknown,
+): Promise<string> {
   let message: Anthropic.Message;
   try {
     message = await client.messages.create({
@@ -48,7 +131,8 @@ async function anthropicExtract(input: ExtractInput, config: Config): Promise<Ex
       // interpolation), so across a 400+ page batch it would otherwise be re-billed in full each
       // time. A breakpoint here bills it at ~0.1x on every call after the first. The per-page text
       // stays in the user turn, AFTER this prefix — putting anything page-specific above it would
-      // change the prefix bytes and defeat the cache entirely.
+      // change the prefix bytes and defeat the cache entirely. The retry note below is appended to
+      // the USER turn for the same reason: it must not disturb the cached prefix.
       //
       // Default 5-minute TTL is deliberate: a batch run extracts a page every few seconds, so the
       // entry never goes cold, and the 1h TTL's 2x write premium would not pay for itself.
@@ -60,7 +144,12 @@ async function anthropicExtract(input: ExtractInput, config: Config): Promise<Ex
         },
       ],
       messages: [
-        { role: 'user', content: buildUserPrompt(input.sourceUrl, input.pageText, input.hints) },
+        {
+          role: 'user',
+          content:
+            buildUserPrompt(input.sourceUrl, input.pageText, input.hints) +
+            retryNote(previousFailure),
+        },
       ],
     });
   } catch (err) {
@@ -75,7 +164,8 @@ async function anthropicExtract(input: ExtractInput, config: Config): Promise<Ex
   }
   // Truncation check BEFORE parsing. A cut-off response is still valid text, so JSON.parse
   // reports a position-N syntax error that reads like a model formatting bug — the actual cause
-  // is the token cap. Say so instead of making the next person debug the prompt.
+  // is the token cap. Say so instead of making the next person debug the prompt. Not retried:
+  // another sample of the same long page truncates the same way.
   if (message.stop_reason === 'max_tokens') {
     throw new Error(
       `extraction was truncated at the ${message.usage.output_tokens}-token cap — the JSON is ` +
@@ -87,11 +177,23 @@ async function anthropicExtract(input: ExtractInput, config: Config): Promise<Ex
     throw new Error('the model declined to extract this page (stop_reason: refusal)');
   }
 
-  const text = message.content
+  return message.content
     .filter((block): block is Anthropic.TextBlock => block.type === 'text')
     .map((block) => block.text)
     .join('');
-  return normalize(parseJsonObject(text), input.sourceUrl);
+}
+
+/** Tells the model how the previous attempt failed. Empty on the first attempt. */
+function retryNote(previousFailure: unknown): string {
+  if (previousFailure === undefined) return '';
+  const reason =
+    previousFailure instanceof Error ? previousFailure.message : String(previousFailure);
+  return (
+    `
+
+RETRY: your previous response could not be parsed (${reason}). Reply with ONLY the JSON ` +
+    'object — no prose, no code fence — and make sure every string and enum value is quoted.'
+  );
 }
 
 /** Offline backend: load the expected extraction that ships next to the fixture HTML. */
