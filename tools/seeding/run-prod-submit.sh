@@ -20,9 +20,17 @@ EXTRA_ARGS=("$@")
 ssh_vps() { ssh -i "$KEY" -o BatchMode=yes "$VPS" "$@"; }
 
 echo "[1/6] Ensuring socat relay container on VPS loopback..."
-ssh_vps 'docker inspect seed-relay >/dev/null 2>&1 || docker run -d --name seed-relay \
-  --network beecompete-prod_internal -p 127.0.0.1:18080:8080 \
-  alpine/socat TCP-LISTEN:8080,fork,reuseaddr TCP:api:8080'
+# Checks RUNNING, not merely present: `docker inspect` succeeds for a STOPPED container, so the
+# old guard accepted a relay that had exited hours earlier, opened a tunnel to nothing, and died
+# at the health gate blaming the Neon quota. A dead-or-missing relay is recreated rather than
+# restarted: a prod redeploy can replace the network underneath it, and a fresh container
+# re-resolves `api` either way.
+ssh_vps 'if [ "$(docker inspect -f "{{.State.Running}}" seed-relay 2>/dev/null)" != "true" ]; then
+  docker rm -f seed-relay >/dev/null 2>&1 || true
+  docker run -d --name seed-relay \
+    --network beecompete-prod_internal -p 127.0.0.1:18080:8080 \
+    alpine/socat TCP-LISTEN:8080,fork,reuseaddr TCP:api:8080
+fi'
 
 echo "[2/6] Opening SSH tunnel localhost:${LOCAL_PORT} -> VPS loopback..."
 if ! curl -s -o /dev/null --max-time 2 "http://localhost:${LOCAL_PORT}/actuator/health"; then
@@ -30,11 +38,15 @@ if ! curl -s -o /dev/null --max-time 2 "http://localhost:${LOCAL_PORT}/actuator/
     -L "${LOCAL_PORT}:127.0.0.1:18080" "$VPS"
 fi
 
-echo "[3/6] Health gate (fails while the Neon quota is still exhausted)..."
+echo "[3/6] Health gate (relay + tunnel + DB must all be live)..."
 HEALTH=$(curl -s --max-time 30 "http://localhost:${LOCAL_PORT}/actuator/health" || true)
 if ! echo "$HEALTH" | grep -q '"UP"'; then
   echo "ABORT: prod API health is not UP: ${HEALTH:-<no response>}"
-  echo "If this is before Aug 1, the Neon free-tier compute quota is likely still exhausted."
+  echo "Check, in this order:"
+  echo "  1. relay:  ssh ... docker ps -a --filter name=seed-relay  (must say Up, not Exited)"
+  echo "  2. tunnel: curl http://localhost:${LOCAL_PORT}/actuator/health"
+  echo "  3. the DB: /api/healthz/db on the public site, with the x-healthz-token header"
+  echo "An empty response is almost always 1 or 2 — the public site serves 200s either way."
   exit 1
 fi
 
