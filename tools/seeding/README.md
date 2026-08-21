@@ -61,6 +61,17 @@ never destabilize the web/api pipelines. It has its own `package.json` and local
    a self-confidence and reviewer notes; `normalize` strips `<`, `>`, and control characters from
    every free-text field, and **drops null-valued attribute keys** (an unknown optional attribute the
    model emits as `null` would otherwise fail the template's `type` and bounce the record to INVALID).
+   **Two retry layers, for two different faults.** Transport faults (connection drops, timeouts,
+   429, 5xx) are the SDK's job — `maxRetries: 5`, with its own backoff and jitter; the default 2 was
+   exhausted twice in a single 50-page batch, losing pages whose fetch had already succeeded.
+   Separately, an **unparseable response is re-asked up to 3×**: in the same batch one page came
+   back with a bare `"delivery": VIRTUAL` (an unquoted enum) and the whole record was lost to one
+   character. Sampling is non-deterministic, so asking again usually lands, and the retry states
+   what went wrong — appended to the **user** turn, never the system prompt, so the cached prefix
+   stays byte-identical. Only *shape* failures are retried: an unknown `categorySlug` is the model's
+   considered answer, and a truncation or a refusal re-rolls the same way, so all three fail fast
+   rather than being paid for twice. Retries print to stderr — a re-ask that fires on every page
+   means the prompt has drifted, and that should be visible in the run log.
 3. **validate** (`src/validate.ts`) — two gates: the `attributes` bag against the **correct Category
    Template JSON Schema** (draft 2020-12, mirrored from seed `0005` in `src/categories.ts`,
    compiled once per category), plus **Spine sanity**: required fields + types, enum tokens,
