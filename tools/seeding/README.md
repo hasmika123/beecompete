@@ -200,6 +200,31 @@ Exit code is non-zero if any item was invalid or errored. Each item's report pri
 errors, **warnings** (e.g. an `officialUrl` on a different domain than the fetched page), and the
 model's **reviewer notes** for the S4 curator.
 
+## `audit-index` — URL pre-flight (no LLM calls)
+
+`official_url` is the ceiling on extraction quality. Before spending on a bulk run, audit the index:
+
+```bash
+pnpm --dir tools/seeding audit-index                 # -> docs/seeding/url-audit.csv
+pnpm --dir tools/seeding audit-index --limit 50      # the top 50 by rank
+pnpm --dir tools/seeding audit-index --out probe.csv --concurrency 4
+```
+
+It fetches each distinct URL through the same `fetch.ts` the extractor uses (same UA, same robots
+check, same SSRF guard) and sorts it with a keyword heuristic — **no API key, no LLM calls, no
+writes**. Verdicts: `PROGRAM` (extract as-is) · `THIN` (glance at it) · `HOMEPAGE` (find a better
+URL first) · `UNREACHABLE` (dead, blocked, or not HTML). Flags: `--index`, `--out`, `--limit N`,
+`--concurrency N`, `--help`.
+
+Why it exists: the first live sweep produced a record with **no edition** because its row pointed at
+an organization homepage rather than a competition page. That failure is free to detect here and
+expensive to detect one paid extraction at a time. The classifier's thresholds live at the top of
+`src/audit.ts` and are unit-tested in `test/audit.test.ts` — they are judgment calls tuned against
+that sweep, so adjust them there rather than second-guessing individual verdicts.
+
+Results of the first full run (and what they mean for the content gate) are written up in
+`docs/seeding/README.md` → "URL quality".
+
 ## Offline / CI mode
 
 With no `ANTHROPIC_API_KEY` (or `--offline`), extraction uses a **stub backend** that reads a

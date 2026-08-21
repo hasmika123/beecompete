@@ -80,7 +80,9 @@ A listing is only useful with a running attached, so also fill these INSIDE "pay
     is open now, CLOSED if it has passed, UPCOMING if announced but not yet open. When unclear use
     UPCOMING and note it.
   - scopeLevel (REQUIRED if edition present): one of ${SCOPE_LEVELS.join(', ')} — the geographic reach
-    of THIS running. Default NATIONAL for a country-wide competition; VIRTUAL only when the running
+    of THIS running. Default NATIONAL for a country-wide competition. Use INTERNATIONAL when the
+    page shows the running draws entrants from MULTIPLE COUNTRIES (e.g. "60+ countries and
+    territories") — not merely that foreigners may enter a US event. VIRTUAL only when the running
     itself is online-only rather than merely allowing online entry.
   - registrationUrl (string|null): the page you actually register on, if stated.
   - entryFee (number|null) + currency (3-letter ISO, e.g. "USD"): REQUIRED TOGETHER — never emit a
