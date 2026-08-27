@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { scoreConfidence } from './confidence.ts';
 import type { Config } from './config.ts';
+import type { TemplateMap } from './templates.ts';
 import { extract, type ExtractBackend } from './extract.ts';
 import { fetchPage, htmlToText } from './fetch.ts';
 import { compareHints } from './hints.ts';
@@ -22,6 +23,11 @@ export interface RunOptions {
   offline: boolean;
   /** SSRF-guard opt-out for the fetch step (--allow-private). */
   allowPrivate?: boolean;
+  /**
+   * This run's Category Templates, resolved ONCE in index.ts (server copy, or the mirror with a
+   * warning). Optional so existing callers and tests keep working on the checked-in default.
+   */
+  templates?: TemplateMap;
 }
 
 export interface ItemReport {
@@ -51,7 +57,7 @@ export async function runItem(
   try {
     const { sourceUrl, pageText, inputPath, remote } = await acquireText(item, config, opts);
     const { extraction, backend } = await extract(
-      { sourceUrl, pageText, inputPath, hints: item.hints },
+      { sourceUrl, pageText, inputPath, hints: item.hints, templates: opts.templates },
       config,
       { offline: opts.offline },
     );

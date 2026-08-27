@@ -1,0 +1,54 @@
+# Fold the extracted `summary` out of PENDING import payloads and into `description`.
+#
+# Context: `competition.summary` was retired 2026-08-21 (owner decision — curators write one prose
+# field, and the CompetitionCard's blurb is derived from `description`). Queued extractions predate
+# that call and still carry a `summary` key that the approve path now ignores, so without this the
+# text a curator is looking at would be silently dropped on approve.
+#
+# PENDING ONLY, deliberately. An APPROVED/REJECTED record's payload is the historical record of
+# what the pipeline actually extracted and what the curator actually decided on; rewriting it would
+# falsify that. Those rows keep their `summary` key, unread.
+#
+# Non-destructive on collision: where a payload somehow carries BOTH, `description` wins and the
+# summary is appended below it rather than discarded — a curator can edit it down at review. (No
+# such row exists in practice: the pipeline always emitted `description: null`, and the public
+# Request-a-Competition form writes `details`, never `summary`.)
+#
+# Idempotent: every statement is keyed on `jsonb_exists(payload, 'summary')`, which the last one clears, so a
+# re-run is a no-op. Data-only — no schema change, so the additive-only rule is untouched.
+databaseChangeLog:
+  - changeSet:
+      id: 0014-import-summary-into-description
+      author: beecompete
+      comment: PENDING import payloads — move extracted summary text into description.
+      changes:
+        - sql:
+            comment: Summary present, description empty/absent → summary BECOMES the description.
+            sql: >-
+              UPDATE import_record
+              SET payload = jsonb_set(payload, '{description}', payload->'summary', true)
+              WHERE status = 'PENDING'
+                AND jsonb_exists(payload, 'summary')
+                AND jsonb_typeof(payload->'summary') = 'string'
+                AND btrim(payload->>'summary') <> ''
+                AND coalesce(btrim(payload->>'description'), '') = ''
+        - sql:
+            comment: Both present → keep the description, append the summary so no text is lost.
+            sql: >-
+              UPDATE import_record
+              SET payload = jsonb_set(payload, '{description}',
+                    to_jsonb((payload->>'description') || chr(10) || chr(10) || (payload->>'summary')), true)
+              WHERE status = 'PENDING'
+                AND jsonb_exists(payload, 'summary')
+                AND jsonb_typeof(payload->'summary') = 'string'
+                AND btrim(payload->>'summary') <> ''
+                AND coalesce(btrim(payload->>'description'), '') <> ''
+                AND strpos(coalesce(payload->>'description', ''), payload->>'summary') = 0
+        - sql:
+            comment: Drop the retired key from every PENDING payload (incl. the null/blank ones).
+            sql: >-
+              UPDATE import_record
+              SET payload = payload - 'summary'
+              WHERE status = 'PENDING' AND jsonb_exists(payload, 'summary')
+      rollback:
+        - empty

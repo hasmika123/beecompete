@@ -37,6 +37,7 @@ export async function addResource(competitionId: string, form: FormData): Promis
       type: form.get('type'),
       isAffiliate: form.get('isAffiliate') === 'on',
       displayOrder: Number(form.get('displayOrder') ?? 0) || 0,
+      imageUrl: form.get('imageUrl') || null,
     },
   });
   revalidate(competitionId);

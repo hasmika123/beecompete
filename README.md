@@ -1,7 +1,8 @@
 # BeeCompete
 
-A cross-vertical discovery marketplace, prep platform, and host toolkit for K-12 academic
-competitions — "every competition worth entering, one place, always current."
+A cross-vertical discovery marketplace, prep platform, and host toolkit for academic
+competitions at every level, elementary school through graduate school — "every competition worth
+entering, one place, always current."
 
 > **Status:** Planning complete; pre-flight setup in progress. No application code yet.
 > The full plan lives in **[`docs/`](docs/README.md)** — start with
@@ -9,7 +10,7 @@ competitions — "every competition worth entering, one place, always current."
 
 ## What this is
 Three facets, built in phases:
-1. **Marketplace** (free) — discover & track competitions across every K-12 subject.
+1. **Marketplace** (free) — discover & track competitions across every subject and level.
 2. **Participant+** (paid) — per-competition prep.
 3. **Host Tools** (paid) — run a competition; the science-fair wedge is the Phase-3 anchor.
 

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180">
+  <!-- Generic VIDEO placeholder (resources-row fallback art). 16:9 dark player frame with an
+       amber play control, per the resource-type hue convention. The landscape shape is the
+       point: it reads "video" before the tag does. -->
+  <rect width="320" height="180" rx="12" fill="#26251f"/>
+  <rect width="320" height="180" rx="12" fill="none" stroke="#44423a" stroke-width="2"/>
+  <!-- play button -->
+  <circle cx="160" cy="82" r="34" fill="#f59e0b"/>
+  <path d="M150 66 L178 82 L150 98 Z" fill="#26251f"/>
+  <!-- progress bar -->
+  <rect x="24" y="146" width="272" height="6" rx="3" fill="#44423a"/>
+  <rect x="24" y="146" width="96" height="6" rx="3" fill="#f59e0b"/>
+  <circle cx="120" cy="149" r="7" fill="#fbbf24"/>
+</svg>

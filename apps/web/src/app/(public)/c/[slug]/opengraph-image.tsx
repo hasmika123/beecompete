@@ -30,7 +30,7 @@ export async function generateImageMetadata({ params }: { params: Promise<{ slug
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  let name = 'K-12 Academic Competitions';
+  let name = 'Academic Competitions';
   let categoryName = '';
   let accent = GOLD;
   let facts: string[] = [];

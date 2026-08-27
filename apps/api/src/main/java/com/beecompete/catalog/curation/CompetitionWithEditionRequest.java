@@ -1,6 +1,7 @@
 package com.beecompete.catalog.curation;
 
 import com.beecompete.catalog.domain.CostType;
+import com.beecompete.catalog.domain.ListingStatus;
 import com.beecompete.catalog.domain.KeyDateType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
@@ -25,16 +26,22 @@ import java.util.UUID;
  */
 public record CompetitionWithEditionRequest(@NotNull @Valid CompetitionRequest competition,
 		@NotNull @Valid EditionRequest edition, List<@Valid FirstEditionKeyDate> keyDates,
-		List<UUID> regionIds) {
+		List<UUID> regionIds,
+		/**
+		 * Where the new listing starts in the §8a lifecycle. Null → PUBLISHED (the one-step
+		 * create import approve and scripts rely on — approve IS the review there). The admin
+		 * form sends DRAFT or IN_REVIEW explicitly; UNLISTED is not a starting state.
+		 */
+		ListingStatus listingStatus) {
+
+	@AssertTrue(message = "a listing cannot start UNLISTED — publish then unlist")
+	public boolean isStartingStatusLegal() {
+		return listingStatus != ListingStatus.UNLISTED;
+	}
 
 	@AssertTrue(message = "an organizer is required")
 	public boolean isOrganizerPresent() {
 		return competition == null || competition.organizerOrgId() != null;
-	}
-
-	@AssertTrue(message = "a card summary is required")
-	public boolean isSummaryPresent() {
-		return competition == null || hasText(competition.summary());
 	}
 
 	@AssertTrue(message = "a description is required")

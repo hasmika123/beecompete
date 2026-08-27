@@ -50,7 +50,7 @@ Legend: registry IDs in (parens). 🔒 = has a compliance gate.
 
 **Data & catalog**
 - **R1-1** — Core schema migration: `Category`, `CategoryTemplate`, `Region`, `Competition`, `Edition`, `EditionRegion`, `KeyDate`, `Resource`, `CorrectionProposal` + provenance/verification/`archived_at` fields — per the locked modeling decisions (domain-model §7: grade encoding, Division placement, Edition-level regions, soft-delete D7). Include storage for **curated per-competition FAQ entries** (details-page FAQ tab, page-blueprints §3a — exact shape decided at build per domain-model rules). **2026-07-08 additions (domain model, legacy review):** `entry_pathway` on Competition; `age_cutoff_date` + `prize_summary`/`prize_value`/`prize_currency` on Edition; reserved `member_id` on User. **2026-07-08 additions (registry Rev 9):** `HeroCard` + `FeaturedSlot` (admin-managed Landing content, M36 — domain-model §3e-bis). *Article entities are NOT in R1-1 — Phase 2, additive (Hook #15).* (X9, catalog)
-- **R1-2** — Category taxonomy + templates seeded (~10 K-12 categories) with JSON-Schema validation of `attributes`. (X9)
+- **R1-2** — Category taxonomy + templates seeded (~10 categories) with JSON-Schema validation of `attributes`. (X9)
 - **R1-3** — **Admin curation tooling v0** (X16, DQ13): minimal internal web admin — CRUD for `Competition`/`Edition`/`KeyDate`/`Resource`/`Category`(+templates), **import-review queue** (approve/edit/reject records from the S3 extraction pipeline — S4's 20–30 approvals/day throughput depends on this UI, so scripts alone don't cut it), and verification-state + provenance controls. **Landing-content panel (M36, Rev 9):** update the 3 `HeroCard`s (image upload, alt text; main card: link + hover description) and manage `FeaturedSlot` carousel picks (add/remove/reorder, 6–10 cap). Every admin write stamps provenance. **Access: behind Cloudflare Access (email allow-list) on the admin route — no app auth exists at R1; migrates to real RBAC at R2-7.**
 - **R1-3b** — **Corrections intake + review** (DQ6): public "Suggest a correction" form on detail pages → `CorrectionProposal` rows (domain-model D7); admin review queue — approve applies the diff and writes an audit record, reject discards. DQ15 "request a competition" submissions (R1-15b) land in this same queue.
 
@@ -228,6 +228,10 @@ Code alone doesn't make R1 launchable — **the catalog does**. An empty marketp
 technical gate and still be worthless to a visitor. Seeding is tracked as a first-class workstream
 with its own tasks and a hard launch gate. Curation is also **permanent labor, not a one-time
 import** — budget a few hours/week post-launch, guided by analytics (X20 depth-on-demand).
+
+> ⚠ **Before S4 bulk curation:** clear the **pending schema batch** in `domain-model.md` §7a
+> (owner 2026-08-23). Those are decided-but-unbuilt model changes; seeding ~200 listings under a
+> superseded shape means re-curating them later. Currently holds: entry-pathway → multi-select.
 
 **R1 content gate** (enforced in R1-17):
 - **≥ 200 competitions live at launch**, spanning **all ~10 seed categories** (≥ 15 each for the major ones).

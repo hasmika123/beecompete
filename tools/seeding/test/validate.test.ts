@@ -217,7 +217,7 @@ test('normalize strips angle brackets and control chars from free-text fields', 
       payload: {
         slug: 'evil-comp',
         name: `Evil <script>alert(1)</script>${BEL} Comp`,
-        summary: `a${NUL}b <b>bold</b>`,
+        organizerName: `a${NUL}b <b>bold</b>`,
         categorySlug: 'math',
         tags: ['<i>tag</i>', 'clean'],
         participationMode: 'INDIVIDUAL',
@@ -231,12 +231,12 @@ test('normalize strips angle brackets and control chars from free-text fields', 
     'https://evil.example.org',
   );
   const p = extraction.payload;
-  for (const value of [p.name, p.summary, p.tags?.[0]]) {
+  for (const value of [p.name, p.organizerName, p.tags?.[0]]) {
     const s = String(value);
     assert.ok(!s.includes('<') && !s.includes('>'), `expected no angle brackets in "${s}"`);
   }
   assert.ok(!String(p.name).includes(BEL));
-  assert.ok(!String(p.summary).includes(NUL));
+  assert.ok(!String(p.organizerName).includes(NUL));
   const attrs = p.attributes as Record<string, unknown>;
   assert.equal((attrs.topics as string[])[0], 'ualgebra/u'); // brackets gone, text kept
   assert.equal(attrs.syllabus, 'xy'); // control char stripped

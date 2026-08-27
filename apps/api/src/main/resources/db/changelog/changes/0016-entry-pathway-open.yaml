@@ -1,0 +1,29 @@
+# Entry-pathway widening (owner 2026-08-23): SCHOOL and CHAPTER split apart, and EITHER renamed
+# OPEN — "open to all", which is what the token always meant in practice (search treated EITHER
+# as the match-everything wildcard).
+#
+# Data-only. `entry_pathway` is VARCHAR(20) with no CHECK constraint, so the two NEW tokens
+# (SCHOOL, CHAPTER) need no DDL at all — same rule ScopeLevel's INTERNATIONAL relied on. All
+# three new tokens fit the column width (SCHOOL=6, CHAPTER=7, OPEN=4).
+#
+# SCHOOL_OR_CHAPTER rows are deliberately NOT touched: only a curator knows whether a given
+# listing means school, chapter, or genuinely both, and inventing that at scale would be worse
+# than leaving an honest value in place. It stays a selectable option for exactly that reason.
+#
+# EITHER is retained in the Java enum (deprecated) even though this migration should leave no
+# rows carrying it — a row written by an older running instance mid-deploy must still read back.
+#
+# Idempotent: the WHERE clause is self-clearing, so a re-run is a no-op.
+databaseChangeLog:
+  - changeSet:
+      id: 0016-entry-pathway-either-to-open
+      author: beecompete
+      comment: entry_pathway EITHER -> OPEN (rename only; SCHOOL/CHAPTER need no DDL).
+      changes:
+        - sql:
+            sql: >-
+              UPDATE competition SET entry_pathway = 'OPEN' WHERE entry_pathway = 'EITHER'
+      rollback:
+        - sql:
+            sql: >-
+              UPDATE competition SET entry_pathway = 'EITHER' WHERE entry_pathway = 'OPEN'

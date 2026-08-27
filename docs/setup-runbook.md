@@ -249,6 +249,46 @@ A minors-facing, payments-bound platform should not launch publicly as an uninco
 5. Turn on **Web Analytics** (free, cookieless) → get the snippet for the web app.
 - **Outputs:** Cloudflare account; Web Analytics token.
 
+## 3b. Curator logins — adding people to /admin  *(R1, no code)*
+
+Curators get **their own login** without any user table: Cloudflare Access is the identity layer
+until RBAC lands (R2-7). `/admin` is behind ONE Access application; every curator is an entry in
+its allow policy. **Owner decision 2026-08-25: no path-scoped tiers** — curators get the whole
+admin dashboard (landing, categories, regions included). A path-scoped split (a second Access app
+covering only `/admin/competitions`, `/admin/import-records`, `/admin/corrections`,
+`/admin/organizations`, with the broad app owner-only) was designed and is easy to add later if
+the curator pool grows beyond people trusted with everything; it lives in this file's git history.
+
+**To add a curator (Zero Trust dashboard):**
+
+1. **Zero Trust → Access → Applications →** the `beecompete.com/admin` application **→ Policies**.
+2. Open the allow policy → **Include → Emails** → add their address. (“Emails ending in” is only
+   safe for a domain you control — never a public mail provider.)
+3. Save. They visit `https://beecompete.com/admin`, enter that address, and Cloudflare emails a
+   one-time PIN. No password to share, nothing to provision.
+4. Set the application's **session duration** to about a working day, so removing someone isn't
+   delayed by a live session.
+
+**To remove someone:** delete their address from the same policy.
+
+⚠ **Everyone on the policy can do everything the owner can in /admin** — including editing the
+public landing page and the category/region taxonomy. The safety net is soft-delete everywhere
+(`archived_at`), provenance stamps, and per-address write logging — recoverable and attributable,
+not preventable. Real per-user authorization is RBAC (R2-7). **Do NOT give anyone
+`ADMIN_API_TOKEN`** — it is a server-side secret the web app injects; the browser never holds it,
+and a curator never needs it. See §5.
+
+**What you get for free:** Access logs every login under **Zero Trust → Logs → Access**, and every
+admin *write* is logged by the API with the address that made it (`CuratorAuditFilter` — the BFF
+forwards Access's `Cf-Access-Authenticated-User-Email`). Import approvals and rejections also
+record the address in the queue note, so curators can see who already reviewed a record.
+That attribution is **advisory, not authorization** — it labels a request Access already let
+through; it is not verified and must never be used to decide what someone may do.
+
+⚠ **Prod only.** Do NOT onboard curators to `staging.beecompete.com/admin`: staging's admin is not
+behind Access, and its 401 is the fail-closed token gate doing its job. Setting a staging admin
+token would expose curation writes publicly.
+
 ## 4. VPS server  *(R1)*
 1. Provision a VPS (Hetzner/DigitalOcean/etc., ~$5–10/mo to start).
 2. **Harden:** create a non-root sudo user; SSH **key-only** (disable password login); enable **UFW firewall** (allow 22, 80, 443); enable `fail2ban`; enable unattended security updates.

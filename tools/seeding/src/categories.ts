@@ -1,11 +1,19 @@
 /**
  * The 11 launch categories: slug -> category UUID and slug -> Category Template JSON Schema.
  *
- * These MUST stay in lock-step with apps/api's seed changeset
- * `0005-seed-categories.yaml` (fixed `beec0000-...` UUIDs, permissive draft-2020-12 schemas).
+ * These MUST stay in lock-step with apps/api's template changesets — `0005-seed-categories.yaml`
+ * (fixed `beec0000-...` UUIDs, permissive draft-2020-12 schemas) AND every later changeset that
+ * edits a template: `0015` judging keys, `0017` the eligibility catch-all, `0019` contact keys,
+ * `0022` student_status_required -> boolean.
  * They are mirrored here so the pipeline can resolve `categoryId` and validate the extracted
  * `attributes` bag offline — the SAME schema the server re-checks via `CategoryAttributeValidator`
  * on approve. If a template is edited in the admin tool, refresh this file to match.
+ *
+ * ⚠ This file is ALSO what the extraction prompt is generated from (see prompt.ts —
+ * `renderAttributeGuidance`). Drift here is not just a weaker offline check: it silently stops the
+ * model being told a key exists, so the field is never extracted at all. Templates carry
+ * `additionalProperties: true`, so nothing fails loudly — the data just never arrives.
+ * That is exactly how 0015/0017/0019's six keys went unextracted until 2026-08-26.
  */
 
 export type CategorySlug =
@@ -46,9 +54,20 @@ const arrayOfStrings = { type: 'array', items: { type: 'string' } } as const;
 const baseProps: Record<string, JsonSchema> = {
   eligible_countries: arrayOfStrings,
   citizenship_countries: arrayOfStrings,
-  student_status_required: { type: 'string' },
+  // Boolean since API changelog `0022` (owner 2026-08-26): "is being a student required?", not
+  // a sentence about which students. Prose belongs in other_eligibility_requirements.
+  student_status_required: { type: 'boolean' },
+  // The eligibility catch-all (`0017`) — the prose home for rules the typed keys can't express.
+  other_eligibility_requirements: { type: 'string' },
   syllabus: { type: 'string' },
   topics: arrayOfStrings,
+  // Judging catalog-info (`0015`). ⚠ judging_criteria is an ARRAY; tie_breakers is prose.
+  judging_criteria: arrayOfStrings,
+  tie_breakers: { type: 'string' },
+  rules_url: { type: 'string', format: 'uri' },
+  // Contact pair (`0019`), rendered on the public Logistics tab.
+  contact_email: { type: 'string', format: 'email' },
+  contact_phone: { type: 'string' },
 };
 
 function template(extra: Record<string, JsonSchema>): JsonSchema {

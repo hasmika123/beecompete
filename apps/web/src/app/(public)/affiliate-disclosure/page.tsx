@@ -13,6 +13,11 @@ import { pageMetadata } from '@/lib/seo';
 // R1-12 · Affiliate Disclosure (🔒 DQ10 / FTC endorsement rule). The dedicated, linkable home for
 // the disclosure that also renders inline with any resources row that contains an affiliate link
 // (R1-8, components/detail/resources-row.tsx). ⚠️ Pre-launch DRAFT — counsel review before R1-17.
+//
+// 🔒 The "As an Amazon Associate…" sentence in the summary is REQUIRED VERBATIM by the Amazon
+// Associates Operating Agreement / Program Policies (we enrolled 2026-08-25, tag `beecompete-20`) —
+// it is a separate obligation stacked on top of the FTC endorsement rule, not decorative copy.
+// Do not reword, abbreviate, or bury it below the fold; Amazon can terminate the account over it.
 
 export const revalidate = 0;
 
@@ -51,6 +56,7 @@ export default function AffiliateDisclosurePage() {
           <strong className="font-medium text-foreground">never</strong> affects which competitions
           we list, how we rank them, or what we write about them.
         </LegalP>
+        <LegalP>As an Amazon Associate, we earn from qualifying purchases.</LegalP>
       </LegalSection>
 
       <LegalSection id="what" heading="What affiliate links are">
@@ -73,6 +79,11 @@ export default function AffiliateDisclosurePage() {
             Each affiliate link is clearly labeled with an{' '}
             <strong className="font-medium text-foreground">&ldquo;Affiliate&rdquo;</strong> tag,
             and a short note appears alongside the resources whenever any affiliate link is present.
+          </LegalLI>
+          <LegalLI>
+            Today those links go to <strong className="font-medium text-foreground">Amazon</strong>,
+            through the Amazon Associates program. If we ever add another retailer, this page says
+            so first.
           </LegalLI>
           <LegalLI>
             Links that send you to a competition&apos;s official site to register are{' '}

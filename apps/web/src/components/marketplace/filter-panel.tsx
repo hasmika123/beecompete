@@ -2,7 +2,7 @@
 
 import { useId, useState } from 'react';
 import { ChevronDown, Radio, RadioGroup, Select, cn } from '@beecompete/ui';
-import { GRADE_VALUES, gradeName } from '@/lib/catalog-display';
+import { GRADE_VALUES, gradeOptionLabel } from '@/lib/catalog-display';
 import type { SearchFacets, RegionOption } from '@/lib/catalog-types';
 import {
   DEADLINE_WINDOWS,
@@ -89,7 +89,7 @@ export function FilterPanel({
     const count = gradeCount(grade);
     return {
       value: String(grade),
-      label: `Grade ${gradeName(grade)}${count !== undefined ? ` (${count})` : ''}`,
+      label: `${gradeOptionLabel(grade)}${count !== undefined ? ` (${count})` : ''}`,
     };
   });
 
@@ -206,7 +206,9 @@ export function FilterPanel({
         >
           <Radio value="" label="Any" />
           <Radio value="individual" label="Enter on your own" />
-          <Radio value="school_or_chapter" label="Through a school or chapter" />
+          <Radio value="school" label="Through a school" />
+          <Radio value="chapter" label="Through a chapter" />
+          <Radio value="open" label="Open to all" />
         </RadioGroup>
       </Facet>
 

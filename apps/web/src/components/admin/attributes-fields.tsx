@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Checkbox, Input, Textarea } from '@beecompete/ui';
+import { Button, Checkbox, Input, Plus, Textarea, Trash } from '@beecompete/ui';
 import { Select } from '@beecompete/ui';
 import { enumLabel } from '@/components/admin/enum-labels';
+import { SubSectionHeading } from '@/components/admin/form-section';
 
 /**
  * Schema-driven fields for a competition's `attributes` bag (sweep item 8 / A7): renders the
@@ -42,6 +43,12 @@ export interface AttributesFieldsProps {
   uiHints: Record<string, unknown> | null;
   value: Record<string, unknown>;
   onChange: (next: Record<string, unknown>) => void;
+  /**
+   * Keys another surface renders with dedicated controls (e.g. the Judging step) — skipped here
+   * in BOTH the declared and undeclared passes so nothing renders twice. Render-only: the keys
+   * stay in `value` and survive every onChange merge untouched.
+   */
+  omitKeys?: string[];
 }
 
 const asRecord = (v: unknown): Record<string, unknown> =>
@@ -127,7 +134,31 @@ function RawJsonField({
   );
 }
 
-export function AttributesFields({ schema, uiHints, value, onChange }: AttributesFieldsProps) {
+interface DraftField {
+  id: number;
+  k: string;
+  v: string;
+}
+
+/** trim + spaces to underscores — attribute keys are snake-ish, matching the template style. */
+const normalizeKey = (raw: string) => raw.trim().replace(/\s+/g, '_');
+
+export function AttributesFields({
+  schema,
+  uiHints,
+  value,
+  onChange,
+  omitKeys = [],
+}: AttributesFieldsProps) {
+  const omitted = new Set(omitKeys);
+  // Add-a-field rows (owner 2026-08-23): a draft lives locally until its key is committable —
+  // non-blank, not a template key (those have real controls above), not already in the bag.
+  // One blank row is present from the start (owner 2026-08-24) so the tab opens ready to type
+  // instead of behind an "Add field" click. A blank draft never commits, so it adds nothing to
+  // the bag if left untouched; discarding it is allowed — "Add field" brings one back.
+  const [templateDrafts, setTemplateDrafts] = useState<DraftField[]>([{ id: 0, k: '', v: '' }]);
+  const [extraDrafts, setExtraDrafts] = useState<DraftField[]>([{ id: 1, k: '', v: '' }]);
+  const [nextDraftId, setNextDraftId] = useState(2);
   const properties = asRecord(schema.properties) as Record<string, SchemaProperty>;
   const hints = asRecord(uiHints);
   const order = Array.isArray(hints.order)
@@ -139,8 +170,8 @@ export function AttributesFields({ schema, uiHints, value, onChange }: Attribute
   const schemaKeys = [
     ...order.filter((k) => k in properties),
     ...Object.keys(properties).filter((k) => !order.includes(k)),
-  ];
-  const extraKeys = Object.keys(value).filter((k) => !(k in properties));
+  ].filter((k) => !omitted.has(k));
+  const extraKeys = Object.keys(value).filter((k) => !(k in properties) && !omitted.has(k));
 
   const set = (key: string, v: unknown) => {
     const next = { ...value };
@@ -233,34 +264,150 @@ export function AttributesFields({ schema, uiHints, value, onChange }: Attribute
     return <RawJsonField id={id} value={v} onChange={(parsed) => set(key, parsed)} />;
   };
 
+  // Both sections carry their own add-a-field rows (owner 2026-08-24), so a curator adds a field
+  // where they were already looking instead of scrolling to one shared control. They write to the
+  // same bag — the TEMPLATE is what makes a key "category-specific", so a key typed in either row
+  // is by definition an extra one and lands under Other fields once committed. Each list keeps
+  // one blank row from the start so both sections open ready to type; a blank draft never
+  // commits, so an untouched row adds nothing.
+  const draftRows = (
+    drafts: DraftField[],
+    setDrafts: (fn: (ds: DraftField[]) => DraftField[]) => void,
+    context: string,
+  ) => (
+    <>
+      {drafts.map((d) => {
+        const norm = normalizeKey(d.k);
+        const clash = norm !== '' && (norm in properties || norm in value);
+        const commit = () => {
+          if (norm === '' || clash) return;
+          set(norm, d.v);
+          // Consume the draft and leave a fresh blank behind when it was the last one, so the
+          // section never runs out of somewhere to type (owner 2026-08-24: both sections keep a
+          // ready name+value row). `nextDraftId` still advances, so keys stay unique.
+          setDrafts((ds) => {
+            const rest = ds.filter((x) => x.id !== d.id);
+            return rest.length > 0 ? rest : [{ id: nextDraftId, k: '', v: '' }];
+          });
+          setNextDraftId((n) => n + 1);
+        };
+        return (
+          <div key={d.id} className="grid grid-cols-[180px_1fr_32px] items-start gap-2">
+            <div className="grid gap-1">
+              <Input
+                aria-label={`New ${context} field name`}
+                placeholder="field_name"
+                value={d.k}
+                onChange={(e) =>
+                  setDrafts((ds) =>
+                    ds.map((x) => (x.id === d.id ? { ...x, k: e.target.value } : x)),
+                  )
+                }
+                onBlur={commit}
+              />
+              {clash && <p className="text-xs text-danger">already a field above</p>}
+            </div>
+            <Input
+              aria-label={`New ${context} field value`}
+              placeholder="value"
+              value={d.v}
+              onChange={(e) =>
+                setDrafts((ds) => ds.map((x) => (x.id === d.id ? { ...x, v: e.target.value } : x)))
+              }
+              onBlur={commit}
+            />
+            <button
+              type="button"
+              aria-label={`Discard new ${context} field`}
+              onClick={() => setDrafts((ds) => ds.filter((x) => x.id !== d.id))}
+              className="grid size-8 place-items-center rounded-md text-muted hover:bg-background hover:text-danger"
+            >
+              <Trash aria-hidden="true" className="size-4" />
+            </button>
+          </div>
+        );
+      })}
+      <div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setDrafts((ds) => [...ds, { id: nextDraftId, k: '', v: '' }]);
+            setNextDraftId((n) => n + 1);
+          }}
+        >
+          <Plus aria-hidden="true" className="size-4" /> Add field
+        </Button>
+      </div>
+    </>
+  );
+
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {schemaKeys.map((key) => (
-        <div key={key} className="grid content-start gap-1">
-          <label htmlFor={`attr-${key}`} className="text-sm font-medium text-foreground">
-            {hintString(hints, 'labels', key) ?? enumLabel(key)}
-          </label>
-          {field(key, properties[key] ?? {})}
+    // Two titled sections (owner 2026-08-24): what the category template asks for, then
+    // everything else. The split was implicit before — one grid of controls with a conditional
+    // grey caption partway down — so a curator could not tell which fields the category expected
+    // from which ones a previous curator had improvised.
+    <div className="grid gap-6">
+      <section className="grid gap-3">
+        <SubSectionHeading
+          title="Category-specific fields"
+          hint={
+            schemaKeys.length === 0
+              ? 'This category’s template declares no fields of its own — add what the listing needs below.'
+              : 'The fields this category’s template declares. They appear automatically and are validated against the template on save.'
+          }
+        />
+        {schemaKeys.length > 0 && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {schemaKeys.map((key) => (
+              <div key={key} className="grid content-start gap-1">
+                <label htmlFor={`attr-${key}`} className="text-sm font-medium text-foreground">
+                  {hintString(hints, 'labels', key) ?? enumLabel(key)}
+                </label>
+                {field(key, properties[key] ?? {})}
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="grid gap-2">{draftRows(templateDrafts, setTemplateDrafts, 'category')}</div>
+      </section>
+
+      <section className="grid gap-3">
+        <SubSectionHeading
+          title="Other fields"
+          hint="Anything this category’s template doesn’t declare. Stored on the listing and shown on the public Overview tab."
+        />
+        <div className="grid gap-2">
+          {extraKeys.map((key) => (
+            <div key={key} className="grid grid-cols-[180px_1fr_32px] items-start gap-2">
+              <Input value={key} readOnly aria-label={`Field ${key} name`} className="bg-surface" />
+              {typeof value[key] === 'string' ? (
+                <Input
+                  aria-label={`Field ${key} value`}
+                  value={value[key] as string}
+                  onChange={(e) => set(key, e.target.value)}
+                />
+              ) : (
+                <RawJsonField
+                  id={`attr-${key}`}
+                  value={value[key]}
+                  onChange={(parsed) => set(key, parsed)}
+                />
+              )}
+              <button
+                type="button"
+                aria-label={`Remove field ${key}`}
+                onClick={() => set(key, undefined)}
+                className="grid size-8 place-items-center rounded-md text-muted hover:bg-background hover:text-danger"
+              >
+                <Trash aria-hidden="true" className="size-4" />
+              </button>
+            </div>
+          ))}
+          {draftRows(extraDrafts, setExtraDrafts, 'other')}
         </div>
-      ))}
-      {extraKeys.map((key) => (
-        <div key={key} className="grid content-start gap-1">
-          <label htmlFor={`attr-${key}`} className="text-sm font-medium text-foreground">
-            {enumLabel(key)}{' '}
-            <span className="text-xs font-normal text-muted">(not in template)</span>
-          </label>
-          <RawJsonField
-            id={`attr-${key}`}
-            value={value[key]}
-            onChange={(parsed) => set(key, parsed)}
-          />
-        </div>
-      ))}
-      {schemaKeys.length === 0 && extraKeys.length === 0 && (
-        <p className="text-sm text-muted sm:col-span-2">
-          This category&apos;s template declares no fields. Add any via raw JSON.
-        </p>
-      )}
+      </section>
     </div>
   );
 }

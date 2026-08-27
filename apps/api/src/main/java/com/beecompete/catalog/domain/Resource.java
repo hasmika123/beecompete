@@ -61,6 +61,10 @@ public class Resource {
 	@Column(name = "display_order", nullable = false)
 	private short displayOrder = 0;
 
+	/** Optional card preview art (a URL to the resource's own cover/thumbnail) — 0020. */
+	@Column(name = "image_url", length = 1000)
+	private String imageUrl;
+
 	/** Set by Hibernate at insert; DB now() default remains for raw seed SQL. */
 	@CreationTimestamp
 	@Column(name = "created_at", nullable = false, updatable = false)
@@ -141,6 +145,14 @@ public class Resource {
 
 	public void setDisplayOrder(short displayOrder) {
 		this.displayOrder = displayOrder;
+	}
+
+	public String getImageUrl() {
+		return imageUrl;
+	}
+
+	public void setImageUrl(String imageUrl) {
+		this.imageUrl = imageUrl;
 	}
 
 	public Instant getCreatedAt() {

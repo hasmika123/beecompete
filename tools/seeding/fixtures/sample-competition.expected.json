@@ -5,7 +5,6 @@
     "organizerName": "Nova Math Foundation",
     "officialUrl": "https://novamath.example.org",
     "logo": "https://novamath.example.org/logo.png",
-    "summary": null,
     "categorySlug": "math",
     "tags": ["algebra", "number-theory", "geometry", "combinatorics", "olympiad"],
     "participationMode": "INDIVIDUAL",
@@ -20,7 +19,7 @@
     "recurrence": "ANNUAL",
     "attributes": {
       "eligible_countries": ["US"],
-      "student_status_required": "enrolled in a U.S. school",
+      "student_status_required": true,
       "topics": ["algebra", "number theory", "geometry", "combinatorics"],
       "calculator_allowed": false,
       "proof_based": false

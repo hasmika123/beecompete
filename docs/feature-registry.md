@@ -70,7 +70,7 @@ though we build them later. Those feed directly into the Domain & Data Model doc
 | **1** | Marketplace MVP (discovery, seeded listings, tracker, accounts + parental consent, curated/affiliate resources) |
 | **2** | Participant+ v1 + Educator dashboard (real revenue #1 + growth engine) |
 | **3** | Host Tools v1 — **science-fair wedge first** (registration, K-12 compliance/consent/advancement, basic judging) |
-| **4** | Advanced judging suite, UGC creator marketplace, institutional subscriptions, expansion beyond K-12 / US |
+| **4** | Advanced judging suite, UGC creator marketplace, institutional subscriptions, expansion beyond the K-12 *host* market / beyond the US *(the AUDIENCE already spans elementary–grad school — repositioned 2026-08-25; what stays K-12-shaped here is the host/science-fair tooling)* |
 | **Backlog** | Captured idea, no committed phase (parked to protect the foundation from creep) |
 
 **Cx (complexity):** S = small · M = medium · L = large · XL = very large.
@@ -124,7 +124,7 @@ though we build them later. Those feed directly into the Domain & Data Model doc
 | DQ10 | Affiliate disclosure system | 1 | S | FTC requirement — ships with affiliate links (M11) |
 | DQ11 | **Host identity verification** (edu/org email domain, domain-ownership proof, nonprofit/business lookup, Stripe KYC) | 3 | M | 🪝 Gate to claim/publish a listing |
 | DQ12 | **Pre-publication moderation gate** — self-submitted listings reviewed (or auto-approved for verified-domain hosts) before going public | 3 | M | "Public posting" = submit for review, never instant anonymous publish |
-| DQ13 | **Verified-organizer badges + host trust tiers** (curated / claimed / verified — org-level; the "unverified" tier was retired 2026-07-13) | 1 | M | User-facing; extends DQ1 provenance. Public **maintainer attribution** (locked 2026-07-07): "Listing **maintained by** BeeCompete Curation Team" while curated (team-level, never individual staff names) → flips to the host org after claim. Wording rule: **"maintained by," never "managed by"** — no implied operation of/affiliation with the competition (compliance §8) |
+| DQ13 | **Verified-organizer badges + host trust tiers** (curated / claimed / verified — org-level; the "unverified" tier was retired 2026-07-13) | 1 | M | User-facing; extends DQ1 provenance. Public **maintainer attribution** (locked 2026-07-07): "Listing **maintained by** BeeCompete's Curation Team" while curated (wording rev 2026-08-26) (team-level, never individual staff names) → flips to the host org after claim. Wording rule: **"maintained by," never "managed by"** — no implied operation of/affiliation with the competition (compliance §8) |
 | DQ14 | Scam/abuse heuristics (off-platform-payment flags, minor-safety review, progressive host reputation) | 3 | M | Extra scrutiny because users are minors |
 | DQ15 | **"Request a Competition"** — user-submitted new-listing requests → curation queue (canonical label, owner 2026-07-13; supersedes "Suggest a competition"). Route slug stays `/suggest-a-competition` until the R1-15b wizard build. | 1 | S | Complements DQ6 (which covers corrections to *existing* listings only); demand signal feeds seeding priorities (S2) |
 
@@ -238,7 +238,7 @@ judging deep-dive** (`development-process.md` §6a) — the model is shaped by w
 | H21 | Data export (CSV) | 3 | S | |
 | H22 | Sponsor management | Backlog | M | Park |
 | H23 | Tracks / divisions management | 3 | M | 🪝 Schema modeled in P1 (see hooks) |
-| H24 | Stages / rounds management | 3 | M | 🪝 Schema modeled in P1. **R1 limitation (logged 2026-07-14):** an R1 `Edition` carries a single date/fee set and `delivery` is competition-level, so a tiered competition (local→regional→national) can't vary deadlines/costs/delivery per level — those levels are **Stages** under one annual **Edition** (target model, domain-model §8b + glossary), delivered by this hook at Phase 3 (with H23 divisions + H25 advancement). R1 interim: one running = one Edition record + per-level milestones as `KeyDate`s; tier structure in description/FAQ. **Do not** hand-model tiers as separate Editions at R1 |
+| H24 | Stages / rounds management | 3 | M | 🪝 Schema modeled in P1. **R1 limitation (logged 2026-07-14):** an R1 `Edition` carries a single date/fee set and `delivery` is competition-level, so a tiered competition (local→regional→national) can't vary deadlines/costs/delivery per level — those levels are **Stages** under one annual **Edition** (target model, domain-model §8b + glossary), delivered by this hook at Phase 3 (with H23 divisions + H25 advancement). R1 interim: one running = one Edition record + per-level milestones as `KeyDate`s; tier structure in description/FAQ. **Do not** hand-model tiers as separate Editions at R1. **Design intent recorded 2026-08-22** (domain-model §8b): season rollover, level-template instances, locked/defaulted/local field tiers, slot/invite coordination + coverage dashboard, architecture map, structure-first create form |
 | H25 | Qualification / advancement rules | 3 | L | 🪝 Schema modeled in P1; regional→state→national chains. Moved 4→3 (Rev 5): core to the fair wedge |
 | H26 | Blind judging | 4 | M | Anonymized submissions |
 | H27 | Conflict-of-interest / recusal management | 4 | M | Judge COI |

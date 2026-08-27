@@ -8,27 +8,56 @@ import { displayRegionName, isUsCountry, stateCode } from '@/lib/us-states';
 // inside a ~14-day window (blueprints decision #12) with the danger tint only in the final
 // days (owner r8), and the region label. Server + client safe (no imports with side effects).
 
+const COLLEGE_YEARS: Record<number, string> = {
+  13: 'College freshman',
+  14: 'College sophomore',
+  15: 'College junior',
+  16: 'College senior',
+};
+
 export function gradeName(grade: number): string {
   if (grade <= -1) return 'Pre-K';
   if (grade === 0) return 'K';
+  // 13–16 are the four undergraduate years, 17+ is Graduate (owner 2026-08-24 — the single
+  // "College" rung couldn't say whether a competition was freshman-only or open to all four).
+  if (COLLEGE_YEARS[grade]) return COLLEGE_YEARS[grade];
+  if (grade >= 17) return 'Graduate';
   return String(grade);
 }
 
-/**
- * The full grade ladder Pre-K(-1) … 12 (Q2 encoding). Single source shared by the marketplace
- * grade filter and the admin eligibility dropdowns, so both offer the identical grade choices.
- */
-export const GRADE_VALUES: readonly number[] = Array.from({ length: 14 }, (_, i) => i - 1);
+/** Whether a rung carries its own name ("College") instead of reading as "grade N". */
+const namedLevel = (grade: number) => grade >= 13;
 
-/** "Grades 8–10" · "Grades K–5" · "Up to grade 8" · "Grade 9+" · undefined when open. */
+/** Dropdown label: "Grade 8" / "Grade K" for the school rungs, the bare name past them. */
+export function gradeOptionLabel(grade: number): string {
+  return namedLevel(grade) ? gradeName(grade) : `Grade ${gradeName(grade)}`;
+}
+
+/**
+ * The full grade ladder Pre-K(-1) … 12, then the four college years (13–16) and Graduate (17) —
+ * the Q2 encoding, post-high-school rungs activated 2026-08-23 and split into named
+ * undergraduate years 2026-08-24. Single source shared by the marketplace grade filter and the
+ * admin eligibility dropdowns, so both offer the identical choices.
+ */
+export const GRADE_VALUES: readonly number[] = Array.from({ length: 19 }, (_, i) => i - 1);
+
+/**
+ * "Grades 8–10" · "Grades K–5" · "Up to grade 8" · "Grade 9+" · undefined when open. The named
+ * post-HS rungs drop the "grade" wording: "Grades 9–College freshman" · "College freshman+".
+ */
 export function gradeLabel(min: number | null, max: number | null): string | undefined {
   if (min == null && max == null) return undefined;
   if (min != null && max != null) {
-    if (min === max) return `Grade ${gradeName(min)}`;
-    return `Grades ${gradeName(min)}–${gradeName(max)}`;
+    if (min === max) return namedLevel(min) ? gradeName(min) : `Grade ${gradeName(min)}`;
+    return namedLevel(min)
+      ? `${gradeName(min)}–${gradeName(max)}`
+      : `Grades ${gradeName(min)}–${gradeName(max)}`;
   }
-  if (max != null) return `Up to grade ${gradeName(max)}`;
-  return `Grade ${gradeName(min as number)}+`;
+  if (max != null)
+    return namedLevel(max) ? `Up to ${gradeName(max)}` : `Up to grade ${gradeName(max)}`;
+  return namedLevel(min as number)
+    ? `${gradeName(min as number)}+`
+    : `Grade ${gradeName(min as number)}+`;
 }
 
 const RELATIVE_WINDOW_DAYS = 14;
@@ -112,11 +141,11 @@ export function toCardData(item: CompetitionSummary): CompetitionCardData {
     gradeLabel: gradeLabel(item.minGrade, item.maxGrade),
     organizerName: item.organizer?.name,
     organizerVerified: item.organizer?.verificationState === 'verified',
-    summary: item.summary ?? undefined,
+    blurb: item.blurb ?? undefined,
     free: item.costType === 'free',
     regionLabel: regionLabel(item.regions),
     // "Bragging rights" when no prize is on record (sweep item 16) — the footer's bold prize slot
-    // then always renders. A null summary is uncurated, not a guaranteed no-prize; curators fill in
+    // then always renders. A null prize is uncurated, not a guaranteed no-prize; curators fill in
     // a real prize where one exists.
     prizeLabel: item.prizeSummary ?? 'Bragging rights',
     deadlineLabel: deadline?.label,

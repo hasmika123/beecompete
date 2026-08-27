@@ -139,8 +139,10 @@ Legend: ✅ market-standard (we must have) · ⭐ differentiator (few have it; c
 
 ## 7. Adjacent K-12 vertical tools (broad-beachhead relevant)
 
-Because our beachhead is *broad* K-12, these vertical-specific incumbents matter — each owns one
-slice, none spans verticals (our differentiator), and several intersect the educator/chapter angle:
+Because our beachhead is *broad* K-12 — the BEACHHEAD, note, not the audience, which spans
+elementary through grad school since the 2026-08-25 repositioning — these vertical-specific
+incumbents matter: each owns one slice, none spans verticals (our differentiator), and several
+intersect the educator/chapter angle:
 
 - **CTSO Central** (`ctsocentral.com`) — purpose-built for **DECA, FBLA, HOSA, BPA, SkillsUSA, TSA, FCCLA, FFA**: membership, conference registration/payments/housing/check-in, **live electronic judging, custom rubrics, side-by-side scoring, rounds/brackets, online testing**, analytics, API/Zapier. New (off waitlist ~2026). Directly serves the formal-chapter world we anchored the educator angle to.
 - **Tabroom** (`speechanddebate.org/tabroom`) — NSDA-operated, dominant **speech & debate** tournament system (pairings, online ballots, results). **Free to run tournaments**; **NSDA Campus** virtual rooms **$8/room/day** (no observers) / **$14** (with). Directors set entry fees.

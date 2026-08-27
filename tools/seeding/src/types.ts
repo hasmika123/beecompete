@@ -67,7 +67,6 @@ export interface CompetitionPayload {
   logo?: string | null;
   /** Draft only — S4 curators write our own prose (facts aren't copyrightable, prose is). */
   description?: string | null;
-  summary?: string | null;
   categoryId: string;
   tags?: string[] | null;
   participationMode: ParticipationMode;

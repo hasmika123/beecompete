@@ -3,9 +3,13 @@ import {
   ageLabel,
   categoryAttributeRows,
   deadlineFact,
+  displayUrl,
   editionStatusLabel,
+  entryFormatLabel,
+  studentStatusLabel,
   prizeLabel,
   regOpensAt,
+  scopeLabel,
 } from '@/lib/detail-display';
 import type { CompetitionDetail, EditionView } from '@/lib/catalog-types';
 
@@ -162,5 +166,108 @@ describe('categoryAttributeRows', () => {
 
   it('returns nothing for a null bag', () => {
     expect(categoryAttributeRows(null)).toEqual([]);
+  });
+
+  // #108: the contact pair moved to the Logistics tab, so the More bin must stop showing it —
+  // otherwise both tabs render the same two rows.
+  it('drops the judging and logistics keys the designed tabs claim', () => {
+    expect(
+      categoryAttributeRows({
+        fair_levels: ['Regional', 'State'],
+        judging_criteria: 'originality', // Judging tab
+        tie_breakers: 'earliest submission', // Judging tab
+        rules_url: 'https://example.org/rules', // Judging tab, as a link
+        contact_email: 'hello@example.org', // Logistics tab, as a mailto:
+        contact_phone: '+1 206 555 0142', // Logistics tab, as a tel:
+      }),
+    ).toEqual([{ label: 'Fair Levels', value: 'Regional, State' }]);
+  });
+});
+
+// #108. Scope is `Edition.scopeLevel`, public tokens = the lowercased ScopeLevel enum.
+describe('scopeLabel', () => {
+  it('labels every scope token', () => {
+    expect(scopeLabel('international')).toBe('International');
+    expect(scopeLabel('national')).toBe('National');
+    expect(scopeLabel('state')).toBe('Statewide');
+    expect(scopeLabel('regional')).toBe('Regional');
+    expect(scopeLabel('local')).toBe('Local');
+    // Worded apart from DELIVERY_LABELS.virtual ("Online") on purpose — both rows can render
+    // side by side on the Logistics tab.
+    expect(scopeLabel('virtual')).toBe('Online — no fixed region');
+  });
+
+  it('passes an unknown token through rather than rendering blank', () => {
+    expect(scopeLabel('galactic')).toBe('galactic');
+  });
+});
+
+// --- #111 Logistics rows ----------------------------------------------------------------------
+// Participation + team size render as ONE row, so the compose has to hold every mode/bounds combo.
+
+const base = {
+  participationMode: 'both',
+  teamSizeMin: 1,
+  teamSizeMax: 3,
+} as CompetitionDetail;
+
+describe('entryFormatLabel', () => {
+  it('puts the bounds in parentheses after a capitalised mode', () => {
+    expect(entryFormatLabel(base)).toBe('Individual or Team (1–3)');
+    expect(entryFormatLabel({ ...base, participationMode: 'team' } as CompetitionDetail)).toBe(
+      'Team (1–3)',
+    );
+    expect(
+      entryFormatLabel({ ...base, participationMode: 'individual' } as CompetitionDetail),
+    ).toBe('Individual');
+  });
+
+  it('degrades to the bare mode when bounds are absent — never "Team (null)"', () => {
+    const noBounds = { ...base, teamSizeMin: null, teamSizeMax: null } as CompetitionDetail;
+    expect(entryFormatLabel(noBounds)).toBe('Individual or Team');
+    expect(entryFormatLabel({ ...noBounds, participationMode: 'team' } as CompetitionDetail)).toBe(
+      'Team',
+    );
+  });
+
+  it('handles a one-sided bound', () => {
+    expect(
+      entryFormatLabel({ ...base, teamSizeMin: null, teamSizeMax: 4 } as CompetitionDetail),
+    ).toBe('Individual or Team (up to 4)');
+    expect(
+      entryFormatLabel({ ...base, teamSizeMin: 2, teamSizeMax: null } as CompetitionDetail),
+    ).toBe('Individual or Team (2 or more)');
+  });
+});
+
+describe('studentStatusLabel', () => {
+  it('states the requirement rather than answering yes/no', () => {
+    expect(studentStatusLabel(true)).toBe('Required');
+    expect(studentStatusLabel(false)).toBe('Not required');
+  });
+
+  it('omits the row when the key is absent', () => {
+    expect(studentStatusLabel(undefined)).toBeNull();
+    expect(studentStatusLabel(null)).toBeNull();
+  });
+
+  it('falls back to the generic renderer for a non-boolean', () => {
+    // `0022` retyped this key to boolean, so a string here means a stale or hand-edited bag —
+    // show it rather than dropping curated text on the floor.
+    expect(studentStatusLabel('enrolled full-time')).toBe('enrolled full-time');
+  });
+});
+
+describe('displayUrl', () => {
+  it('strips scheme, www and a trailing slash but keeps the whole path', () => {
+    expect(displayUrl('https://www.example.org/challenge/register/')).toBe(
+      'example.org/challenge/register',
+    );
+    expect(displayUrl('http://sub.example.org/a/b?c=d')).toBe('sub.example.org/a/b?c=d');
+  });
+
+  it("never truncates — shortening is the layout's job, so a copied link stays real", () => {
+    const long = `https://example.org/${'a'.repeat(120)}`;
+    expect(displayUrl(long)).toHaveLength(long.length - 'https://'.length);
   });
 });

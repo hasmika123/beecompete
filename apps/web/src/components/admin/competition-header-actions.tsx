@@ -2,12 +2,26 @@
 
 import { useTransition } from 'react';
 import { Button, Restore, Trash, useConfirm, useToast } from '@beecompete/ui';
-import { archiveCompetition, restoreCompetition } from '@/app/admin/competitions/actions';
+import {
+  archiveCompetition,
+  restoreCompetition,
+  setListingStatus,
+} from '@/app/admin/competitions/actions';
+import type { ListingStatus } from '@/lib/admin-types';
 
 // R1-19: a competition has no verification/maintainer control of its own — that's derived from
-// the organizer org (claim the org → all its competitions become host-maintained). Only
-// archive/restore lives here now.
-export function CompetitionHeaderActions({ id, archived }: { id: string; archived: boolean }) {
+// the organizer org (claim the org → all its competitions become host-maintained). Archive/restore
+// plus the §8a lifecycle moves (item 14) live here. Which moves show follows the state machine —
+// the server still validates, this just doesn't offer illegal ones.
+export function CompetitionHeaderActions({
+  id,
+  archived,
+  listingStatus,
+}: {
+  id: string;
+  archived: boolean;
+  listingStatus: ListingStatus;
+}) {
   const [pending, startTransition] = useTransition();
   const { confirm, dialog } = useConfirm();
   const { toast } = useToast();
@@ -22,9 +36,54 @@ export function CompetitionHeaderActions({ id, archived }: { id: string; archive
       }
     });
 
+  // label · next state · needs-confirm. Publish from DRAFT/IN_REVIEW, the pause pair on the rest.
+  const moves: Array<{ label: string; next: ListingStatus; confirmMsg?: string }> = archived
+    ? []
+    : listingStatus === 'PUBLISHED'
+      ? [
+          {
+            label: 'Unlist',
+            next: 'UNLISTED',
+            confirmMsg: 'The listing disappears from the public catalog until you re-list it.',
+          },
+        ]
+      : listingStatus === 'UNLISTED'
+        ? [{ label: 'Re-list', next: 'PUBLISHED' }]
+        : [
+            { label: 'Publish', next: 'PUBLISHED' },
+            ...(listingStatus === 'DRAFT'
+              ? [{ label: 'Submit for review', next: 'IN_REVIEW' as ListingStatus }]
+              : [{ label: 'Send back to draft', next: 'DRAFT' as ListingStatus }]),
+          ];
+
   return (
     <div className="flex flex-wrap items-center gap-2">
       {dialog}
+      {moves.map((move) => (
+        <Button
+          key={move.next}
+          variant={move.next === 'PUBLISHED' ? 'brand' : 'secondary'}
+          size="sm"
+          disabled={pending}
+          onClick={async () => {
+            if (move.confirmMsg) {
+              const okConfirm = await confirm({
+                title: `${move.label} this competition?`,
+                message: move.confirmMsg,
+                confirmLabel: move.label,
+                tone: 'danger',
+              });
+              if (!okConfirm) return;
+            }
+            run(
+              () => setListingStatus(id, move.next),
+              move.label === 'Unlist' ? 'Unlisted' : 'Done',
+            );
+          }}
+        >
+          {move.label}
+        </Button>
+      ))}
       {archived ? (
         <Button
           variant="secondary"

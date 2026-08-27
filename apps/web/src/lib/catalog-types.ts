@@ -22,7 +22,8 @@ export interface CompetitionSummary {
   id: string;
   slug: string;
   name: string;
-  summary: string | null;
+  /** Card blurb — the API's word-boundary truncation of `description` (max 300). */
+  blurb: string | null;
   logo: string | null;
   category: CategoryRef;
   organizer: OrganizerRef | null;
@@ -162,6 +163,8 @@ export interface ResourceView {
   type: string;
   isAffiliate: boolean;
   displayOrder: number;
+  /** Optional card preview art (the resource's own cover/thumbnail URL) — falls back to the type tint. */
+  imageUrl: string | null;
 }
 
 export interface FaqView {

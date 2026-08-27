@@ -37,6 +37,16 @@ export function ImportOriginBadge({ origin }: { origin: 'PIPELINE' | 'USER_REQUE
   );
 }
 
+/**
+ * A listing with no live edition is a ZOMBIE: the readiness gate (domain-model §8a) hides it from
+ * the public catalog, so it is invisible rather than wrong — unfinished work that would otherwise
+ * only be findable by opening each listing. Renders nothing when the flag wasn't computed (null)
+ * or when an edition exists; a badge on every healthy row would be wall-of-sameness.
+ */
+export function MissingEditionBadge({ hasLiveEdition }: { hasLiveEdition: boolean | null }) {
+  return hasLiveEdition === false ? <Badge variant="danger">no edition</Badge> : null;
+}
+
 /** Archived vs live — quick scan column in tables. */
 export function ArchivedBadge({ archivedAt }: { archivedAt: string | null }) {
   return archivedAt ? (
@@ -44,4 +54,31 @@ export function ArchivedBadge({ archivedAt }: { archivedAt: string | null }) {
   ) : (
     <Badge variant="neutral">live</Badge>
   );
+}
+
+const LISTING_VARIANT: Record<string, { variant: BadgeVariant; label: string }> = {
+  DRAFT: { variant: 'outline', label: 'draft' },
+  IN_REVIEW: { variant: 'gold', label: 'in review' },
+  PUBLISHED: { variant: 'verified', label: 'published' },
+  UNLISTED: { variant: 'neutral', label: 'unlisted' },
+};
+
+/**
+ * §8a lifecycle in one glance. Archived wins the slot — an archived listing's stored
+ * listing_status is irrelevant (the gate auto-unlists it), so showing both would imply a
+ * "published but archived" state that cannot exist publicly.
+ */
+export function ListingStatusBadge({
+  listingStatus,
+  archivedAt,
+}: {
+  listingStatus: string;
+  archivedAt: string | null;
+}) {
+  if (archivedAt) return <Badge variant="outline">archived</Badge>;
+  const v = LISTING_VARIANT[listingStatus] ?? {
+    variant: 'outline' as BadgeVariant,
+    label: listingStatus,
+  };
+  return <Badge variant={v.variant}>{v.label}</Badge>;
 }

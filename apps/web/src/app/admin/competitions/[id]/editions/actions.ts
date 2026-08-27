@@ -2,6 +2,12 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import {
+  asPrizeDisplayMode,
+  derivedPrizeFields,
+  parseAwards,
+  withPrizeDisplayMode,
+} from '@/lib/competition-payload';
 import { adminFetch } from '@/lib/admin-api';
 import { DEFAULT_TIMEZONE, zonedWallClockToInstant } from '@/lib/dates';
 import type { Edition, FormState } from '@/lib/admin-types';
@@ -22,15 +28,24 @@ function currency(form: FormData, key: string): string | null {
 }
 
 function buildEdition(form: FormData): Record<string, unknown> {
-  let attributes: unknown = undefined;
+  let attributes: Record<string, unknown> | undefined = undefined;
   const raw = str(form, 'attributes');
   if (raw) {
     try {
-      attributes = JSON.parse(raw);
+      attributes = JSON.parse(raw) as Record<string, unknown>;
     } catch {
       throw new Error('Attributes must be valid JSON.');
     }
   }
+  const awards = parseAwards(str(form, 'awards'));
+  const mode = asPrizeDisplayMode(str(form, 'awardsMode'));
+  const custom = str(form, 'awardsCustom') ?? '';
+  // The display-mode marker rides in the bag beside the rows (cleared when back at default).
+  const bag = withPrizeDisplayMode(
+    awards.length > 0 ? { ...(attributes ?? {}), awards } : { ...(attributes ?? {}) },
+    awards.length > 0 ? mode : 'titles',
+  );
+  const mergedAttributes = Object.keys(bag).length > 0 ? bag : null;
   return {
     cycleLabel: str(form, 'cycleLabel'),
     status: str(form, 'status'),
@@ -38,12 +53,12 @@ function buildEdition(form: FormData): Record<string, unknown> {
     entryFee: num(form, 'entryFee') ?? null,
     currency: currency(form, 'currency'),
     ageCutoffDate: str(form, 'ageCutoffDate') ?? null,
-    prizeSummary: str(form, 'prizeSummary') ?? null,
-    prizeValue: num(form, 'prizeValue') ?? null,
-    prizeCurrency: currency(form, 'prizeCurrency'),
+    // Prize columns are DERIVED from the awards rows (owner 2026-08-23); the rows themselves
+    // merge into the attributes bag beside whatever the raw-JSON field holds.
+    ...derivedPrizeFields(awards, mode, custom),
     scopeLevel: str(form, 'scopeLevel'),
     advancesToEditionId: str(form, 'advancesToEditionId') ?? null,
-    attributes: attributes ?? null,
+    attributes: mergedAttributes,
   };
 }
 

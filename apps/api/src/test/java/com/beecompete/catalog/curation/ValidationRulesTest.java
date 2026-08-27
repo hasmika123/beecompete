@@ -37,7 +37,7 @@ class ValidationRulesTest {
 
 	private CompetitionRequest competition(Short minGrade, Short maxGrade, Short teamMin, Short teamMax) {
 		// organizerName (not id) satisfies the mandatory-organizer rule — the resolve-or-create path.
-		return new CompetitionRequest("amc-10", "AMC 10", null, "Test Org", null, null, null, null, null,
+		return new CompetitionRequest("amc-10", "AMC 10", null, "Test Org", null, null, null, null,
 				UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, teamMin, teamMax, Delivery.IN_PERSON,
 				EntryPathway.INDIVIDUAL, null, minGrade, maxGrade, null, null, CostType.FREE, Recurrence.ANNUAL,
 				null);
@@ -52,7 +52,7 @@ class ValidationRulesTest {
 	void organizerMissingFails() {
 		// Neither organizerOrgId nor organizerName → the mandatory-organizer @AssertTrue fails.
 		CompetitionRequest noOrg = new CompetitionRequest("amc-10", "AMC 10", null, null, null, null, null, null,
-				null, UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, null, null, Delivery.IN_PERSON,
+				UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, null, null, Delivery.IN_PERSON,
 				EntryPathway.INDIVIDUAL, null, (short) 9, (short) 12, null, null, CostType.FREE, Recurrence.ANNUAL,
 				null);
 		assertTrue(hasMessage(V.validate(noOrg), "organizer is required"));
@@ -62,7 +62,7 @@ class ValidationRulesTest {
 	void organizerByIdPasses() {
 		// An organizerOrgId (no name) also satisfies the rule.
 		CompetitionRequest byId = new CompetitionRequest("amc-10", "AMC 10", UUID.randomUUID(), null, null, null,
-				null, null, null, UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, null, null,
+				null, null, UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, null, null,
 				Delivery.IN_PERSON, EntryPathway.INDIVIDUAL, null, (short) 9, (short) 12, null, null, CostType.FREE,
 				Recurrence.ANNUAL, null);
 		assertTrue(V.validate(byId).isEmpty());
@@ -75,9 +75,13 @@ class ValidationRulesTest {
 	}
 
 	@Test
-	void gradeAboveTwelveFails() {
-		// @Max(12): the entity's "13 reserved" comment notwithstanding, 13 is NOT accepted yet (C3).
-		assertFalse(V.validate(competition((short) 9, (short) 13, null, null)).isEmpty());
+	void gradeLadderTopsOutAtGraduate() {
+		// @Max(17) since 2026-08-24: 13-16 are the four college years and 17 is Graduate; 18 is not
+		// a rung. (13/14 meant College/Graduate between 2026-08-23 and the split.)
+		assertTrue(V.validate(competition((short) 9, (short) 13, null, null)).isEmpty());
+		assertTrue(V.validate(competition((short) 13, (short) 16, null, null)).isEmpty());
+		assertTrue(V.validate(competition((short) 16, (short) 17, null, null)).isEmpty());
+		assertFalse(V.validate(competition((short) 9, (short) 18, null, null)).isEmpty());
 	}
 
 	@Test

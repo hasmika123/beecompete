@@ -67,10 +67,12 @@ public class Competition {
 	@Column(columnDefinition = "text")
 	private String description;
 
-	/** Curated 1–2 sentence blurb for the CompetitionCard (clamp-2). Falls back to truncated description. */
-	@Size(max = 300)
-	@Column(length = 300)
-	private String summary;
+	// RETIRED 2026-08-21: `summary` (curated card blurb) is no longer part of the Competition —
+	// the CompetitionCard clamps `description` instead. The competition.summary COLUMN is left in
+	// place, unmapped: migrations are additive-only, and it still feeds the 0007 generated
+	// search tsvector, whose coalesce() handles the NULLs new rows now write. Do not re-add a
+	// mapping; if the column is ever truly dropped, 0007's generated column + GIN index must be
+	// rebuilt in the same migration.
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "category_id", nullable = false)
@@ -106,7 +108,7 @@ public class Competition {
 	@Column(name = "evaluation_type", columnDefinition = "text[]")
 	private List<String> evaluationType;
 
-	/** Grade encoding (Q2, locked): Pre-K −1, K 0, grades 1–12; 13 reserved. */
+	/** Grade encoding (Q2): Pre-K −1, K 0, grades 1–12; 13 College, 14 Graduate (2026-08-23). */
 	@Column(name = "min_grade")
 	private Short minGrade;
 
@@ -145,6 +147,22 @@ public class Competition {
 
 	@Column(name = "archived_at")
 	private Instant archivedAt;
+
+	/**
+	 * Lifecycle (§8a): only PUBLISHED passes the public gate. Defaults to PUBLISHED — the admin
+	 * one-step create and import approve publish directly; DRAFT / IN_REVIEW are opted into.
+	 */
+	@Enumerated(EnumType.STRING)
+	@Column(name = "listing_status", nullable = false, length = 20)
+	private ListingStatus listingStatus = ListingStatus.PUBLISHED;
+
+	/** §8a approval stamp — when this listing FIRST entered PUBLISHED; never cleared by unlisting. */
+	@Column(name = "approved_at")
+	private Instant approvedAt;
+
+	/** NULL until real user ids exist (RBAC R2-7); the admin write log carries WHO until then. */
+	@Column(name = "approved_by")
+	private UUID approvedBy;
 
 	/** Set by Hibernate at insert (so it's non-null right after save, without a reload); the DB now() default remains as a net for raw seed SQL. */
 	@CreationTimestamp
@@ -201,14 +219,6 @@ public class Competition {
 
 	public void setOrganizer(Organization organizer) {
 		this.organizer = organizer;
-	}
-
-	public String getSummary() {
-		return summary;
-	}
-
-	public void setSummary(String summary) {
-		this.summary = summary;
 	}
 
 	public String getOfficialUrl() {
@@ -377,6 +387,30 @@ public class Competition {
 
 	public void setArchivedAt(Instant archivedAt) {
 		this.archivedAt = archivedAt;
+	}
+
+	public ListingStatus getListingStatus() {
+		return listingStatus;
+	}
+
+	public void setListingStatus(ListingStatus listingStatus) {
+		this.listingStatus = listingStatus;
+	}
+
+	public Instant getApprovedAt() {
+		return approvedAt;
+	}
+
+	public void setApprovedAt(Instant approvedAt) {
+		this.approvedAt = approvedAt;
+	}
+
+	public UUID getApprovedBy() {
+		return approvedBy;
+	}
+
+	public void setApprovedBy(UUID approvedBy) {
+		this.approvedBy = approvedBy;
 	}
 
 	public Instant getCreatedAt() {

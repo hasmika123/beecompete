@@ -50,5 +50,6 @@ public class ResourceCurationService {
 		resource.setAffiliate(request.isAffiliate());
 		resource.setAffiliateMeta(request.affiliateMeta());
 		resource.setDisplayOrder(request.displayOrder());
+		resource.setImageUrl(request.imageUrl());
 	}
 }

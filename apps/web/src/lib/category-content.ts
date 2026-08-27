@@ -95,9 +95,21 @@ export function categoryContent(slug: string): CategoryContent | undefined {
   return CATEGORY_CONTENT.find((c) => c.slug === slug);
 }
 
-/** Grade quick-chip bands (blueprints decision #11): coarse one-tap narrowing. */
+/**
+ * Grade quick-chip bands (blueprints decision #11): coarse one-tap narrowing.
+ *
+ * Covers the WHOLE ladder since 2026-08-25 (owner) — college (13–16) and grad school (17) were
+ * missing, so the chips implied a K-12-only catalog that the listings don't match. Ordered
+ * HIGHEST first, also owner-set: the previous elementary-up order put the youngest band in the
+ * position that reads as the default, which is the audience the site is least aimed at.
+ *
+ * Ranges must stay exact (min/max), not overlapping: `marketplace-params` suppresses the grade
+ * chip when a URL's range equals a band's, and a fuzzy range would stop matching.
+ */
 export const GRADE_BANDS = [
-  { key: 'elementary', label: 'Elementary', minGrade: -1, maxGrade: 5 },
-  { key: 'middle', label: 'Middle School', minGrade: 6, maxGrade: 8 },
+  { key: 'grad', label: 'Grad School', minGrade: 17, maxGrade: 17 },
+  { key: 'college', label: 'College', minGrade: 13, maxGrade: 16 },
   { key: 'high', label: 'High School', minGrade: 9, maxGrade: 12 },
+  { key: 'middle', label: 'Middle School', minGrade: 6, maxGrade: 8 },
+  { key: 'elementary', label: 'Elementary', minGrade: -1, maxGrade: 5 },
 ] as const;

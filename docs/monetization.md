@@ -121,7 +121,7 @@ The market is split: **Award Force, Evalato, zFairs take 0%** (and market it lou
 3. **Promoted/featured listings** — Facet 1 lever, Phase 3+.
 4. **Educator/institutional subscriptions** — B2B, Phase 4.
 5. **UGC creator marketplace** rev-share — Phase 4 (moved to make room for the science-fair wedge).
-6. **Affiliate** on curated resources — minor, ongoing.
+6. **Affiliate** on curated resources — minor, ongoing. **Amazon Associates enrolled 2026-08-25**, tag `beecompete-20` (see the decisions log and `owners-manual.md` §3/§9).
 7. **Managed-service upsell** ("we help run your competition") — later, à la Devpost/HackerEarth.
 8. **Entry-fee collection** — 0% platform cut (feature, not revenue).
 
@@ -129,6 +129,7 @@ The market is split: **Award Force, Evalato, zFairs take 0%** (and market it lou
 
 - **Public listing is paid; private hosting is the free tier** (✅ 2026-07-08 — *supersedes* the free-public-listing framing of §2's original table and registry Rev 7's "never tier-gate visibility" guardrail): self-created competitions publish publicly only with a `public_listing` entitlement (included in all paid tiers, Starter+); the free tier = claimed-listing management + capped private competitions (registration, roster, announcements, submissions; participant cap 🔬 TBD). Claiming curated listings stays free; DQ15 self-suggestions get editorial curation only (accepted loophole — curation is our product, not self-serve publishing). Phase-3 launch pricing (charge day one vs. free promo grants) decided at Phase 3; the entitlement gate ships regardless.
 - **Entry-fee cut:** ✅ **0%** (confirmed 2026-07-06).
+- **Affiliate network #1 = Amazon Associates** (enrolled **2026-08-25**; Associate ID / tracking tag **`beecompete-20`**, US store). Access to Associates Central is live, but the application itself is only *reviewed* after we refer qualified sales, and Amazon **withdraws it after 180 days with no qualified sale** (~2027-02-21). That makes tagging Amazon prep-resource links a real, dated task rather than an idle-backlog one — but it does **not** change the guardrail: commissions never influence what we list or how we rank it (`compliance.md` DQ10, the Affiliate Disclosure page). Ops detail in `owners-manual.md` §3/§9.
 - **Participant tiers:** ✅ free = **Participant**; launch package = **Participant+**; premium (deferred) = **Participant²**. Single package at launch.
 - **Science-fair compliance wedge:** ✅ **PRIORITIZED (2026-07-07 — supersedes the 2026-07-06 "hold for Phase 4" decision).** The wedge is now the **anchor of Phase 3**: Host Tools v1 ships science-fair-first (registration + compliance/consent/advancement HC1–HC8 + basic judging H12–H17), targeting the fairs displaced by Scienteer's collapse (TX, AL, LA, ME, MO, VT, VA). Rationale: our own research (`competitive-analysis.md` §5) shows a live, *closing* opening with warm B2B demand — waiting until Phase 4 forfeits it. To make room, the UGC creator marketplace moves to Phase 4. **Non-coding groundwork starts now:** outreach to displaced-state fair directors during Phases 1–2 — plan in `go-to-market.md` §3; the notes feed Gate A (`development-process.md` §6a).
 - **Host prioritization:** ✅ paid add-on (promoted/featured listings), Phase 3+.

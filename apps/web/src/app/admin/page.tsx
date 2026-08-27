@@ -6,13 +6,14 @@ import type { Category, CorrectionProposal, ImportRecord, Page } from '@/lib/adm
 import type { Competition, Organization } from '@/lib/admin-types';
 
 async function counts() {
-  const [competitions, organizations, categories, pendingImports, pendingCorrections] =
+  const [competitions, organizations, categories, pendingImports, pendingCorrections, inReview] =
     await Promise.all([
       adminFetch<Page<Competition>>('/competitions?size=1'),
       adminFetch<Page<Organization>>('/organizations?size=1'),
       adminFetch<Category[]>('/categories'),
       adminFetch<Page<ImportRecord>>('/import-records?status=PENDING&size=1'),
       adminFetch<Page<CorrectionProposal>>('/corrections?status=PENDING&size=1'),
+      adminFetch<Page<Competition>>('/competitions?listingStatus=IN_REVIEW&size=1'),
     ]);
   return {
     competitions: competitions.totalElements,
@@ -20,6 +21,7 @@ async function counts() {
     categories: categories.length,
     pendingImports: pendingImports.totalElements,
     pendingCorrections: pendingCorrections.totalElements,
+    inReview: inReview.totalElements,
   };
 }
 
@@ -57,6 +59,7 @@ export default async function AdminDashboard() {
     { href: '/admin/categories', label: 'Categories', value: data?.categories },
   ];
   const queues = [
+    { href: '/admin/review', label: 'Listings in review', value: data?.inReview },
     { href: '/admin/import-records', label: 'Pending imports', value: data?.pendingImports },
     { href: '/admin/corrections', label: 'Pending corrections', value: data?.pendingCorrections },
   ];

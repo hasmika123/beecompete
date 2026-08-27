@@ -168,7 +168,7 @@ public class CorrectionApplyService {
 				Competition c = competitions.findById(subjectId).orElseThrow(this::subjectGone);
 				yield new CompetitionRequest(c.getSlug(), c.getName(),
 						c.getOrganizer() != null ? c.getOrganizer().getId() : null, null, null,
-						c.getOfficialUrl(), c.getLogo(), c.getDescription(), c.getSummary(),
+						c.getOfficialUrl(), c.getLogo(), c.getDescription(),
 						c.getCategory().getId(), c.getTags(), c.getParticipationMode(), c.getTeamSizeMin(),
 						c.getTeamSizeMax(), c.getDelivery(), c.getEntryPathway(), c.getEvaluationType(),
 						c.getMinGrade(), c.getMaxGrade(), c.getMinAge(), c.getMaxAge(), c.getCostType(),
@@ -184,7 +184,7 @@ public class CorrectionApplyService {
 			case RESOURCE -> {
 				Resource r = resources.findById(subjectId).orElseThrow(this::subjectGone);
 				yield new ResourceRequest(r.getTitle(), r.getUrl(), r.getType(), r.isAffiliate(),
-						r.getAffiliateMeta(), r.getDisplayOrder());
+						r.getAffiliateMeta(), r.getDisplayOrder(), r.getImageUrl());
 			}
 		};
 	}

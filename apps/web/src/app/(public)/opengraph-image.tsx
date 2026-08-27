@@ -6,7 +6,7 @@ import { BrandRow, GOLD, GROUND, INK, MUTED, OG_FONTS, OG_SIZE } from '@/lib/og'
 // Fraunces display headlines, Inter for UI text. The competition detail route overrides this
 // with a per-listing card.
 export const runtime = 'nodejs';
-export const alt = 'BeeCompete: find K-12 academic competitions';
+export const alt = 'BeeCompete: find academic competitions';
 export const size = OG_SIZE;
 export const contentType = 'image/png';
 
@@ -43,8 +43,8 @@ export default function Image() {
             maxWidth: '900px',
           }}
         >
-          Every K-12 academic competition, from math and science to coding and debate, in one
-          curated place.
+          Every academic competition, from math and science to coding and debate, in one curated
+          place.
         </div>
       </div>
 

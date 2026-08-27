@@ -105,8 +105,8 @@ trades a legal position for layout.*
   **Left half:** large bold headline — **"Search. Prepare. Compete."** (owner 2026-08-15, #40;
   supersedes "Search. Compete. Participate." — the last word carries the italic serif accent) —
   with **subtext that carries the value proposition** (owner 2026-07-08): names the audience
-  (K-12 / "your student"), names 2–3 subjects (math, science, debate…), and states the
-  one-place promise. Subtext is **16px** (`text-base`, reduced from 18px — owner 2026-08-15, #40). **Two CTAs** below: primary **"Browse competitions"** → a plain button that
+  (every level, elementary through grad school — was "K-12 / your student" until the 2026-08-25
+  repositioning), names 2–3 subjects (math, science, debate…), and states the one-place promise. Subtext is **16px** (`text-base`, reduced from 18px — owner 2026-08-15, #40). **Two CTAs** below: primary **"Browse competitions"** → a plain button that
   navigates to /competitions (→ M1) — **no dropdown, no panel** (owner 2026-07-09, supersedes the
   hover quick-match panel). Secondary **"Browse by category"** → /categories (owner 2026-08-15,
   #66 — was "How it works" → Page 4, which has been discarded; /articles is a coming-soon stub and
@@ -378,21 +378,40 @@ use **short labels** below sm (#109) and sit on **one row from ~344px up** (#113
   register? Track it" (→ M23).
 
 **3. Main content — left column (majority width)**
-- **a. Tabbed section** — default tab **"Details"** (renamed from "Key Facts & Details", #82),
-  three grouped sub-sections: **Eligibility** (age + cutoff date, how to enter, and the standard
-  eligibility JSONB keys — citizenship / eligible countries / student status — pulled out of the
-  generic bag), **Format & judging** (team size, evaluation, recurrence), **{Category} details**
-  (remaining attributes from the Category Template → X9). Grades/Cost/Format/Delivery deliberately
-  absent — the At-a-glance strip owns them. Eligibility becomes its own TAB once Tier-2 keys are
-  commonly populated (post-seeding call). Second tab: **"About"** (long description). Third tab: **"FAQ" [R1]** (owner
-  2026-07-08) — 3–5 curated per-competition Q&As ("how do I prepare," "can homeschoolers enter,"
-  "when are results announced") rendered with **FAQPage structured data** — the long-tail SEO
-  block on the primary SEO surface.
+- **a. Tabbed section** — tab set **Overview · Logistics · Eligibility · Judging · Awards · FAQ ·
+  More** (owner 2026-08-22, #87 — supersedes the "Details/About" pair and cashes in item 59's
+  reserved-tab intent; **Logistics + More added 2026-08-26, #108**). **Overview** (default): the
+  At-a-glance strip (now incl. a Recurrence item) — the long description moved to the header at
+  #106 and the {Category} details overflow moved to **More** at #108. **Logistics**: an icon
+  ledger, one row per fact — registration link · official site · cost · delivery · every location ·
+  scope · recurrence · format (#111). Covers every field the admin form's `administration` step
+  collects, minus the contact pair, which moved to FAQ. Always shown. **Eligibility**: grades (repeated from the strip — on this tab the strip isn't visible), age +
+  cutoff date, how to enter, and the standard eligibility JSONB keys (citizenship / eligible
+  countries / student status). **Team size left this tab at #108** — it lives on Logistics only.
+  All tabs but FAQ share one `DetailLedger` register since #112, with short fields two-up. **Judging**: evaluation types + the judging catalog info
+  keys (`judging_criteria`, `tie_breakers`, `rules_url` — 2026-08-22 template additions); tab
+  hidden when none are populated. ⚠ catalog INFO only — the judging *system* (H12–H17/H25)
+  stays 🛑 gated behind its Phase-3 deep-dive. **Awards**: the edition's prize summary (upgrades
+  to a real breakdown when H47 Award data exists); hidden when no prize is curated. **FAQ [R1]**
+  (owner 2026-07-08) — 3–5 curated per-competition Q&As rendered with **FAQPage structured
+  data** — the long-tail SEO block on the primary SEO surface; hidden when empty. **More**: the
+  overflow bin — the remaining Category Template attributes (→ X9) as a label rail of free text
+  (#110); hidden when empty. (Tags left for the page header, #109.) The Timeline stays its own layout entity (sidebar / mobile section), NOT a
+  tab. The admin create form's steps mirror this tab set (+ a Timeline step; FAQs stay post-create
+  on the edit page) — #108 tightened that mirror in the other direction too, so the public tab
+  ORDER now follows the form's step order with the overflow bin last, as "Custom fields" is.
 - **b. Resources row** (→ M11) — horizontally scrollable row of resource cards with side scroll
   buttons; each resource (document, video, textbook…) shows a preview image. ⚠ **Affiliate
   disclosure displayed with this row** (→ DQ10).
 - **c. Related competitions** (→ M25) — heading + "See More" right-aligned → filtered /competitions;
-  below, a row of **CompetitionCards**.
+  below, a row of **CompetitionCards**. **Tier-ranked since #109** (owner 2026-08-26): the row aims
+  for a constant 4 cards, picked from the same-category pool ordered by owner priority
+  **category > organizer > grade-band overlap > location**, applied lexicographically (losing a
+  higher-priority match can't be bought back by lower ones); when the category can't fill the row
+  it tops up from an unfiltered newest search. Heading/link name the category only while every
+  card is in it, else "More competitions to explore" → /competitions. Ranking lives in
+  `apps/web/src/lib/related.ts` (pinned by `related.test.ts`); listing-property based, NOT
+  visitor-personalized — that stays R2-15.
 
 **4. Main content — right column (sidebar), top to bottom — sticky on desktop once scrolled**
 *(owner 2026-07-08: the Follow CTA is the page's conversion event; it never leaves view)*
@@ -406,7 +425,7 @@ use **short labels** below sm (#109) and sit on **one row from ~344px up** (#113
   → M6), current/next date emphasized **with an add-to-calendar link (ics + Google Calendar) at
   R1** — no account needed (owner 2026-07-08).
 - **c. Trust & attribution panel** (→ DQ1, DQ13) — trust tier badge · source + confidence · "Last
-  verified …" · **"Listing maintained by BeeCompete Curation Team"** (flips to the host org after
+  verified …" · **"Listing maintained by BeeCompete's Curation Team"** (flips to the host org after
   claim; locked wording — *maintained*, never *managed*).
 - **d. "Claim this Competition" button** (→ H46) — deliberately adjacent to the attribution line
   ("maintained by BeeCompete" + "claim it" = the host-recruitment hook). Reveals a short **Claim
@@ -518,6 +537,8 @@ Landing audience cards, so the digest capture is not lost — only this placemen
 - **Confirmation step** states what happens next ("our curation team reviews suggestions within
   X days") — closing that loop is what makes people submit.
 - Zero-results referrals prefill the first step from the logged query when possible (→ X20).
+- The full structural spec of this wizard is canonized as the reusable **"form stepper"**
+  pattern (→ Named structural patterns, #89) — future multi-question flows reference it by name.
 
 ---
 
@@ -538,6 +559,48 @@ useful instead of dead-ending)*
 - **Always `noindex`**, independent of the global `SEARCH_INDEXING` flag: a private transactional
   endpoint has no business in search results.
 - **No claim variant** — a Claim Request emails the admin inbox and has no opt-in step to confirm.
+
+---
+
+## Named structural patterns *(reusable — reference by name)*
+
+### "Form stepper" *(owner-kept 2026-08-26, #89 — distilled from the discarded "BeeCompete Noir" restyle mockup)*
+
+A **structure-only** pattern for any multi-question ask (a form that would feel long as one page).
+Deliberately color- and typeface-agnostic: when reused, it takes whatever visual system the
+surrounding product has — what is locked here is placement and flow only. The owner liked and kept
+this structure from an otherwise-discarded full-site restyle concept (artifact "BeeCompete Noir",
+2026-08-26); the R1 Request-a-Competition wizard (Page 6) is already the closest built instance.
+
+**Composition (top to bottom, single centered column ~600–640px):**
+
+1. **Page header, centered:** display-size headline (may end in an accent-colored period),
+   one supporting paragraph that says who reviews the submission and what happens after —
+   the trust line lives *above* the form, not at the end.
+2. **Progress row:** small muted text, "Step {n} of {N}" left-aligned, "{pct}%" right-aligned,
+   sitting directly on top of…
+3. **Progress bar:** slim (~5–6px) full-width rounded track, brand-accent fill, width animates
+   on step change. The pair (row + bar) is the pattern's signature — always both, always in
+   this order.
+4. **One question per step:** the question itself is a large heading ("What competition should
+   we add?"), **not** a field label — conversational, ends in a question mark. Below it, one
+   primary field (the final step may group 2–3 short optional fields under one "Anything
+   else?" heading). An optional one-line muted hint sits under the field
+   ("Required. Everything after this is optional.").
+5. **Only step 1 is required.** Every later step is skippable — this is a flow rule, not just
+   copy. Next is never disabled except by the step-1 requirement.
+6. **Nav row, space-between:** quiet text button "← Back" on the left (kept in layout but
+   invisible on step 1 so nothing shifts), primary pill button "Next →" on the right that
+   **morphs into the submit label** ("Submit request") on the last step. No separate
+   review/summary step.
+7. **Success replaces the wizard in place** (same route, no redirect): centered check-mark in a
+   soft ring, "Thanks! …received." heading, one paragraph restating the human-review promise
+   ("reviewed by a human before anything goes live"), then two CTAs — a primary onward action
+   and a secondary reset ("Request another") that returns to step 1 with fields cleared.
+
+**When to reach for it:** any future "big ask" flow — host onboarding, claim-a-listing,
+multi-field feedback, R2 tracker setup. Reference it as **"form stepper"** and this section
+is the spec.
 
 ---
 
@@ -572,7 +635,7 @@ Follow placement (sidebar top) · audience-band position (below how-it-works) ·
 of visual breadcrumb *(superseded 2026-07-08, see below)*.
 
 **2026-07-08 (market/UX review — all owner-selected):**
-1. **Hero:** slogan headline kept; **subtext carries the descriptive value prop** (K-12, named subjects, one-place promise).
+1. **Hero:** slogan headline kept; **subtext carries the descriptive value prop** (audience, named subjects, one-place promise — the audience half said "K-12" until 2026-08-25).
 2. ~~**Quick-match panel:** "Browse competitions" opens an animated Grade + Subject panel on hover/focus → pre-filtered /competitions.~~ **Superseded 2026-07-09** — the Browse button is a plain button that navigates to /competitions; no dropdown/panel (see 2026-07-09 entry below). Per-category entry lives in the hero category strip (decision #3).
 3. ~~**Hero category strip** (horizontal scroll, side buttons) **replaces the full-bleed Category highlight section**.~~ **Superseded 2026-08-15 (#38)** — the strip is removed; per-category entry lives in the nav's Categories link + the Categories index page.
 4. **Relocations:** demo video, stats & imagery grid, and the How It Works timeline move to the new **How It Works page** (nav tab renamed from "About Us"); Landing keeps the admissions-stats value-prop split.
@@ -981,13 +1044,11 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
     (d) **Follow button rides the breadcrumb row** (right-aligned, no vertical cost) → anchors to
     the follow capture panel (#follow-cta), matching the mobile sticky bar; hidden below sm where
     the sticky bar already provides Follow.
-    **Reserved tabs (intent recorded, NOT designed):** the owner wants future tabs for **Judging**
-    (rubric, judges, process) and **Prize breakdown**, and **Eligibility promoted from a Details
-    sub-section to its own tab**. Target tab set: Details · Eligibility · Prizes · Judging ·
-    About · FAQ. ⚠ **Judging is 🛑 gated** (H12–H17/H25, Gate A/B — CLAUDE.md hard stop): no
-    rubric/judge schema, no tab skeleton, nothing until its Phase-3 deep-dive. Prize breakdown =
-    **H47** (sweep plan §15) — build the tab when Award data exists. Eligibility tab = when the
-    Tier-2 keys are commonly populated (post-seeding), simply lifting the existing group.
+    **Reserved tabs — SUPERSEDED by #87 (owner 2026-08-22, §3a):** the tab set shipped as
+    Overview · Eligibility · Judging · Awards · FAQ. The Judging tab renders catalog INFO only
+    (the 2026-08-22 `judging_criteria`/`tie_breakers`/`rules_url` template keys + evaluation
+    types) — the judging *system* (H12–H17/H25, Gate A/B) remains 🛑 gated. Awards renders the
+    existing prize summary and upgrades when **H47** Award data exists.
 60. **One Follow, Share beside it** (owner 2026-08-18, #86): the rail's Follow **disclosure
     button** is gone — the breadcrumb-row Follow is the single trigger — and **Share moved out of
     the byline row onto that same row**. ⚠ The rail panel itself STAYS: it is the anchor target for
@@ -1412,13 +1473,232 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
     trust/claim panel are statements ABOUT this listing, so they read as one block ahead of the two
     outward-linking sections. Desktop is untouched — the rail keeps its source order (Register →
     how-to-enter → Timeline → trust), since these are `max-lg:` variants only.
+87. **Detail page gains Logistics + More tabs** (owner 2026-08-26, #108). Tab set goes from five
+    to seven: **Overview · Logistics · Eligibility · Judging · Awards · FAQ · More**.
+    - **Logistics** (new) is a deliberate **full mirror** of the admin create form's
+      `administration` step, in that step's owner-set 2026-08-23 order: sign-up + cost, delivery +
+      location, scope + recurrence, format + team size, contact email + phone. Owner chose the
+      mirror over a narrower contact-and-scope tab **with the duplication on the table**: Cost,
+      Delivery, Location, Format and Runs also sit in the At-a-glance strip, and the sign-up link
+      is also the sidebar's Register button. The three facts it
+      surfaces for the FIRST time are **Scope** (`Edition.scopeLevel` — rendered nowhere public
+      before), **Contact email** and **Contact phone** (`contact_email`/`contact_phone`, on every
+      category template since `0019`, previously dumped into the overflow bin). Always visible.
+    - **Named "Logistics", not "Administration"** (the admin step's own label): the glossary
+      reserves **Admin / Curator** for internal BeeCompete staff, so an "Administration" tab on a
+      public page collides with the term and reads as staff-facing.
+    - **More** (new) is the overflow bin — `{Category} details` + Tags — moved OUT of Overview,
+      which is now the At-a-glance strip alone. Hidden when the listing has neither. Named "More",
+      not "Details", because #87 retired "Details" when it split into Eligibility + Judging;
+      reusing it would resurrect a dead label with different contents.
+    - **Team size is trimmed off the Eligibility tab** (owner 2026-08-26, same call): it is now
+      EXCLUSIVE to Logistics, which completes the mirror in the other direction — the admin form
+      had already moved participation + team size off its Eligibility step on 2026-08-24. Team
+      size answers "how many enter together", not "who may enter". Grades stay repeated across
+      Overview and Eligibility on purpose; this one deliberately is not.
+    - Contact keys are excluded from the More bin now that Logistics claims them (same mechanism
+      as the eligibility/judging keys). Both contact rows and the sign-up row render as links, so
+      each is validated at the point of use — the attributes bag is untrusted JSONB.
+    - Seven tabs overflow a phone: the underline TabList already scrolls horizontally with a
+      hidden scrollbar and `shrink-0` tabs (verified 375px — scrolls, no wrap, no page-level
+      horizontal scroll).
+88. **Related row goes tier-ranked** (owner 2026-08-26, #109). Supersedes R1's plain
+    same-category-newest pick (§3c). The row targets a constant **4 cards** and ranks the
+    same-category pool by the owner's priority order **category > organizer > grade band >
+    location**, lexicographically: org match (bit 4) > grade overlap (bit 2) > location match
+    (bit 1), so a candidate keeping a higher-priority match always outranks one that lost it.
+    Category is the pool, not a bit — an unfiltered newest top-up runs only when the category
+    can't fill the row, and its cards always rank below every same-category pick. Grade = band
+    overlap with null-as-all-grades (absent data can't cost a slot); location = shared region
+    NAME (summary DTO exposes names) or virtual↔virtual, with in-person-no-regions matching
+    nothing (geography is a claim, absent data must not fake it). No API change: the search has
+    no organizer filter, but the summary DTO carries organizer/grades/regions, so one
+    category fetch (size 50) is scored client-side; at most one top-up fetch follows. Heading
+    and See-more link stay category-branded only while every card is in the category. NOT
+    visitor-personalized — M25/R2-15 unchanged.
+
+89. **"Form stepper" pattern kept from the discarded Noir concept** (owner 2026-08-26; named
+    "Beeline wizard" at first record, renamed by owner the same day). A
+    full-site dark restyle mockup ("BeeCompete Noir", styled after goliathdata.com) was
+    reviewed and discarded — colors, type, and layout all rejected — **except** the structure
+    of its Request-a-Competition wizard, which the owner explicitly kept: centered narrow
+    column, step-count + percent row over a slim accent progress bar, one conversational
+    question-as-heading per step, only step 1 required, Back/Next morphing to submit, in-place
+    success panel with a reset. Recorded structure-only (no palette/typeface) under **Named
+    structural patterns** above so future flows can be requested as "build it as a form
+    stepper".
+
+90. **Tab UI pass: Logistics · Eligibility · More · Contact** (owner 2026-08-26, #110).
+    - **Logistics** drops the flat 10-row grid for a **composed sentence + short ledger**.
+      ⚠ **SUPERSEDED THE NEXT DAY by #111 (entry 91)** — the sentence is gone; every fact is a
+      ledger row. Kept here because the reasoning still explains what the rows are *for*, and
+      because `logisticsSummary` and its phonetic-article handling were deleted, not disabled: do
+      not resurrect them from git without re-reading 91.
+    - **Links show their real address** (owner): the registration link AND the organizer's
+      official site, rendered through `displayUrl` (scheme / `www.` / trailing slash stripped),
+      CSS-ellipsized when they outgrow the row. The href always carries the whole URL, so a
+      copied link is never the shortened form. **Every location is named** — "+2" belongs only in
+      the At-a-glance strip, where a one-line cell has no choice.
+    - **Icons** come from the curated Phosphor set via `packages/ui`, reusing the At-a-glance
+      vocabulary (Ticket = entry, Globe = web, MapPin = place). **Never emoji** (owner).
+      `Phone` was added to `packages/ui/src/icons.ts` for the contact card.
+    - **Eligibility is now ALL rows** (owner) — no tiles, no callouts. The prose catch-all takes
+      the new **`wide` row**: full width, value left-aligned beside its label. Wide rows sort last
+      so the two-up grid above them never breaks mid-flow.
+    - **More** becomes a **label rail**: fixed label column, free-text value beside it. Chosen
+      over chips and cards because the bag is unstructured free text per key — any treatment
+      implying structure would misrepresent the data. Same rail as a `wide` row, so a long value
+      looks identical on either tab.
+    - **Contact moves to the FAQ tab** as a "Still have questions? Ask the organizer" card *after*
+      the questions, in the chip treatment. It renders even when a listing has no curated FAQs
+      (either half alone shows the tab), so the fields never depend on unrelated data. Validation
+      is unchanged and still at the point of use — the bag is untrusted JSONB.
+    - Judging, Awards and Overview were **not** touched in this pass; their options are still open.
+
+91. **Logistics is one ledger, no prose** (owner 2026-08-27, #111). Reverses the sentence half of
+    #110 after seeing it: the composed line is deleted and **every field renders as an icon row in
+    the same register as Register / Official site / Locations** — label column aligned down the
+    tab, value beside it, one hairline between. Rows, in the admin step's owner-set order with the
+    two links leading: **Register · Official site · Cost · Delivery · Locations · Scope · Runs ·
+    Format**.
+    - **Participation + team size collapse into one "Format" row** ("Individual or team of 1–3").
+      A bare "1–3 members" row says nothing without the mode beside it, and splitting them would
+      have needed two near-identical people glyphs. `entryFormatLabel` degrades to the bare mode
+      when no bounds are curated — never "a team of null".
+    - **Every row needs a DISTINCT icon** — two rows sharing a glyph reads as a rendering bug — so
+      a few deliberately depart from the At-a-glance vocabulary: Ticket is the entry there but
+      *registration* here, so cost takes DollarSign, and Globe stays with delivery while the
+      organizer's own site takes Buildings. MapPin, Restore and Users match the strip exactly.
+    - `logisticsSummary`, its adjective maps and the phonetic-article set are **deleted**, not
+      left dormant. Scope no longer needs its `virtual` special case: it is simply a row.
+    - Rows drop individually on absent data (verified: AMC 10 has no official URL and no regions,
+      so those rows are absent and Register falls back to "No registration link yet"). At 375px
+      the long URL ellipsizes inside its cell, labels stay aligned, and nothing forces the page to
+      scroll sideways.
+
+92. **One field register across every tab but FAQ** (owner 2026-08-27, #112). The Logistics
+    ledger becomes THE shape: `DetailLedger` (icon · label column · value, hairline between rows)
+    now renders **Logistics, Eligibility, Judging, Awards and More**. `DefinitionGrid` — the old
+    right-aligned two-up list that could hold neither a paragraph nor a URL — is **deleted**, and
+    `AttrRow` is trimmed to `{label, value}` since presentation moved to the ledger.
+    - **Two columns for short fields only** (owner): a field whose value is bounded by an enum or
+      a short numeric range may pair two-to-a-row — Logistics' cost · delivery · scope · runs ·
+      format, Eligibility's grades · age · how-to-enter · student-status, Awards' "For the
+      running". Everything array-shaped or prose stays full width, because those grow without
+      limit. `compact` is set per FIELD, never by measuring the value: a length heuristic makes
+      the same field jump columns between listings.
+    - **More is one column, always, and has no icons** (owner): its fields are arbitrary Category
+      Template keys holding free text — nothing bounds their length, and no glyph could carry
+      meaning specific enough to earn its place.
+    - ⚠ **Ordering contract:** it is a plain 2-column grid, so a full-width row after an ODD
+      number of compact rows leaves a hole beside the last one. Keep compact fields in contiguous
+      runs and let an odd run fall at the END. Logistics does (5 trailing compacts); Eligibility's
+      run of 4 leads and is even, so the full-width rows after it start clean.
+    - ⚠ **Last-row hairline:** the final visual row differs by breakpoint (one column below sm,
+      two above), and the last item shares its row only when the trailing compact run is EVEN.
+      A first cut that assumed "the item before the last always pairs with it" stripped the border
+      under Logistics' *Runs* while *Scope* beside it kept one — caught in the rendered DOM, not
+      by a test.
+    - Awards **repeats icons on purpose** — Trophy for an award carrying money, Star for one that
+      does not. That is not the duplicate-glyph bug the other tabs guard against: those repeat a
+      glyph across DIFFERENT fields, these are list items of the same kind.
+    - **Overview is deliberately untouched.** The At-a-glance strip is the 10-second answer and a
+      different designed object (#94/#105); converting it would have made five tabs look alike and
+      discarded eight owner passes. Its options remain open.
+
+93. **Ledger tuning pass** (owner 2026-08-27, #113).
+    - **Logistics leads with the two-up fields** — cost | delivery, scope | runs, format — then the
+      full-width rows: register, official site, locations. The tab opens on facts and closes on
+      links. Departs from the admin step field order; coverage is what mirrors that step.
+    - **The ledger now closes its own holes.** #112 asked callers to keep odd-length compact runs
+      at the END, because a full-width row after an odd number of compact ones leaves a gap. That
+      constraint is gone: an odd item whose run is followed by more rows now STRETCHES across both
+      columns to close the row (a compact field that merely ends the list keeps its half width —
+      no hole to close, and one short value spanning full width just looks empty). Callers order
+      fields however reads best. Verified: Logistics renders Format at full width mid-list.
+    - **Eligible countries + Citizenship pair** on Eligibility (owner) — same kind of fact, read
+      best compared side by side. They are the one COMPACT exception to the bounded-value rule:
+      a country list is unbounded, so a long one wraps inside its half column instead of
+      truncating. Revisit this pair if a listing ever ships a dozen countries.
+    - **Awards gets a wide label column** (, w-32/sm:w-52): there the label IS
+      the content — an award name — while the value is a short amount, the inverse of every other
+      tab. Verified at 208px, and no award name wraps.
+    - **More drops its visible "{Category} details" heading** (owner) — the tab strip already says
+      "More". The heading stays as sr-only, matching the other tabs.
+
+94. **Ledger copy + order pass** (owner 2026-08-27, #114).
+    - **Logistics: locations moves above the links.** Order is now the five two-up facts, then
+      Locations, then Register and Official site. The links sit last because they are the only
+      rows that leave the site.
+    - **Student status states the requirement, not a yes/no.** Label "Student status", value
+      **Required / Not required** (was "Student status required — Yes"). The label in
+      ELIGIBILITY_ATTR_LABELS changed with it; studentStatusLabel falls back to the generic
+      renderer for a non-boolean, which changeset 0022 should make impossible but a hand-edited
+      bag could still produce.
+    - **Format reads "Individual or Team (1–3)"** — bounds in parentheses so the mode stays the
+      scannable part, Team capitalised to match Individual since both name a mode. Degrades to the
+      bare mode with no curated sizes; one-sided bounds render "Team (up to 4)" / "Team (2 or
+      more)".
+    - **More gets ONE generic icon** (Tag) on every row. #112 left it icon-free on the grounds
+      that no glyph could describe an arbitrary Category Template key — true, but it made More the
+      one tab whose labels started at a different left edge (verified: all tabs now sit at the
+      same 28px offset from the panel). The repetition is the point: it marks "a curated detail"
+      without claiming to say which. ⚠ Do not map keys to glyphs — the key set is open-ended and
+      per-category.
+
+95. **Awards drops its cycle row; More's marker simplified** (owner 2026-08-27, #115).
+    - **"For the running — 2026–27" is gone.** It was the only non-award row on the tab, and which
+      running the prizes belong to is the page's context rather than a property of the award list.
+      Awards is now strictly what winning is worth.
+      ⚠ Side effect: `edition.cycleLabel` renders NOWHERE on the public page now. If a listing
+      ever carries two live runnings that becomes a real ambiguity — the fix then is a heading on
+      the tab, not a row back in the ledger.
+    - **More's repeated glyph goes Tag → Info.** Tag read as a label/keyword affordance, which
+      these fields are not (the page's actual tags live in the header, #109). Info is the plainest
+      marker in the set — a circle and a stroke — saying "a further detail" without claiming to
+      describe which. The repetition remains the point; do not map keys to glyphs.
+
+96. **At-a-glance strip tuning** (owner 2026-08-27, #116). First change to the Overview strip
+    since #105; the tab itself is otherwise untouched.
+    - **Location drops its "· Hybrid" suffix.** `locationLabel` used to append the delivery mode
+      for hybrid runnings, which duplicated the strip's own Delivery cell two columns away AND
+      pushed the value past the cell's truncation point — a visitor read
+      "Washington, Oregon +2 · Hy…", stacking an ellipsis on top of the "+2" that already means
+      "there are more". The count is the overflow signal; nothing follows it.
+    - **Format reads "Individual or Team"** — capital T, matching `entryFormatLabel` on Logistics
+      (#114). Both name a mode, so both are proper nouns of the taxonomy.
+    - **Uneven columns at sm+**: `1.14fr / 0.72fr / 1.14fr`, because the middle column's three
+      values are always the short ones. The strip renders exactly NINE items in a fixed order and
+      every branch pushes exactly one item per slot, so the column each field lands in is STABLE:
+      left = Category · Registration/Deadline · Location, middle = Grades · Cost · Runs,
+      right = Format · Delivery · Prize. ⚠ Add or make an item conditional and that mapping
+      shifts — re-check the columns before changing the item list.
+    - ⚠ The bare-`fr` version of this bent under content pressure (see 97, which fixed it).
+
+97. **Strip columns hold their ratio at every width** (owner 2026-08-27, #117 — "keep a
+    consistent ratio"). #116 set `1.14fr / 0.72fr / 1.14fr`, but a bare `fr` track is
+    `minmax(AUTO, …fr)`: its floor is the content's min-content width, so one long unbreakable
+    value silently widens its whole column and takes the difference from the others. The Prize
+    line pinned the right column at ~310px and the ratio bent to **216 / 131 / 310** on a 630px
+    panel. Flooring every track at zero — `minmax(0, 1.1fr) / minmax(0, 0.8fr) / minmax(0, 1.1fr)`
+    — holds the proportions exactly: measured **1.37 : 1 : 1.37** at 951px, 725px and 630px panels
+    alike.
+    - **The trade, taken deliberately:** a value too long for its cell now truncates instead of
+      widening its column. In practice that is the Prize line at panels ≤725px, which falls back
+      to the `title` tooltip the strip's one-line design (#91) already provides. Everything else —
+      including Location at "Washington, Oregon +2" — fits at every width tested, and the middle
+      column still clears its longest value ("Grades 9–12") at the narrowest panel.
+    - If the truncated prize ever matters more than the ratio, the fix is NOT to loosen the tracks
+      again: split `prizeLabel` so the cell's value is the amount alone and the summary rides the
+      existing `hint` line, which is what domain note #82 ("the amount LEADS; the summary is its
+      caption") already describes.
 
 ## Status
 | Page | Blueprint | Style prototype | Built |
 |---|---|---|---|
 | Landing | ✅ approved (2026-07-07 · rev 2026-07-09 · hero image-cards rev 2026-07-08 #25–26 · **hero cutout + no category strip rev 2026-08-15 #38** · **full-height hero + value-prop removed rev 2026-08-15 #39** · **hero copy + larger cutout rev 2026-08-15 #40** · **bigger headline + grade quick-links rev 2026-08-15 #41** · **left-column trim/retune/raise rev 2026-08-15 #42** · **headline at width ceiling rev 2026-08-15 #43** · **cutout +7.5% / column raised rev 2026-08-15 #44** · **cutout at height ceiling rev 2026-08-15 #45** · **gap tightened / hero reclaims shell padding rev 2026-08-15 #46** · **gap 16px / headline 112px / opposed spacing rev 2026-08-15 #47** · **header retune + hero at its limits rev 2026-08-15 #48** · **navbar retune / h-14 rev 2026-08-15 #49** · **gold streak + inward cutout rev 2026-08-15 #50** · **full-width navbar + mobile grid fix rev 2026-08-15 #51** · **headline 116px at column ceiling rev 2026-08-15 #52** · **quick-links grade + category rev 2026-08-15 #53** · **coloured category icon rev 2026-08-15 #54** · **on-demand capture panels rev 2026-08-15 #55**) | delegated (#29 — supersedes the round-2 prototype review) | ✅ R1-6b (2026-07-12; digest wiring done R1-15. PR C hero-card image upload is moot under #38; the sourced-stats TODO(owner) is moot under #39) |
 | Competitions (listing) | ✅ approved (2026-07-07 · rev 2026-07-08) | delegated (#29) | ✅ R1-6 (2026-07-12, incl. category hubs #16 + interim /c/ detail stub #30) |
-| Competition details | ✅ approved (2026-07-07 · rev 2026-07-08) | delegated (#29) | ✅ R1-7 (2026-07-12; at-a-glance · tabs+FAQ · key-dates timeline w/ add-to-calendar · trust panel · Event/BreadcrumbList/FAQPage JSON-LD · mobile sticky bar · **resources row + affiliate disclosure (R1-8) + Follow/Claim email capture (R1-15b) — both done**) |
+| Competition details | ✅ approved (2026-07-07 · rev 2026-07-08) | delegated (#29) | ✅ R1-7 (2026-07-12; at-a-glance · tabs+FAQ · key-dates timeline w/ add-to-calendar · trust panel · Event/BreadcrumbList/FAQPage JSON-LD · mobile sticky bar · **resources row + affiliate disclosure (R1-8) + Follow/Claim email capture (R1-15b) — both done** · **Logistics + More tabs #108 2026-08-26**) |
 | How It Works | ✅ approved (2026-07-08) | delegated (#29) | ✅ R1-6b (2026-07-12; demo video placeholder) |
 | Categories (index) | ✅ approved (2026-07-08, may be tuned) | delegated (#29) | ✅ R1-6b (2026-07-12) |
 | Request a Competition | ✅ approved (2026-07-08) | — | ✅ R1-15b (2026-07-17; 5-step wizard → import/curation queue) |

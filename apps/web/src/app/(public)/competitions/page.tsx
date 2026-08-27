@@ -11,9 +11,9 @@ export async function generateMetadata({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }): Promise<Metadata> {
   return pageMetadata({
-    title: 'Browse K-12 Academic Competitions',
+    title: 'Browse Academic Competitions',
     description:
-      'Search and filter curated K-12 academic competitions by grade, category, cost, deadline, and more: math, science, coding, debate, writing, and beyond.',
+      'Search and filter curated academic competitions by grade, category, cost, deadline, and more: math, science, coding, debate, writing, and beyond.',
     path: canonicalPath('/competitions', await searchParams),
   });
 }

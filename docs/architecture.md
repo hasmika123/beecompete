@@ -213,7 +213,7 @@ tooling + audit log) → Phase 2+ (dedup DQ4, conflict resolution DQ5) → Phase
   **regions**, in **one transaction** (`ListingCurationService`, composing the per-record curation
   write paths, so all invariants — attributes template, provenance — still apply). A partial create
   can't leave the "zombie" listing the **readiness gate** (§13b) hides. An **admin-form completeness
-  policy** lives on `CompetitionWithEditionRequest` (`@AssertTrue`s: organizer, summary, description,
+  policy** lives on `CompetitionWithEditionRequest` (`@AssertTrue`s: organizer, description,
   official + registration URL, prize, ≥ 1 region, and ≥ 1 `REG_CLOSE`/`SUBMISSION_DUE` key date
   dated-or-TBD; plus a **cost-aware fee** rule — PAID ⇒ fee > 0 + currency, FREE ⇒ no fee) so a
   manual listing is complete by default — kept HERE, not on the shared `CompetitionRequest`/
@@ -246,8 +246,11 @@ tooling + audit log) → Phase 2+ (dedup DQ4, conflict resolution DQ5) → Phase
   key-date** row editor (indexed `keydate_N_*` fields; wall-clock via `zonedWallClockToInstant`), and
   **`region-picker.tsx`** — a grouped/searchable region tree used by BOTH the create form and the
   edition `RegionTagger`, with soft scope assist (NATIONAL → suggest US, VIRTUAL → suggest
-  Virtual/Online). Regions are pre-seeded (Liquibase `0010`: US + 50 states + DC + ~25 cities +
-  Virtual/Online) so admins pick, not hand-create. Edit mode renders the same `stepDefs` as stacked
+  Virtual/Online). Regions are pre-seeded (Liquibase `0010`: US + 50 states + DC + Virtual/Online
+  + 25 metros, widened to the **top ~1000 US cities** by `0018`, 2026-08-24) so admins pick, not
+  hand-create. Past 25 cities the picker needs the parent to disambiguate — 5 Springfields, 3
+  Columbuses — so `region-select.tsx` renders "Springfield, Missouri" in both the option row and
+  the chip, and matches every whitespace token against name + parent + code ("columbus ohio"). Edit mode renders the same `stepDefs` as stacked
   `FormSection`s (no stepper).
 - **Cover-image upload (R1-19, 2026-07-16):** `POST /api/v1/admin/uploads/cover` returns a short-TTL
   **pre-signed S3 PUT URL** (validates PNG/JPEG/WebP + ≤ 5 MB) so the browser uploads the cover
@@ -399,7 +402,8 @@ tooling + audit log) → Phase 2+ (dedup DQ4, conflict resolution DQ5) → Phase
 
 - **Infra (migration `0007`):** `CREATE EXTENSION pg_trgm` (fine on Neon as DB owner and on the
   postgres:16 test image); a **stored generated `tsvector` column** on `competition` (weighted:
-  name A, tags/summary B, description C — expression wrapped in an IMMUTABLE SQL function because
+  name A, tags B, description C — expression wrapped in an IMMUTABLE SQL function because
+  (the vector still reads a `summary` argument; the column is retired-but-present, see domain-model §7)
   `array_to_string(text[])` is only marked STABLE); GIN indexes on the vector, on
   `lower(name) gin_trgm_ops` (typo tolerance), and on `evaluation_type` (the multi-valued facet
   the domain model reserved for R1-5).

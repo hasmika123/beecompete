@@ -2,9 +2,11 @@ package com.beecompete.catalog.curation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -15,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.beecompete.TestcontainersConfiguration;
 import com.beecompete.platform.web.AdminTokenFilter;
+import com.beecompete.platform.web.CuratorAuditFilter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
@@ -97,7 +100,7 @@ class AdminApiIntegrationTest {
 
 		String goodCompetition = """
 				{"slug": "amc-10", "name": "AMC 10", "categoryId": "%s", "organizerOrgId": "%s",
-				 "summary": "The classic 25-question contest.", "minGrade": 9, "maxGrade": 10,
+				 "description": "The classic 25-question contest.", "minGrade": 9, "maxGrade": 10,
 				 "participationMode": "INDIVIDUAL", "delivery": "IN_PERSON", "entryPathway": "SCHOOL_OR_CHAPTER",
 				 "costType": "PAID", "recurrence": "ANNUAL",
 				 "attributes": {"topics": ["algebra"], "calculator_allowed": false}}
@@ -110,10 +113,13 @@ class AdminApiIntegrationTest {
 				.andReturn().getResponse().getContentAsString();
 		String compId = mapper.readTree(compJson).get("id").asText();
 
-		// Duplicate slug → 409.
+		// Duplicate slug on a CURATED create → suffixed, not rejected: the admin form derives the
+		// slug from the name and has no slug field, so a 409 would be an error with nothing to fix.
+		// (The import-approve path still 409s — see the import queue test.)
 		mvc.perform(withToken(post("/api/v1/admin/competitions")).contentType("application/json")
 						.content(goodCompetition))
-				.andExpect(status().isConflict());
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.slug", is("amc-10-2")));
 
 		// Edition + key date + region tag.
 		String editionJson = mvc.perform(withToken(post("/api/v1/admin/competitions/" + compId + "/editions"))
@@ -250,7 +256,27 @@ class AdminApiIntegrationTest {
 		// The created competition carries provenance = IMPORT with the pipeline's confidence.
 		mvc.perform(withToken(get("/api/v1/admin/competitions").param("query", "MATHCOUNTS")))
 				.andExpect(jsonPath("$.content[0].provenanceSource", is("IMPORT")))
-				.andExpect(jsonPath("$.content[0].provenanceConfidence", is(0.85)));
+				.andExpect(jsonPath("$.content[0].provenanceConfidence", is(0.85)))
+				// This extraction carried no edition, so approve produced a ZOMBIE: hidden publicly by
+				// the readiness gate (§8a). Only this path can make one — the create form posts
+				// /competitions/with-edition, whose edition is @NotNull. The admin list flags it...
+				.andExpect(jsonPath("$.content[0].hasLiveEdition", is(false)));
+
+		// ...and can narrow to exactly those, which is how the debt gets found instead of piling up.
+		mvc.perform(withToken(get("/api/v1/admin/competitions").param("missingEdition", "true")))
+				.andExpect(jsonPath("$.content[*].slug", hasItem("mathcounts")));
+
+		// Archiving removes it from the zombie filter — an archived listing is hidden on PURPOSE,
+		// and letting it linger here would bury the real zombies (found live, 2026-08-25).
+		String zombieList = mvc.perform(withToken(get("/api/v1/admin/competitions").param("query", "MATHCOUNTS")))
+				.andReturn().getResponse().getContentAsString();
+		String zombieId = mapper.readTree(zombieList).get("content").get(0).get("id").asText();
+		mvc.perform(withToken(delete("/api/v1/admin/competitions/" + zombieId))).andExpect(status().isOk());
+		mvc.perform(withToken(get("/api/v1/admin/competitions").param("missingEdition", "true")))
+				.andExpect(jsonPath("$.content[*].slug", not(hasItem("mathcounts"))));
+		// Restore — the slug-collision test downstream depends on this listing existing.
+		mvc.perform(withToken(post("/api/v1/admin/competitions/" + zombieId + "/restore")))
+				.andExpect(status().isOk());
 
 		// Resolve-or-create: approve created the organizer org (CURATED/HOST), inheriting the
 		// import provenance stamp. The organizerName never reached the queue as an org before now.
@@ -272,10 +298,14 @@ class AdminApiIntegrationTest {
 		// Garbage parses to a request full of nulls → approve fails validation, stays PENDING…
 		mvc.perform(withToken(post("/api/v1/admin/import-records/" + badId + "/approve")))
 				.andExpect(status().isUnprocessableEntity());
-		// …and can then be rejected with a note.
+		// …and can then be rejected with a note, which carries WHO rejected it. The curator header
+		// is what the BFF forwards from Cloudflare Access; reviewed_by cannot hold it (UUID,
+		// reserved for a real user id at R2-7), so the note is where a curator sees it today.
 		mvc.perform(withToken(post("/api/v1/admin/import-records/" + badId + "/reject"))
+						.header(CuratorAuditFilter.HEADER, "curator@beecompete.test")
 						.contentType("application/json").content("{\"note\": \"unusable extraction\"}"))
-				.andExpect(jsonPath("$.status", is("REJECTED")));
+				.andExpect(jsonPath("$.status", is("REJECTED")))
+				.andExpect(jsonPath("$.note", is("unusable extraction · by curator@beecompete.test")));
 	}
 
 	@Test
@@ -334,7 +364,7 @@ class AdminApiIntegrationTest {
 		// The RESULTS row is TBD (startsAt null, R1-18) and carries a label.
 		String body = """
 				{"competition": {"slug": "combined-open", "name": "Combined Open",
-				  "categoryId": "%s", "organizerOrgId": "%s", "summary": "One-call create.",
+				  "categoryId": "%s", "organizerOrgId": "%s", "description": "One-call create.",
 				  "description": "A complete-by-default listing created in one call.",
 				  "officialUrl": "https://combined.example.org", "participationMode": "INDIVIDUAL",
 				  "delivery": "VIRTUAL", "entryPathway": "INDIVIDUAL", "costType": "FREE",
@@ -353,6 +383,13 @@ class AdminApiIntegrationTest {
 				.andExpect(jsonPath("$.provenanceSource", is("CURATED")))
 				.andReturn().getResponse().getContentAsString();
 		String compId = mapper.readTree(created).get("id").asText();
+
+		// The counterpart to the import case above: created WITH an edition, so it is browsable and
+		// must never appear under the missing-edition filter.
+		mvc.perform(withToken(get("/api/v1/admin/competitions").param("query", "Combined Open")))
+				.andExpect(jsonPath("$.content[0].hasLiveEdition", is(true)));
+		mvc.perform(withToken(get("/api/v1/admin/competitions").param("missingEdition", "true")))
+				.andExpect(jsonPath("$.content[*].slug", not(hasItem("combined-open"))));
 
 		// The edition, both typed key dates, and the region tag were created alongside.
 		String editions = mvc.perform(withToken(get("/api/v1/admin/competitions/" + compId + "/editions")))
@@ -388,7 +425,7 @@ class AdminApiIntegrationTest {
 		// write (a 422 AFTER bean validation passed), after the competition would have been saved.
 		String rollback = """
 				{"competition": {"slug": "combined-rollback", "name": "Combined Rollback",
-				  "categoryId": "%s", "organizerOrgId": "%s", "summary": "Rollback probe.",
+				  "categoryId": "%s", "organizerOrgId": "%s", "description": "Rollback probe.",
 				  "description": "Must not survive the failed edition write.",
 				  "officialUrl": "https://combined.example.org", "participationMode": "INDIVIDUAL",
 				  "delivery": "VIRTUAL", "entryPathway": "INDIVIDUAL", "costType": "FREE",
@@ -504,7 +541,7 @@ class AdminApiIntegrationTest {
 		String mathId = findBySlug(categories, "math");
 
 		// S3 v1: the payload carries the first edition + typed key dates alongside the competition
-		// fields. DELIBERATELY incomplete by admin-form standards - no organizerOrgId, summary,
+		// fields. DELIBERATELY incomplete by admin-form standards - no organizerOrgId, description,
 		// description, prize, registrationUrl or region. Those are @AssertTrue rules on
 		// CompetitionWithEditionRequest and must NOT reach the import path, or a competition page that
 		// simply doesn't state a prize would be unapprovable. This asserts the leniency, not just the
@@ -699,6 +736,94 @@ class AdminApiIntegrationTest {
 		return mapper.readTree(json).get("id").asText();
 	}
 
+	/**
+	 * §8a lifecycle (item 14): an IN_REVIEW create is invisible on every public surface until
+	 * published from the review queue; publish stamps approved_at exactly once; illegal
+	 * transitions 409. The combined-create test above stays the PUBLISHED-by-default proof.
+	 */
+	@Test
+	@Order(11)
+	void listingLifecycleGatesThePublicCatalog() throws Exception {
+		String categories = mvc.perform(withToken(get("/api/v1/admin/categories")))
+				.andReturn().getResponse().getContentAsString();
+		String mathId = findBySlug(categories, "math");
+
+		// The admin completeness gate wants a RESOLVED organizer + ≥ 1 region — same fixtures the
+		// combined-create test builds.
+		String orgJson = mvc.perform(withToken(post("/api/v1/admin/organizations"))
+						.contentType("application/json")
+						.content("{\"name\": \"Lifecycle Org\", \"type\": \"HOST\"}"))
+				.andReturn().getResponse().getContentAsString();
+		String orgId = mapper.readTree(orgJson).get("id").asText();
+		String regionJson = mvc.perform(withToken(post("/api/v1/admin/regions"))
+						.contentType("application/json")
+						.content("{\"level\": \"COUNTRY\", \"name\": \"Lifecycleland\", \"code\": \"LC\"}"))
+				.andReturn().getResponse().getContentAsString();
+		String regionId = mapper.readTree(regionJson).get("id").asText();
+
+		String body = """
+				{"competition": {"slug": "lifecycle-open", "name": "Lifecycle Open",
+				  "categoryId": "%s", "organizerOrgId": "%s",
+				  "description": "A listing created for review, not direct publish.",
+				  "officialUrl": "https://lifecycle.example.org", "participationMode": "INDIVIDUAL",
+				  "delivery": "VIRTUAL", "entryPathway": "INDIVIDUAL", "costType": "FREE",
+				  "recurrence": "ANNUAL"},
+				 "edition": {"cycleLabel": "2026", "scopeLevel": "NATIONAL",
+				  "registrationUrl": "https://lifecycle.example.org/register", "prizeSummary": "Medals"},
+				 "keyDates": [
+				  {"type": "REG_CLOSE", "startsAt": "2026-12-01T04:59:00Z", "timezone": "America/New_York"}],
+				 "regionIds": ["%s"],
+				 "listingStatus": "IN_REVIEW"}
+				""".formatted(mathId, orgId, regionId);
+		String created = mvc.perform(withToken(post("/api/v1/admin/competitions/with-edition"))
+						.contentType("application/json").content(body))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.listingStatus", is("IN_REVIEW")))
+				.andExpect(jsonPath("$.approvedAt", nullValue()))
+				.andReturn().getResponse().getContentAsString();
+		String id = mapper.readTree(created).get("id").asText();
+
+		// Invisible on every public leg while awaiting review: detail 404s, search omits.
+		mvc.perform(get("/api/v1/competitions/lifecycle-open")).andExpect(status().isNotFound());
+		// The fuzzy search matches sibling test listings named "…Open" — assert THIS slug is
+		// absent, not that the result is empty.
+		mvc.perform(get("/api/v1/competitions").param("query", "Lifecycle Open"))
+				.andExpect(jsonPath("$.content[*].slug", not(hasItem("lifecycle-open"))));
+
+		// The review queue finds it through the listingStatus filter.
+		mvc.perform(withToken(get("/api/v1/admin/competitions").param("listingStatus", "IN_REVIEW")))
+				.andExpect(jsonPath("$.content[*].slug", hasItem("lifecycle-open")));
+
+		// Skipping the state machine — IN_REVIEW straight to UNLISTED — is refused.
+		mvc.perform(withToken(put("/api/v1/admin/competitions/" + id + "/listing-status"))
+						.contentType("application/json").content("{\"status\": \"UNLISTED\"}"))
+				.andExpect(status().isConflict());
+
+		// Approve: publish stamps approved_at, and the listing appears publicly.
+		mvc.perform(withToken(put("/api/v1/admin/competitions/" + id + "/listing-status"))
+						.contentType("application/json").content("{\"status\": \"PUBLISHED\"}"))
+				.andExpect(jsonPath("$.listingStatus", is("PUBLISHED")))
+				.andExpect(jsonPath("$.approvedAt", notNullValue()));
+		// Re-read for the stamp: the publish response serializes the in-memory nanosecond instant,
+		// while Postgres stores microseconds — later reads must match the STORED value.
+		String stored = mvc.perform(withToken(get("/api/v1/admin/competitions/" + id)))
+				.andReturn().getResponse().getContentAsString();
+		String approvedAt = mapper.readTree(stored).get("approvedAt").asText();
+		mvc.perform(get("/api/v1/competitions/lifecycle-open")).andExpect(status().isOk());
+
+		// Unlist: the pause. Public again gone; approved_at NOT cleared…
+		mvc.perform(withToken(put("/api/v1/admin/competitions/" + id + "/listing-status"))
+						.contentType("application/json").content("{\"status\": \"UNLISTED\"}"))
+				.andExpect(jsonPath("$.listingStatus", is("UNLISTED")))
+				.andExpect(jsonPath("$.approvedAt", is(approvedAt)));
+		mvc.perform(get("/api/v1/competitions/lifecycle-open")).andExpect(status().isNotFound());
+
+		// …and re-listing keeps the ORIGINAL stamp (it answers "was this vetted", not "last toggle").
+		mvc.perform(withToken(put("/api/v1/admin/competitions/" + id + "/listing-status"))
+						.contentType("application/json").content("{\"status\": \"PUBLISHED\"}"))
+				.andExpect(jsonPath("$.approvedAt", is(approvedAt)));
+	}
+
 	private String byName(String slug, String name, String catId, String organizerName, String officialUrl,
 			Boolean confirmNewOrganizer) {
 		StringBuilder sb = new StringBuilder();
@@ -714,6 +839,43 @@ class AdminApiIntegrationTest {
 		sb.append(", \"participationMode\": \"INDIVIDUAL\", \"delivery\": \"VIRTUAL\","
 				+ " \"entryPathway\": \"INDIVIDUAL\", \"costType\": \"FREE\", \"recurrence\": \"ANNUAL\"}");
 		return sb.toString();
+	}
+
+	/**
+	 * Slugs are DERIVED from the name now (the admin form has no slug field), so two listings whose
+	 * names reduce to the same slug is an ordinary event, not curator error — and a 409 would leave
+	 * them with no field to fix. Create suffixes instead; UPDATE still refuses, because there the
+	 * slug is a deliberate choice.
+	 */
+	@Test
+	@Order(10)
+	void derivedSlugCollisionsGetSuffixedOnCreateButStillConflictOnUpdate() throws Exception {
+		String categories = mvc.perform(withToken(get("/api/v1/admin/categories")))
+				.andReturn().getResponse().getContentAsString();
+		String mathId = findBySlug(categories, "math");
+
+		String first = mvc.perform(withToken(post("/api/v1/admin/competitions")).contentType("application/json")
+						.content(byName("slug-clash", "Slug Clash", mathId, "Clash Org", null, null)))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.slug", is("slug-clash")))
+				.andReturn().getResponse().getContentAsString();
+
+		// Same derived slug → stored as -2, not rejected.
+		mvc.perform(withToken(post("/api/v1/admin/competitions")).contentType("application/json")
+						.content(byName("slug-clash", "Slug Clash", mathId, "Clash Org", null, null)))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.slug", is("slug-clash-2")));
+		// ...and it keeps counting rather than reusing -2.
+		mvc.perform(withToken(post("/api/v1/admin/competitions")).contentType("application/json")
+						.content(byName("slug-clash", "Slug Clash", mathId, "Clash Org", null, null)))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.slug", is("slug-clash-3")));
+
+		// Update onto a taken slug is still a hard conflict.
+		String firstId = mapper.readTree(first).get("id").asText();
+		mvc.perform(withToken(put("/api/v1/admin/competitions/" + firstId)).contentType("application/json")
+						.content(byName("slug-clash-2", "Slug Clash", mathId, "Clash Org", null, null)))
+				.andExpect(status().isConflict());
 	}
 
 	private String findBySlug(String categoriesJson, String slug) throws Exception {

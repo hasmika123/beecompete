@@ -1,0 +1,97 @@
+# `student_status_required` becomes a BOOLEAN — "is being a student required, yes or no" — instead
+# of the free-text sentence it has been since 0005 (owner 2026-08-26).
+#
+# Why: the key is NAMED for a yes/no question but stored prose, so curators were writing whole
+# eligibility clauses into it ("Enrolled full-time in grades 9–12 at the time of submission.") and
+# the public Eligibility tab rendered them as if they were a typed fact. 0017 already added
+# `other_eligibility_requirements` as the home for exactly that prose — this changeset finishes the
+# split it started: typed fact here, sentences there.
+#
+# ⚠ THE PROSE IS DISCARDED, ON PURPOSE (owner's call when told it could be moved to
+# `other_eligibility_requirements` instead). Recorded here so it is not lost from the repo's
+# history even though it leaves the database — the two LIVE values at migration time were:
+#   mathcounts-competition-series → "middle school student (grades 6-8)"
+#   mock-detail-page              → "Enrolled full-time in grades 9–12 at the time of submission."
+# (four archived `mock-all-fields*` rows carried a copy of the second.) Neon PITR is the only
+# other route back; `rollback: empty` cannot restore them.
+#
+# ⚠ THE DATA CONVERSION IS NOT OPTIONAL. CategoryAttributeValidator validates every write against
+# the template, so the instant the schema says `boolean`, any row still holding a string fails to
+# save — including the 17 PENDING import payloads, which would break on approve rather than on
+# write, i.e. in a curator's face. Schema and data therefore move in ONE changelog file.
+#
+# A stored sentence converts to `true`, never `false`: the key only ever got filled when the
+# organizer stated a student requirement, so its presence IS the yes. An empty/whitespace string
+# is not a "no" either — it is an unanswered field, so the key is removed and the row falls back
+# to "not stated" (the tab omits absent keys).
+#
+# `jsonb_typeof(...) = 'string'` is the guard rather than `attributes ? 'key'` — the `?` operator
+# is eaten by JDBC as a bind placeholder in Liquibase SQL (use jsonb_exists() when you need it).
+# It also makes every changeset idempotent: a second run matches nothing, because the values are
+# booleans by then.
+databaseChangeLog:
+  - changeSet:
+      id: 0022-student-status-boolean-schema
+      author: beecompete
+      comment: Retype student_status_required to boolean on every category template.
+      changes:
+        - sql:
+            comment: The type flip — drives both the admin checkbox and server-side validation.
+            sql: >-
+              UPDATE category_template
+              SET json_schema = jsonb_set(
+                    json_schema,
+                    '{properties,student_status_required}',
+                    '{"type": "boolean"}'::jsonb,
+                    true)
+              WHERE jsonb_typeof(json_schema->'properties') = 'object'
+        - sql:
+            comment: >-
+              Label it as the question it now asks. No placeholder — a checkbox has nothing to
+              placehold, and a stale one would still render in the raw-JSON fallback path.
+            sql: >-
+              UPDATE category_template
+              SET ui_hints = coalesce(ui_hints, '{}'::jsonb)
+                  || jsonb_build_object(
+                       'labels', coalesce(ui_hints->'labels', '{}'::jsonb) || jsonb_build_object(
+                         'student_status_required', 'Student status required'),
+                       'placeholders',
+                         coalesce(ui_hints->'placeholders', '{}'::jsonb) - 'student_status_required')
+      rollback:
+        - empty
+  - changeSet:
+      id: 0022-student-status-boolean-data
+      author: beecompete
+      comment: Convert stored student_status_required prose to booleans (competitions + import queue).
+      changes:
+        - sql:
+            comment: >-
+              Curated listings, archived ones included — an archived row still has to validate if
+              it is ever restored.
+            sql: >-
+              UPDATE competition
+              SET attributes = CASE
+                    WHEN btrim(coalesce(attributes->>'student_status_required', '')) = ''
+                      THEN attributes - 'student_status_required'
+                    ELSE jsonb_set(
+                           attributes, '{student_status_required}', 'true'::jsonb, true)
+                  END
+              WHERE jsonb_typeof(attributes->'student_status_required') = 'string'
+        - sql:
+            comment: >-
+              The import queue's raw extraction payloads (key sits at {attributes,...}). Without
+              this, approving any of the 17 PENDING rows fails validation after the type flip.
+            sql: >-
+              UPDATE import_record
+              SET payload = CASE
+                    WHEN btrim(coalesce(payload->'attributes'->>'student_status_required', '')) = ''
+                      THEN jsonb_set(
+                             payload,
+                             '{attributes}',
+                             (payload->'attributes') - 'student_status_required')
+                    ELSE jsonb_set(
+                           payload, '{attributes,student_status_required}', 'true'::jsonb, true)
+                  END
+              WHERE jsonb_typeof(payload->'attributes'->'student_status_required') = 'string'
+      rollback:
+        - empty

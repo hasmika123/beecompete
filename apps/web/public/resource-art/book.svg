@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="300" viewBox="0 0 200 300">
+  <!-- Generic BOOK cover placeholder (resources-row fallback art). 2:3 jacket, indigo per the
+       resource-type hue convention. Abstract on purpose: real title text would read as a real
+       (wrong) book. -->
+  <rect width="200" height="300" rx="10" fill="#e0e7ff"/>
+  <rect width="200" height="300" rx="10" fill="none" stroke="#c7d2fe" stroke-width="2"/>
+  <!-- spine -->
+  <path d="M0 10 A10 10 0 0 1 10 0 H22 V300 H10 A10 10 0 0 1 0 290 Z" fill="#6366f1"/>
+  <rect x="22" y="0" width="4" height="300" fill="#a5b4fc"/>
+  <!-- emblem -->
+  <circle cx="113" cy="96" r="34" fill="#c7d2fe"/>
+  <path d="M97 108 c0-14 7-26 16-30 c9 4 16 16 16 30 c-5-4-10-6-16-6 c-6 0-11 2-16 6 Z" fill="#4338ca"/>
+  <!-- title bars -->
+  <rect x="55" y="168" width="116" height="12" rx="6" fill="#4338ca"/>
+  <rect x="71" y="192" width="84" height="12" rx="6" fill="#4338ca"/>
+  <!-- author bar -->
+  <rect x="83" y="248" width="60" height="8" rx="4" fill="#818cf8"/>
+</svg>

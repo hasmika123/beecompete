@@ -65,6 +65,8 @@ export type { ProgressRingProps } from './components/progress-ring';
 export { Stepper } from './components/stepper';
 export type { StepperProps, StepperStep } from './components/stepper';
 
+export { FileUpload } from './components/file-upload';
+export type { FileUploadProps } from './components/file-upload';
 export { ImageUpload } from './components/image-upload';
 export type { ImageUploadProps } from './components/image-upload';
 

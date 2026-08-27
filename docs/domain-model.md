@@ -44,7 +44,8 @@ schools" and "sponsorship" as later config, not migrations).
 (participant, cohort, parent views) is aggregated from one append-only `ActivityEvent` stream.
 
 **D6 — Structure is entities, not flags.** Divisions, Rounds, and Advancement are first-class
-records because K-12 competitions are multi-division, multi-round, and multi-level.
+records because academic competitions are routinely multi-division, multi-round, and multi-level —
+K-12 ones especially, and collegiate ones no less.
 
 **D7 — Soft-delete + event-log audit; no temporal tables** *(locked 2026-07-07)*. Curated records
 are **never hard-deleted** (their slugs carry SEO and inbound links): archive via `archived_at` /
@@ -58,8 +59,8 @@ no separate versioning/history tables. User-submitted corrections (DQ6) are rows
 
 | # | Question | Decision |
 |---|---|---|
-| Q1 | **Category set** for launch | A two-level taxonomy (Category → Subcategory), seeded with ~10 top K-12 categories: Math · Science & Engineering · Computer Science/Coding · Robotics · Debate & Speech · Business/Entrepreneurship (CTSO) · Writing & Essay · Arts & Music · Academic Bowl/Quiz · History/Geography/Civics · (+ "Other"). This is **seed config, not schema** — the taxonomy table grows freely. |
-| Q2 | **Grade/age** representation | Store **both**: a normalized **grade range** (`min_grade`/`max_grade`) as the *primary* eligibility/filter axis, and an optional **age range** (`min_age`/`max_age`) for age-gated or international competitions. A Participant has a grade + DOB (→ age). **Encoding locked (2026-07-07):** `smallint` — **Pre-K = −1, K = 0, grades 1–12 = 1–12; 13 = post-high-school (reserved, unused at launch — keeps collegiate expansion migration-free)**. Homeschool/ungraded map to the age-equivalent grade. Age-gated comps filter on age (from DOB); grade-gated on grade. **Profile storage (locked 2026-07-07):** participants store **`grad_year`** as canonical; grade is *derived* (UI asks grade, converts on save) — so profiles never go stale at school-year rollover. |
+| Q1 | **Category set** for launch | A two-level taxonomy (Category → Subcategory), seeded with ~10 top academic-competition categories: Math · Science & Engineering · Computer Science/Coding · Robotics · Debate & Speech · Business/Entrepreneurship (CTSO) · Writing & Essay · Arts & Music · Academic Bowl/Quiz · History/Geography/Civics · (+ "Other"). This is **seed config, not schema** — the taxonomy table grows freely. |
+| Q2 | **Grade/age** representation | Store **both**: a normalized **grade range** (`min_grade`/`max_grade`) as the *primary* eligibility/filter axis, and an optional **age range** (`min_age`/`max_age`) for age-gated or international competitions. A Participant has a grade + DOB (→ age). **Encoding locked (2026-07-07):** `smallint` — **Pre-K = −1, K = 0, grades 1–12 = 1–12; 13–16 = the four undergraduate years (College freshman → College senior), 17 = Graduate** *(post-HS rungs activated 2026-08-23, split into named college years 2026-08-24 by owner — a single “College” rung couldn’t say whether a competition was freshman-only or open to all four; “grade” stays the canonical term, the post-HS rungs are named levels on the same ladder — UI renders them without the “grade” prefix: “Grades 9–College freshman”, “College freshman+”. The 13/14 = College/Graduate encoding held for one day and no row ever used it, so the renumber needed no migration)*. Homeschool/ungraded map to the age-equivalent grade. Age-gated comps filter on age (from DOB); grade-gated on grade. **Profile storage (locked 2026-07-07):** participants store **`grad_year`** as canonical; grade is *derived* (UI asks grade, converts on save) — so profiles never go stale at school-year rollover. |
 | Q3 | **Region** granularity | Structured geo, not free text: **Country → State → County/District → City**, plus a special **"Virtual/Online"**. Each Edition has a `scope_level` (international/national/state/regional/local/virtual) + associated region(s). **`INTERNATIONAL` added 2026-08-20** — the S3 seeding sweep hit ISEF and FIRST Robotics, both genuinely multi-country, and without the token the extractor stored `NATIONAL` for them; it means the *running draws entrants from multiple countries*, not that a US event accepts foreign entrants. No migration: `scope_level` is a `VARCHAR(20)` with no CHECK constraint. US-first ⇒ **State** is the primary filter granularity; District enables chapter scoping. **Multi-region rule locked (2026-07-07):** the region join is **Edition-level** (`EditionRegion`). Test: **one registration = one Edition** — same dates + same registration + same results ⇒ **one** Edition tagged with many regions (e.g., AMC 10 2026 nationwide); operationally distinct regional runnings (own dates/registration/results) ⇒ **separate** Editions (e.g., Dallas vs. Houston regional fairs), linked upward via `advances_to_edition_id` — exactly the advancement chain. A Competition's region facet in search is *derived* from its Editions. **Phase-3 target (§8b):** these per-place runnings are renamed **Stages** under a single annual Edition (not separate Editions); R1 keeps this interim separate-record form. |
 | Q4 | **Division** representation | A generic `Division` per Competition with a name + flexible criteria (grade range and/or skill label). Not hard-coded — each Competition defines its own (Junior/Senior, Novice/Varsity, etc.). A participant maps to a Division at registration. **Placement locked (2026-07-07): `Division` lives on `Competition`** (stable identity across years — needed for history/analytics) with an **`active` flag**; restructures add new rows + deactivate old ones, never edit existing rows. `Registration` **snapshots the resolved division** at registration time, so later definition changes never rewrite past records. No per-Edition division copies. |
 | Q5 | **Round / advancement** | Two mechanisms: **`Round`** = a sequential phase *within* an Edition; **Edition linkage** (`advances_to_edition_id`) = multi-level advancement *across* Editions (school→regional→state→national). `AdvancementRule` (top-N / threshold / judge-selected) attaches to a Round or linkage. Structure is represented at launch; *enforcement* lands with the Phase-3 host tools (H25/HC5 — moved 4→3 by registry Rev 5; designed at Gates A/B). Rules are data, not code. |
@@ -72,7 +73,7 @@ no separate versioning/history tables. User-submitted corrections (DQ6) are rows
 ### 3a. Competition domain
 
 **`Competition`** [P1] — the evergreen entity.
-`id, slug, name, organizer_org_id?, official_url, logo, description, summary?, category_id, tags[],
+`id, slug, name, organizer_org_id?, official_url, logo, description, category_id, tags[],
 participation_mode (individual|team|both), team_size_min?, team_size_max?, delivery
 (in_person|virtual|hybrid), entry_pathway (individual|school_or_chapter|either), evaluation_type[],
 min_grade?, max_grade?, min_age?, max_age?, cost_type (free|paid), recurrence
@@ -83,11 +84,25 @@ only through a school/chapter — filterable, shown in the Details at-a-glance s
 
 > **Standard attributes-bag keys** *(2026-07-08 — conventional JSONB keys, not Spine columns;
 > validated per Category Template where relevant):* `eligible_countries[]`,
-> `citizenship_countries[]`, `student_status_required` (international/eligibility depth) and
-> `syllabus` / `topics[]` (feeds Participant+ practice content + recommender, → P8).
-> ⚠ The three **eligibility keys are slated for JSONB→Spine promotion** (filterable columns) at
+> `citizenship_countries[]`, `student_status_required` (**boolean** since `0022`, owner
+> 2026-08-26 — "must entrants be enrolled students, yes or no"; it was free text until then, and
+> the prose curators had written into it was discarded, not migrated),
+> `other_eligibility_requirements` (international/eligibility depth) and `syllabus` / `topics[]`
+> (feeds Participant+ practice content + recommender, → P8).
+> ⚠ The typed/prose split across those last two is the point: a *fact* about eligibility is a
+> key; a *sentence* about it belongs in `other_eligibility_requirements` (added by `0017` for
+> exactly this reason). Never widen a typed key back into prose to fit one listing.
+> ⚠ The two **country keys are slated for JSONB→Spine promotion** (filterable columns) at
 > Phase 3 with H36 — owner 2026-08-18, plan in `sweep-remediation-plan.md` §16. Until then they
-> render under the detail page Eligibility group (#82) but cannot be filtered on.
+> render under the detail page Eligibility group (#82) but cannot be filtered on. Since
+> 2026-08-23 the admin form's Eligibility tab writes them through typed inputs, and since
+> **2026-08-24 the two country keys are CLOSED vocabularies** — `eligible_countries` is one of
+> United States / Canada / Other, `citizenship_countries` is United States or nothing (owner:
+> free-typed spellings can never be filtered on, so the promotion would have inherited dirty
+> data). Each still stores a one-element array, so the shape is unchanged. The closure is what
+> `other_eligibility_requirements` exists for: the prose catch-all (added 2026-08-24, `0017`,
+> declared on every template) that absorbs what the closed lists can't say — including what a
+> curator meant by "Other". It is deliberately NOT promotion-bound; nothing filters on prose.
 
 **`Edition`** [P1] — one running of a Competition.
 `id, competition_id, cycle_label ("2026"), status (upcoming|open|closed|ongoing|archived),
@@ -119,8 +134,10 @@ never before.)*
 **`Region`** [P1] — `id, parent_id?, level (country|state|county|city|virtual), name, code`
 *(`virtual` level added at R1-1 build, 2026-07-12 — the Q3 special "Virtual/Online" region needs a
 level so virtual Editions can carry a region row. **Seeded** at sweep item 15, 2026-07-16, Liquibase
-`0010`: US + 50 states + DC + ~25 major cities + `Virtual / Online` — so admins pick, not
-hand-create; more (Canada, counties) via admin CRUD. The grouped/searchable admin picker is
+`0010`: US + 50 states + DC + ~25 major cities + `Virtual / Online`; **`0018` (2026-08-24) widened
+the city rung to the top ~1000 US cities** — so admins pick, not hand-create; more (Canada,
+counties) via admin CRUD. City coverage is an ADMIN convenience only: `/api/v1/regions` lists just
+the regions carrying a live listing, so the marketplace filter is unaffected by the seed size. The grouped/searchable admin picker is
 `region-picker.tsx`.)*
 ⚠ **None of this structure survives into the public search projection**: `CompetitionSummary.regions`
 is a flat `string[]` of NAMES — no `level`, no `code` — so the web re-derives both by name matching
@@ -132,6 +149,10 @@ level}`, DTO-only, no migration): **`sweep-remediation-plan.md` §12**, batched 
 **`Resource`** [P1] — curated prep/reference link on a Competition.
 `id, competition_id, title, url, type (book|past_paper|guide|video|other), is_affiliate, affiliate_meta (JSONB), display_order, created_at`
 *(`display_order` added at R1-1 build — the details Resources row is a curated, ordered strip.)*
+*(Affiliate convention, 2026-08-25: the only network so far is **Amazon Associates** — tag
+`beecompete-20`. An Amazon link is stored with the `?tag=beecompete-20` query already on the `url`,
+`is_affiliate = true`, and `affiliate_meta` recording at least `{"network": "amazon", "tag":
+"beecompete-20"}` so the tag can be re-pointed in bulk if the Associate ID ever changes.)*
 
 **`CompetitionFaq`** [P1] — curated per-competition FAQ entry (glossary: **FAQ Entry**; details
 FAQ tab + FAQPage structured data → R1-7; shape decided at R1-1 build, 2026-07-12).
@@ -343,13 +364,80 @@ mine it when each phase opens.)*
 ## 7. Open modeling questions — status (updated 2026-07-07)
 
 **Resolved — locked above, no ambiguity remains:**
-- ✅ **Grade encoding** → Q2: `smallint`; Pre-K = −1, K = 0, grades 1–12 = 1–12; 13 reserved for post-high-school.
+- ✅ **Grade encoding** → Q2: `smallint`; Pre-K = −1, K = 0, grades 1–12 = 1–12; 13–16 = College freshman–senior, 17 = Graduate (post-HS activated 2026-08-23, split into college years 2026-08-24).
 - ✅ **Division placement** → Q4: on `Competition`, `active` flag, snapshot at registration.
 - ✅ **Soft-delete / versioning** → D7: soft-delete (`archived_at`) + `ActivityEvent` diffs + `CorrectionProposal` queue; no temporal/history tables.
 
 - ✅ **Multi-region Editions** → Q3: region join is **Edition-level** (`EditionRegion`); rule = *one registration = one Edition* — same dates/registration/results ⇒ one Edition, many regions; operationally distinct runnings ⇒ separate Editions linked via `advances_to_edition_id`.
 
 **All pre-R1-1 modeling blockers are resolved (2026-07-07) — the R1-1 schema migration is unblocked.**
+
+## 7a. PENDING schema batch — run BEFORE bulk seeding (owner 2026-08-23)
+
+Changes that are **decided but deliberately not yet executed**. Owner is batching them so the
+~200-listing seeding run (`phase-1-plan.md` → R1 content gate) writes data under the FINAL model
+exactly once — re-curating rows written under a superseded shape is the expensive order.
+
+**Gate rule: this batch must be empty (or consciously waived) before S4 bulk curation begins.**
+Add new items here as they are decided; each entry carries enough detail to execute without
+re-deriving the design.
+
+---
+
+### 7a.1 `entry_pathway` → multi-select `entry_pathways` *(decided 2026-08-23, not built)*
+
+**Why.** Entry pathway is genuinely a SET — a competition may accept individual entry *and* school
+entry. The single-value column forced composite tokens (`SCHOOL_OR_CHAPTER`) and a wildcard
+(`EITHER`, renamed `OPEN` by `0016`), i.e. the classic "enum that should be a set". A set expresses
+`{SCHOOL, CHAPTER}` exactly, and **all three composite tokens disappear**: `SCHOOL_OR_CHAPTER`,
+`OPEN`, `EITHER`. "Open to all" becomes all three selected.
+
+**Precedent to mirror exactly — do not invent a new pattern:** `evaluation_type` is already a
+multi-valued facet: `TEXT[]` column (`0002`), GIN index (`0007`), `&&` overlap in
+`CompetitionSearchService`, `@JdbcTypeCode(SqlTypes.ARRAY) List<String>` on the entity, checkbox
+group in the admin form, token validation at the service boundary.
+
+**Migration (next free number, additive-only):**
+1. `addColumn competition.entry_pathways TEXT[]`.
+2. Backfill from `entry_pathway`: `INDIVIDUAL→{INDIVIDUAL}` · `SCHOOL→{SCHOOL}` ·
+   `CHAPTER→{CHAPTER}` · `SCHOOL_OR_CHAPTER→{SCHOOL,CHAPTER}` · `OPEN`/`EITHER`→
+   `{INDIVIDUAL,SCHOOL,CHAPTER}`.
+3. `CREATE INDEX ... USING gin (entry_pathways)` — it is a filter facet, so the index is required,
+   not optional.
+4. `dropNotNullConstraint` on the old `entry_pathway` column, then leave it **dormant and unmapped**
+   — same treatment as retired `competition.summary` (§8 note); precedent for relaxing NOT NULL is
+   `0008` (`key_date.starts_at`). Do NOT drop the column.
+
+**Code to change:**
+- `EntryPathway.java` — reduce to `INDIVIDUAL, SCHOOL, CHAPTER` (or retire the enum in favour of
+  token validation, mirroring `EvaluationTypes`).
+- `Competition.java` — unmap `entryPathway`, add `entryPathways` as an ARRAY column.
+- `CompetitionRequest` · `CompetitionAdminController.CompetitionResponse` · **public**
+  `CatalogPublicController.CompetitionSummary` **and** `CompetitionDetail`: `entryPathway` →
+  `entryPathways` (a **public API contract change** — web is the only consumer and ships in the
+  same build-once-promote image, so no versioning needed, but deploy them together).
+- `CompetitionSearchService` — delete the `pathwayMatches()` match-set helper added 2026-08-23; a
+  single-select filter becomes `entry_pathways && ARRAY[:pathway]`. The whole broader-token
+  problem evaporates.
+- Web: `admin-types.ts` (`ENTRY_PATHWAYS` = 3 tokens) · competition form (Select → Checkbox group,
+  copy the `evaluationType` block verbatim) · `competition-payload.ts` (`multi()` not `str()`) ·
+  `detail-display.ts` (`pathwayLabel` → join a list; drop the legacy keys) · `key-facts.tsx`
+  Eligibility row · `filter-panel.tsx` (keep single-select radio: a user filters by the ONE route
+  they would use).
+- **Seeding pipeline** (`tools/seeding`): `types.ts`, `prompt.ts`, `validate.ts`, `extract.ts` emit
+  `entryPathways` as an array.
+- **Queued import payloads**: ~46 PENDING records carry singular `entryPathway`. Map it in
+  `lib/import-seed.ts` (read either shape) rather than rewriting the stored payloads — same
+  approach as the retired-`summary` handling; a data migration is optional, not required.
+- Tests: API integration tests post `"entryPathway": "…"` in several JSON bodies;
+  `import-seed.test.ts` fixtures.
+
+**Verification checklist:** filter each of the 3 tokens against seeded rows and confirm a
+`{SCHOOL,CHAPTER}` listing appears under BOTH school and chapter · admin form round-trips a
+2-value selection · detail page Eligibility shows both labels · an import approve preserves the
+extracted pathway(s).
+
+---
 
 ## 8. R1-1 as-built notes (2026-07-12 — migrations `0002`/`0003`, `apps/api` catalog module)
 
@@ -379,8 +467,13 @@ The R1-1 catalog schema shipped (12 tables: the §5 catalog set + `CompetitionFa
 
 **Foundation-final additions (owner-approved 2026-07-12, migration `0004`):**
 - **`Organization` built in R1-1** (see §3b note) + real FK on `competition.organizer_org_id`.
-- **`competition.summary`** — curated 1–2 sentence card blurb (clamp-2); falls back to truncated
-  `description` when absent. S4 curation writes both.
+- **`competition.summary`** — ~~curated 1–2 sentence card blurb (clamp-2)~~ **RETIRED 2026-08-21**
+  (owner decision): curators write only `description`, and the CompetitionCard's two-line blurb is
+  derived from it — the public search projection sends `blurb`, a word-boundary truncation to 300
+  chars done server-side in `CatalogPublicController.cardBlurb` (a description runs to 10 000 chars
+  and a search page carries 24 of them). The **column still exists** and is deliberately unmapped:
+  migrations are additive-only, and it is still an argument to `0007`'s generated search tsvector.
+  Dropping it would require rebuilding that generated column + its GIN index in the same migration.
 - **`updated_at`** on all curated content tables (competition, edition, resource, competition_faq,
   category, category_template, organization): sitemap lastmod (R1-10), S5 freshness, audit-lite
   until `ActivityEvent` lands (R2-9).
@@ -396,6 +489,12 @@ The R1-1 catalog schema shipped (12 tables: the §5 catalog set + `CompetitionFa
   `effectiveStatus` on public edition DTOs. v0 rules: curated CLOSED/ONGOING/ARCHIVED stand;
   UPCOMING/OPEN whose deadline (earliest `REG_CLOSE`, fallback earliest `SUBMISSION_DUE`) has
   passed → closed; UPCOMING whose `REG_OPEN` has passed (deadline ahead) → open.
+  **Write side (2026-08-22):** the admin CREATE form no longer asks for a status —
+  `EditionRequest.status` is nullable; null on create seeds the stored value from the same
+  EffectiveStatus rules over the submitted key dates (UPCOMING when there are none), null on
+  update keeps the current value. The per-edition edit page keeps the status select as the
+  curated override for the states dates can't know: CLOSED early (cap reached), ONGOING,
+  ARCHIVED. An import-approve with an extracted `status` still stores it as sent.
 
 **Sweep-remediation as-built (2026-07-13 — migrations `0008`/`0009`; remaining backlog in
 `sweep-remediation-plan.md`):**
@@ -415,8 +514,9 @@ The R1-1 catalog schema shipped (12 tables: the §5 catalog set + `CompetitionFa
 - **Org trust ladder (R1-19, `0009`):** see §3f — trust is org-only (`CURATED → CLAIMED →
   VERIFIED`; `UNVERIFIED` retired, existing rows folded to `CURATED`); competition/edition
   `verification_state` is vestigial, held at the constant `CURATED`, never read.
-- **Validation bounds (server = source of truth; forms mirror):** grades `-1..12` (the entity
-  comment's "13 reserved" is NOT accepted yet — loosening validation later is cheap, owner);
+- **Validation bounds (server = source of truth; forms mirror):** grades `-1..17`
+  (13–16 = the four college years, 17 = Graduate — the reserved post-HS headroom, accepted since
+  2026-08-23 and split into named years 2026-08-24);
   ages `0..25`; team sizes `≥ 1`; cross-field `min ≤ max` on grades/ages/team sizes;
   `entry_fee`/`prize_value` `≥ 0` with ≤ 2 decimals, each requiring its 3-letter uppercase
   ISO-4217 currency; key-date `ends_at > starts_at`. Bean-validation failures return **400**
@@ -459,17 +559,26 @@ now() >= list_at)`.
 **As-built (2026-07-15, no schema):** the `EXISTS(non-archived edition)` clause is now enforced on
 every public read — browse/search/count + grade & category facet counts (`CompetitionSearchService`),
 detail (404 when none), sitemap, category tile counts, landing featured + the live-catalog count
-(`countPublicListings`). `listing_status` is **not** in the predicate yet (that column is Phase-3
-item 14); at R1 the gate + `archived_at` are the whole rule. The source-side fix — combined
-create-competition-with-first-edition (`POST /admin/competitions/with-edition`,
-`ListingCurationService`, one transaction) — makes admin-created listings complete-by-default.
-`approved_at`/`approved_by` deferred to item 14 (owner, 2026-07-15).
+(`countPublicListings`). The source-side fix — combined create-competition-with-first-edition
+(`POST /admin/competitions/with-edition`, `ListingCurationService`, one transaction) — makes
+admin-created listings complete-by-default.
 
-**Columns (migration `0010`, additive):** `competition.approved_at timestamptz NULL`,
-`approved_by uuid NULL` (FK-less, like `organizer_org_id`), `listing_status varchar NOT NULL DEFAULT
-'PUBLISHED'` (enum `DRAFT|PUBLISHED|UNLISTED`). **Backfill** existing rows `listing_status='PUBLISHED'`,
-`approved_at=created_at` (already live + vetted). `archived_at` stays the archive signal; no CHECK
-constraint (enum-as-varchar house rule, §8).
+**As-built (2026-08-25 — item 14 landed, migration `0021`):** `listing_status varchar(20) NOT NULL
+DEFAULT 'PUBLISHED'` (enum `DRAFT|IN_REVIEW|PUBLISHED|UNLISTED` — IN_REVIEW included NOW as the
+curator submit-for-review state; DQ12 reuses it at Phase 3), `approved_at timestamptz NULL`,
+`approved_by uuid NULL` (FK-less; stays NULL until RBAC R2-7 — WHO published is in the admin write
+log). Backfilled `approved_at = created_at`. The public gate now enforces all three legs
+(`archived_at IS NULL AND listing_status='PUBLISHED' AND EXISTS(edition)`) on every surface above,
+plus detail-by-slug (a draft with a guessable slug 404s). Combined create takes an optional
+`listingStatus` (null → PUBLISHED, so import-approve and scripts stay one-step; publish stamps
+`approved_at` once, never re-stamped on re-list). Transitions via
+`PUT /admin/competitions/{id}/listing-status`, validated (`ListingStatus.canTransitionTo`):
+`DRAFT → IN_REVIEW|PUBLISHED`, `IN_REVIEW → PUBLISHED|DRAFT`, `PUBLISHED ⇄ UNLISTED`; archived
+listings must be restored first. **The unified review queue** (`/admin/review`, owner-requested
+2026-08-25) is one page for both decision streams: IN_REVIEW listings (publish/send-back inline)
+and PENDING import records (deep review stays on the import screen). Create form offers
+Publish now / Submit for review / Save as draft — same completeness gate for all three; with no
+roles yet, review is process + audit trail, not permission.
 
 **Deferred seams — design now, build later:**
 - **IN_REVIEW + DQ12** pre-publication review (Phase 3): `approved` becomes the review outcome, and an
@@ -528,5 +637,90 @@ program (different org per regional, ISEF-style) gives each Stage its own owning
 without fragmenting discovery into many listings. (A grouping *above* Competition — a Program/Series
 entity — is a separate future consideration, only if we onboard federated networks.)
 
+
+**Owner decisions 2026-08-22 — structure model confirmed + host-tools design intent.** A full
+pass over alternatives ended with the §8b model REAFFIRMED; the following is binding direction
+for the Phase-3 deep-dives (Gate A/B still design the judging/advancement internals):
+
+- **Alternatives rejected, with reasons (do not reopen without new facts):**
+  (a) *Drop Edition; hosts duplicate the Competition yearly* — rejected: breaks the evergreen
+  slug/SEO asset (N near-identical listings, zero carried page authority), turns cross-year
+  continuity (follows, tracker, results history M33, analytics) into an annual migration chore,
+  and multiplies content upkeep (a description fix must land in N copies). The pain it targets
+  ("rebuild from scratch each year") does not exist: everything reusable — description, cover,
+  resources, practice sets, FAQs — lives on the evergreen Competition and never moves at rollover.
+  (b) *Scope carried on timeline events (KeyDates)* — rejected: a timeline is *sequence* (when);
+  scopes within a season are *parallel instances* (where). Ten regionals are ten simultaneous
+  instances of ONE phase, each with its own registration/fee/results/owner — a scope tag on a
+  KeyDate cannot carry those, and growing it until it can just reinvents Stage in a shape that
+  cannot express 10-feed-1. The timeline *renders* stages as phases (presentation), storage keeps
+  the two axes separate.
+  **"Edition" disappears from the UX, not from storage:** hosts meet "seasons", never the word
+  Edition (status already derives, 2026-08-22; cycle label can default).
+- **Season rollover ("Open next season"):** one click clones the prior Edition's *structure* —
+  level/Stage skeleton, timeline with dates cleared to TBD, fee defaults — under the same
+  Competition. Separate host feature **"Duplicate competition"** exists for genuinely new sibling
+  programs (new identity, new slug); duplication is never the yearly mechanism.
+- **Levels vs. instances; instances are template clones.** A host defines each *level* once
+  (Regional / State / National — rubric + judging info, awards, advancement rule live PER LEVEL);
+  *instances* (the per-place Stages: Dallas, NY…) clone the level template and edit only deltas
+  (venue, date-in-window, local reg URL, local fee if allowed). Ten regionals = one level + ten
+  table rows with a duplicate-row gesture. Assigning an instance's owning org hands that org
+  management of exactly that Stage (federated model, above).
+- **Field governance — every field is locked / defaulted / local:** *locked* = set by the program
+  owner, inherited, immutable below (brand, description, resources, eligibility, level structure,
+  advancement rules, rubric per level); *defaulted* = owner sets, locals may override where policy
+  allows (fee, registration settings, award text at their level); *local* = instance-owner only
+  (venue, exact date, local reg URL, roster, judges). The owner sets **windows, not dates**
+  ("all regionals complete by Mar 15"); locals pick dates inside the window.
+- **Slot/invite coordination:** the owner publishes the season skeleton with expected coverage as
+  *slots* (TX, NY, … or open). Granting a coordinator role (Membership/Role, X5 → R2-7) fires the
+  invite — a dashboard task card + an empty node on the season map; the coordinator's instance
+  arrives pre-filled from the level template; publishing turns the node live. The owner gets a
+  **coverage dashboard** (live / pending / nudge).
+- **Real-time progression:** when an instance posts results, its advancement rule fires and
+  qualifiers appear on the next level's roster automatically ("12 qualifiers arrived from
+  Dallas") — no manual handoff. (Rule *enforcement* = H25/HC5, designed at Gate A/B.)
+- **Architecture map (visual):** the season tree/DAG rendered as a diagram with status coloring —
+  host view shows slots, coverage, and per-node ownership; a simplified participant view shows
+  "you are here → next: State, Apr 2" on the listing.
+- **Per-level awards + judging display:** at Phase 3 the judging catalog info
+  (`judging_criteria`/`tie_breakers`/`rules_url`, today competition-level) and the prize fields
+  (today edition-level) move DOWN to Stage; the public Awards tab renders a per-level breakdown
+  ("Regionals — medals · State — advancement only · National — $10,000 scholarship", → H47) and
+  the Judging tab shows the rubric per round. **R1 interim:** the single free-text
+  `prize_summary` states multi-level prizes in prose ("Medals at regionals; $10,000 at
+  nationals"). A final Stage can be **entry-by-advancement** (non-registrable): no Register
+  button; the listing says "qualify via your state round". Participants register ONCE per season
+  at their entry Stage (the region selector picks the instance); advancement promotes them with
+  no re-registration; the tracker shows one continuous journey.
+- **Structure-first create form:** the add-competition form OPENS by asking the competition's
+  structure — (a) *multi-level tiers* (regional/state/national …), (b) *one location, multiple
+  rounds*, (c) *single event, no rounds* — and the chosen answer shapes the rest of the UI:
+  (c) keeps today's single-running wizard (a lone Stage is implied; the word never appears),
+  (a)/(b) add a Structure step (levels list → per-level sections reusing the standard
+  Overview/Eligibility/Judging/Awards/Timeline panels → instances as a duplicate-friendly table),
+  navigated by the existing stepper rail grown into the season tree. Returning hosts land on
+  "Open next season" or a template (single event / multi-round / multi-region) instead of a blank
+  form. **Admins curating external competitions keep the single-running form** (the R1 interim
+  rule stands — we don't hand-model someone else's regionals).
+
+- **School-restricted entry = ELIGIBILITY; listing visibility is a separate lever (owner
+  2026-08-23).** Competitions restricted to students of specific schools/universities — whether
+  *interschool* (a five-school math league) or *intraschool* (owner clarification: even
+  single-institution events are sometimes restricted to a set of universities) — are modeled as
+  an **enrollment restriction**: a structured "must be enrolled at one of: […]" list referencing
+  `Organization(type=school)` rows, enforced at registration by the **H36 eligibility pre-screen**.
+  Phase 3, alongside the JSONB→Spine promotion (sweep §16): enforcement needs verified school
+  affiliation on `ParticipantProfile`, which is COPPA-sensitive and belongs in that deep-dive —
+  no free-text stand-in field before then. ⚠ `student_status_required` is **not** that stand-in
+  and no longer can be: it became a plain boolean at `0022` (owner 2026-08-26), so it records only
+  *whether* enrolment is required, never *where*. A listing that needs to state the restriction in
+  words uses `other_eligibility_requirements`, display-only, with no enforcement implied. **Visibility** (public / unlisted / private listings) is a
+  *separate* Phase-3 host-tools item: it answers *who can find it*, never *who may register*, and
+  the two compose — an interschool league lists publicly WITH an enrollment restriction so its
+  schools' students discover it; a school-internal event may be unlisted AND restricted. Do not
+  conflate the levers: restricting visibility is never the mechanism for restricting entry.
+
 Cross-ref: Q3 (region granularity) · §8a (lifecycle) · registry H24 (stages/rounds) / HC5
-(advancement) · glossary (Edition / Stage / Round / Advancement).
+(advancement) · H36 (eligibility pre-screen) · glossary (Edition / Stage / Round / Advancement).

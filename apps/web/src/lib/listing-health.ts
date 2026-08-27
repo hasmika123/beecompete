@@ -24,7 +24,6 @@ export function listingHealth(
   const liveEditions = editions.filter((e) => e.archivedAt == null);
   return [
     { key: 'organizer', label: 'Organizer attributed', ok: competition.organizerOrgId != null },
-    { key: 'summary', label: 'Card summary written', ok: Boolean(competition.summary) },
     { key: 'description', label: 'Full description written', ok: Boolean(competition.description) },
     { key: 'edition', label: 'At least one active edition', ok: liveEditions.length > 0 },
     {

@@ -2,6 +2,7 @@ package com.beecompete.catalog.curation;
 
 import com.beecompete.catalog.domain.Competition;
 import com.beecompete.catalog.domain.Edition;
+import com.beecompete.catalog.domain.EditionStatus;
 import com.beecompete.catalog.domain.Provenance;
 import com.beecompete.catalog.repository.CompetitionRepository;
 import com.beecompete.catalog.repository.EditionRepository;
@@ -33,7 +34,10 @@ public class EditionCurationService {
 	public Edition create(UUID competitionId, EditionRequest request, Provenance stamp) {
 		Competition competition = competitions.findById(competitionId).orElseThrow(
 				() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "competition not found"));
-		Edition edition = new Edition(competition, request.cycleLabel(), request.status(), request.scopeLevel());
+		// Null status = not curated — start UPCOMING; the caller may refine it from key dates
+		// (ListingCurationService) and the read path renders effective status regardless.
+		Edition edition = new Edition(competition, request.cycleLabel(),
+				request.status() != null ? request.status() : EditionStatus.UPCOMING, request.scopeLevel());
 		apply(edition, request, stamp);
 		return editions.save(edition);
 	}
@@ -43,7 +47,9 @@ public class EditionCurationService {
 		Edition edition = editions.findById(id).orElseThrow(
 				() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "edition not found"));
 		edition.setCycleLabel(request.cycleLabel());
-		edition.setStatus(request.status());
+		if (request.status() != null) { // null = keep — an update that doesn't curate the status
+			edition.setStatus(request.status());
+		}
 		edition.setScopeLevel(request.scopeLevel());
 		apply(edition, request, stamp);
 		return edition;

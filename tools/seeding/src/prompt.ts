@@ -1,4 +1,5 @@
-import { CATEGORY_SLUGS } from './categories.ts';
+import { CATEGORY_SLUGS, CATEGORY_TEMPLATES, type CategorySlug } from './categories.ts';
+import type { TemplateMap } from './templates.ts';
 import {
   COST_TYPES,
   DELIVERIES,
@@ -21,7 +22,73 @@ import {
  *   3. TBD BEATS A GUESS — an unknown date is emitted as null, never estimated. A wrong deadline
  *      on a minors-facing catalog can cost a student a real entry.
  */
-export function buildSystemPrompt(): string {
+/** A JSON Schema property rendered as the short type label the prompt uses. */
+function typeLabel(schema: Record<string, unknown>): string {
+  const t = schema.type;
+  if (t === 'array') {
+    const items = schema.items as Record<string, unknown> | undefined;
+    return `${typeLabel(items ?? { type: 'string' })}[]`;
+  }
+  if (t === 'integer' || t === 'number') return 'integer';
+  if (t === 'boolean') return 'boolean';
+  if (schema.format === 'uri') return 'absolute URL string';
+  if (schema.format === 'email') return 'email string';
+  return 'string';
+}
+
+function renderKeys(props: Record<string, unknown>, keys: string[]): string {
+  return keys.map((k) => `${k} (${typeLabel(props[k] as Record<string, unknown>)})`).join(', ');
+}
+
+/**
+ * The `attributes` section, GENERATED from the Category Templates rather than hand-written.
+ *
+ * Why generated: the hand-written version named example keys for three categories out of eleven
+ * and never mentioned the judging or contact keys at all, so eight categories' facts and six
+ * universal ones were simply never extracted — silently, because templates are
+ * `additionalProperties: true` and an absent key is not an error. Deriving the text from
+ * categories.ts means adding a key to a template is enough to start extracting it.
+ */
+function renderAttributeGuidance(templates: TemplateMap): string {
+  const base = templates.other.properties as Record<string, unknown>;
+  const standardKeys = Object.keys(base);
+  const perCategory = (CATEGORY_SLUGS as CategorySlug[])
+    .map((slug) => {
+      const props = (templates[slug]?.properties ?? {}) as Record<string, unknown>;
+      const own = Object.keys(props).filter((k) => !standardKeys.includes(k));
+      return own.length ? `    ${slug}: ${renderKeys(props, own)}` : null;
+    })
+    .filter(Boolean)
+    .join('\n');
+
+  return `- attributes (object|null): the facts the page states, keyed by our Category Template.
+  STANDARD KEYS — valid in EVERY category, use them whenever the page states the fact:
+    ${renderKeys(base, standardKeys)}
+  Notes on the ones that are easy to get wrong:
+    * student_status_required is a BOOLEAN — true only when the page says entrants must be
+      enrolled students. The WORDING of the rule goes in other_eligibility_requirements, never here.
+    * other_eligibility_requirements is the catch-all for eligibility rules the typed fields above
+      cannot express ("must have qualified at a regional", "member schools only").
+    * judging_criteria is an ARRAY of short factual criteria ("originality", "scientific method"),
+      NOT a paragraph. tie_breakers is prose. rules_url is the official rules/rubric page.
+    * contact_email / contact_phone: the organizer's PUBLIC contact for entrants, when stated.
+  CATEGORY-SPECIFIC KEYS — use ONLY the line matching the categorySlug you chose:
+${perCategory}
+  If the page states a significant fact that fits NO key above, you MAY add your own key: short
+  snake_case name, a scalar / string[] value, factual. Prefer an existing key over inventing a
+  near-duplicate (do not add "contact" when contact_email fits), and mention any invented key in
+  reviewerNotes so a curator can promote it or fold it in.
+  Only include a key when the page actually states the fact. Never guess.`;
+}
+
+/**
+ * @param templates the Category Templates this run resolved — the SERVER's copy on a normal run,
+ * the checked-in mirror offline (see templates.ts). Defaulted so tests and one-off calls stay
+ * simple; the pipeline always passes the resolved map.
+ */
+export function buildSystemPrompt(
+  templates: TemplateMap = CATEGORY_TEMPLATES as TemplateMap,
+): string {
   return `You are a data-extraction assistant for BeeCompete, a catalog of K-12 academic competitions.
 Given the text of a competition's OFFICIAL web page(s), extract STRUCTURED FACTS into a single JSON
 object. You capture facts only — you never invent, embellish, or copy marketing prose.
@@ -46,7 +113,6 @@ Return ONLY a JSON object with this exact top-level shape (no markdown, no comme
 - officialUrl (string|null): the canonical official URL for the competition.
 - logo (string|null): absolute URL of the logo image if clearly present, else null.
 - description (MUST be null): do NOT write a description. Human curators write our own prose later.
-- summary (string|null): leave null unless the page states a one-line factual tagline; never marketing copy.
 - categoryId: OMIT this — you output categorySlug instead (see below); the tool resolves the id.
 - categorySlug (string, REQUIRED): the single best-fit category, one of:
   ${CATEGORY_SLUGS.join(', ')}.
@@ -62,12 +128,7 @@ Return ONLY a JSON object with this exact top-level shape (no markdown, no comme
 - minAge / maxAge (integer|null): only if the page gives ages rather than (or in addition to) grades.
 - costType (REQUIRED): ${COST_TYPES.join(' or ')} — FREE if there is no entry fee, else PAID.
 - recurrence (REQUIRED): one of ${RECURRENCES.join(', ')} — ANNUAL if it runs yearly.
-- attributes (object|null): category-specific facts. Standard keys usable in ANY category:
-  eligible_countries (string[]), citizenship_countries (string[]), student_status_required (string),
-  syllabus (string), topics (string[]). Category-specific keys are allowed and encouraged when the
-  page states them (e.g. math: calculator_allowed boolean, proof_based boolean; writing-essay:
-  word_limit integer, genres string[]; robotics: league/kit_platform/game_title strings).
-  Only include a key when the page actually states the fact. Never guess.
+${renderAttributeGuidance(templates)}
 
 ## edition + key dates (the competition's CURRENT or NEXT running)
 A listing is only useful with a running attached, so also fill these INSIDE "payload":
@@ -112,6 +173,14 @@ A listing is only useful with a running attached, so also fill these INSIDE "pay
 - If no timezone is stated, leave timezone null rather than assuming one.
 - Emit a REG_CLOSE or SUBMISSION_DUE row whenever the page implies a closing date exists, even when
   the date itself is TBD — that row is what the public card and search read as the deadline.
+- **A milestone that is not one of the listed types is NOT dropped — emit it as CUSTOM with a short
+  factual label.** The five named types cover the common shape of a competition, not every one:
+  qualifying and regional rounds, awards ceremonies, mandatory information sessions, team-formation
+  or intent-to-enter deadlines, project-plan approvals, shipping/mailing deadlines and finals week
+  all belong on the timeline as CUSTOM rows. Label them the way the page names them ("Regional
+  qualifier", "Awards ceremony", "Research plan due"), 2-4 words, no sentences. Every date rule
+  above applies unchanged — a CUSTOM milestone you cannot date is still startsAt: null, never a
+  guess. ROUND_START exists for a competition round proper; use CUSTOM when nothing else fits.
 
 ## rules
 - Output valid JSON only. Use null (not empty strings) for unknown scalar fields; omit unknown attribute keys.

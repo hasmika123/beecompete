@@ -22,6 +22,9 @@
       <encoder class="net.logstash.logback.encoder.LogstashEncoder">
         <includeMdcKeyName>traceId</includeMdcKeyName>
         <includeMdcKeyName>spanId</includeMdcKeyName>
+        <!-- Who made an admin write (CuratorAuditFilter) — the allow-list is opt-in, so an
+             un-listed MDC key is silently dropped from prod JSON logs. -->
+        <includeMdcKeyName>curator</includeMdcKeyName>
         <customFields>{"service":"beecompete-api"}</customFields>
       </encoder>
     </appender>

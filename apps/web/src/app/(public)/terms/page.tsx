@@ -39,7 +39,7 @@ export function generateMetadata(): Metadata {
   return pageMetadata({
     title: 'Terms of Use',
     description:
-      'The terms for using BeeCompete, a free browse-only catalog of K-12 academic competitions. We list competitions run by third-party organizers; registration always happens on the organizer’s official site.',
+      'The terms for using BeeCompete, a free browse-only catalog of academic competitions. We list competitions run by third-party organizers; registration always happens on the organizer’s official site.',
     path: '/terms',
   });
 }
@@ -50,7 +50,7 @@ export default function TermsOfUsePage() {
       title="Terms of Use"
       icon={Scales}
       currentPath="/terms"
-      summary="These terms govern your use of BeeCompete, a free catalog that helps you discover K-12 academic competitions run by other organizations. Please read them: by using the site, you agree to them."
+      summary="These terms govern your use of BeeCompete, a free catalog that helps you discover academic competitions run by other organizations. Please read them: by using the site, you agree to them."
       sections={SECTIONS}
     >
       <LegalSection id="acceptance" heading="Agreement to these terms">

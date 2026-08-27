@@ -18,7 +18,7 @@ manageable with good defaults built in from day one (which our architecture alre
 | Regime | What it is | What we must do | Kicks in |
 |---|---|---|---|
 | **COPPA** (+ 2025 amended Rule) | US federal law for under-13 online data | Verifiable **parental consent** before collecting a child's data; clear privacy policy; **data minimization**; parental rights to review/delete; **data-retention limits**; separate consent for any third-party/ad disclosure; reasonable security. | Whenever accounts/PII exist (R2+) |
-| **State student-privacy laws** (e.g., California **SOPIPA**, ~130+ state laws) | Restrict K-12-directed online services | **No selling student data. No targeted advertising to students. No profiling** except for the service itself. | Always (we're K-12-directed) |
+| **State student-privacy laws** (e.g., California **SOPIPA**, ~130+ state laws) | Restrict K-12-directed online services | **No selling student data. No targeted advertising to students. No profiling** except for the service itself. | **Always — we comply regardless.** SOPIPA reaches services "designed and marketed for K-12 school purposes"; since 2026-08-25 we describe ourselves as a general-audience catalog spanning elementary through grad school, which makes applicability a question for counsel rather than a given. The posture does not move: K-12 students are a real part of the audience, and none of these prohibitions cost us anything we wanted to do. |
 | **CA Age-Appropriate Design Code** (emerging; modeled on UK Children's Code) | Design duties for services minors access | High-privacy defaults, DPIAs, no dark patterns, age-appropriate design. Partially litigated but signals direction. | Design from the start |
 
 **Practical implication:** the "no selling / no targeted ads to students" rule (SOPIPA-style) is why our **privacy-first, no-ad-tracking analytics** decision isn't just nice-to-have — it's compliance-aligned. And COPPA is why **parent-linked accounts + consent gating** are foundation hooks, not afterthoughts.
@@ -70,7 +70,7 @@ Any future exception (e.g., judge clarifications) must be org-visible, logged, a
 
 | Regime | What we must do | Kicks in |
 |---|---|---|
-| **FTC endorsement / affiliate disclosure** | Clear, conspicuous **affiliate disclosure** (DQ10) wherever affiliate links appear. | R1 (affiliate links) |
+| **FTC endorsement / affiliate disclosure** | Clear, conspicuous **affiliate disclosure** (DQ10) wherever affiliate links appear. Our first (and so far only) network is **Amazon Associates** (enrolled 2026-08-25, tag `beecompete-20`), whose Operating Agreement imposes its own required sentence ("As an Amazon Associate, we earn from qualifying purchases") on top of the FTC rule — **live in the Affiliate Disclosure page summary since 2026-08-25**; counsel reviews it with the page but it is Amazon's wording, not ours to soften. | R1 (affiliate links) |
 | **CAN-SPAM** | Marketing email: real sender identity, working **unsubscribe**, no deception. | Newsletter (R2+) |
 | **FTC "dark patterns"** | No deceptive UX in signup/cancel/consent. | Always |
 
@@ -116,13 +116,19 @@ Checked in code rather than assumed, so counsel can rely on it:
   `STATE`**; follow/host add `COMPETITION` / `COMPANY`; `/feedback` carries an optional reply address.
 
 ### 🔒 Open question for counsel — the digest capture's age posture
-**Put this to the privacy attorney in these terms:** BeeCompete is a K-12 academic-competition
-marketplace. The weekly-digest form collects an **email address together with a grade level**. The
-only control today is a self-declaration in the form copy ("For parents, educators, and students
-16+"), with the field labeled "Your student's grade" — i.e. framed as a parent entering a child's
-grade. There is **no neutral age screen and no verification.** Is this site *child-directed* or
-*mixed-audience* under the FTC's analysis, and does the mixed-audience path require a **neutral age
-screen before collection** rather than a notice alongside it? Double opt-in is enabled, which is a
+**Put this to the privacy attorney in these terms:** BeeCompete is an academic-competition
+marketplace spanning elementary school through graduate school. **As of 2026-08-25 the Privacy
+Policy states plainly that the site is "not directed to children under 13"** while acknowledging
+that some visitors will be — a deliberate repositioning away from the earlier "directed to a K-12
+audience" wording, which the owner reports never matched the catalog. That sentence is exactly the
+one the FTC's child-directed analysis turns on, so **counsel should be asked to bless or rewrite it
+specifically, not skim it.** The weekly-digest form collects an **email address together with a
+grade level**. The only control today is a self-declaration in the form copy ("For parents,
+educators, and students 16+"), with the field labeled "Your student's grade" — i.e. framed as a
+parent entering a child's grade. There is **no neutral age screen and no verification.** Given the
+new wording, is this site *child-directed* or *mixed-audience* under the FTC's analysis, and does
+the mixed-audience path require a **neutral age screen before collection** rather than a notice
+alongside it? Double opt-in is enabled, which is a
 consent *record* but is not an age check.
 
 **Until counsel answers, do not** add any field to a capture form that narrows a subscriber toward an

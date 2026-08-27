@@ -4,8 +4,12 @@ Read this every session. It's the always-on guardrail; the full reasoning lives 
 When in doubt, `docs/` is the source of truth and this file points to it.
 
 ## What this project is
-A minors-facing, payments-handling marketplace for K-12 academic competitions. **Users are minors and
-money moves** — security, privacy, and COPPA compliance are first-class, not afterthoughts.
+A payments-handling marketplace for academic competitions at **every level — elementary school
+through graduate school** (repositioned 2026-08-25; it was described as K-12 before, which the
+catalog never matched). **Some users are minors and money moves** — security, privacy, and COPPA
+compliance stay first-class, not afterthoughts. The site is *not directed to children under 13*
+and says so in the Privacy Policy, but we expect some under-13 visitors and build as if they are
+here: that is a statement about who we AIM at, never a licence to drop a protection.
 Start context: `docs/README.md` → `docs/vision-prd.md`, `docs/glossary.md`.
 
 ## Non-negotiables

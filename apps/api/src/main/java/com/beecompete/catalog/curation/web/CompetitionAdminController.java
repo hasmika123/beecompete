@@ -8,6 +8,7 @@ import com.beecompete.catalog.curation.ListingCurationService;
 import com.beecompete.catalog.curation.ResourceCurationService;
 import com.beecompete.catalog.curation.ResourceRequest;
 import com.beecompete.catalog.domain.Competition;
+import com.beecompete.catalog.domain.ListingStatus;
 import com.beecompete.catalog.domain.CompetitionFaq;
 import com.beecompete.catalog.domain.Provenance;
 import com.beecompete.catalog.domain.Resource;
@@ -25,6 +26,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -78,12 +80,32 @@ public class CompetitionAdminController {
 		this.resourceCuration = resourceCuration;
 	}
 
+	/**
+	 * Admin list. {@code missingEdition=true} narrows to ZOMBIE listings — no live edition, so the
+	 * readiness gate hides them publicly (domain-model &sect;8a). They can only arrive via import
+	 * approve, which is deliberately lenient (see ImportReviewService); the create form posts
+	 * {@code /competitions/with-edition} and cannot make one. Surfacing them here is how that debt
+	 * gets found and finished instead of accumulating invisibly.
+	 *
+	 * <p>Every row carries {@code hasLiveEdition} for the badge, resolved in ONE extra query per
+	 * page rather than one per row.
+	 */
 	@GetMapping("/competitions")
 	@Transactional(readOnly = true)
 	public Page<CompetitionResponse> list(@RequestParam(defaultValue = "") String query,
-			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size) {
+			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size,
+			@RequestParam(defaultValue = "false") boolean missingEdition,
+			@RequestParam(required = false) ListingStatus listingStatus) {
 		var pageable = PageRequest.of(Math.max(0, page), Math.clamp(size, 1, 100), Sort.by("name"));
-		return competitions.findByNameContainingIgnoreCase(query, pageable).map(CompetitionResponse::from);
+		Page<Competition> found = listingStatus != null
+				? competitions.findByListingStatusAndNameContainingIgnoreCaseAndArchivedAtIsNull(
+						listingStatus, query, pageable)
+				: missingEdition
+						? competitions.findMissingLiveEdition(query, pageable)
+						: competitions.findByNameContainingIgnoreCase(query, pageable);
+		List<UUID> ids = found.getContent().stream().map(Competition::getId).toList();
+		Set<UUID> live = ids.isEmpty() ? Set.of() : Set.copyOf(competitions.idsWithLiveEdition(ids));
+		return found.map(c -> CompetitionResponse.from(c, live.contains(c.getId())));
 	}
 
 	@GetMapping("/competitions/{id}")
@@ -140,6 +162,19 @@ public class CompetitionAdminController {
 		competition.setVerificationState(request.state());
 		return CompetitionResponse.from(competition);
 	}
+
+	/**
+	 * §8a lifecycle: Publish / Unlist / Re-list / Submit-for-review / Send-back, as one explicit
+	 * transition (validated in {@link CompetitionCurationService#transitionListingStatus}).
+	 * Archive stays the separate DELETE — orthogonal axis.
+	 */
+	@PutMapping("/competitions/{id}/listing-status")
+	public CompetitionResponse setListingStatus(@PathVariable UUID id,
+			@Valid @RequestBody ListingStatusRequest request) {
+		return CompetitionResponse.from(curation.transitionListingStatus(id, request.status()));
+	}
+
+	public record ListingStatusRequest(@jakarta.validation.constraints.NotNull ListingStatus status) {}
 
 	// --- FAQ entries (glossary: FAQ Entry; details FAQ tab — R1-7) ---
 
@@ -220,34 +255,46 @@ public class CompetitionAdminController {
 
 	/** ResourceRequest lives in catalog.curation — shared with the correction queue (R1-3b). */
 	public record ResourceResponse(UUID id, String title, String url, ResourceType type, boolean isAffiliate,
-			Map<String, Object> affiliateMeta, short displayOrder) {
+			Map<String, Object> affiliateMeta, short displayOrder, String imageUrl) {
 		static ResourceResponse from(Resource r) {
 			return new ResourceResponse(r.getId(), r.getTitle(), r.getUrl(), r.getType(), r.isAffiliate(),
-					r.getAffiliateMeta(), r.getDisplayOrder());
+					r.getAffiliateMeta(), r.getDisplayOrder(), r.getImageUrl());
 		}
 	}
 
 	public record CompetitionResponse(UUID id, String slug, String name, UUID organizerOrgId, String officialUrl,
-			String logo, String description, String summary, UUID categoryId, List<String> tags,
+			String logo, String description, UUID categoryId, List<String> tags,
 			String participationMode, Short teamSizeMin, Short teamSizeMax, String delivery, String entryPathway,
 			List<String> evaluationType, Short minGrade, Short maxGrade, Short minAge, Short maxAge,
 			String costType, String recurrence, Map<String, Object> attributes, String provenanceSource,
 			Instant provenanceLastVerifiedAt, BigDecimal provenanceConfidence, String verificationState,
-			Instant archivedAt, Instant createdAt, Instant updatedAt, int version) {
+			String listingStatus, Instant approvedAt,
+			Instant archivedAt, Instant createdAt, Instant updatedAt, int version,
+			/**
+			 * Whether a non-archived edition exists — the readiness gate, precomputed for the admin
+			 * list's badge. NULL on every other endpoint, meaning "not computed", never "no edition":
+			 * only the list pays for the lookup.
+			 */
+			Boolean hasLiveEdition) {
 
 		static CompetitionResponse from(Competition c) {
+			return from(c, null);
+		}
+
+		static CompetitionResponse from(Competition c, Boolean hasLiveEdition) {
 			Provenance p = c.getProvenance();
 			return new CompetitionResponse(c.getId(), c.getSlug(), c.getName(),
 					c.getOrganizer() != null ? c.getOrganizer().getId() : null, c.getOfficialUrl(), c.getLogo(),
-					c.getDescription(), c.getSummary(), c.getCategory().getId(), c.getTags(),
+					c.getDescription(), c.getCategory().getId(), c.getTags(),
 					c.getParticipationMode().name(), c.getTeamSizeMin(), c.getTeamSizeMax(),
 					c.getDelivery().name(), c.getEntryPathway().name(), c.getEvaluationType(), c.getMinGrade(),
 					c.getMaxGrade(), c.getMinAge(), c.getMaxAge(), c.getCostType().name(),
 					c.getRecurrence().name(), c.getAttributes(),
 					p != null && p.getSource() != null ? p.getSource().name() : null,
 					p != null ? p.getLastVerifiedAt() : null, p != null ? p.getConfidence() : null,
-					c.getVerificationState().name(), c.getArchivedAt(), c.getCreatedAt(), c.getUpdatedAt(),
-					c.getVersion());
+					c.getVerificationState().name(), c.getListingStatus().name(), c.getApprovedAt(),
+					c.getArchivedAt(), c.getCreatedAt(), c.getUpdatedAt(),
+					c.getVersion(), hasLiveEdition);
 		}
 	}
 }

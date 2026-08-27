@@ -1,0 +1,51 @@
+# The eligibility catch-all: one optional prose key on every Category Template, for the rules the
+# typed eligibility fields can't express — "must have qualified at a regional", "open only to
+# member schools", or what a curator meant when they picked "Other" in the country dropdown.
+#
+# Why now: the two country gates became CLOSED dropdowns on 2026-08-24 (United States / Canada /
+# Other; citizenship United States or none). Closing a vocabulary only works if the input it used
+# to absorb has somewhere else to go — otherwise curators wedge the exception into
+# `student_status_required`, which means something narrower, and the public Eligibility tab starts
+# lying. This key is that somewhere else.
+#
+# Why the attributes bag rather than a Spine column: category-shaped, optional prose that nothing
+# filters or sorts on — the exact split domain-model §7 defines. The country keys ARE slated for
+# JSONB→Spine promotion at H36 (sweep §16) precisely because they're filterable; this one is not,
+# by design.
+#
+# Templates already carry additionalProperties:true, so the API accepted this key before the
+# declaration existed — this changeset is what makes it TYPED (and gives AttributesFields the
+# label + textarea widget for anyone who reaches it through the Category-details step).
+#
+# Idempotent: jsonb_set writes the same key on a re-run. Additive — existing template keys and
+# every stored attributes bag are untouched.
+databaseChangeLog:
+  - changeSet:
+      id: 0017-other-eligibility-requirements
+      author: beecompete
+      comment: Add other_eligibility_requirements to every category template (the eligibility catch-all).
+      changes:
+        - sql:
+            comment: Declare the property so the admin form renders a typed control for it.
+            sql: >-
+              UPDATE category_template
+              SET json_schema = jsonb_set(
+                    json_schema,
+                    '{properties,other_eligibility_requirements}',
+                    '{"type": "string"}'::jsonb,
+                    true)
+              WHERE jsonb_typeof(json_schema->'properties') = 'object'
+        - sql:
+            comment: Label, placeholder and a textarea widget so the field reads as prose, not a key.
+            sql: >-
+              UPDATE category_template
+              SET ui_hints = coalesce(ui_hints, '{}'::jsonb)
+                  || jsonb_build_object(
+                       'labels', coalesce(ui_hints->'labels', '{}'::jsonb) || jsonb_build_object(
+                         'other_eligibility_requirements', 'Other eligibility requirements'),
+                       'placeholders', coalesce(ui_hints->'placeholders', '{}'::jsonb) || jsonb_build_object(
+                         'other_eligibility_requirements', 'Must have qualified at a regional round.'),
+                       'widgets', coalesce(ui_hints->'widgets', '{}'::jsonb) || jsonb_build_object(
+                         'other_eligibility_requirements', 'textarea'))
+      rollback:
+        - empty

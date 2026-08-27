@@ -39,7 +39,7 @@ export function governingLawJurisdiction(): string {
 }
 
 /** ISO date of the last substantive revision — shown as "Last updated" and bump on every edit. */
-export const LEGAL_LAST_UPDATED = '2026-08-20';
+export const LEGAL_LAST_UPDATED = '2026-08-25';
 
 /** True until a lawyer signs off (R1-17). Drives the on-page "under review" notice so the copy
  *  never silently reads as finalized before counsel has seen it. Flip to false at the launch gate. */

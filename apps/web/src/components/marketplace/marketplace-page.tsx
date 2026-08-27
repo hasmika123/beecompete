@@ -230,10 +230,12 @@ export async function MarketplacePage({ rawSearchParams, hub }: MarketplacePageP
         }
         quickChips={
           // One swipeable row below sm (mobile pass), a wrapping row from sm. `flex-wrap` at
-          // every size put "High School" alone on a second line — 4 chips need ~384px and a phone
-          // row is 343px — which reads as a stray button rather than the fourth of a set. The
-          // chips are `shrink-0` so the row overflows (and scrolls) instead of squeezing labels;
-          // the scrollbar is hidden to match every other horizontal strip on the site.
+          // every size orphaned the last chip onto a line of its own, which reads as a stray
+          // button rather than the last of a set. The chips are `shrink-0` so the row overflows
+          // (and scrolls) instead of squeezing labels; the scrollbar is hidden to match every
+          // other horizontal strip on the site. Six chips since the ladder gained College and
+          // Grad School (2026-08-25), so the scroll below sm now carries real content rather than
+          // a few pixels of slack — the wrap from sm absorbs the rest.
           <div
             className="flex flex-nowrap items-center gap-2 overflow-x-auto [scrollbar-width:none] sm:flex-wrap [&::-webkit-scrollbar]:hidden"
             aria-label="Grade levels"

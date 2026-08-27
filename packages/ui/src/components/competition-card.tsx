@@ -40,7 +40,8 @@ export interface CompetitionCardData {
    * approved to be listed), so the card has no competition-level trust/"unverified" badge.
    */
   organizerVerified?: boolean;
-  summary?: string;
+  /** Two-line card blurb (the API derives it from the competition's description). */
+  blurb?: string;
   /** Cost fact: free renders positive (success green, owner r5). */
   free: boolean;
   /** Region fact value, e.g. "Texas" · "Texas +2" · "Nationwide". */
@@ -122,10 +123,10 @@ export function CompetitionCard({
           )}
         </div>
         {/* Slot 4 — description, ALWAYS exactly two lines tall: clamp caps it, `2lh` reserves
-            it (lh tracks the real line-height), so a missing/short summary leaves blank space
+            it (lh tracks the real line-height), so a missing/short blurb leaves blank space
             instead of pulling the facts row up. */}
-        <CardDescription className="line-clamp-2 min-h-[2lh]" data-testid="summary-slot">
-          {data.summary}
+        <CardDescription className="line-clamp-2 min-h-[2lh]" data-testid="blurb-slot">
+          {data.blurb}
         </CardDescription>
       </div>
 
