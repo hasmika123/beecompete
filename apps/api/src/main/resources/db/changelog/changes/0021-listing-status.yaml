@@ -1,0 +1,45 @@
+# Listing lifecycle + approval stamp (domain-model §8a, sweep-remediation item 14 — built
+# 2026-08-25). Three additive columns on competition:
+#
+#   listing_status  DRAFT | IN_REVIEW | PUBLISHED | UNLISTED   (enum-as-varchar house rule, §8;
+#                   ARCHIVED stays archived_at — orthogonal axis, archiving auto-unlists by gate)
+#   approved_at     when the listing first entered PUBLISHED (the §8a approval stamp)
+#   approved_by     uuid, FK-less like organizer_org_id — stays NULL until real user ids exist
+#                   (RBAC R2-7); WHO published is carried by the admin write log until then.
+#
+# Backfill: every existing row is live today, so PUBLISHED + approved_at = created_at (§8a's
+# specified backfill — already live means already vetted).
+#
+# The public read gate becomes:
+#   archived_at IS NULL AND listing_status = 'PUBLISHED' AND EXISTS(non-archived edition)
+# enforced in code (CompetitionSearchService / CatalogPublicController / CompetitionRepository).
+databaseChangeLog:
+  - changeSet:
+      id: 0021-listing-status
+      author: beecompete
+      comment: listing_status + approved_at/approved_by on competition (§8a lifecycle, item 14)
+      changes:
+        - addColumn:
+            tableName: competition
+            columns:
+              - column:
+                  name: listing_status
+                  type: varchar(20)
+                  defaultValue: PUBLISHED
+                  constraints:
+                    nullable: false
+              - column:
+                  name: approved_at
+                  type: timestamptz
+              - column:
+                  name: approved_by
+                  type: uuid
+        - sql:
+            comment: Existing rows are live and vetted — stamp approval at their creation time.
+            sql: UPDATE competition SET approved_at = created_at WHERE approved_at IS NULL
+        - createIndex:
+            tableName: competition
+            indexName: idx_competition_listing_status
+            columns:
+              - column:
+                  name: listing_status

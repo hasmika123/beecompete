@@ -10,23 +10,31 @@ import {
   Button,
   Check,
   Checkbox,
+  GripHandle,
   cn,
+  FilePdf,
+  FileUpload,
   FormField,
   ImageUpload,
+  Info,
   Input,
   Plus,
   ProgressRing,
   Select,
   Stepper,
   Textarea,
+  Tooltip,
   Trash,
   useToast,
 } from '@beecompete/ui';
 import { AttributesFields } from '@/components/admin/attributes-fields';
-import { FormSection } from '@/components/admin/form-section';
-import { RegionPicker } from '@/components/admin/region-picker';
+import { FormSection, SubSectionHeading } from '@/components/admin/form-section';
+import { RegionSelect } from '@/components/admin/region-select';
+import { AwardsInput, awardRowsFromSeed } from '@/components/admin/awards-input';
+import { TagsInput } from '@/components/admin/tags-input';
 import { enumLabel, enumOptions } from '@/components/admin/enum-labels';
-import { GRADE_VALUES, gradeName } from '@/lib/catalog-display';
+import { GRADE_VALUES, gradeOptionLabel } from '@/lib/catalog-display';
+import { defaultKeyDateLabel } from '@/lib/detail-display';
 import { uploadCoverImage } from '@/lib/cover-upload';
 import { createCompetition, updateCompetition } from '@/app/admin/competitions/actions';
 import { approveImportFromForm } from '@/app/admin/import-records/actions';
@@ -36,12 +44,12 @@ import {
   ADMIN_TIMEZONES,
   COST_TYPES,
   DELIVERIES,
-  EDITION_STATUSES,
   ENTRY_PATHWAYS,
   EVALUATION_TYPES,
   KEY_DATE_TYPES,
   PARTICIPATION_MODES,
   RECURRENCES,
+  RESOURCE_TYPES,
   SCOPE_LEVELS,
   type Category,
   type CategoryTemplate,
@@ -70,8 +78,59 @@ function slugify(s: string): string {
 // ladder as the marketplace grade filter (GRADE_VALUES); age runs 0…99 with 99 shown as "99+".
 const GRADE_OPTIONS = [
   { value: '', label: 'Any' },
-  ...GRADE_VALUES.map((g) => ({ value: String(g), label: `Grade ${gradeName(g)}` })),
+  ...GRADE_VALUES.map((g) => ({ value: String(g), label: gradeOptionLabel(g) })),
 ];
+/**
+ * The two country gates are CLOSED vocabularies (owner 2026-08-24). Deliberately tiny: these
+ * feed a filter axis at H36 (JSONB→Spine promotion, sweep §16), and free text can't be filtered
+ * on — "USA" / "U.S." / "United States" were all being typed for the same rule. Anything the
+ * list can't say is "Other", explained in `other_eligibility_requirements`. Stored as a
+ * one-element array so the shape matches the template schema and the public renderer.
+ */
+const ELIGIBLE_COUNTRY_OPTIONS = [
+  { value: '', label: 'Any / worldwide' },
+  { value: 'United States', label: 'United States' },
+  { value: 'Canada', label: 'Canada' },
+  { value: 'Other', label: 'Other' },
+];
+/**
+ * The Judging step's right column is sized AGAINST the evaluation list beside it (owner
+ * 2026-08-25): the rules/rubric box reads as two checkbox rows, and the two text boxes are equal
+ * to each other and together read as three — a 2:3 split of the five.
+ *
+ * Done with fractional grid rows rather than pixel heights, because the two goals ("that ratio"
+ * and "both columns end level") are otherwise over-constrained: the right column spends extra
+ * height on two more labels and larger gaps than the left, so three boxes literally equal to five
+ * checkbox rows would overshoot every time. Proportional rows divide whatever height the left
+ * column actually claims, so the ratio holds AND the columns end level at every width, with no
+ * measured constant to go stale when a checkbox hint gains a line.
+ *
+ * Each field also needs `grid-rows-[auto_1fr]` so it is the CONTROL that absorbs its row, not the
+ * label; `min-h-0` lets the boxes shrink rather than overflow if the left column is ever short.
+ */
+const JUDGING_ROWS = 'grid h-full grid-rows-[1.5fr_1.5fr_2fr] gap-4';
+const JUDGING_FIELD = 'min-h-0 grid-rows-[auto_1fr]';
+const JUDGING_BOX = 'h-full min-h-0';
+
+/** Citizenship has one real answer at R1 — the US-citizens-only rule (e.g. USAMO). */
+const CITIZENSHIP_OPTIONS = [
+  { value: '', label: 'Any / none' },
+  { value: 'United States', label: 'United States' },
+];
+
+/**
+ * One-line explainers for the evaluation tokens (owner 2026-08-23). Curator-facing: the tokens
+ * alone ("Submission", "Portfolio") don't say where the line between them falls, and picking the
+ * wrong one mislabels the listing's Judging tab.
+ */
+const EVALUATION_HINTS: Record<string, string> = {
+  exam: 'A timed, scored test.',
+  submission: 'Work sent in by a deadline.',
+  live_performance: 'Judged live, in the room.',
+  interview: 'Judged in conversation.',
+  portfolio: 'A whole body of work.',
+};
+
 const AGE_MAX = 99;
 const AGE_OPTIONS = [
   { value: '', label: 'Any' },
@@ -85,11 +144,17 @@ interface StepDef {
   id: string;
   label: string;
   meta: string;
+  /** ⓘ beside the step heading (create h2 + edit FormSection) — context, not a paragraph. */
+  hint?: string;
   content: ReactNode;
   /** Hidden from the create flow (e.g. category attributes, which need a saved category). */
   hideOnCreate?: boolean;
   /** Hidden from the edit page (the first-edition block — later years use the Editions tab). */
   hideOnEdit?: boolean;
+  /** Hidden from import review — for steps whose data the approve path cannot persist (the
+   *  approve response carries no competition id to hang sub-resources off). Hiding the step is
+   *  the no-silently-dropped-input rule: better no controls than controls that discard. */
+  hideOnImport?: boolean;
 }
 
 /**
@@ -106,6 +171,21 @@ export type CompetitionFormMode = 'create' | 'edit' | 'import';
 /** The server-required minimum on the import path — everything else is advice, not a gate. */
 const IMPORT_BLOCKING_KEYS = ['name', 'slug', 'category', 'organizer'];
 
+/**
+ * The milestones a CREATE-form listing must account for (owner 2026-08-24) — each needs a date
+ * or an explicit TBD before the form will submit. Blank rows for all four are seeded, so the ask
+ * is "fill these in", not "know which ones to add".
+ *
+ * ⚠ A FORM rule, not a server rule. The API still demands only a REG_CLOSE or SUBMISSION_DUE
+ * (`CompetitionWithEditionRequest.isDeadlinePresent`), and that is deliberate: the seeding
+ * pipeline and the import-approve path both post through the same endpoint, and real organizer
+ * pages rarely publish all four — tightening the server would reject most extractions and stall
+ * the content gate. The stricter rule belongs where a human is actually filling a form.
+ * ROUND_START and CUSTOM stay optional: not every competition has rounds, and a custom date is by
+ * definition not a fixed part of the shape.
+ */
+const REQUIRED_KEY_DATE_TYPES = ['REG_OPEN', 'REG_CLOSE', 'SUBMISSION_DUE', 'RESULTS'] as const;
+
 /** Case- and whitespace-insensitive org-name key — mirrors the server's normalize on resolve. */
 const orgNameKey = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
 
@@ -114,6 +194,8 @@ export function CompetitionForm({
   mode = competition ? 'edit' : 'create',
   importRecordId,
   seed,
+  headerAction,
+  headerNotice,
   organizerMatches = [],
   categories,
   organizations,
@@ -127,6 +209,18 @@ export function CompetitionForm({
   importRecordId?: string;
   /** Import mode only — the extracted payload read into form values (lib/import-seed). */
   seed?: ImportSeed;
+  /**
+   * Create mode only — rendered on the title line, right-aligned (e.g. “Paste JSON”). Lives here
+   * rather than above the form because create draws its own page header; a caller-owned row would
+   * sit at a different altitude than the h1 it belongs with.
+   */
+  headerAction?: ReactNode;
+  /**
+   * Create mode only — a full-width block under the header, above the stepper (e.g. what a pasted
+   * payload resolved to). Same reason as {@link headerAction}: create draws its own header, so the
+   * caller cannot place anything between that header and the form without a slot.
+   */
+  headerNotice?: ReactNode;
   /** Import mode only — organizations matching the extracted organizer name (fetched server-side). */
   organizerMatches?: Organization[];
   categories: Category[];
@@ -212,6 +306,8 @@ export function CompetitionForm({
     key: number;
     type: string;
     date: string;
+    /** Optional — set only for a milestone that spans days; posts as end-of-day in `timezone`. */
+    endDate: string;
     time: string;
     timezone: string;
     tbd: boolean;
@@ -221,27 +317,171 @@ export function CompetitionForm({
     key,
     type,
     date: '',
+    endDate: '',
     time: '',
     timezone: DEFAULT_TIMEZONE,
     tbd: false,
     label: '',
   });
   // Import starts from the extracted timeline (already read into wall-clock rows in their own
-  // zones); create/edit start with one empty deadline row.
-  const [keyDateRows, setKeyDateRows] = useState<KeyDateRow[]>(() =>
-    seed && seed.keyDates.length > 0
-      ? seed.keyDates.map((row, i) => ({ key: i, ...row }))
-      : [emptyKeyDateRow(0, 'REG_CLOSE')],
-  );
+  // zones); create starts empty. EITHER WAY the four required milestones are topped up with blank
+  // rows, so a curator is never asked for a date whose row they'd have to add first.
+  const [keyDateRows, setKeyDateRows] = useState<KeyDateRow[]>(() => {
+    const seeded = seed?.keyDates.map((row, i) => ({ key: i, ...row })) ?? [];
+    const missing = REQUIRED_KEY_DATE_TYPES.filter((t) => !seeded.some((r) => r.type === t));
+    return [...seeded, ...missing.map((t, i) => emptyKeyDateRow(seeded.length + i, t))];
+  });
   const patchKeyDateRow = (key: number, patch: Partial<KeyDateRow>) =>
     setKeyDateRows((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
   const addKeyDateRow = () =>
     setKeyDateRows((rows) => [
       ...rows,
-      emptyKeyDateRow(Math.max(...rows.map((r) => r.key), -1) + 1, 'RESULTS'),
+      emptyKeyDateRow(Math.max(...rows.map((r) => r.key), -1) + 1, 'ROUND_START'),
     ]);
   const removeKeyDateRow = (key: number) =>
     setKeyDateRows((rows) => rows.filter((r) => r.key !== key));
+
+  // --- Resources + FAQ rows (create-only extras step, 2026-08-25). Same repeatable-row grammar
+  // as key dates: controls carry indexed names (`resource_0_title`, …) derived from RENDER
+  // position, so removal renumbers automatically; keys are only list identity. One blank row
+  // each from the start — blanks post nothing (buildResources/buildFaqs skip the incomplete).
+  interface ResourceRow {
+    key: number;
+    title: string;
+    url: string;
+    type: string;
+    affiliate: boolean;
+    image: string;
+  }
+  interface FaqRow {
+    key: number;
+    question: string;
+    answer: string;
+  }
+  const [resourceRows, setResourceRows] = useState<ResourceRow[]>([
+    { key: 0, title: '', url: '', type: 'GUIDE', affiliate: false, image: '' },
+  ]);
+  const [faqRows, setFaqRows] = useState<FaqRow[]>([{ key: 0, question: '', answer: '' }]);
+  const patchResourceRow = (key: number, patch: Partial<ResourceRow>) =>
+    setResourceRows((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  const patchFaqRow = (key: number, patch: Partial<FaqRow>) =>
+    setFaqRows((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  const addResourceRow = () =>
+    setResourceRows((rows) => [
+      ...rows,
+      {
+        key: Math.max(...rows.map((r) => r.key), -1) + 1,
+        title: '',
+        url: '',
+        type: 'GUIDE',
+        affiliate: false,
+        image: '',
+      },
+    ]);
+  const addFaqRow = () =>
+    setFaqRows((rows) => [
+      ...rows,
+      { key: Math.max(...rows.map((r) => r.key), -1) + 1, question: '', answer: '' },
+    ]);
+  // The last row clears instead of disappearing — the editor stays ready to type (awards rule).
+  const removeResourceRow = (key: number) =>
+    setResourceRows((rows) =>
+      rows.length === 1
+        ? [{ key: rows[0]!.key, title: '', url: '', type: 'GUIDE', affiliate: false, image: '' }]
+        : rows.filter((r) => r.key !== key),
+    );
+  const removeFaqRow = (key: number) =>
+    setFaqRows((rows) =>
+      rows.length === 1
+        ? [{ key: rows[0]!.key, question: '', answer: '' }]
+        : rows.filter((r) => r.key !== key),
+    );
+  // Drag reordering, the AwardsInput grammar verbatim (owner 2026-08-25): rows are draggable
+  // only while the grip is held (armed), and the held row follows the row the pointer enters.
+  // Order is meaning — buildResources/buildFaqs number displayOrder from row position. One
+  // state pair per list; a shared pair would let a drag started in one list reorder the other.
+  const [resourceDrag, setResourceDrag] = useState<{ drag: number | null; armed: number | null }>({
+    drag: null,
+    armed: null,
+  });
+  const [faqDrag, setFaqDrag] = useState<{ drag: number | null; armed: number | null }>({
+    drag: null,
+    armed: null,
+  });
+  const reorder = <T extends { key: number }>(rows: T[], dragKey: number, overKey: number): T[] => {
+    const from = rows.findIndex((r) => r.key === dragKey);
+    const to = rows.findIndex((r) => r.key === overKey);
+    if (from < 0 || to < 0 || from === to) return rows;
+    const next = [...rows];
+    const [held] = next.splice(from, 1);
+    next.splice(to, 0, held!);
+    return next;
+  };
+
+  /**
+   * A row the CURATOR orders by hand: no date to sort it by, either because it's TBD or because
+   * nothing has been typed yet. Dated rows are placed by their dates and are not draggable — a
+   * drop that fought the calendar would just snap back.
+   */
+  const isUndatedRow = (r: KeyDateRow) => r.tbd || r.date === '';
+
+  /** True when this row is the sole carrier of a required milestone type — removing it would
+   *  strand the form on an unsatisfiable requirement. */
+  const isOnlyRequiredRow = (r: KeyDateRow) =>
+    (REQUIRED_KEY_DATE_TYPES as readonly string[]).includes(r.type) &&
+    keyDateRows.filter((o) => o.type === r.type).length === 1;
+
+  // Drag reordering for those rows (owner 2026-08-24) — the Awards editor's gesture: the row is
+  // only draggable while the pointer is holding its grip, so selecting text in an input never
+  // starts a drag. `armedKey` = grip held, `dragKey` = row in hand.
+  const [keyDateDragKey, setKeyDateDragKey] = useState<number | null>(null);
+  const [keyDateArmedKey, setKeyDateArmedKey] = useState<number | null>(null);
+
+  /**
+   * Live reorder while dragging. It moves the row inside `keyDateRows` STATE, which is what the
+   * chronological view below tie-breaks undated rows on — so a drag among undated rows lands
+   * exactly where it was dropped. Refuses when either end is dated, because their order is a fact
+   * about the calendar rather than a preference.
+   */
+  const dragOverKeyDate = (overKey: number) => {
+    if (keyDateDragKey === null || keyDateDragKey === overKey) return;
+    setKeyDateRows((rows) => {
+      const from = rows.findIndex((r) => r.key === keyDateDragKey);
+      const to = rows.findIndex((r) => r.key === overKey);
+      if (from < 0 || to < 0) return rows;
+      if (!isUndatedRow(rows[from]!) || !isUndatedRow(rows[to]!)) return rows;
+      const next = [...rows];
+      const [held] = next.splice(from, 1);
+      next.splice(to, 0, held!);
+      return next;
+    });
+  };
+
+  /**
+   * The rows in CHRONOLOGICAL order (owner 2026-08-24) — a derived view, never a re-sort of
+   * state, so a row's identity (`key`, and therefore focus and the patch/remove handlers) is
+   * untouched by where it happens to sit. Dated rows ascend; TBD and not-yet-dated rows sink to
+   * the bottom, because "we don't know when" can't be placed on a timeline. Ties and undated rows
+   * hold their STATE order (the `seq` tiebreak) — which is exactly what makes them drag-orderable:
+   * `dragOverKeyDate` rewrites that order and the sort preserves it.
+   *
+   * This is what the row counter numbers, and it is deliberately NOT the order the curator typed
+   * them in: the public timeline sorts by date too, so the editor showing anything else would be
+   * a preview of a page that doesn't exist. Rendering order also drives the posted field indices
+   * (`keydate_0_*`, `keydate_1_*`, …), which is harmless — `buildKeyDates` only needs them
+   * contiguous, and the server re-sorts anyway.
+   */
+  const orderedKeyDateRows = keyDateRows
+    .map((row, seq) => ({ row, seq }))
+    .sort((a, b) => {
+      const at = a.row.tbd || !a.row.date ? null : `${a.row.date}T${a.row.time || '23:59'}`;
+      const bt = b.row.tbd || !b.row.date ? null : `${b.row.date}T${b.row.time || '23:59'}`;
+      if (at === bt) return a.seq - b.seq;
+      if (at === null) return 1;
+      if (bt === null) return -1;
+      return at < bt ? -1 : 1;
+    })
+    .map(({ row }) => row);
 
   // Controlled selections — feed both the form post and the required-field ring.
   const [categoryId, setCategoryId] = useState(c?.categoryId ?? '');
@@ -253,6 +493,21 @@ export function CompetitionForm({
       (importing && extractedOrganizer ? CREATE_ORGANIZER_SENTINEL : ''),
   );
   const [regionIds, setRegionIds] = useState<string[]>(seed?.regionIds ?? []);
+
+  // Awards editor seed — an extracted prize becomes the first row; create starts empty.
+  const [initialAwardRows] = useState(() =>
+    awardRowsFromSeed(
+      editionSeed?.prizeSummary || editionSeed?.prizeValue
+        ? [
+            {
+              title: editionSeed?.prizeSummary ?? '',
+              value: editionSeed?.prizeValue || undefined,
+              currency: editionSeed?.prizeCurrency || undefined,
+            },
+          ]
+        : [],
+    ),
+  );
   const toggleRegion = (id: string) =>
     setRegionIds((prev) => (prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]));
 
@@ -261,14 +516,64 @@ export function CompetitionForm({
   const [attributes, setAttributes] = useState<Record<string, unknown>>(
     (c?.attributes as Record<string, unknown>) ?? {},
   );
+
+  // Judging + eligibility catalog-info controls (their steps) write into the SAME attributes
+  // bag the Category-details step posts — one hidden input, one source of truth. Empty clears
+  // the key. CSV fields keep local text so typing ", " isn't re-normalized mid-keystroke.
+  const attrCsvText = (key: string) => {
+    const v = ((c?.attributes as Record<string, unknown>) ?? {})[key];
+    return Array.isArray(v) ? v.join(', ') : '';
+  };
+  const csvToList = (text: string) =>
+    text
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+  const [judgingCriteriaText, setJudgingCriteriaText] = useState(() =>
+    attrCsvText('judging_criteria'),
+  );
+  // Evaluation types are a real column (not the bag) and post through the checkboxes' own
+  // `name`; the state exists so the chosen rows can SHOW as chosen (owner 2026-08-23).
+  const [evaluationTypes, setEvaluationTypes] = useState<string[]>(c?.evaluationType ?? []);
+  const toggleEvaluationType = (token: string) =>
+    setEvaluationTypes((prev) =>
+      prev.includes(token) ? prev.filter((t) => t !== token) : [...prev, token],
+    );
+  // The country gates are single-choice now, but the BAG still holds arrays (unchanged schema).
+  // Read the first entry back; anything a previous curator free-typed that isn't in the closed
+  // list resolves to "Other" rather than silently blanking the field.
+  const attrFirst = (key: string, allowed: readonly string[]) => {
+    const v = ((c?.attributes as Record<string, unknown>) ?? {})[key];
+    const first = Array.isArray(v) ? v[0] : undefined;
+    if (typeof first !== 'string' || first === '') return '';
+    return allowed.includes(first) ? first : 'Other';
+  };
+  const [eligibleCountry, setEligibleCountry] = useState(() =>
+    attrFirst('eligible_countries', ['United States', 'Canada']),
+  );
+  const [citizenship, setCitizenship] = useState(() =>
+    attrFirst('citizenship_countries', ['United States']),
+  );
+  const setAttrKey = (key: string, value: unknown) =>
+    setAttributes((prev) => {
+      const next = { ...prev };
+      if (value == null || value === '' || (Array.isArray(value) && value.length === 0)) {
+        delete next[key];
+      } else {
+        next[key] = value;
+      }
+      return next;
+    });
   const template = templates.find((t) => t.categoryId === categoryId);
   const [rawMode, setRawMode] = useState(false);
   const [rawText, setRawText] = useState('');
-  const structured = template !== undefined && !rawMode;
+  // Structured is the default even with NO template (owner 2026-08-23): custom fields and
+  // the JSON dropdown work regardless; a template only adds its typed controls on top.
+  const structured = !rawMode;
 
   // Active stepper step (create mode). Declared unconditionally (Rules of Hooks) — the first
   // step is always "basics"; ignored in edit mode, which renders every section at once.
-  const [activeStepId, setActiveStepId] = useState('basics');
+  const [activeStepId, setActiveStepId] = useState('overview');
 
   const enterRawMode = () => {
     setRawText(Object.keys(attributes).length ? JSON.stringify(attributes, null, 2) : '');
@@ -297,14 +602,15 @@ export function CompetitionForm({
   const [name, setName] = useState(c?.name ?? '');
   const [slug, setSlug] = useState(c?.slug ?? '');
   // Auto-mirror only while creating: an edit keeps its permanent slug, and an import already has
-  // the slug the extractor derived — retyping the name must not silently change either.
-  const [slugDirty, setSlugDirty] = useState(mode !== 'create');
+  // the slug the extractor derived — retyping the name must not silently change either. Nothing
+  // can unlock this any more (the slug is assigned, with no field to override it), so it's a
+  // plain constant rather than state.
+  const slugLocked = mode !== 'create';
 
   // --- required-field tracking (drives the completion ring; server stays the real gate) ---
   // Text fields stay uncontrolled (defaultValue) with a change listener recording only whether
   // they're non-empty — enough for the ring without controlling every keystroke.
   const [filled, setFilled] = useState({
-    summary: Boolean(c?.summary),
     description: Boolean(c?.description),
     officialUrl: Boolean(c?.officialUrl),
     cycleLabel: Boolean(editionSeed?.cycleLabel),
@@ -341,46 +647,54 @@ export function CompetitionForm({
   const eligibilityValid = !eligErrors.minGrade && !eligErrors.minAge;
 
   const orgChosen = organizerOrgId !== '' && organizerOrgId !== ADD_ORG;
-  // "Deadline" (item 21) = at least one REG_CLOSE or SUBMISSION_DUE row, dated or TBD — matching
-  // the search deadline rule (blueprint #31) and the server's completeness gate.
-  const deadlineOk = keyDateRows.some(
-    (r) => (r.type === 'REG_CLOSE' || r.type === 'SUBMISSION_DUE') && (r.tbd || r.date !== ''),
-  );
+  // A required milestone is satisfied by a row of that type carrying either a real date or an
+  // explicit TBD — "we checked and it isn't published yet" is a complete answer, an untouched
+  // blank row is not. This supersedes the old single "Deadline" check: REG_CLOSE and
+  // SUBMISSION_DUE are now each required outright, so the server's either/or gate is met by
+  // construction.
+  const keyDateOk = (type: string) =>
+    keyDateRows.some((r) => r.type === type && (r.tbd || r.date !== ''));
   // Create front-loads everything the public card/detail shows (item 5/9): the listing is
   // complete-by-default. Edit keeps only the base spine required, so legacy listings still save.
   // Import uses the SAME full checklist as create, but only to SHOW what a curator would have to
   // chase — see `blockingFields` below for what actually gates the button.
   const requiredFields = editing
     ? [
-        { key: 'name', label: 'Name', stepId: 'basics', ok: name.trim() !== '' },
-        { key: 'slug', label: 'Slug', stepId: 'basics', ok: slug.trim() !== '' },
-        { key: 'category', label: 'Category', stepId: 'basics', ok: categoryId !== '' },
-        { key: 'organizer', label: 'Organizer', stepId: 'basics', ok: orgChosen },
+        { key: 'name', label: 'Name', stepId: 'overview', ok: name.trim() !== '' },
+        { key: 'category', label: 'Category', stepId: 'overview', ok: categoryId !== '' },
+        { key: 'organizer', label: 'Organizer', stepId: 'overview', ok: orgChosen },
       ]
     : [
-        { key: 'name', label: 'Name', stepId: 'basics', ok: name.trim() !== '' },
-        { key: 'slug', label: 'Slug', stepId: 'basics', ok: slug.trim() !== '' },
-        { key: 'category', label: 'Category', stepId: 'basics', ok: categoryId !== '' },
-        { key: 'organizer', label: 'Organizer', stepId: 'basics', ok: orgChosen },
-        { key: 'summary', label: 'Summary', stepId: 'about', ok: filled.summary },
-        { key: 'description', label: 'Description', stepId: 'about', ok: filled.description },
-        { key: 'officialUrl', label: 'Official URL', stepId: 'media', ok: filled.officialUrl },
-        { key: 'cycleLabel', label: 'Cycle label', stepId: 'edition', ok: filled.cycleLabel },
+        { key: 'name', label: 'Name', stepId: 'overview', ok: name.trim() !== '' },
+        { key: 'category', label: 'Category', stepId: 'overview', ok: categoryId !== '' },
+        { key: 'organizer', label: 'Organizer', stepId: 'overview', ok: orgChosen },
+        { key: 'description', label: 'Description', stepId: 'overview', ok: filled.description },
+        { key: 'officialUrl', label: 'Official URL', stepId: 'overview', ok: filled.officialUrl },
         {
           key: 'registrationUrl',
           label: 'Registration URL',
-          stepId: 'edition',
+          stepId: 'administration',
           ok: filled.registrationUrl,
         },
         ...(isFree
           ? []
           : [
-              { key: 'entryFee', label: 'Entry fee', stepId: 'edition', ok: filled.entryFee },
-              { key: 'currency', label: 'Currency', stepId: 'edition', ok: filled.currency },
+              {
+                key: 'entryFee',
+                label: 'Entry fee',
+                stepId: 'administration',
+                ok: filled.entryFee,
+              },
+              { key: 'currency', label: 'Currency', stepId: 'administration', ok: filled.currency },
             ]),
-        { key: 'prize', label: 'Prize', stepId: 'edition', ok: filled.prizeSummary },
-        { key: 'region', label: 'Region', stepId: 'edition', ok: regionIds.length > 0 },
-        { key: 'deadline', label: 'Deadline', stepId: 'edition', ok: deadlineOk },
+        { key: 'prize', label: 'Awards', stepId: 'awards', ok: filled.prizeSummary },
+        { key: 'region', label: 'Region', stepId: 'administration', ok: regionIds.length > 0 },
+        ...REQUIRED_KEY_DATE_TYPES.map((type) => ({
+          key: `keydate_${type}`,
+          label: defaultKeyDateLabel(type),
+          stepId: 'timeline',
+          ok: keyDateOk(type),
+        })),
       ];
   const filledCount = requiredFields.filter((r) => r.ok).length;
   const totalRequired = requiredFields.length;
@@ -403,303 +717,1175 @@ export function CompetitionForm({
   // --- step content (written once; laid out as a stepper on create, stacked sections on edit) ---
   const stepDefs: StepDef[] = [
     {
-      id: 'basics',
-      label: 'Basics',
-      meta: 'Name · slug · category',
+      id: 'overview',
+      label: 'Overview',
+      meta: 'Name · category · cover',
       content: (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label="Name" required>
-            <Input
-              name="name"
-              value={name}
-              minLength={2}
-              maxLength={300}
-              onChange={(e) => {
-                const v = e.target.value;
-                setName(v);
-                if (!slugDirty) setSlug(slugify(v));
-              }}
-            />
-          </FormField>
-          <FormField
-            label="Slug"
-            required
-            hint="auto-filled from the name; lowercase-kebab-case, permanent (SEO)."
-          >
-            <Input
-              name="slug"
-              value={slug}
-              minLength={2}
-              maxLength={160}
-              pattern="[a-z0-9]+(-[a-z0-9]+)*"
-              onChange={(e) => {
-                setSlug(e.target.value);
-                setSlugDirty(true);
-              }}
-            />
-          </FormField>
+        <div className="grid gap-4">
+          <input type="hidden" name="slug" value={slug} />
+          {/* Two explicit column stacks rather than row-wise auto-placement: the fields have very
+            different heights (a textarea, a card-shaped upload), so flowing them across rows left
+            one column short. Grouped so the columns finish level, and so Tags sits under
+            Description. Focus order runs down the left column, then the right. */}
           {/* An archived org holding the extracted name makes approve a 422 — the curator has to
               restore it or choose another, and finding that out only on submit wastes the review. */}
           {importing && archivedOrganizer && (
-            <Alert tone="warning" className="sm:col-span-2">
+            <Alert tone="warning">
               An <b>archived</b> organization is already called “{archivedOrganizer.name}”. Restore
               it or pick a different organizer — approving with the extracted name will fail while
               it stays archived.
             </Alert>
           )}
-          <FormField label="Category" required>
-            <Select
-              name="categoryId"
-              options={categoryOptions}
-              placeholder="Select category…"
-              value={categoryId}
-              onValueChange={setCategoryId}
-            />
-          </FormField>
-          <FormField
-            label="Organizer"
-            required
-            hint={
-              importing && extractedOrganizer
-                ? exactOrganizer
-                  ? `The page named “${extractedOrganizer}”, which matches this existing organization — it will be reused, not duplicated.`
-                  : `The page named “${extractedOrganizer}”. No existing organization matches, so approving creates one (CURATED / host).`
-                : 'the organization the verified seal attaches to.'
-            }
-          >
-            <Select
-              name="organizerOrgId"
-              options={orgSelectOptions}
-              placeholder="Select organizer…"
-              value={organizerOrgId}
-              onValueChange={(v) => {
-                if (v === ADD_ORG) {
-                  // Open the add-organization form in a new tab so the in-progress listing isn't
-                  // lost; refresh this page afterward to pick the new org from the list.
-                  window.open('/admin/organizations/new', '_blank', 'noopener,noreferrer');
-                  return;
+          {/* COLUMN ALIGNMENT (owner 2026-08-25). The grid already stretches both columns to the
+              same height; what didn't line up was their CONTENT, because each stack packed to the
+              top and left its slack dangling below the last field. Two changes fix it at every
+              width: every control here has a deterministic height (nothing scales with the column
+              width or can be dragged bigger — see the cover image below), and each stack is a
+              full-height flex column whose LAST field carries `mt-auto`. Whichever column is
+              shorter pushes its final field to the bottom; the taller one has no slack, so
+              `mt-auto` is inert there. Symmetric, so it self-corrects whichever side wins at a
+              given breakpoint — no hard-coded "left is taller" assumption to go stale. */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex h-full flex-col gap-4">
+              <FormField label="Name" required>
+                <Input
+                  name="name"
+                  value={name}
+                  minLength={2}
+                  maxLength={300}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setName(v);
+                    if (!slugLocked) setSlug(slugify(v));
+                  }}
+                />
+              </FormField>
+              <FormField label="Category" required>
+                <Select
+                  name="categoryId"
+                  options={categoryOptions}
+                  placeholder="Select category…"
+                  value={categoryId}
+                  onValueChange={setCategoryId}
+                />
+              </FormField>
+              <FormField
+                label="Description"
+                required={req}
+                hintAs="icon"
+                hint="Full write-up (About tab) — its first ~300 chars also become the card blurb. Write our own; never paste theirs."
+              >
+                <Textarea
+                  name="description"
+                  defaultValue={c?.description ?? ''}
+                  minLength={20}
+                  maxLength={10000}
+                  rows={3}
+                  // Textarea's shared min-h-24 floor was overriding `rows`, so the box couldn't get
+                  // shorter. Released here — it now sizes to its rows, and still scrolls/resizes for
+                  // the long prose this field takes.
+                  className="min-h-0"
+                  onChange={mark('description')}
+                />
+              </FormField>
+              <FormField
+                className="mt-auto"
+                label="Tags"
+                hintAs="icon"
+                hint="type a tag and press Enter or +. Paste a comma-separated list to add several."
+              >
+                <TagsInput name="tags" defaultValue={c?.tags ?? []} />
+              </FormField>
+            </div>
+            <div className="flex h-full flex-col gap-4">
+              <FormField
+                label="Organizer"
+                required
+                hintAs="icon"
+                hint={
+                  importing && extractedOrganizer
+                    ? exactOrganizer
+                      ? `The page named “${extractedOrganizer}”, which matches this existing organization — it will be reused, not duplicated.`
+                      : `The page named “${extractedOrganizer}”. No existing organization matches, so approving creates one (CURATED / host).`
+                    : 'the organization the verified seal attaches to.'
                 }
-                setOrganizerOrgId(v);
-              }}
-              searchable
-            />
-          </FormField>
+              >
+                <Select
+                  name="organizerOrgId"
+                  options={orgSelectOptions}
+                  placeholder="Select organizer…"
+                  value={organizerOrgId}
+                  onValueChange={(v) => {
+                    if (v === ADD_ORG) {
+                      // Open the add-organization form in a new tab so the in-progress listing isn't
+                      // lost; refresh this page afterward to pick the new org from the list.
+                      window.open('/admin/organizations/new', '_blank', 'noopener,noreferrer');
+                      return;
+                    }
+                    setOrganizerOrgId(v);
+                  }}
+                  searchable
+                />
+              </FormField>
+              <FormField
+                label="Official URL"
+                required={req}
+                hintAs="icon"
+                hint="the competition’s home page."
+              >
+                <Input
+                  name="officialUrl"
+                  type="url"
+                  inputMode="url"
+                  defaultValue={c?.officialUrl ?? ''}
+                  maxLength={1000}
+                  placeholder="https://…"
+                  onChange={mark('officialUrl')}
+                />
+              </FormField>
+              <FormField
+                className="mt-auto"
+                label="Cover image"
+                labelAsText
+                hintAs="icon"
+                hint="Shown on the listing card and the detail header. Falls back to generated category art when empty."
+              >
+                {/* w-full min-w-0: a grid item defaults to min-width:auto, which let the drop
+                  zone size itself from its content height and overflow the column. */}
+                <div className="w-full min-w-0">
+                  <ImageUpload
+                    compact
+                    // A FIXED height (h-36 = 144px, the listing card cover's real pixel height),
+                    // not the `aspect-[263/144]` it used to carry. An aspect ratio makes the box
+                    // grow and shrink with the column, so this column's total height changed at
+                    // every breakpoint and the two columns only happened to line up at some of
+                    // them. Width still fills like every other control; only the exact card
+                    // PROPORTION is given up, and the height kept is the one the card uses.
+                    dropZoneClassName="h-36 w-full"
+                    name="logo"
+                    defaultValue={c?.logo}
+                    uploadEnabled
+                    onSelectFile={uploadCoverImage}
+                  />
+                </div>
+              </FormField>
+            </div>
+          </div>
         </div>
       ),
     },
+    // First edition (create + import): a competition needs a running to be publicly visible (the
+    // readiness gate). The card-facing facts (prize, region, deadline) are captured here so a new
+    // listing is complete-by-default — one atomic create, and one atomic approve.
     {
-      id: 'about',
-      label: 'About',
-      meta: 'Summary · description · tags',
+      id: 'administration',
+      label: 'Administration',
+      meta: 'Sign-up · cost · delivery',
+      // NOT hideOnEdit: delivery/cost/recurrence are competition-level and must stay editable.
+      // The seasonal fields inside (location, fee, sign-up link, scope) carry their own !editing
+      // guards — those are edited per-edition on the Editions tab.
       content: (
-        <div className="grid gap-4">
-          <FormField
-            label="Summary"
-            required={req}
-            hint="1–2 sentences shown on the card (max 300 chars)."
-          >
-            <Textarea
-              name="summary"
-              defaultValue={c?.summary ?? ''}
-              minLength={10}
-              maxLength={300}
-              rows={2}
-              onChange={mark('summary')}
-            />
-          </FormField>
-          <FormField
-            label="Description"
-            required={req}
-            hint="Full write-up (About tab). Write our own; never paste theirs."
-          >
-            <Textarea
-              name="description"
-              defaultValue={c?.description ?? ''}
-              minLength={20}
-              maxLength={10000}
-              rows={5}
-              onChange={mark('description')}
-            />
-          </FormField>
-          <FormField label="Tags" hint="comma-separated">
-            <Input name="tags" defaultValue={c?.tags?.join(', ') ?? ''} maxLength={300} />
-          </FormField>
-        </div>
-      ),
-    },
-    {
-      id: 'format',
-      label: 'Format & eligibility',
-      meta: 'Participation · cost · grades',
-      content: (
-        <div className="grid gap-4">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <FormField label="Participation">
-              <Select
-                name="participationMode"
-                options={enumOptions(PARTICIPATION_MODES)}
-                value={participation}
-                onValueChange={setParticipation}
+        // One 2-column grid, owner-set order (2026-08-23): sign-up + cost, then delivery +
+        // location, then scope + recurrence — the sign-up link and price lead because they're
+        // what a curator copies off the organizer's page first. On EDIT the three edition-level
+        // fields (registration URL, location, scope) drop out and the remaining three simply
+        // repack; only the create/import form shows the full 3×2.
+        <div className="grid gap-4 sm:grid-cols-2">
+          {!editing && (
+            <FormField
+              label="Registration URL"
+              required
+              hintAs="icon"
+              hint="where entrants sign up."
+            >
+              <Input
+                name="edition_registrationUrl"
+                type="url"
+                inputMode="url"
+                defaultValue={editionSeed?.registrationUrl ?? ''}
+                maxLength={1000}
+                placeholder="https://…"
+                onChange={mark('registrationUrl')}
               />
             </FormField>
-            <FormField label="Delivery">
-              <Select
-                name="delivery"
-                options={enumOptions(DELIVERIES)}
-                value={delivery}
-                onValueChange={setDelivery}
-              />
-            </FormField>
-            <FormField label="Entry pathway">
-              <Select
-                name="entryPathway"
-                options={enumOptions(ENTRY_PATHWAYS)}
-                defaultValue={c?.entryPathway ?? 'INDIVIDUAL'}
-              />
-            </FormField>
-            <FormField label="Cost">
+          )}
+          <FormField label="Cost" labelAsText>
+            <div className="flex items-start gap-2">
               <Select
                 name="costType"
                 options={enumOptions(COST_TYPES)}
                 value={costType}
-                onValueChange={(v) => {
-                  setCostType(v);
-                  // The fee/currency inputs unmount on FREE and remount empty on the way back, so
-                  // clear their ring-tracking flags on any cost change to stay in sync.
-                  setFilled((f) => ({ ...f, entryFee: false, currency: false }));
-                }}
+                onValueChange={setCostType}
+                className="w-32 shrink-0"
               />
-            </FormField>
-            <FormField label="Recurrence">
-              <Select
-                name="recurrence"
-                options={enumOptions(RECURRENCES)}
-                defaultValue={c?.recurrence ?? 'ANNUAL'}
-              />
-            </FormField>
-            <FormField label="Team size" hint="team competitions only">
-              <div className="flex items-center gap-2">
-                <Input
-                  name="teamSizeMin"
-                  type="number"
-                  aria-label="Team size (min)"
-                  placeholder="min"
-                  defaultValue={c?.teamSizeMin ?? ''}
-                  min={1}
-                  disabled={teamDisabled}
-                />
-                <span aria-hidden="true" className="text-muted">
-                  –
-                </span>
-                <Input
-                  name="teamSizeMax"
-                  type="number"
-                  aria-label="Team size (max)"
-                  placeholder="max"
-                  defaultValue={c?.teamSizeMax ?? ''}
-                  min={1}
-                  disabled={teamDisabled}
+              {!editing && (
+                // Fee + currency stay MOUNTED on FREE and go disabled instead of vanishing
+                // (owner 2026-08-23): the row keeps its shape, and a price typed before someone
+                // flips to Free survives the flip back. Disabled controls are omitted from the
+                // submission, so FREE still posts no fee — same payload the unmounted version
+                // sent. `filled` needs no resetting for the same reason: the values persist, so
+                // the flags stay true to them (and entryFee/currency drop out of
+                // `requiredFields` entirely while FREE).
+                <>
+                  <Input
+                    name="edition_entryFee"
+                    type="number"
+                    step="0.01"
+                    min={0}
+                    max={100000}
+                    defaultValue={editionSeed?.entryFee ?? ''}
+                    placeholder="0.00"
+                    aria-label="Entry fee"
+                    disabled={isFree}
+                    onChange={mark('entryFee')}
+                    className="min-w-0 flex-1"
+                  />
+                  <Input
+                    name="edition_currency"
+                    defaultValue={editionSeed?.currency ?? ''}
+                    maxLength={3}
+                    pattern="[A-Za-z]{3}"
+                    placeholder="USD"
+                    aria-label="Currency"
+                    disabled={isFree}
+                    onChange={mark('currency')}
+                    className="w-20 shrink-0 uppercase"
+                  />
+                </>
+              )}
+            </div>
+          </FormField>
+          <FormField label="Delivery">
+            <Select
+              name="delivery"
+              options={enumOptions(DELIVERIES)}
+              value={delivery}
+              onValueChange={(v) => {
+                setDelivery(v);
+                // Virtual delivery auto-tags the Virtual/Online region — the location IS the
+                // internet; any extra regions then mean “who may enter”, not venues.
+                if (v === 'VIRTUAL') {
+                  const virtual = regions.find((r) => r.level === 'VIRTUAL');
+                  if (virtual && !regionIds.includes(virtual.id)) toggleRegion(virtual.id);
+                }
+              }}
+            />
+          </FormField>
+          {!editing && (
+            <FormField
+              label={delivery === 'VIRTUAL' ? 'Who can enter' : 'Location'}
+              required
+              labelAsText
+              hintAs="icon"
+              hint="the regions this running covers — shown on the card and drives the marketplace region filter. Virtual competitions keep the Online tag; add regions to say who may enter."
+            >
+              <div className="grid gap-1">
+                {regionIds.map((id) => (
+                  <input key={id} type="hidden" name="edition_regionIds" value={id} />
+                ))}
+                <RegionSelect
+                  regions={regions}
+                  selectedIds={regionIds}
+                  onToggle={toggleRegion}
+                  ariaLabel={delivery === 'VIRTUAL' ? 'Who can enter' : 'Location'}
                 />
               </div>
             </FormField>
-          </div>
-          <FormField
-            label="Evaluation types"
-            hint="how entries are judged; pick any that apply."
-            labelAsText
-          >
-            <div className="flex flex-wrap gap-x-4 gap-y-2 pt-1">
-              {EVALUATION_TYPES.map((token) => (
-                <Checkbox
-                  key={token}
-                  name="evaluationType"
-                  value={token}
-                  defaultChecked={c?.evaluationType?.includes(token) ?? false}
-                  label={enumLabel(token)}
-                />
-              ))}
+          )}
+          {/* Row 3 — WHO ENTERS, moved off the Eligibility step (owner 2026-08-24): participation
+              and its dependent team size are administrative shape ("how is this run"), not who
+              qualifies, and they belong beside delivery. Team size only applies to team/both, so
+              the inputs stay disabled otherwise — disabled fields aren't submitted, so
+              INDIVIDUAL never posts a stray size. */}
+          <FormField label="Participation">
+            <Select
+              name="participationMode"
+              options={enumOptions(PARTICIPATION_MODES)}
+              value={participation}
+              onValueChange={setParticipation}
+            />
+          </FormField>
+          <FormField label="Team size" hintAs="icon" hint="team competitions only">
+            <div className="flex items-center gap-2">
+              <Input
+                name="teamSizeMin"
+                type="number"
+                aria-label="Team size (min)"
+                placeholder="min"
+                defaultValue={c?.teamSizeMin ?? ''}
+                min={1}
+                disabled={teamDisabled}
+              />
+              <span aria-hidden="true" className="text-muted">
+                –
+              </span>
+              <Input
+                name="teamSizeMax"
+                type="number"
+                aria-label="Team size (max)"
+                placeholder="max"
+                defaultValue={c?.teamSizeMax ?? ''}
+                min={1}
+                disabled={teamDisabled}
+              />
             </div>
           </FormField>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormField label="Min grade" error={eligErrors.minGrade}>
+          {/* Row 4 */}
+          {!editing && (
+            <FormField
+              label="Scope level"
+              hintAs="icon"
+              hint="the season's overall reach — a regionals→nationals program is National."
+            >
+              <Select
+                name="edition_scopeLevel"
+                options={enumOptions(SCOPE_LEVELS)}
+                value={scopeLevel}
+                onValueChange={setScopeLevel}
+              />
+            </FormField>
+          )}
+          <FormField label="Recurrence">
+            <Select
+              name="recurrence"
+              options={enumOptions(RECURRENCES)}
+              defaultValue={c?.recurrence ?? 'ANNUAL'}
+            />
+          </FormField>
+          {/* Row 5 — the organizer's published contact points (owner 2026-08-25). Bag keys
+              (`contact_email` / `contact_phone`, declared on every template by `0019`), so they
+              carry the structured-mode gate the other bag fields do and surface publicly through
+              the Overview overflow. The organizer's OWN published details, never a person's. */}
+          {structured && (
+            <>
+              <FormField
+                label="Contact email"
+                hintAs="icon"
+                hint="the organizer’s published contact address, from their site — shown on the listing. Never a personal address."
+              >
+                <Input
+                  type="email"
+                  inputMode="email"
+                  value={
+                    typeof attributes.contact_email === 'string' ? attributes.contact_email : ''
+                  }
+                  onChange={(e) => setAttrKey('contact_email', e.target.value)}
+                  placeholder="info@organizer.org"
+                  maxLength={320}
+                />
+              </FormField>
+              <FormField
+                label="Contact phone"
+                hintAs="icon"
+                hint="the organizer’s published phone number, if they list one."
+              >
+                <Input
+                  type="tel"
+                  inputMode="tel"
+                  value={
+                    typeof attributes.contact_phone === 'string' ? attributes.contact_phone : ''
+                  }
+                  onChange={(e) => setAttrKey('contact_phone', e.target.value)}
+                  placeholder="(555) 123-4567"
+                  maxLength={40}
+                />
+              </FormField>
+            </>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'eligibility',
+      label: 'Eligibility',
+      meta: 'Grades · ages · countries',
+      content: (
+        // One 2-column grid, owner-set order (2026-08-24):
+        //   R1  Grades          | Ages                          — the two ranges, each cell its own min/max
+        //   R2  Student status  | Age cutoff date               — who qualifies, and as of when
+        //   R3  Entry pathway   | Citizenship requirement
+        //   R4  Other requirements | Eligible countries         — the catch-all beside the gate it explains
+        // Participation + team size LEFT this step for Administration — they describe how the
+        // competition is run, not who may enter. Bag-backed fields (student status, countries,
+        // other requirements) carry the structured-mode gate; in raw-JSON mode they drop out and
+        // the rest repacks, so the table above holds for the create/import form specifically.
+        <div className="grid gap-4 sm:grid-cols-2">
+          {/* Row 1 — the two ranges. Min+max share a cell so the row reads as two bands, not
+              four loose selects; the range error hangs off the cell that owns both ends. */}
+          <FormField label="Grades" labelAsText error={eligErrors.minGrade}>
+            <div className="flex items-center gap-2">
               <Select
                 name="minGrade"
                 options={GRADE_OPTIONS}
                 value={elig.minGrade}
                 onValueChange={setEligValue('minGrade')}
+                aria-label="Min grade"
+                className="min-w-0 flex-1"
               />
-            </FormField>
-            <FormField label="Max grade">
+              <span aria-hidden="true" className="text-muted">
+                –
+              </span>
               <Select
                 name="maxGrade"
                 options={GRADE_OPTIONS}
                 value={elig.maxGrade}
                 onValueChange={setEligValue('maxGrade')}
+                aria-label="Max grade"
+                className="min-w-0 flex-1"
               />
-            </FormField>
-            <FormField label="Min age" error={eligErrors.minAge}>
+            </div>
+          </FormField>
+          <FormField label="Ages" labelAsText error={eligErrors.minAge}>
+            <div className="flex items-center gap-2">
               <Select
                 name="minAge"
                 options={AGE_OPTIONS}
                 value={elig.minAge}
                 onValueChange={setEligValue('minAge')}
+                aria-label="Min age"
+                className="min-w-0 flex-1"
               />
-            </FormField>
-            <FormField label="Max age">
+              <span aria-hidden="true" className="text-muted">
+                –
+              </span>
               <Select
                 name="maxAge"
                 options={AGE_OPTIONS}
                 value={elig.maxAge}
                 onValueChange={setEligValue('maxAge')}
+                aria-label="Max age"
+                className="min-w-0 flex-1"
+              />
+            </div>
+          </FormField>
+          {/* Row 2 — the enrollment gate and the date its age rule is measured from.
+              Student status is a BOOLEAN since `0022` (owner 2026-08-26); it was a 300-char
+              free-text box, which is why curators wrote whole clauses into a key named for a
+              yes/no question. Sentences belong in Other eligibility requirements (0017). */}
+          {structured && (
+            <FormField
+              label="Student status required"
+              hintAs="icon"
+              hint="tick when entrants must be enrolled students. The exact wording of the rule goes in Other eligibility requirements below."
+            >
+              <Checkbox
+                checked={attributes.student_status_required === true}
+                onChange={(e) => setAttrKey('student_status_required', e.target.checked)}
+                label={<span className="text-sm">Must be an enrolled student</span>}
               />
             </FormField>
-          </div>
+          )}
+          {!editing && (
+            <FormField
+              label="Age cutoff date"
+              hintAs="icon"
+              hint="age eligibility is computed “as of” this date, the way competitions state age rules. Re-dated each season."
+            >
+              <Input
+                name="edition_ageCutoffDate"
+                type="date"
+                defaultValue={editionSeed?.ageCutoffDate ?? ''}
+              />
+            </FormField>
+          )}
+          {/* Row 3 — how they enter, then the citizenship gate. */}
+          <FormField label="Entry pathway">
+            <Select
+              name="entryPathway"
+              options={enumOptions(ENTRY_PATHWAYS)}
+              defaultValue={c?.entryPathway ?? 'INDIVIDUAL'}
+            />
+          </FormField>
+          {/* The two country gates are CLOSED dropdowns rather than the old comma-separated text
+              (owner 2026-08-24): curators were free-typing spellings that no filter could ever
+              match. The vocabulary is deliberately tiny — anything outside it is "Other", and the
+              free-text field says what "Other" actually means. Both still POST as a one-element
+              array, so the stored shape and the public Eligibility tab are unchanged.
+              ⚠ DOM ORDER IS THE LAYOUT (owner 2026-08-24): the grid is auto-flow, so these three
+              are emitted citizenship → other requirements → eligible countries to land as
+              R3C2 / R4C1 / R4C2. Reordering the JSX moves the cells. */}
+          {structured && (
+            <>
+              <FormField
+                label="Citizenship requirement"
+                hintAs="icon"
+                hint="citizenship / permanent-residency requirement, independent of where they live (e.g. USAMO). Leave Any when there is none."
+              >
+                <Select
+                  options={CITIZENSHIP_OPTIONS}
+                  value={citizenship}
+                  onValueChange={(v) => {
+                    setCitizenship(v);
+                    setAttrKey('citizenship_countries', v ? [v] : []);
+                  }}
+                />
+              </FormField>
+              {/* Row 4 — the catch-all, beside the country gate whose "Other" it most often
+                  explains. Everything the closed vocabularies can't express (a country rule
+                  outside the list, school-affiliation clauses, prior-round qualification) lands
+                  here as prose rather than being wedged into a field that means something else.
+                  Half-width now, not the full row it used to span. */}
+              <FormField
+                label="Other eligibility requirements"
+                hintAs="icon"
+                hint="anything the fields above can’t say — e.g. “must have qualified at a regional”, “open only to member schools”. Shown verbatim on the public Eligibility tab."
+              >
+                {/* One LINE tall by default, draggable taller (owner 2026-08-25): most listings
+                    have no extra rule at all, so the field should cost a row's worth of space
+                    until it's used — and the ones that do need a paragraph get the resize handle.
+                    `min-h-10` overrides the Textarea's own `min-h-24` floor and stops a drag from
+                    shrinking it below one line. Alignment survives: this is a flat auto-flow grid,
+                    so growing this cell grows its whole ROW, and the two columns stay level. */}
+                <Textarea
+                  value={
+                    typeof attributes.other_eligibility_requirements === 'string'
+                      ? attributes.other_eligibility_requirements
+                      : ''
+                  }
+                  onChange={(e) => setAttrKey('other_eligibility_requirements', e.target.value)}
+                  maxLength={1000}
+                  className="h-10 min-h-10 resize-y"
+                />
+              </FormField>
+              <FormField
+                label="Eligible countries"
+                hintAs="icon"
+                hint="where entrants must live or study. Leave Any for open-worldwide; pick Other and spell the rule out under Other requirements."
+              >
+                <Select
+                  options={ELIGIBLE_COUNTRY_OPTIONS}
+                  value={eligibleCountry}
+                  onValueChange={(v) => {
+                    setEligibleCountry(v);
+                    setAttrKey('eligible_countries', v ? [v] : []);
+                  }}
+                />
+              </FormField>
+            </>
+          )}
+          {!structured && (
+            <p className="text-xs text-muted sm:col-span-2">
+              Attributes are in raw-JSON mode — edit the eligibility keys there directly:
+              eligible_countries, citizenship_countries, student_status_required,
+              other_eligibility_requirements.
+            </p>
+          )}
         </div>
       ),
     },
     {
-      id: 'media',
-      label: 'Media & links',
-      meta: 'Cover image · official URL',
+      id: 'judging',
+      label: 'Judging',
+      meta: 'Evaluation · rules',
+      content: (
+        // Two columns (owner 2026-08-23): HOW entries are assessed on the left, WHAT the
+        // organizer publishes about it on the right. The left column is a real spine column and
+        // always renders; the right one lives in the attributes bag, so it carries the same
+        // structured-mode gate the Category-details step does.
+        <div className="grid gap-4 lg:grid-cols-2">
+          <FormField
+            label="Evaluation types"
+            hintAs="icon"
+            hint="how entries are judged; pick any that apply."
+            labelAsText
+          >
+            {/* One row per type instead of a wrapped checkbox line: each option gets its
+                explainer, a full-width hit area, and a visible selected state (border-primary,
+                the same selected token Chip/Tabs use). */}
+            <div className="grid gap-2">
+              {EVALUATION_TYPES.map((token) => {
+                const selected = evaluationTypes.includes(token);
+                return (
+                  <Checkbox
+                    key={token}
+                    name="evaluationType"
+                    value={token}
+                    checked={selected}
+                    onChange={() => toggleEvaluationType(token)}
+                    className={cn(
+                      'items-start gap-2.5 rounded-[var(--radius-field)] border p-3 transition-colors',
+                      selected
+                        ? 'border-primary bg-surface-raised'
+                        : 'border-border hover:bg-background',
+                    )}
+                    label={
+                      <span className="grid gap-0.5">
+                        <span className="font-medium text-foreground">{enumLabel(token)}</span>
+                        <span className="text-xs text-muted">{EVALUATION_HINTS[token]}</span>
+                      </span>
+                    }
+                  />
+                );
+              })}
+            </div>
+          </FormField>
+          {/* Catalog INFO about how the ORGANIZER judges (2026-08-22 template keys) — written
+              into the same attributes bag the Category-details step posts; the controls there
+              omit these keys so nothing renders twice. NOT the gated judging system. The bag
+              only POSTS in structured mode (a category picked, not raw-JSON editing), so the
+              controls are gated on the same condition rather than silently dropping input. */}
+          {structured ? (
+            // Proportional rows against the checkbox stack — see JUDGING_ROWS for the ratio and
+            // why it is fractions rather than pixels. The two text boxes stay equal to each other
+            // (1.5fr each), which is what made this column read as one list of three answers
+            // instead of three unrelated widgets.
+            <div className={JUDGING_ROWS}>
+              <FormField
+                className={JUDGING_FIELD}
+                label="What judges look for"
+                hintAs="icon"
+                hint="short criteria, comma-separated — e.g. Originality 40%, Method 30%, Presentation 30%."
+              >
+                {/* Textarea, not the one-line Input it was: real criteria run past a single line,
+                    and it is what makes this box match its two neighbours. Still CSV — the value
+                    is a string[] in the bag, so the parsing is unchanged. */}
+                <Textarea
+                  value={judgingCriteriaText}
+                  onChange={(e) => {
+                    setJudgingCriteriaText(e.target.value);
+                    setAttrKey('judging_criteria', csvToList(e.target.value));
+                  }}
+                  maxLength={500}
+                  className={cn(JUDGING_BOX, 'resize-none')}
+                />
+              </FormField>
+              <FormField
+                className={JUDGING_FIELD}
+                label="Tie-breaker rules"
+                hintAs="icon"
+                hint="how the organizer breaks ties — shown to participants on the Judging tab."
+              >
+                <Textarea
+                  value={typeof attributes.tie_breakers === 'string' ? attributes.tie_breakers : ''}
+                  onChange={(e) => setAttrKey('tie_breakers', e.target.value)}
+                  maxLength={2000}
+                  className={cn(JUDGING_BOX, 'resize-none')}
+                />
+              </FormField>
+              <FormField
+                className={JUDGING_FIELD}
+                label="Official rules / rubric"
+                hintAs="icon"
+                hint="the organizer’s current rules or rubric. A LINK is preferred — participants then always read the season’s live version; attach a PDF when the organizer publishes no stable page."
+              >
+                {/* Same drop-or-link field as the cover image (packages/ui FileUpload). Uploads
+                    stay OFF until PDF storage is wired — browsing then explains itself and falls
+                    through to link entry, which is the preferred answer anyway. Value lives in
+                    the attributes bag, so no posted field: onChange is the only write path. */}
+                {/* h-full on the WRAPPER too: the drop zone's own `h-full` resolves against this
+                    div, so without it the zone fell back to its content height (~102px) and left
+                    a gap at the bottom of its row. */}
+                <div className="h-full w-full min-w-0">
+                  <FileUpload
+                    compact
+                    // h-full has to be threaded the whole way down — wrapper, FileUpload's own
+                    // root, then the drop zone — or the zone resolves it against a content-sized
+                    // ancestor and stops ~10px short of its row.
+                    className="h-full"
+                    dropZoneClassName={cn(JUDGING_BOX, 'w-full')}
+                    noun="rubric"
+                    article="a"
+                    accept="application/pdf"
+                    setLabel="Rules / rubric linked"
+                    placeholder="https://…/rules.pdf"
+                    urlIcon={<FilePdf className="size-4" />}
+                    defaultValue={
+                      typeof attributes.rules_url === 'string' ? attributes.rules_url : ''
+                    }
+                    onChange={(url) => setAttrKey('rules_url', url)}
+                  />
+                </div>
+              </FormField>
+            </div>
+          ) : (
+            <p className="text-xs text-muted">
+              Pick a category first — judging info is stored with the category-specific fields. (In
+              raw-JSON mode, edit the keys directly: judging_criteria, tie_breakers, rules_url.)
+            </p>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'awards',
+      label: 'Awards',
+      meta: 'Prizes · order · value',
+      // Awards are seasonal — managed per-edition on the Editions tab after create.
+      hideOnEdit: true,
+      content: (
+        <FormField
+          label="Awards"
+          labelAsText
+          hintAs="icon"
+          hint="listed in display order — the first money award leads the card (“$10,000 · …”); the card line and the public Awards tab derive from these rows."
+        >
+          <AwardsInput
+            name="edition_awards"
+            initial={initialAwardRows}
+            onPrizeLineChange={(has) => setFilled((f) => ({ ...f, prizeSummary: has }))}
+          />
+        </FormField>
+      ),
+    },
+    {
+      id: 'timeline',
+      label: 'Timeline',
+      meta: 'The running · dates · regions',
+      hideOnEdit: true,
       content: (
         <div className="grid gap-4">
-          <div className="grid gap-1.5">
-            <span className="text-sm font-medium text-foreground">Cover image</span>
-            <ImageUpload
-              name="logo"
-              defaultValue={c?.logo}
-              uploadEnabled
-              onSelectFile={uploadCoverImage}
-            />
-            <p className="text-xs text-muted">
-              Shown on the listing card and the detail header. Falls back to generated category art
-              when empty.
-            </p>
-          </div>
-          <FormField label="Official URL" required={req} hint="the competition’s home page.">
-            <Input
-              name="officialUrl"
-              type="url"
-              inputMode="url"
-              defaultValue={c?.officialUrl ?? ''}
-              maxLength={1000}
-              placeholder="https://…"
-              onChange={mark('officialUrl')}
-            />
+          {/* Import only: the cycle label is what decides whether an edition exists at all, so an
+              empty one has to say what that costs. Extractions of pages that describe no running
+              are legitimate — they just leave a listing the readiness gate hides. */}
+          {importing && !editionSeed?.cycleLabel && (
+            <Alert tone="warning">
+              With no <b>cycle label</b> this approves the competition <b>without an edition</b>.
+              The listing is then published but invisible (the readiness gate hides a competition
+              with no running), and the dates and regions below are not saved. Add the year here, or
+              approve now and create the edition on the listing afterwards.
+            </Alert>
+          )}
+          {/* Cycle label is ASSIGNED, not asked (owner 2026-08-23): the year for a manual
+              create; the extracted label on import — left empty there so an extraction with no
+              running still approves edition-less (the warning above). */}
+          <input
+            type="hidden"
+            name="edition_cycleLabel"
+            value={editionSeed?.cycleLabel ?? (importing ? '' : String(new Date().getFullYear()))}
+          />
+          <FormField
+            label="Key dates"
+            labelAsText
+            hintAs="icon"
+            hint="needs a Reg close or Submission due (dated or TBD); add the rest as you have them."
+          >
+            {/* ONE panel of hairline-divided rows with "Add date" as its last row — the same
+                shape the Awards editor settled on (owner 2026-08-24).
+                TWO LINES per row, not one strip of six controls: line 1 is what the milestone IS
+                (type + label), line 2 is WHEN it happens (date + TBD + time + zone). The main
+                column is ~650px, so a single line gave every control ~90px and the date input was
+                clipping its own placeholder; splitting by meaning gives each field room without
+                turning each date into a full card. */}
+            <div className="rounded-[var(--radius-field)] border border-border">
+              <div className="divide-y divide-border">
+                {orderedKeyDateRows.map((row, i) => (
+                  <div
+                    key={row.key}
+                    draggable={keyDateArmedKey === row.key}
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = 'move';
+                      setKeyDateDragKey(row.key);
+                    }}
+                    onDragEnd={() => {
+                      setKeyDateDragKey(null);
+                      setKeyDateArmedKey(null);
+                    }}
+                    onDragOver={(e) => e.preventDefault()} // required for the drop cursor
+                    onDragEnter={() => dragOverKeyDate(row.key)}
+                    className={cn(
+                      'group flex gap-3 px-3.5 py-3.5',
+                      keyDateDragKey === row.key && 'bg-brand-gold-soft/50 opacity-80',
+                    )}
+                  >
+                    <div className="mt-7 flex shrink-0 items-center gap-1">
+                      {/* The grip appears ONLY on rows with no date to sort them by (owner
+                          2026-08-24): once a milestone has a date the calendar owns its position,
+                          so offering a handle there would promise a reorder that snaps back. TBD
+                          rows are exactly the case where order is still the curator's call. */}
+                      {isUndatedRow(row) ? (
+                        <button
+                          type="button"
+                          aria-hidden="true"
+                          tabIndex={-1}
+                          onMouseDown={() => setKeyDateArmedKey(row.key)}
+                          onMouseUp={() => setKeyDateArmedKey(null)}
+                          className="hidden cursor-grab touch-none text-muted/40 group-focus-within:text-muted group-hover:text-muted active:cursor-grabbing sm:block"
+                        >
+                          <GripHandle className="size-4" />
+                        </button>
+                      ) : (
+                        <span aria-hidden="true" className="hidden size-4 sm:block" />
+                      )}
+                      {/* Position, not identity: the number tracks where this milestone falls in
+                          the CHRONOLOGY the rows are sorted into, so it renumbers as dates change
+                          and as undated rows are dragged. */}
+                      <span
+                        aria-hidden="true"
+                        className="grid size-6 place-items-center rounded-full border border-border text-xs font-semibold text-muted tabular-nums"
+                      >
+                        {i + 1}
+                      </span>
+                    </div>
+                    <div className="grid min-w-0 flex-1 gap-3">
+                      <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
+                        <FormField label="Milestone" className="min-w-0">
+                          <Select
+                            name={`keydate_${i}_type`}
+                            options={enumOptions(KEY_DATE_TYPES)}
+                            value={row.type}
+                            onValueChange={(v) => patchKeyDateRow(row.key, { type: v })}
+                          />
+                        </FormField>
+                        <FormField
+                          label="Label"
+                          hintAs="icon"
+                          hint="optional — leave empty and the public timeline uses the milestone's own wording (shown greyed here). Type only to override it, or to name a Custom date."
+                          className="min-w-0"
+                        >
+                          {/* Placeholder, never a pre-filled VALUE: it shows the exact wording
+                              visitors will read for the chosen milestone, so an empty field is
+                              visibly a deliberate "use the standard name", not an unfinished one. */}
+                          <Input
+                            name={`keydate_${i}_label`}
+                            maxLength={200}
+                            placeholder={
+                              row.type === 'CUSTOM'
+                                ? 'Name this date'
+                                : defaultKeyDateLabel(row.type)
+                            }
+                            value={row.label}
+                            onChange={(e) => patchKeyDateRow(row.key, { label: e.target.value })}
+                          />
+                        </FormField>
+                      </div>
+                      {/* Line 2 — WHEN. TBD keeps every field on screen and DISABLES the three it
+                          makes irrelevant (owner 2026-08-24), rather than swapping them out: the
+                          row holds its shape, and the disabled controls still show what was typed
+                          before the switch, so flipping back loses nothing. Disabled fields aren't
+                          submitted, so a TBD row posts no date — the same payload the hidden flag
+                          below already implied. */}
+                      <div className="flex flex-wrap items-end gap-2">
+                        <FormField label="Date" className="min-w-36 flex-1">
+                          <Input
+                            name={`keydate_${i}_date`}
+                            type="date"
+                            disabled={row.tbd}
+                            value={row.date}
+                            onChange={(e) => patchKeyDateRow(row.key, { date: e.target.value })}
+                            className="w-full min-w-0"
+                          />
+                        </FormField>
+                        <FormField
+                          label="Ends"
+                          hintAs="icon"
+                          hint="optional — only for a milestone that runs over more than one day (a two-day finals). Leave empty for a single day; it ends at end-of-day in the zone below."
+                          className="min-w-36 flex-1"
+                          error={
+                            row.endDate !== '' && row.date !== '' && row.endDate <= row.date
+                              ? 'Must be after the start date.'
+                              : undefined
+                          }
+                        >
+                          <Input
+                            name={`keydate_${i}_enddate`}
+                            type="date"
+                            disabled={row.tbd}
+                            min={row.date || undefined}
+                            value={row.endDate}
+                            onChange={(e) => patchKeyDateRow(row.key, { endDate: e.target.value })}
+                            className="w-full min-w-0"
+                          />
+                        </FormField>
+                        {row.tbd && <input type="hidden" name={`keydate_${i}_tbd`} value="on" />}
+                        <button
+                          type="button"
+                          aria-pressed={row.tbd}
+                          aria-label={`Key date ${i + 1} date is TBD`}
+                          onClick={() => patchKeyDateRow(row.key, { tbd: !row.tbd })}
+                          className={cn(
+                            'h-10 shrink-0 rounded-[var(--radius-field)] border px-2.5 text-xs font-semibold transition-colors',
+                            row.tbd
+                              ? 'border-primary bg-surface-raised text-foreground'
+                              : 'border-border text-muted hover:bg-background hover:text-foreground',
+                          )}
+                        >
+                          TBD
+                        </button>
+                        <FormField label="Time" className="w-28 shrink-0">
+                          <Input
+                            name={`keydate_${i}_time`}
+                            type="time"
+                            disabled={row.tbd}
+                            value={row.time}
+                            onChange={(e) => patchKeyDateRow(row.key, { time: e.target.value })}
+                            className="w-full min-w-0"
+                          />
+                        </FormField>
+                        <FormField label="Time zone" className="min-w-40 flex-1">
+                          <Select
+                            name={`keydate_${i}_timezone`}
+                            options={ADMIN_TIMEZONES}
+                            disabled={row.tbd}
+                            value={row.timezone}
+                            onValueChange={(v) => patchKeyDateRow(row.key, { timezone: v })}
+                          />
+                        </FormField>
+                      </div>
+                    </div>
+                    {/* Dimmed until hover/focus — present for touch and keyboard, quiet otherwise
+                        (the Awards editor's row-control grammar). */}
+                    {/* A required milestone's LAST remaining row can't be removed — deleting it
+                        would make the form unsubmittable with no hint as to what vanished.
+                        Duplicates of a required type, and any optional row, still go. */}
+                    {keyDateRows.length > 1 && !isOnlyRequiredRow(row) ? (
+                      <button
+                        type="button"
+                        aria-label={`Remove key date ${i + 1}`}
+                        onClick={() => removeKeyDateRow(row.key)}
+                        className="mt-7 grid size-7 shrink-0 place-items-center self-start rounded text-muted opacity-50 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 hover:bg-background hover:text-danger"
+                      >
+                        <Trash aria-hidden="true" className="size-3.5" />
+                      </button>
+                    ) : (
+                      <span aria-hidden="true" className="size-7 shrink-0" />
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={addKeyDateRow}
+                className="flex w-full items-center gap-1.5 rounded-b-[calc(var(--radius-field)-1px)] border-t border-border px-3.5 py-2.5 text-sm font-medium text-muted transition-colors hover:bg-background hover:text-foreground"
+              >
+                <Plus aria-hidden="true" className="size-4" /> Add date
+              </button>
+            </div>
+          </FormField>
+        </div>
+      ),
+    },
+    // Resources + FAQ (owner 2026-08-25): the two curated extras the create flow never collected
+    // — both previously reachable only via the edit page's managers AFTER a save, which meant a
+    // second trip for data the curator had on screen during the first. Create-only: the edit page
+    // keeps its managers (they edit rows in place), and import review hides this step outright
+    // because the approve response carries no competition id to hang the sub-posts off
+    // (hideOnImport — no controls beats controls that silently discard).
+    {
+      id: 'extras',
+      label: 'Resources & FAQ',
+      meta: 'Prep links · questions',
+      hideOnEdit: true,
+      hideOnImport: true,
+      content: (
+        <div className="grid gap-6">
+          <FormField
+            label="Prep resources"
+            labelAsText
+            hintAs="icon"
+            hint="curated links that help someone prepare — books, past papers, guides, videos. Shown in the Prep resources row on the listing; mark paid placements as affiliate so the disclosure renders."
+          >
+            <div className="rounded-[var(--radius-field)] border border-border">
+              <div className="divide-y divide-border">
+                {resourceRows.map((row, i) => (
+                  <div
+                    key={row.key}
+                    draggable={resourceDrag.armed === row.key}
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = 'move';
+                      setResourceDrag((d) => ({ ...d, drag: row.key }));
+                    }}
+                    onDragEnd={() => setResourceDrag({ drag: null, armed: null })}
+                    onDragOver={(e) => {
+                      e.preventDefault(); // required for the drop cursor; reorder happens on enter
+                    }}
+                    onDragEnter={() => {
+                      if (resourceDrag.drag !== null && resourceDrag.drag !== row.key)
+                        setResourceRows((rows) => reorder(rows, resourceDrag.drag!, row.key));
+                    }}
+                    className={cn(
+                      'group grid gap-2 px-3.5 py-3',
+                      resourceDrag.drag === row.key && 'bg-brand-gold-soft/50 opacity-80',
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      {/* Grip + rank as one quiet ordinal block (AwardsInput grammar): the number
+                          is POSITION — it renumbers as rows are dragged, and it is exactly the
+                          displayOrder the row will save with. */}
+                      <button
+                        type="button"
+                        aria-hidden="true"
+                        tabIndex={-1}
+                        onMouseDown={() => setResourceDrag((d) => ({ ...d, armed: row.key }))}
+                        onMouseUp={() => setResourceDrag((d) => ({ ...d, armed: null }))}
+                        className="hidden cursor-grab touch-none text-muted/50 group-focus-within:text-muted group-hover:text-muted active:cursor-grabbing sm:block"
+                      >
+                        <GripHandle className="size-4" />
+                      </button>
+                      <span
+                        aria-hidden="true"
+                        className="w-4 text-center text-xs text-muted tabular-nums"
+                      >
+                        {i + 1}
+                      </span>
+                      <Input
+                        aria-label={`Resource ${i + 1} title`}
+                        name={`resource_${i}_title`}
+                        placeholder="e.g. AMC 10 past papers"
+                        maxLength={300}
+                        value={row.title}
+                        onChange={(e) => patchResourceRow(row.key, { title: e.target.value })}
+                        className="min-w-0 flex-1"
+                      />
+                      <Select
+                        aria-label={`Resource ${i + 1} type`}
+                        name={`resource_${i}_type`}
+                        options={enumOptions(RESOURCE_TYPES)}
+                        value={row.type}
+                        onValueChange={(v) => patchResourceRow(row.key, { type: v })}
+                        className="w-32 shrink-0"
+                      />
+                      {/* Dimmed until hover/focus — the Awards editor's row-control grammar. */}
+                      <button
+                        type="button"
+                        aria-label={`Remove resource ${i + 1}`}
+                        onClick={() => removeResourceRow(row.key)}
+                        className="grid size-7 shrink-0 place-items-center rounded text-muted opacity-50 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 hover:bg-background hover:text-danger"
+                      >
+                        <Trash aria-hidden="true" className="size-3.5" />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Input
+                        aria-label={`Resource ${i + 1} URL`}
+                        name={`resource_${i}_url`}
+                        type="url"
+                        inputMode="url"
+                        placeholder="https://…"
+                        maxLength={1000}
+                        value={row.url}
+                        onChange={(e) => patchResourceRow(row.key, { url: e.target.value })}
+                        className="min-w-0 flex-1"
+                      />
+                      {/* 🔒 The affiliate flag drives the public disclosure — checkbox presence
+                          is the posted signal (same contract as the key-date TBD flag). */}
+                      <Checkbox
+                        name={`resource_${i}_affiliate`}
+                        label="Affiliate link"
+                        checked={row.affiliate}
+                        onChange={(e) => patchResourceRow(row.key, { affiliate: e.target.checked })}
+                        className="shrink-0"
+                      />
+                    </div>
+                    {/* Optional card art (0020) — the resource's own cover/thumbnail; the public
+                        card falls back to its type tint without one. */}
+                    <Input
+                      aria-label={`Resource ${i + 1} preview image URL`}
+                      name={`resource_${i}_image`}
+                      type="url"
+                      inputMode="url"
+                      placeholder="Preview image URL (optional) — https://…"
+                      maxLength={1000}
+                      value={row.image}
+                      onChange={(e) => patchResourceRow(row.key, { image: e.target.value })}
+                      className="min-w-0"
+                    />
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={addResourceRow}
+                className="flex w-full items-center gap-1.5 rounded-b-[calc(var(--radius-field)-1px)] border-t border-border px-3.5 py-2.5 text-sm font-medium text-muted transition-colors hover:bg-background hover:text-foreground"
+              >
+                <Plus aria-hidden="true" className="size-4" /> Add resource
+              </button>
+            </div>
+          </FormField>
+          <FormField
+            label="FAQ"
+            labelAsText
+            hintAs="icon"
+            hint="questions parents and students actually ask — shown as the listing's FAQ tab. Write our own answers; never paste the organizer's."
+          >
+            <div className="rounded-[var(--radius-field)] border border-border">
+              <div className="divide-y divide-border">
+                {faqRows.map((row, i) => (
+                  <div
+                    key={row.key}
+                    draggable={faqDrag.armed === row.key}
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = 'move';
+                      setFaqDrag((d) => ({ ...d, drag: row.key }));
+                    }}
+                    onDragEnd={() => setFaqDrag({ drag: null, armed: null })}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                    }}
+                    onDragEnter={() => {
+                      if (faqDrag.drag !== null && faqDrag.drag !== row.key)
+                        setFaqRows((rows) => reorder(rows, faqDrag.drag!, row.key));
+                    }}
+                    className={cn(
+                      'group grid gap-2 px-3.5 py-3',
+                      faqDrag.drag === row.key && 'bg-brand-gold-soft/50 opacity-80',
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        aria-hidden="true"
+                        tabIndex={-1}
+                        onMouseDown={() => setFaqDrag((d) => ({ ...d, armed: row.key }))}
+                        onMouseUp={() => setFaqDrag((d) => ({ ...d, armed: null }))}
+                        className="hidden cursor-grab touch-none text-muted/50 group-focus-within:text-muted group-hover:text-muted active:cursor-grabbing sm:block"
+                      >
+                        <GripHandle className="size-4" />
+                      </button>
+                      <span
+                        aria-hidden="true"
+                        className="w-4 text-center text-xs text-muted tabular-nums"
+                      >
+                        {i + 1}
+                      </span>
+                      <Input
+                        aria-label={`FAQ ${i + 1} question`}
+                        name={`faq_${i}_question`}
+                        placeholder="e.g. Can homeschooled students enter?"
+                        maxLength={500}
+                        value={row.question}
+                        onChange={(e) => patchFaqRow(row.key, { question: e.target.value })}
+                        className="min-w-0 flex-1"
+                      />
+                      <button
+                        type="button"
+                        aria-label={`Remove FAQ ${i + 1}`}
+                        onClick={() => removeFaqRow(row.key)}
+                        className="grid size-7 shrink-0 place-items-center rounded text-muted opacity-50 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 hover:bg-background hover:text-danger"
+                      >
+                        <Trash aria-hidden="true" className="size-3.5" />
+                      </button>
+                    </div>
+                    {/* One line tall until it's used, draggable taller — the Other-requirements
+                        pattern: an answer is often a sentence, sometimes a paragraph. */}
+                    <Textarea
+                      aria-label={`FAQ ${i + 1} answer`}
+                      name={`faq_${i}_answer`}
+                      placeholder="The answer, in our words."
+                      value={row.answer}
+                      onChange={(e) => patchFaqRow(row.key, { answer: e.target.value })}
+                      className="h-10 min-h-10 resize-y"
+                    />
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={addFaqRow}
+                className="flex w-full items-center gap-1.5 rounded-b-[calc(var(--radius-field)-1px)] border-t border-border px-3.5 py-2.5 text-sm font-medium text-muted transition-colors hover:bg-background hover:text-foreground"
+              >
+                <Plus aria-hidden="true" className="size-4" /> Add question
+              </button>
+            </div>
           </FormField>
         </div>
       ),
     },
     {
       id: 'attributes',
-      label: 'Category details',
-      meta: 'Template fields',
-      hideOnCreate: true,
+      label: 'Custom fields',
+      meta: 'Category-specific · extras',
       content: (
         <div className="grid gap-4">
-          <p className="text-xs text-muted">
-            Category-specific fields, validated against the category template on save.
-          </p>
           {structured ? (
             <>
               <input
@@ -709,16 +1895,48 @@ export function CompetitionForm({
               />
               <AttributesFields
                 key={categoryId}
-                schema={template.jsonSchema}
-                uiHints={template.uiHints}
+                schema={template?.jsonSchema ?? {}}
+                uiHints={template?.uiHints ?? null}
                 value={attributes}
                 onChange={setAttributes}
+                // The Judging + Eligibility steps own these keys with dedicated controls — never twice.
+                omitKeys={[
+                  'judging_criteria',
+                  'tie_breakers',
+                  'rules_url',
+                  'eligible_countries',
+                  'citizenship_countries',
+                  'student_status_required',
+                  'other_eligibility_requirements',
+                  'contact_email',
+                  'contact_phone',
+                ]}
               />
-              <div>
-                <Button type="button" variant="ghost" size="sm" onClick={enterRawMode}>
-                  Edit raw JSON
-                </Button>
-              </div>
+              {/* The payload itself, tucked away (owner 2026-08-23): read it at a glance, or
+                  switch to the existing raw-edit mode — never two live editors of one bag. Titled
+                  like the two field sections above it (owner 2026-08-24) so the tab reads as three
+                  named parts rather than two plus an unlabelled stray control. */}
+              <section className="grid gap-3">
+                <SubSectionHeading
+                  title="Raw JSON payload"
+                  hint="Exactly what the two sections above will save. Open it to check a value, or edit the bag directly when a field needs a shape the controls can’t express."
+                />
+                <details className="rounded-[var(--radius-field)] border border-border">
+                  <summary className="cursor-pointer px-3.5 py-2 text-xs font-medium text-muted hover:text-foreground">
+                    Show payload
+                  </summary>
+                  <div className="grid gap-2 border-t border-border p-3">
+                    <pre className="max-h-56 overflow-auto rounded-md bg-surface p-2 font-mono text-xs text-foreground">
+                      {Object.keys(attributes).length ? JSON.stringify(attributes, null, 2) : '{ }'}
+                    </pre>
+                    <div>
+                      <Button type="button" variant="ghost" size="sm" onClick={enterRawMode}>
+                        Edit as JSON
+                      </Button>
+                    </div>
+                  </div>
+                </details>
+              </section>
             </>
           ) : rawMode ? (
             <>
@@ -732,252 +1950,13 @@ export function CompetitionForm({
                   placeholder='{ "topics": ["algebra"] }'
                 />
               </FormField>
-              {template && (
-                <div>
-                  <Button type="button" variant="ghost" size="sm" onClick={exitRawMode}>
-                    Back to fields
-                  </Button>
-                </div>
-              )}
-            </>
-          ) : (
-            <FormField
-              label="Attributes (JSON)"
-              hint="No template for this category yet; raw JSON only (pick a category first)."
-            >
-              <Textarea
-                name="attributes"
-                defaultValue={
-                  Object.keys(attributes).length ? JSON.stringify(attributes, null, 2) : ''
-                }
-                rows={6}
-                className="font-mono text-xs"
-                placeholder='{ "topics": ["algebra"] }'
-              />
-            </FormField>
-          )}
-        </div>
-      ),
-    },
-    // First edition (create + import): a competition needs a running to be publicly visible (the
-    // readiness gate). The card-facing facts (prize, region, deadline) are captured here so a new
-    // listing is complete-by-default — one atomic create, and one atomic approve.
-    {
-      id: 'edition',
-      label: 'First edition',
-      meta: 'The year’s running',
-      hideOnEdit: true,
-      content: (
-        <div className="grid gap-4">
-          <p className="text-xs text-muted">
-            The current year’s running, needed for the listing to go live. Later years are added on
-            the Editions tab.
-          </p>
-          {/* Import only: the cycle label is what decides whether an edition exists at all, so an
-              empty one has to say what that costs. Extractions of pages that describe no running
-              are legitimate — they just leave a listing the readiness gate hides. */}
-          {importing && !filled.cycleLabel && (
-            <Alert tone="warning">
-              With no <b>cycle label</b> this approves the competition <b>without an edition</b>.
-              The listing is then published but invisible (the readiness gate hides a competition
-              with no running), and the dates and regions below are not saved. Add the year here, or
-              approve now and create the edition on the listing afterwards.
-            </Alert>
-          )}
-          <div className="grid gap-4 sm:grid-cols-3">
-            <FormField label="Cycle label" required hint="e.g. 2026">
-              <Input
-                name="edition_cycleLabel"
-                defaultValue={editionSeed?.cycleLabel ?? ''}
-                maxLength={60}
-                onChange={mark('cycleLabel')}
-              />
-            </FormField>
-            <FormField label="Status">
-              <Select
-                name="edition_status"
-                options={enumOptions(EDITION_STATUSES)}
-                defaultValue={editionSeed?.status ?? 'UPCOMING'}
-              />
-            </FormField>
-            <FormField label="Scope level">
-              <Select
-                name="edition_scopeLevel"
-                options={enumOptions(SCOPE_LEVELS)}
-                value={scopeLevel}
-                onValueChange={setScopeLevel}
-              />
-            </FormField>
-          </div>
-          <div
-            className={cn('grid gap-4', isFree ? 'sm:grid-cols-1' : 'sm:grid-cols-[2fr_1fr_1fr]')}
-          >
-            <FormField label="Registration URL" required hint="where entrants sign up.">
-              <Input
-                name="edition_registrationUrl"
-                type="url"
-                inputMode="url"
-                defaultValue={editionSeed?.registrationUrl ?? ''}
-                maxLength={1000}
-                placeholder="https://…"
-                onChange={mark('registrationUrl')}
-              />
-            </FormField>
-            {/* Fee + currency only when the competition isn't free (item 17) — FREE posts no fee. */}
-            {!isFree && (
-              <>
-                <FormField label="Entry fee" required hint="what entrants pay.">
-                  <Input
-                    name="edition_entryFee"
-                    type="number"
-                    step="0.01"
-                    min={0}
-                    max={100000}
-                    defaultValue={editionSeed?.entryFee ?? ''}
-                    placeholder="0.00"
-                    onChange={mark('entryFee')}
-                  />
-                </FormField>
-                <FormField label="Currency" required hint="ISO, e.g. USD">
-                  <Input
-                    name="edition_currency"
-                    defaultValue={editionSeed?.currency ?? ''}
-                    maxLength={3}
-                    pattern="[A-Za-z]{3}"
-                    placeholder="USD"
-                    className="uppercase"
-                    onChange={mark('currency')}
-                  />
-                </FormField>
-              </>
-            )}
-          </div>
-          <FormField
-            label="Prize"
-            required
-            hint="the headline prize shown on the card, e.g. “$10,000 + trip to nationals”."
-          >
-            <Input
-              name="edition_prizeSummary"
-              defaultValue={editionSeed?.prizeSummary ?? ''}
-              maxLength={500}
-              onChange={mark('prizeSummary')}
-            />
-          </FormField>
-          <FormField
-            label="Regions"
-            required
-            labelAsText
-            hint="where this runs; shown on the card. Pick at least one."
-          >
-            {/* Single element child (a div, not a Fragment): FormField clones its child to wire
-                id/aria, and a Fragment can't take those props. */}
-            <div className="grid gap-1">
-              {regionIds.map((id) => (
-                <input key={id} type="hidden" name="edition_regionIds" value={id} />
-              ))}
-              <RegionPicker
-                regions={regions}
-                selectedIds={regionIds}
-                onToggle={toggleRegion}
-                scopeLevel={scopeLevel}
-                delivery={delivery}
-              />
-            </div>
-          </FormField>
-          <div className="grid gap-2">
-            <span className="text-sm font-medium text-foreground">
-              Key dates{' '}
-              <span className="font-normal text-muted">
-                · needs a Reg close or Submission due (dated or TBD); add the rest as you have them
-              </span>
-            </span>
-            {keyDateRows.map((row, i) => (
-              <div
-                key={row.key}
-                className="grid gap-3 rounded-[var(--radius-panel)] border border-border p-3"
-              >
-                <div className="grid gap-3 sm:grid-cols-[1.3fr_1fr_1fr_1.3fr]">
-                  <FormField label="Type" className="min-w-0">
-                    <Select
-                      name={`keydate_${i}_type`}
-                      options={enumOptions(KEY_DATE_TYPES)}
-                      value={row.type}
-                      onValueChange={(v) => patchKeyDateRow(row.key, { type: v })}
-                    />
-                  </FormField>
-                  <FormField label="Date" className="min-w-0">
-                    <Input
-                      name={`keydate_${i}_date`}
-                      type="date"
-                      disabled={row.tbd}
-                      value={row.date}
-                      onChange={(e) => patchKeyDateRow(row.key, { date: e.target.value })}
-                      className="w-full min-w-0"
-                    />
-                  </FormField>
-                  <FormField label="Time" className="min-w-0">
-                    <Input
-                      name={`keydate_${i}_time`}
-                      type="time"
-                      disabled={row.tbd}
-                      value={row.time}
-                      onChange={(e) => patchKeyDateRow(row.key, { time: e.target.value })}
-                      className="w-full min-w-0"
-                    />
-                  </FormField>
-                  <FormField label="Timezone" className="min-w-0">
-                    <Select
-                      name={`keydate_${i}_timezone`}
-                      options={ADMIN_TIMEZONES}
-                      value={row.timezone}
-                      onValueChange={(v) => patchKeyDateRow(row.key, { timezone: v })}
-                    />
-                  </FormField>
-                </div>
-                <div className="flex flex-wrap items-end gap-3">
-                  <FormField
-                    label="Label"
-                    hint="optional, shown for Custom dates"
-                    className="min-w-40 flex-1"
-                  >
-                    <Input
-                      name={`keydate_${i}_label`}
-                      maxLength={200}
-                      value={row.label}
-                      onChange={(e) => patchKeyDateRow(row.key, { label: e.target.value })}
-                    />
-                  </FormField>
-                  {/* mt aligns the checkbox to the neighbor's control band (same trick as the
-                      edition-page KeyDateManager). */}
-                  <div className="flex h-10 items-center">
-                    <Checkbox
-                      name={`keydate_${i}_tbd`}
-                      label="Date TBD"
-                      checked={row.tbd}
-                      onChange={(e) => patchKeyDateRow(row.key, { tbd: e.target.checked })}
-                    />
-                  </div>
-                  {keyDateRows.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      aria-label="Remove this key date"
-                      onClick={() => removeKeyDateRow(row.key)}
-                    >
-                      <Trash aria-hidden="true" className="size-4" />
-                    </Button>
-                  )}
-                </div>
+              <div>
+                <Button type="button" variant="ghost" size="sm" onClick={exitRawMode}>
+                  Back to fields
+                </Button>
               </div>
-            ))}
-            <div>
-              <Button type="button" variant="ghost" size="sm" onClick={addKeyDateRow}>
-                <Plus aria-hidden="true" className="size-4" /> Add date
-              </Button>
-            </div>
-          </div>
+            </>
+          ) : null}
         </div>
       ),
     },
@@ -990,7 +1969,7 @@ export function CompetitionForm({
         {stepDefs
           .filter((s) => !s.hideOnEdit)
           .map((s) => (
-            <FormSection key={s.id} title={s.label}>
+            <FormSection key={s.id} title={s.label} hint={s.hint}>
               {s.content}
             </FormSection>
           ))}
@@ -1012,13 +1991,14 @@ export function CompetitionForm({
   }
 
   // --- create + import: vertical stepper + a form-wide completion ring ---
-  const steps = stepDefs.filter((s) => !(s.hideOnCreate && mode === 'create'));
+  const steps = stepDefs.filter(
+    (s) => !(s.hideOnCreate && mode === 'create') && !(s.hideOnImport && mode === 'import'),
+  );
   const activeStepDef = steps.find((s) => s.id === activeStepId) ?? steps[0];
   if (!activeStepDef) return null; // steps always has ≥1 entry — this just narrows the type
   const activeIndex = steps.indexOf(activeStepDef);
   const prevStep = steps[activeIndex - 1];
   const nextStep = steps[activeIndex + 1];
-  const nextRemaining = remaining[0];
   const stepperSteps = steps.map((s) => {
     const stepReq = requiredFields.filter((r) => r.stepId === s.id);
     return {
@@ -1029,79 +2009,153 @@ export function CompetitionForm({
       incompleteRequired: stepReq.some((r) => !r.ok),
     };
   });
-  const labelOf = (stepId: string) => steps.find((s) => s.id === stepId)?.label ?? '';
+
+  // Completion summary — crowns the step rail rather than floating in its own card beside it, so
+  // the overall state and the steps that add up to it read as one timeline. Which step holds the
+  // next gap is left to the rail's own amber flags; repeating it here just crowded the header.
+  const completionSummary = (
+    <div className="flex items-center gap-3">
+      <ProgressRing
+        size={56}
+        thickness={6}
+        value={filledCount}
+        max={totalRequired}
+        label={
+          importing
+            ? `${filledCount} of ${totalRequired} listing-completeness fields filled`
+            : `${filledCount} of ${totalRequired} required fields complete`
+        }
+      >
+        {allComplete ? (
+          <Check weight="bold" className="size-6 text-success" />
+        ) : (
+          <span className="text-base font-semibold tabular-nums text-foreground">
+            {filledCount}
+            <span className="text-xs text-muted">/{totalRequired}</span>
+          </span>
+        )}
+      </ProgressRing>
+      <div className="min-w-0">
+        <div className="text-sm font-semibold text-foreground">
+          {allComplete
+            ? importing
+              ? 'Complete listing'
+              : 'Ready to create'
+            : importing
+              ? 'Gaps to fill in'
+              : 'Almost ready'}
+        </div>
+        <div className="mt-0.5 text-xs text-muted">
+          {allComplete
+            ? 'All required fields filled'
+            : importing
+              ? `${remaining.length} field${remaining.length === 1 ? '' : 's'} the page didn’t give us`
+              : `${remaining.length} required field${remaining.length === 1 ? '' : 's'} left`}
+        </div>
+      </div>
+    </div>
+  );
+
+  // The submit closes the step rail, directly under the last step — the rail now reads top to
+  // bottom as state → steps → the action they lead to, so the action sits where the work ends
+  // instead of in a bar pinned across the viewport. Create stays gated on the whole ring; import
+  // gates only on what the server actually refuses, and says so.
+  const submitAction = (
+    <div className="grid gap-2">
+      <Button type="submit" variant="brand" disabled={pending || !submittable} className="w-full">
+        {importing
+          ? pending
+            ? 'Approving…'
+            : 'Approve & create'
+          : pending
+            ? 'Saving…'
+            : 'Publish now'}
+      </Button>
+      {/* §8a lifecycle split (item 14): the same submit, parameterized by where the listing
+          starts. Buttons post `listing_intent`; the server action maps it to listingStatus.
+          "Submit for review" parks it on the review queue (/admin/review) for a second pair of
+          eyes — process, not permission: with no roles yet, nothing STOPS direct publishing.
+          Draft skips the completeness gate? No — same gate: the server's @AssertTrue checks run
+          regardless of status, so a draft must already be a complete listing. */}
+      {!importing && (
+        <>
+          <Button
+            type="submit"
+            name="listing_intent"
+            value="review"
+            variant="secondary"
+            disabled={pending || !submittable}
+            className="w-full"
+          >
+            Submit for review
+          </Button>
+          <Button
+            type="submit"
+            name="listing_intent"
+            value="draft"
+            variant="ghost"
+            disabled={pending || !submittable}
+            className="w-full"
+          >
+            Save as draft
+          </Button>
+        </>
+      )}
+      {blockingRemaining.length > 0 ? (
+        // Create mode says nothing here: the ring at the head of the rail already carries the
+        // count, and the disabled submit carries the consequence. Import still names what the
+        // server will refuse, because there the button is NOT disabled by the same rule.
+        importing ? (
+          <button
+            type="button"
+            onClick={() => {
+              const first = blockingRemaining[0];
+              if (first) setActiveStepId(first.stepId);
+            }}
+            className="text-left text-xs font-medium text-danger hover:underline"
+          >
+            Needs {blockingRemaining.map((r) => r.label.toLowerCase()).join(', ')} before it can be
+            approved
+          </button>
+        ) : null
+      ) : !eligibilityValid ? (
+        <button
+          type="button"
+          onClick={() => setActiveStepId('eligibility')}
+          className="text-left text-xs font-medium text-danger hover:underline"
+        >
+          Fix the errors in Format &amp; eligibility to continue
+        </button>
+      ) : importing && !allComplete ? (
+        <span className="text-xs text-muted">
+          {remaining.length} field{remaining.length === 1 ? '' : 's'} still empty — you can approve
+          anyway and fill them in on the listing.
+        </span>
+      ) : null}
+    </div>
+  );
 
   return (
     <div>
-      {/* Header — back link + title on the left; the completion ring aligns to the back-link line
-          on the right (items-start), so the stepper + form grid below start just beneath the ring
-          card. Import review supplies its own page header (source, confidence, tabs), so only the
-          ring is rendered there. */}
-      <div
-        className={cn('mb-5 flex items-start gap-4', importing ? 'justify-end' : 'justify-between')}
-      >
-        {!importing && (
-          <div>
-            <Link
-              href="/admin/competitions"
-              className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
-            >
-              <ArrowLeft aria-hidden="true" className="size-4" /> Competitions
-            </Link>
-            <h1 className="mt-2 font-display text-2xl text-foreground">New competition</h1>
-          </div>
-        )}
-        <div className="flex shrink-0 items-center gap-3.5 self-start rounded-[var(--radius-panel)] border border-border bg-surface-raised px-4 py-3.5 shadow-[var(--shadow-lift)]">
-          <ProgressRing
-            size={72}
-            thickness={7}
-            value={filledCount}
-            max={totalRequired}
-            label={
-              importing
-                ? `${filledCount} of ${totalRequired} listing-completeness fields filled`
-                : `${filledCount} of ${totalRequired} required fields complete`
-            }
+      {/* Import review supplies its own page header (source, confidence, tabs), so create mode is
+          the only one that draws a header here — and the completion ring now lives at the head of
+          the step rail below, not beside the title. */}
+      {!importing && (
+        <div className="mb-5">
+          <Link
+            href="/admin/competitions"
+            className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
           >
-            {allComplete ? (
-              <Check weight="bold" className="size-7 text-success" />
-            ) : (
-              <span className="text-lg font-semibold tabular-nums text-foreground">
-                {filledCount}
-                <span className="text-sm text-muted">/{totalRequired}</span>
-              </span>
-            )}
-          </ProgressRing>
-          <div className="text-sm">
-            <div className="font-semibold text-foreground">
-              {allComplete
-                ? importing
-                  ? 'Complete listing'
-                  : 'Ready to create'
-                : importing
-                  ? 'Gaps to fill in'
-                  : 'Almost ready'}
-            </div>
-            <div className="mt-0.5 text-xs text-muted">
-              {allComplete
-                ? 'All required fields filled'
-                : importing
-                  ? `${remaining.length} field${remaining.length === 1 ? '' : 's'} the page didn’t give us`
-                  : `${remaining.length} required field${remaining.length === 1 ? '' : 's'} left`}
-            </div>
-            {!allComplete && nextRemaining && (
-              <button
-                type="button"
-                onClick={() => setActiveStepId(nextRemaining.stepId)}
-                className="mt-1.5 inline-flex items-center gap-1.5 rounded-md text-xs font-medium text-amber-700 hover:underline dark:text-amber-400"
-              >
-                <span aria-hidden="true" className="size-1.5 rounded-full bg-amber-500" />
-                {nextRemaining.label} · {labelOf(nextRemaining.stepId)}
-              </button>
-            )}
+            <ArrowLeft aria-hidden="true" className="size-4" /> Competitions
+          </Link>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+            <h1 className="font-display text-2xl text-foreground">New competition</h1>
+            {headerAction}
           </div>
         </div>
-      </div>
+      )}
+
+      {!importing && headerNotice}
 
       <form action={formAction}>
         {/* Import review round-trip: the payload keys this form has no control for, and the
@@ -1118,11 +2172,29 @@ export function CompetitionForm({
             steps={stepperSteps}
             activeId={activeStepId}
             onSelect={setActiveStepId}
-            className="md:sticky md:top-4"
+            header={completionSummary}
+            footer={submitAction}
+            // order-last on mobile: the single-column stack would otherwise put the rail — and now
+            // the submit that closes it — ABOVE the fields, so you'd meet "Create competition"
+            // before anything to fill in. Desktop keeps source order (rail left, sticky).
+            className="order-last md:order-none md:sticky md:top-4"
           />
           <div className="min-w-0 rounded-[var(--radius-panel)] border border-border bg-surface-raised p-5 sm:p-6">
             <div className="mb-5 flex items-baseline justify-between gap-3 border-b border-border pb-3">
-              <h2 className="font-display text-xl text-foreground">{activeStepDef.label}</h2>
+              <span className="flex items-center gap-1.5">
+                <h2 className="font-display text-xl text-foreground">{activeStepDef.label}</h2>
+                {activeStepDef.hint && (
+                  <Tooltip content={activeStepDef.hint}>
+                    <button
+                      type="button"
+                      aria-label={`More about ${activeStepDef.label}`}
+                      className="inline-flex rounded-full text-muted transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:outline-none"
+                    >
+                      <Info aria-hidden="true" className="size-4" />
+                    </button>
+                  </Tooltip>
+                )}
+              </span>
               <span className="shrink-0 text-xs text-muted tabular-nums">
                 Step {activeIndex + 1} of {steps.length}
               </span>
@@ -1157,59 +2229,13 @@ export function CompetitionForm({
           </div>
         </div>
 
-        {/* Sticky save bar — Create gates on the completion ring; the server re-validates regardless. */}
-        {/* Sticky save bar. Create gates on the whole completion ring; import gates only on what
-            the server refuses, and says out loud what an incomplete approve produces. The server
-            re-validates either way. */}
-        <div className="sticky bottom-0 z-10 mt-4 flex flex-wrap items-center gap-3 border-t border-border bg-background py-3">
-          <Button type="submit" variant="brand" disabled={pending || !submittable}>
-            {importing
-              ? pending
-                ? 'Approving…'
-                : 'Approve & create'
-              : pending
-                ? 'Creating…'
-                : 'Create competition'}
-          </Button>
-          {blockingRemaining.length > 0 ? (
-            importing ? (
-              <button
-                type="button"
-                onClick={() => {
-                  const first = blockingRemaining[0];
-                  if (first) setActiveStepId(first.stepId);
-                }}
-                className="text-xs font-medium text-danger hover:underline"
-              >
-                Needs {blockingRemaining.map((r) => r.label.toLowerCase()).join(', ')} before it can
-                be approved
-              </button>
-            ) : (
-              <span className="text-xs text-muted">
-                {blockingRemaining.length} required field
-                {blockingRemaining.length === 1 ? '' : 's'} left
-              </span>
-            )
-          ) : !eligibilityValid ? (
-            <button
-              type="button"
-              onClick={() => setActiveStepId('format')}
-              className="text-xs font-medium text-danger hover:underline"
-            >
-              Fix the errors in Format &amp; eligibility to continue
-            </button>
-          ) : importing && !allComplete ? (
-            <span className="text-xs text-muted">
-              {remaining.length} field{remaining.length === 1 ? '' : 's'} still empty — you can
-              approve anyway and fill them in on the listing.
-            </span>
-          ) : null}
-          {state.error && (
-            <Alert tone="danger" className="min-w-0 flex-1">
-              {state.error}
-            </Alert>
-          )}
-        </div>
+        {/* The submit itself now closes the step rail (see submitAction) — what's left here is the
+            error surface, which must stay in the wide column: an Alert has no room in a 236px rail. */}
+        {state.error && (
+          <Alert tone="danger" className="mt-4">
+            {state.error}
+          </Alert>
+        )}
       </form>
     </div>
   );

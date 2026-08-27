@@ -5,13 +5,16 @@ import com.beecompete.catalog.domain.Competition;
 import com.beecompete.catalog.domain.EvaluationTypes;
 import com.beecompete.catalog.domain.Organization;
 import com.beecompete.catalog.domain.OrganizationType;
+import com.beecompete.catalog.domain.ListingStatus;
 import com.beecompete.catalog.domain.Provenance;
+import com.beecompete.catalog.domain.ProvenanceSource;
 import com.beecompete.catalog.repository.CategoryRepository;
 import com.beecompete.catalog.repository.CompetitionRepository;
 import com.beecompete.catalog.repository.OrganizationRepository;
 import com.beecompete.catalog.service.CategoryAttributeValidator;
 import java.net.URI;
 import java.util.List;
+import java.time.Instant;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.PageRequest;
@@ -42,15 +45,51 @@ public class CompetitionCurationService {
 		this.attributeValidator = attributeValidator;
 	}
 
+	/** How many suffixed variants to try before giving up — far past any real collision run. */
+	private static final int SLUG_SUFFIX_LIMIT = 50;
+
+	/**
+	 * The slug to actually store — and the one place the two create paths deliberately differ.
+	 *
+	 * <p><b>CURATED (a human filling in the admin form):</b> the slug is DERIVED from the name; the
+	 * form has no slug field. A collision is therefore an ordinary event the curator cannot fix by
+	 * editing anything, so we take the first free {@code -2}, {@code -3} … variant instead of
+	 * failing the create with an error they have no lever against.
+	 *
+	 * <p><b>IMPORT (approving a queued extraction):</b> still a hard 409. There a slug collision is
+	 * the strongest signal we have that the catalog ALREADY lists this competition, and quietly
+	 * creating {@code mathcounts-2} would manufacture a near-duplicate — exactly what the queue's
+	 * duplicate flag exists to prevent. Bulk approve leans on this too.
+	 *
+	 * <p>{@link #update} likewise keeps its 409: there the slug is a deliberate choice.
+	 *
+	 * <p>The unique index stays the real guard — two concurrent creates can both see a slug as
+	 * free, and the loser gets a constraint violation rather than a duplicate row.
+	 */
+	private String slugFor(String requested, Provenance stamp) {
+		boolean derived = stamp != null && stamp.getSource() == ProvenanceSource.CURATED;
+		if (!competitions.existsBySlug(requested)) {
+			return requested;
+		}
+		if (!derived) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "slug already exists: " + requested);
+		}
+		for (int n = 2; n < SLUG_SUFFIX_LIMIT; n++) {
+			String candidate = requested + "-" + n;
+			if (!competitions.existsBySlug(candidate)) {
+				return candidate;
+			}
+		}
+		throw new ResponseStatusException(HttpStatus.CONFLICT,
+				"could not derive a free slug from: " + requested);
+	}
+
 	@Transactional
 	public Competition create(CompetitionRequest request, Provenance stamp) {
-		if (competitions.existsBySlug(request.slug())) {
-			throw new ResponseStatusException(HttpStatus.CONFLICT, "slug already exists: " + request.slug());
-		}
 		Category category = requireCategory(request.categoryId());
 		validateAttributes(request);
 		validateEvaluationTypes(request);
-		Competition competition = new Competition(request.slug(), request.name(), category,
+		Competition competition = new Competition(slugFor(request.slug(), stamp), request.name(), category,
 				request.participationMode(), request.delivery(), request.entryPathway(), request.costType(),
 				request.recurrence());
 		apply(competition, request, category, stamp);
@@ -78,13 +117,41 @@ public class CompetitionCurationService {
 		return competition;
 	}
 
+	/**
+	 * §8a lifecycle transition. Legal moves are {@link ListingStatus#canTransitionTo}; anything
+	 * else is a 409 naming both states, so the admin UI can render why. First entry to PUBLISHED
+	 * stamps {@code approved_at} (once — re-listing after an unlist does not re-stamp; the stamp
+	 * answers "was this ever vetted", not "when was it last toggled"). An archived listing has no
+	 * lifecycle to move — restore first.
+	 */
+	@Transactional
+	public Competition transitionListingStatus(UUID id, ListingStatus next) {
+		Competition competition = competitions.findById(id).orElseThrow(
+				() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "competition not found"));
+		if (competition.getArchivedAt() != null) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "listing is archived — restore it first");
+		}
+		ListingStatus current = competition.getListingStatus();
+		if (current == next) {
+			return competition; // idempotent — a double-click is not an error
+		}
+		if (!current.canTransitionTo(next)) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"cannot move a " + current + " listing to " + next);
+		}
+		competition.setListingStatus(next);
+		if (next == ListingStatus.PUBLISHED && competition.getApprovedAt() == null) {
+			competition.setApprovedAt(Instant.now());
+		}
+		return competition;
+	}
+
 	private void apply(Competition competition, CompetitionRequest request, Category category, Provenance stamp) {
 		competition.setCategory(category);
 		competition.setOrganizer(resolveOrganizer(request, stamp));
 		competition.setOfficialUrl(request.officialUrl());
 		competition.setLogo(request.logo());
 		competition.setDescription(request.description());
-		competition.setSummary(request.summary());
 		competition.setTags(request.tags());
 		competition.setTeamSizeMin(request.teamSizeMin());
 		competition.setTeamSizeMax(request.teamSizeMax());

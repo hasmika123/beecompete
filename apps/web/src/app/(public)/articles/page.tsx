@@ -14,7 +14,7 @@ export function generateMetadata(): Metadata {
   return pageMetadata({
     title: 'Articles',
     description:
-      'Guides and explainers on K-12 academic competitions: how they work, how to prepare, and how to choose the right ones. Coming soon.',
+      'Guides and explainers on academic competitions: how they work, how to prepare, and how to choose the right ones. Coming soon.',
     path: '/articles',
     noindex: true,
   });
@@ -36,8 +36,8 @@ export default function ArticlesPage() {
       <p className="text-xs font-semibold tracking-[0.14em] text-muted uppercase">Articles</p>
       <h1 className="font-display text-4xl text-foreground sm:text-5xl">Coming soon</h1>
       <p className="text-base text-muted">
-        Guides and explainers on finding, preparing for, and choosing K-12 academic competitions are
-        on the way. In the meantime, the catalog is live and growing.
+        Guides and explainers on finding, preparing for, and choosing academic competitions are on
+        the way. In the meantime, the catalog is live and growing.
       </p>
       {/* One row on phones — the same treatment as the landing hero's CTA pair (mobile pass);
           keep the two in step if either changes. */}

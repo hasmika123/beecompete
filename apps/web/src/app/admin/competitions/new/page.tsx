@@ -1,4 +1,4 @@
-import { CompetitionForm } from '@/components/admin/competition-form';
+import { NewCompetitionClient } from '@/components/admin/new-competition-client';
 import { adminFetch } from '@/lib/admin-api';
 import type { Category, CategoryTemplate, Organization, Page, Region } from '@/lib/admin-types';
 
@@ -11,9 +11,10 @@ export default async function NewCompetitionPage() {
   ]);
 
   // The back link + page title live in the create form's own header (so the completion ring can
-  // align to the back-link line); this page just supplies the data.
+  // align to the back-link line); this page just supplies the data. The client wrapper adds the
+  // paste-JSON pre-fill (and remounts the form per paste) around the same CompetitionForm.
   return (
-    <CompetitionForm
+    <NewCompetitionClient
       categories={categories}
       organizations={organizations.content}
       templates={templates}

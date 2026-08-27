@@ -25,6 +25,7 @@ jobs:
     outputs:
       web: ${{ steps.filter.outputs.web }}
       api: ${{ steps.filter.outputs.api }}
+      seeding: ${{ steps.filter.outputs.seeding }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -47,6 +48,9 @@ jobs:
               - '.github/workflows/ci.yml'
             api:
               - 'apps/api/**'
+              - '.github/workflows/ci.yml'
+            seeding:
+              - 'tools/seeding/**'
               - '.github/workflows/ci.yml'
 
   # Web + shared packages: format, lint, typecheck, build (Turbo-orchestrated).
@@ -124,11 +128,38 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # Seeding tool (S3 extraction pipeline). A JOB OF ITS OWN, not part of `web`, because
+  # tools/seeding is deliberately NOT a pnpm-workspace member (see its package.json) — it is a
+  # standalone npm project with its own package-lock.json, so Turbo never reaches it and root
+  # `pnpm test` never ran a single one of its tests. Until 2026-08-26 the ONLY automated check on
+  # this directory was root `format:check`, which globs the whole repo; its 60+ tests ran solely
+  # when someone remembered to type `npm test` inside the folder. Anything asserted in there —
+  # including the extraction-prompt coverage guards — was unenforced.
+  # npm, not pnpm: matching the tool's own lockfile. Do not "unify" this into the web job without
+  # first making tools/seeding a workspace member, which its package.json argues against.
+  seeding:
+    needs: changes
+    if: ${{ needs.changes.outputs.seeding == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/seeding
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+          cache-dependency-path: tools/seeding/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test # node:test; no network or API key needed (offline stub extractor)
+
   # Single consolidated status: fails if any required job failed (skipped is fine).
   # Point branch protection at this check when the repo goes public / on Pro.
   ci-status:
     if: always()
-    needs: [changes, web, api, security]
+    needs: [changes, web, api, seeding, security]
     runs-on: ubuntu-latest
     steps:
       - name: Verify required jobs succeeded

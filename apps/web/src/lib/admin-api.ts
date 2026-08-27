@@ -1,4 +1,5 @@
 import 'server-only';
+import { curatorEmail } from '@/lib/admin-identity';
 
 // Admin BFF — the ONLY place the admin API token lives. Server-only (the import above makes a
 // client bundle that pulls this in fail to build), so the X-Admin-Token secret never reaches the
@@ -8,6 +9,10 @@ import 'server-only';
 // Production auth chain: Cloudflare Access (email allow-list) gates /admin in the browser →
 // Next server → API with X-Admin-Token (AdminTokenFilter, fail-closed) → the API is additionally
 // unreachable off-box (BFF pattern). Token migrates to real RBAC at R2-7.
+//
+// The token says the CALLER is trusted; it says nothing about WHO. Each request also forwards the
+// Access-authenticated address (lib/admin-identity) so writes can be attributed — advisory only,
+// see that module and the API's CuratorAuditFilter.
 
 const API_BASE_URL = process.env.API_BASE_URL ?? 'http://localhost:8080';
 const ADMIN_API_TOKEN = process.env.ADMIN_API_TOKEN ?? '';
@@ -37,11 +42,13 @@ interface AdminFetchOptions {
  */
 export async function adminFetch<T>(path: string, options: AdminFetchOptions = {}): Promise<T> {
   const { method = 'GET', body, cache = 'no-store' } = options;
+  const curator = await curatorEmail();
   const res = await fetch(`${API_BASE_URL}/api/v1/admin${path}`, {
     method,
     cache,
     headers: {
       'X-Admin-Token': ADMIN_API_TOKEN,
+      ...(curator ? { 'X-Curator-Email': curator } : {}),
       ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
     },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),

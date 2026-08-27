@@ -18,7 +18,16 @@ export interface FormState {
 
 export const PARTICIPATION_MODES = ['INDIVIDUAL', 'TEAM', 'BOTH'] as const;
 export const DELIVERIES = ['IN_PERSON', 'VIRTUAL', 'HYBRID'] as const;
-export const ENTRY_PATHWAYS = ['INDIVIDUAL', 'SCHOOL_OR_CHAPTER', 'EITHER'] as const;
+// Widened 2026-08-23 (owner): school/chapter split, EITHER renamed OPEN. Legacy EITHER is NOT
+// offered — migration 0016 rewrites those rows — but SCHOOL_OR_CHAPTER stays selectable, since
+// some competitions genuinely accept either route.
+export const ENTRY_PATHWAYS = [
+  'INDIVIDUAL',
+  'SCHOOL',
+  'CHAPTER',
+  'SCHOOL_OR_CHAPTER',
+  'OPEN',
+] as const;
 export const COST_TYPES = ['FREE', 'PAID'] as const;
 export const RECURRENCES = ['ANNUAL', 'ONE_OFF', 'ROLLING'] as const;
 // Org trust ladder (R1-19): CURATED (unclaimed) → CLAIMED → VERIFIED. Competitions have no
@@ -52,6 +61,10 @@ export const EVALUATION_TYPES = [
   'portfolio',
 ] as const;
 export const RESOURCE_TYPES = ['BOOK', 'PAST_PAPER', 'GUIDE', 'VIDEO', 'OTHER'] as const;
+// Listing lifecycle (§8a, item 14): DRAFT → IN_REVIEW → PUBLISHED ⇄ UNLISTED; archived is the
+// separate archived_at axis. Only PUBLISHED passes the public gate.
+export const LISTING_STATUSES = ['DRAFT', 'IN_REVIEW', 'PUBLISHED', 'UNLISTED'] as const;
+export type ListingStatus = (typeof LISTING_STATUSES)[number];
 export const REGION_LEVELS = ['COUNTRY', 'STATE', 'COUNTY', 'CITY', 'VIRTUAL'] as const;
 export const ORG_TYPES = ['HOST', 'SCHOOL', 'SPONSOR', 'OTHER'] as const;
 export const HERO_POSITIONS = ['MAIN', 'TOP_RIGHT', 'BOTTOM_LEFT'] as const;
@@ -59,13 +72,23 @@ export const HERO_POSITIONS = ['MAIN', 'TOP_RIGHT', 'BOTTOM_LEFT'] as const;
 // The wall-clock an admin types is interpreted in THIS zone (default Eastern), never the
 // server's — the display + the stored instant both use it (lib/dates.zonedWallClockToInstant).
 // Shared by the key-date manager and the combined create form.
+/**
+ * Zone picker for admin key dates. Labelled by ABBREVIATION first (owner 2026-08-24) — curators
+ * read "EST" off an organizer's page, not "Eastern", so the list should answer in the same words.
+ *
+ * ⚠ The abbreviations are the STANDARD-time ones and stay put year-round: a June deadline in
+ * America/New_York is really EDT, not EST. That is cosmetic only — the stored value is the IANA
+ * zone, so `zonedWallClockToInstant` applies the right offset for the date in question. Showing a
+ * live EST/EDT toggle would mean recomputing the label per row against that row's date, which
+ * buys nothing: both spellings name the same zone.
+ */
 export const ADMIN_TIMEZONES = [
-  { value: 'America/New_York', label: 'Eastern (New York)' },
-  { value: 'America/Chicago', label: 'Central (Chicago)' },
-  { value: 'America/Denver', label: 'Mountain (Denver)' },
-  { value: 'America/Los_Angeles', label: 'Pacific (Los Angeles)' },
-  { value: 'America/Anchorage', label: 'Alaska (Anchorage)' },
-  { value: 'Pacific/Honolulu', label: 'Hawaii (Honolulu)' },
+  { value: 'America/New_York', label: 'EST (New York)' },
+  { value: 'America/Chicago', label: 'CST (Chicago)' },
+  { value: 'America/Denver', label: 'MST (Denver)' },
+  { value: 'America/Los_Angeles', label: 'PST (Los Angeles)' },
+  { value: 'America/Anchorage', label: 'AKST (Anchorage)' },
+  { value: 'Pacific/Honolulu', label: 'HST (Honolulu)' },
   { value: 'UTC', label: 'UTC' },
 ];
 
@@ -77,7 +100,6 @@ export interface Competition {
   officialUrl: string | null;
   logo: string | null;
   description: string | null;
-  summary: string | null;
   categoryId: string;
   tags: string[] | null;
   participationMode: string;
@@ -95,10 +117,19 @@ export interface Competition {
   attributes: Record<string, unknown> | null;
   provenanceSource: string | null;
   verificationState: string;
+  /** §8a lifecycle — only PUBLISHED is publicly visible (with the readiness gate). */
+  listingStatus: ListingStatus;
+  /** When the listing FIRST entered PUBLISHED; null while never-yet-published. */
+  approvedAt: string | null;
   archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
   version: number;
+  /**
+   * Readiness gate, precomputed by the admin LIST endpoint only. `null` means "not computed"
+   * (every other endpoint), never "no edition" — don't render a badge off a null.
+   */
+  hasLiveEdition: boolean | null;
 }
 
 export interface Edition {
@@ -139,6 +170,7 @@ export interface Resource {
   isAffiliate: boolean;
   affiliateMeta: Record<string, unknown> | null;
   displayOrder: number;
+  imageUrl: string | null;
 }
 
 export interface Faq {

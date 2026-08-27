@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
@@ -5,6 +6,7 @@ import {
   ArrowLeft,
   Badge,
   buttonClasses,
+  ExternalLink,
   Plus,
   Tab,
   TabList,
@@ -14,9 +16,10 @@ import {
 import { PageHeader } from '@/components/admin/page-header';
 import { AdminTable } from '@/components/admin/admin-table';
 import { enumLabel } from '@/components/admin/enum-labels';
-import { ArchivedBadge } from '@/components/admin/status-badges';
+import { ArchivedBadge, ListingStatusBadge } from '@/components/admin/status-badges';
 import { CompetitionForm } from '@/components/admin/competition-form';
 import { CompetitionHeaderActions } from '@/components/admin/competition-header-actions';
+import { CreatedToast } from '@/components/admin/created-toast';
 import { FaqManager } from '@/components/admin/faq-manager';
 import { ResourceManager } from '@/components/admin/resource-manager';
 import { ListingHealth } from '@/components/admin/listing-health';
@@ -55,6 +58,10 @@ export default async function EditCompetitionPage({ params }: { params: Promise<
 
   return (
     <>
+      {/* Announces the assigned public URL after a create — useSearchParams needs a boundary. */}
+      <Suspense fallback={null}>
+        <CreatedToast />
+      </Suspense>
       <Link
         href="/admin/competitions"
         className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
@@ -64,15 +71,37 @@ export default async function EditCompetitionPage({ params }: { params: Promise<
 
       <PageHeader
         title={competition.name}
-        actions={<CompetitionHeaderActions id={id} archived={competition.archivedAt !== null} />}
+        actions={
+          <CompetitionHeaderActions
+            id={id}
+            archived={competition.archivedAt !== null}
+            listingStatus={competition.listingStatus}
+          />
+        }
       />
       {/* R1-19: no competition-level verification badge — maintainer derives from the org. */}
-      <div className="mb-6 flex items-center gap-2 text-sm text-muted">
-        <ArchivedBadge archivedAt={competition.archivedAt} />
+      <div className="mb-6 flex flex-wrap items-center gap-2 text-sm text-muted">
+        <ListingStatusBadge
+          listingStatus={competition.listingStatus}
+          archivedAt={competition.archivedAt}
+        />
         <span>
           · provenance:{' '}
           {competition.provenanceSource ? enumLabel(competition.provenanceSource) : 'none'}
         </span>
+        {/* The public URL belongs HERE, not in the form: it is assigned, not edited, and only
+            meaningful once the listing exists. This page is where a curator lands after create. */}
+        <span>·</span>
+        <a
+          href={`/c/${competition.slug}`}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 font-mono text-xs text-muted underline underline-offset-2 hover:text-foreground"
+        >
+          /c/{competition.slug}
+          <ExternalLink aria-hidden="true" className="size-3.5" />
+          <span className="sr-only">(opens the public listing in a new tab)</span>
+        </a>
       </div>
 
       <Tabs defaultValue="details">

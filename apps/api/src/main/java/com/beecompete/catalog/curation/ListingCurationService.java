@@ -2,15 +2,19 @@ package com.beecompete.catalog.curation;
 
 import com.beecompete.catalog.domain.Competition;
 import com.beecompete.catalog.domain.Edition;
+import com.beecompete.catalog.domain.EditionStatus;
 import com.beecompete.catalog.domain.EditionRegion;
 import com.beecompete.catalog.domain.KeyDate;
+import com.beecompete.catalog.domain.ListingStatus;
 import com.beecompete.catalog.domain.Provenance;
 import com.beecompete.catalog.domain.Region;
 import com.beecompete.catalog.repository.EditionRegionRepository;
 import com.beecompete.catalog.repository.EditionRepository;
 import com.beecompete.catalog.repository.KeyDateRepository;
 import com.beecompete.catalog.repository.RegionRepository;
+import com.beecompete.catalog.service.EffectiveStatus;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -50,9 +54,18 @@ public class ListingCurationService {
 	@Transactional
 	public Competition createWithFirstEdition(CompetitionWithEditionRequest request, Provenance stamp) {
 		Competition competition = competitionCuration.create(request.competition(), stamp);
+		// Lifecycle (§8a): null → PUBLISHED, keeping the one-step create one step. First entry to
+		// PUBLISHED stamps approved_at; approved_by stays null until RBAC (R2-7) — WHO is in the
+		// admin write log. A DRAFT/IN_REVIEW create is invisible publicly until published.
+		ListingStatus start = request.listingStatus() != null ? request.listingStatus() : ListingStatus.PUBLISHED;
+		competition.setListingStatus(start);
+		if (start == ListingStatus.PUBLISHED) {
+			competition.setApprovedAt(Instant.now());
+		}
 		Edition edition = editionCuration.create(competition.getId(), request.edition(), stamp);
 		applyRegions(edition, request.regionIds());
 		List<CompetitionWithEditionRequest.FirstEditionKeyDate> requestedDates = request.keyDates();
+		List<KeyDate> savedDates = new ArrayList<>();
 		if (requestedDates != null && !requestedDates.isEmpty()) {
 			// Typed timeline rows (item 21); startsAt may be null (date TBD, R1-18).
 			for (CompetitionWithEditionRequest.FirstEditionKeyDate row : requestedDates) {
@@ -60,9 +73,15 @@ public class ListingCurationService {
 				keyDate.setLabel(row.label());
 				keyDate.setEndsAt(row.endsAt());
 				keyDate.setTimezone(row.timezone());
-				keyDates.save(keyDate);
+				savedDates.add(keyDates.save(keyDate));
 			}
 			editions.touchUpdatedAt(edition.getId(), Instant.now()); // sitemap lastmod (R1-10)
+		}
+		// No curated status (the create form stopped asking, 2026-08-22): seed the stored value
+		// from the very rule the read path applies, so the admin list agrees with the public site
+		// from the first render. A curated (non-null) status is stored as sent, as before.
+		if (request.edition().status() == null) {
+			edition.setStatus(EffectiveStatus.compute(EditionStatus.UPCOMING, savedDates, Instant.now()));
 		}
 		return competition;
 	}

@@ -87,9 +87,9 @@ export default function CookiePolicyPage() {
           <LegalLI>No social-media or ad-network trackers embedded in our pages.</LegalLI>
         </LegalList>
         <LegalP>
-          This is a deliberate choice: BeeCompete serves a K-12 audience, and we don&apos;t do
-          behavioral advertising. See our <LegalLink href="/privacy">Privacy Policy</LegalLink> for
-          the bigger picture.
+          This is a deliberate choice: BeeCompete serves students of every age, including some who
+          are under 13, and we don&apos;t do behavioral advertising. See our{' '}
+          <LegalLink href="/privacy">Privacy Policy</LegalLink> for the bigger picture.
         </LegalP>
       </LegalSection>
 

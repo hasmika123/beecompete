@@ -1,0 +1,49 @@
+# Organizer contact info on curated listings — an email and a phone number a participant (or
+# parent) can reach the organizer at, as two optional keys on every Category Template
+# (owner 2026-08-25, requested alongside the create form's Resources + FAQ step).
+#
+# Why the attributes bag rather than Spine columns: optional, display-only strings that nothing
+# filters or sorts on — the domain-model §7 split, same call as the judging-info keys (`0015`)
+# and the eligibility catch-all (`0017`). They surface publicly through the Overview tab's
+# category-details overflow (humanized as "Contact Email" / "Contact Phone"), so no renderer
+# work is needed either.
+#
+# ⚠ These are the ORGANIZER'S published contact points, copied from their site — never a
+# participant's or curator's personal details. The admin form's hints say so.
+#
+# Idempotent: jsonb_set writes the same keys on a re-run. Additive — existing template keys and
+# every stored attributes bag are untouched.
+databaseChangeLog:
+  - changeSet:
+      id: 0019-contact-attributes
+      author: beecompete
+      comment: Add contact_email + contact_phone to every category template (organizer contact info).
+      changes:
+        - sql:
+            comment: Declare the two properties so the admin form renders typed controls for them.
+            sql: >-
+              UPDATE category_template
+              SET json_schema = jsonb_set(
+                    jsonb_set(
+                      json_schema,
+                      '{properties,contact_email}',
+                      '{"type": "string", "format": "email"}'::jsonb,
+                      true),
+                    '{properties,contact_phone}',
+                    '{"type": "string"}'::jsonb,
+                    true)
+              WHERE jsonb_typeof(json_schema->'properties') = 'object'
+        - sql:
+            comment: Labels + placeholders so the fields read as contact points, not keys.
+            sql: >-
+              UPDATE category_template
+              SET ui_hints = coalesce(ui_hints, '{}'::jsonb)
+                  || jsonb_build_object(
+                       'labels', coalesce(ui_hints->'labels', '{}'::jsonb) || jsonb_build_object(
+                         'contact_email', 'Contact email',
+                         'contact_phone', 'Contact phone'),
+                       'placeholders', coalesce(ui_hints->'placeholders', '{}'::jsonb) || jsonb_build_object(
+                         'contact_email', 'info@organizer.org',
+                         'contact_phone', '(555) 123-4567'))
+      rollback:
+        - empty

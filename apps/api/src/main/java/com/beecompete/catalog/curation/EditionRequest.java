@@ -19,7 +19,12 @@ import java.util.UUID;
  * the correction queue (R1-3b) became a second write source — same rationale as {@link
  * CompetitionRequest}: one shape, one validation path for every write.
  */
-public record EditionRequest(@NotBlank @Size(max = 60) String cycleLabel, @NotNull EditionStatus status,
+public record EditionRequest(@NotBlank @Size(max = 60) String cycleLabel,
+		// Nullable since 2026-08-22: the create form no longer asks for a status — null means
+		// “derive it” (create: from the key dates via EffectiveStatus; update: keep the current
+		// value). A non-null value is the curated override (CLOSED early / ONGOING / ARCHIVED),
+		// set from the per-edition edit page — domain-model §8 effective-status rule.
+		EditionStatus status,
 		@Size(max = 1000) String registrationUrl,
 		@PositiveOrZero @Digits(integer = 10, fraction = 2) BigDecimal entryFee,
 		@Pattern(regexp = "[A-Z]{3}", message = "currency must be a 3-letter ISO code") String currency,

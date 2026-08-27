@@ -40,10 +40,15 @@ The result: students (and the parents/educators guiding them) **under-participat
 
 ## 4. Personas (who has the problem)
 
-**P1 — The Student (primary user).** K-12, motivated by achievement / college admissions / passion. Sub-segments:
+**P1 — The Student (primary user).** Any level, elementary through graduate school (widened from
+"K-12" 2026-08-25), motivated by achievement / admissions / passion. Sub-segments:
 - *Elementary (via parent)* — no self-agency; the parent is the actual user.
 - *Middle school* — emerging self-drive, still parent/coach-guided.
 - *High school* — most self-directed; admissions-motivated.
+- *College and graduate* — fully self-directed and self-paying; **no parent in the loop at all**,
+  which is what makes them a distinct segment rather than "older high schoolers": P2 (the
+  parent/guardian gatekeeper) simply doesn't exist for them, so nothing consent-gated or
+  payer-mediated applies.
 - **Jobs-to-be-done:** "Find competitions I'm eligible for and interested in," "don't miss deadlines," "know how to prepare and be competitive."
 - **Pains:** doesn't know what exists; discovers things too late; unsure how to prep.
 

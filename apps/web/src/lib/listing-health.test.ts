@@ -6,7 +6,6 @@ import { listingHealth } from '@/lib/listing-health';
 const comp = (over: Partial<Competition> = {}): Competition =>
   ({
     organizerOrgId: null,
-    summary: null,
     description: null,
     ...over,
   }) as Competition;
@@ -26,7 +25,7 @@ describe('listingHealth', () => {
 
   it('passes every check for a fully populated listing', () => {
     const checks = listingHealth(
-      comp({ organizerOrgId: 'org-1', summary: 'Short blurb', description: 'Long write-up' }),
+      comp({ organizerOrgId: 'org-1', description: 'Long write-up' }),
       [edition({ registrationUrl: 'https://reg.example' })],
       [{ id: 'f1' } as Faq],
       [{ id: 'r1' } as Resource],

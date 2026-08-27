@@ -83,8 +83,7 @@ export function eventJsonLd(competition: CompetitionDetail): JsonLd | undefined 
     },
   };
   if (end !== start) event.endDate = end;
-  if (competition.summary || competition.description)
-    event.description = competition.summary ?? competition.description ?? undefined;
+  if (competition.description) event.description = competition.description;
   if (competition.organizer)
     event.organizer = { '@type': 'Organization', name: competition.organizer.name };
   if (offers) event.offers = offers;

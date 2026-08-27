@@ -1,0 +1,86 @@
+# Participant-facing judging INFORMATION on curated listings — "how is this judged, and how are
+# ties broken" — as two optional keys on every Category Template.
+#
+# 🛑 Deliberately NOT the judging system. H12–H17/H25 (rubrics as scoring instruments, judge
+# assignment, scoring workflows) stay untouched behind the Gate B deep-dive; nothing here scores
+# anything, assigns anyone, or models a judge. These are descriptive catalog fields in exactly the
+# same class as `syllabus` or `fair_levels` — text a participant reads before deciding to enter,
+# about competitions we do NOT run.
+#
+# Why the attributes bag rather than Spine columns: this is category-shaped, optional prose that
+# nothing filters or sorts on — the exact split domain-model §7 defines. So: no migration to the
+# competition table, no new entity, and the admin form renders real controls for them the moment
+# the template declares them (AttributesFields reads jsonSchema + uiHints).
+#
+# Applied to ALL 11 templates: tie-breakers matter as much to an exam contest as to a fair, and
+# `evaluation_type` on the Spine already says HOW an entry is assessed.
+#
+# Idempotent: jsonb_set writes the same keys on a re-run. Additive — existing template keys and
+# every stored attributes bag are untouched.
+databaseChangeLog:
+  - changeSet:
+      id: 0015-judging-info-attributes
+      author: beecompete
+      comment: Add judging_criteria + tie_breakers to every category template (catalog info, NOT the judging system).
+      changes:
+        - sql:
+            comment: Declare the two properties so the admin form renders typed controls for them.
+            sql: >-
+              UPDATE category_template
+              SET json_schema = jsonb_set(
+                    jsonb_set(
+                      json_schema,
+                      '{properties,judging_criteria}',
+                      '{"type": "array", "items": {"type": "string"}}'::jsonb,
+                      true),
+                    '{properties,tie_breakers}',
+                    '{"type": "string"}'::jsonb,
+                    true)
+              WHERE jsonb_typeof(json_schema->'properties') = 'object'
+        - sql:
+            comment: Labels, placeholders and a textarea widget so the fields read as prose, not keys.
+            sql: >-
+              UPDATE category_template
+              SET ui_hints = coalesce(ui_hints, '{}'::jsonb)
+                  || jsonb_build_object(
+                       'labels', coalesce(ui_hints->'labels', '{}'::jsonb) || jsonb_build_object(
+                         'judging_criteria', 'What judges look for',
+                         'tie_breakers', 'Tie-breaker rules'),
+                       'placeholders', coalesce(ui_hints->'placeholders', '{}'::jsonb) || jsonb_build_object(
+                         'judging_criteria', 'Originality 40%, Method 30%, Presentation 30%',
+                         'tie_breakers', 'Ties broken by the highest score on the final round.'),
+                       'widgets', coalesce(ui_hints->'widgets', '{}'::jsonb) || jsonb_build_object(
+                         'tie_breakers', 'textarea'))
+      rollback:
+        - empty
+
+  # A LINK to the organizer's rules/rubric PDF rather than a copy of it. Two reasons, both
+  # deliberate: rules PDFs are revised every season, so a re-hosted copy silently goes stale and
+  # can send a student to superseded rules; and the document is someone else's work — the catalog
+  # links to canonical sources everywhere else (official URL, registration URL, resources) rather
+  # than mirroring them. `format: uri` makes the admin form render a type=url input on its own.
+  - changeSet:
+      id: 0015-rules-url-attribute
+      author: beecompete
+      comment: Add rules_url to every category template — link to the official rules/rubric document.
+      changes:
+        - sql:
+            sql: >-
+              UPDATE category_template
+              SET json_schema = jsonb_set(
+                    json_schema,
+                    '{properties,rules_url}',
+                    '{"type": "string", "format": "uri"}'::jsonb,
+                    true)
+              WHERE jsonb_typeof(json_schema->'properties') = 'object'
+        - sql:
+            sql: >-
+              UPDATE category_template
+              SET ui_hints = coalesce(ui_hints, '{}'::jsonb)
+                  || jsonb_build_object(
+                       'labels', coalesce(ui_hints->'labels', '{}'::jsonb) || jsonb_build_object(
+                         'rules_url', 'Official rules / rubric (PDF or page)'),
+                       'placeholders', coalesce(ui_hints->'placeholders', '{}'::jsonb) || jsonb_build_object(
+                         'rules_url', 'https://…/rules.pdf'))
+      rollback:
+        - empty

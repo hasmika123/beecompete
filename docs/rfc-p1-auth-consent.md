@@ -8,7 +8,10 @@ This RFC designs identity, the COPPA parental-consent flow, guardianship, and RB
 > ⚠️ Compliance-critical. **Counsel must review** the consent method and privacy disclosures before R2.
 
 ## Decisions locked (clarify gate)
-1. **Under-13 = parent-managed** (parent creates/consents; 13+ self-register). Supports all of K-12.
+1. **Under-13 = parent-managed** (parent creates/consents; 13+ self-register). Covers the whole
+   ladder: an under-13 needs a parent, everyone from 13 up — including college and grad students —
+   self-registers. Unchanged by the 2026-08-25 repositioning away from "K-12"; the rule keys off
+   AGE, which is what COPPA keys off too, not off who the site is aimed at.
 2. **Consent method = "email-plus" now**, upgrade to a stronger method later (triggers below).
 3. **Account creation = both student- and parent-initiated.**
 

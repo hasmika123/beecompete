@@ -14,6 +14,7 @@ that the extraction pipeline and curators work down, in rank order, until the R1
 | `master-index.csv` | Machine-readable long-list — one row per competition, ranked. The S3 pipeline reads this. |
 | `master-index.md` | Human-readable companion — per-category tables + a coverage summary. |
 | `README.md` | This file — provenance, methodology, column definitions, and how S3/S4 consume it. |
+| `paste-json-prompt.md` | **Manual “give me the JSON” prompt** — for adding ONE competition by hand via Admin → Competitions → New → Paste JSON. Keep its field rules in step with `tools/seeding/src/prompt.ts`. |
 | `url-audit.csv` | **URL-quality snapshot** (2026-08-20) — one verdict per distinct `official_url`. Regenerate with `pnpm --dir tools/seeding audit-index`. See "URL quality" below. |
 
 ## How S3 / S4 consume it

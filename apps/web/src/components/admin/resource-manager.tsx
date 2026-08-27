@@ -114,6 +114,9 @@ export function ResourceManager({
         <FormField label="Order" hint="lower shows first">
           <Input name="displayOrder" type="number" min={0} defaultValue={resources.length} />
         </FormField>
+        <FormField label="Preview image URL" hint="optional — the resource’s own cover/thumbnail">
+          <Input name="imageUrl" type="url" maxLength={1000} placeholder="https://…" />
+        </FormField>
         <div className="flex items-center">
           <Checkbox name="isAffiliate" label="Affiliate link" />
         </div>

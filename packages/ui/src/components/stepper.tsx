@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { Check } from '../icons';
 import { cn } from '../lib/cn';
 
@@ -9,6 +10,12 @@ import { cn } from '../lib/cn';
  * field so the rail nudges without blocking navigation. Nodes read done (check) / current (gold)
  * / to-do (number), threaded by a continuous connector rail; the whole row is a button so
  * keyboard + click both select the step.
+ *
+ * An optional {@link StepperProps.header} crowns the rail — a summary of the whole run of steps
+ * (e.g. a completion ring) that belongs WITH the timeline rather than floating beside it. It sits
+ * inside the same panel above a hairline, so the rail reads as one object: overall state, then
+ * the steps that add up to it. {@link StepperProps.footer} closes it the same way, for the action
+ * the steps lead to (e.g. the form's submit): state at the top, the steps, then the payoff.
  */
 
 export interface StepperStep {
@@ -26,6 +33,10 @@ export interface StepperProps {
   steps: StepperStep[];
   activeId: string;
   onSelect: (id: string) => void;
+  /** Optional summary crowning the rail (e.g. a completion ring) — see the component note. */
+  header?: ReactNode;
+  /** Optional action closing the rail (e.g. the form's submit) — see the component note. */
+  footer?: ReactNode;
   className?: string;
   'aria-label'?: string;
 }
@@ -34,6 +45,8 @@ export function Stepper({
   steps,
   activeId,
   onSelect,
+  header,
+  footer,
   className,
   'aria-label': ariaLabel = 'Form steps',
 }: StepperProps) {
@@ -45,6 +58,10 @@ export function Stepper({
         className,
       )}
     >
+      {header && (
+        // Padded to the step rows' own inset so the header and the nodes share a left edge.
+        <div className="mb-2 border-b border-border px-2.5 pb-3.5 pt-1.5">{header}</div>
+      )}
       {steps.map((step, i) => {
         const current = step.id === activeId;
         const showCheck = step.complete && !current;
@@ -121,6 +138,10 @@ export function Stepper({
           </button>
         );
       })}
+      {footer && (
+        // Mirrors the header inset so the action lines up with the nodes above it.
+        <div className="mt-2 border-t border-border px-2.5 pb-1 pt-3.5">{footer}</div>
+      )}
     </nav>
   );
 }

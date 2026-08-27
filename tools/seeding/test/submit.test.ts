@@ -29,7 +29,6 @@ const COMPETITION_REQUEST_FIELDS = new Set([
   'officialUrl',
   'logo',
   'description',
-  'summary',
   'categoryId',
   'tags',
   'participationMode',

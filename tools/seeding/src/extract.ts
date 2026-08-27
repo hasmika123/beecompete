@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { CATEGORY_IDS, isCategorySlug } from './categories.ts';
 import type { Config } from './config.ts';
 import { buildSystemPrompt, buildUserPrompt } from './prompt.ts';
+import type { TemplateMap } from './templates.ts';
 import type { Extraction, SeedHints } from './types.ts';
 
 export type ExtractBackend = 'anthropic' | 'stub';
@@ -14,6 +15,12 @@ export interface ExtractInput {
   inputPath?: string;
   /** Known facts from the S2 master index, fed to the model as trusted guidance (#2). */
   hints?: SeedHints;
+  /**
+   * Category Templates for this run — the SERVER's copy when the API was reachable, the
+   * checked-in mirror otherwise (templates.ts). The attributes half of the system prompt is
+   * generated from it, so a stale map here silently narrows what gets extracted.
+   */
+  templates?: TemplateMap;
 }
 
 /**
@@ -139,7 +146,7 @@ async function callModel(
       system: [
         {
           type: 'text',
-          text: buildSystemPrompt(),
+          text: buildSystemPrompt(input.templates),
           cache_control: { type: 'ephemeral' },
         },
       ],
@@ -220,7 +227,7 @@ async function stubExtract(input: ExtractInput): Promise<Extraction> {
  * Normalizes raw model/fixture JSON into an Extraction: resolves `categorySlug` -> `categoryId`,
  * forces `description` to null (curator-authored later), coerces the confidence range, and
  * SANITIZES free-text fields (M4): `<`, `>`, and control characters are stripped from name,
- * summary, tags, and every string inside the `attributes` bag — page-injected markup never
+ * tags, and every string inside the `attributes` bag — page-injected markup never
  * reaches the queue. Wrong-TYPED fields are passed through untouched so `validatePayload` can
  * report them as validation errors instead of this module throwing (L3).
  */
@@ -252,7 +259,6 @@ export function normalize(raw: unknown, sourceUrl: string): Extraction {
     // substitute the S2 index hint here — an unverified hint must not become catalog data; a page
     // that doesn't name its organizer stays null and is flagged for manual assignment (decision b).
     organizerName: sanitizeIfString(rest.organizerName),
-    summary: sanitizeIfString(rest.summary),
     tags: Array.isArray(rest.tags) ? rest.tags.map((t) => sanitizeIfString(t)) : rest.tags,
     attributes: pruneNullProps(sanitizeDeep(rest.attributes)),
     categoryId,

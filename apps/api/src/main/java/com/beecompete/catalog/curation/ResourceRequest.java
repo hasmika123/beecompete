@@ -12,4 +12,4 @@ import java.util.Map;
  */
 public record ResourceRequest(@NotBlank @Size(max = 300) String title, @NotBlank @Size(max = 1000) String url,
 		@NotNull ResourceType type, boolean isAffiliate, Map<String, Object> affiliateMeta,
-		short displayOrder) {}
+		short displayOrder, @Size(max = 1000) String imageUrl) {}

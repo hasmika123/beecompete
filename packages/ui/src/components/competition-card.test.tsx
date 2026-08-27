@@ -9,7 +9,7 @@ const DATA = {
   gradeLabel: 'Grades 8–10',
   organizerName: 'MAA',
   organizerVerified: true,
-  summary: 'The classic 25-question contest.',
+  blurb: 'The classic 25-question contest.',
   free: false,
   regionLabel: 'Nationwide',
   prizeLabel: 'Medals + AIME invite',
@@ -49,14 +49,14 @@ describe('CompetitionCard', () => {
 
   it('reserves the organizer + description slots on a sparse card (fixed-slot anatomy)', () => {
     // Owner 2026-07-13 (blueprints #35): every card renders the same rows at the same heights.
-    // An unattributed, summary-less card keeps BLANK reserved space — the slots exist, empty.
+    // An unattributed, blurb-less card keeps BLANK reserved space — the slots exist, empty.
     render(
       <CompetitionCard
         data={{
           ...DATA,
           organizerName: undefined,
           organizerVerified: undefined,
-          summary: undefined,
+          blurb: undefined,
           gradeLabel: undefined,
         }}
       />,
@@ -65,9 +65,9 @@ describe('CompetitionCard', () => {
     expect(orgSlot).toBeTruthy();
     expect(orgSlot.textContent).toBe(''); // blank, never placeholder text
     expect(orgSlot.className).toContain('h-6'); // fixed height even when empty
-    const summarySlot = screen.getByTestId('summary-slot');
-    expect(summarySlot.textContent).toBe('');
-    expect(summarySlot.className).toContain('min-h-[2lh]'); // two lines reserved
+    const blurbSlot = screen.getByTestId('blurb-slot');
+    expect(blurbSlot.textContent).toBe('');
+    expect(blurbSlot.className).toContain('min-h-[2lh]'); // two lines reserved
     expect(screen.queryByRole('img', { name: 'Verified organizer' })).toBeNull();
   });
 });

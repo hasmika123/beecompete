@@ -11,8 +11,11 @@
 // (4) is transactional rather than a subscription because a claim is a 1:1 support conversation,
 // not a broadcast audience — see claim-actions.ts for the full reasoning.
 //
-// COMPLIANCE: the reader-facing captures are pitched to parents/educators/16+ (a K-12-directed
-// email to a child would trigger COPPA); host captures use organizer framing. We default to Brevo
+// COMPLIANCE: the reader-facing captures are pitched to parents/educators/16+ — unchanged by the
+// 2026-08-25 repositioning away from "K-12 audience". The site is a general-audience catalog now,
+// but the reason this framing exists never depended on that: an email capture aimed at a child
+// under 13 triggers COPPA regardless of who the rest of the site is for, and we expect some
+// under-13 visitors. Host captures use organizer framing. We default to Brevo
 // DOUBLE OPT-IN when a DOI template is configured — the subscriber must click a confirmation email
 // before anything is stored on the list, which is both the consent record (CAN-SPAM / prudent COPPA
 // posture) and good deliverability hygiene.

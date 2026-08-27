@@ -10,9 +10,11 @@ This is the *operator's* view — deep technical detail lives in the docs linked
 
 ## 1. What BeeCompete is (30-second refresher)
 
-A marketplace for **K-12 academic competitions** — students/parents browse, filter, and track
-competitions across ~11 categories (math, science, robotics, debate, …). Users are **minors** and
-(later) **money moves**, so COPPA/privacy/security are first-class.
+A marketplace for **academic competitions at every level**, elementary school through graduate
+school — students/parents browse, filter, and track competitions across ~11 categories (math,
+science, robotics, debate, …). **Some users are minors** and (later) **money moves**, so
+COPPA/privacy/security are first-class. (Repositioned 2026-08-25 from "K-12": the catalog always
+listed past grade 12, and the grade ladder now runs to Graduate.)
 
 - **Live now:** `https://beecompete.com` (+ `staging.beecompete.com`) — **R1 browse-only marketplace**
   (no accounts, no PII, no payments). Currently **noindex** — not yet public/searchable.
@@ -50,7 +52,7 @@ Every external account the project depends on. All free-tier unless noted — **
 | Service | Used for | Cost | Watch out |
 |---|---|---|---|
 | **IONOS** | VPS M+ (4 GB, US East, Ubuntu 24.04, IP `74.208.212.158`) | **Paid monthly** | Must stay on the upgradeable **VPS+** line (not "Cloud VPS"). Upgrade in-place to L+ (8 GB) before co-hosting a 2nd app |
-| **Cloudflare** | DNS, CDN/WAF, rate-limiting, **Access** (admin lock), Web Analytics, **Email Routing** (support@ → Gmail) | Free | SSL mode = Full (strict). Only 1 free rate-limit rule (now on `/suggest-a-`; re-point to `/login` at R2). Never delete the MX/SPF/DKIM DNS records |
+| **Cloudflare** | DNS, CDN/WAF, rate-limiting, **Access** (admin lock + per-curator logins, §3b of the runbook), Web Analytics, **Email Routing** (support@ → Gmail) | Free | SSL mode = Full (strict). Only 1 free rate-limit rule (now on `/suggest-a-`; re-point to `/login` at R2). Never delete the MX/SPF/DKIM DNS records |
 | **Neon** | Postgres (staging + prod branches, one account) | **Launch — usage-based, no base fee** | $0.106/CU-h · $0.35/GB-mo storage. **No quota wall any more — and no automatic spend cap either.** The ONLY hard cap is each compute's autoscale max (prod 0.25–1 CU, staging 0.25–0.5 CU). Never leave the 16 CU default: pinned that is ~$1,240/mo. Expect **$4–8/mo**. Full rules: `setup-runbook.md` → "Neon cost controls" |
 | **AWS** | S3 public-assets bucket (covers) + IAM user `beecompete-api-s3` | ~Free | Root MFA still TODO. Private submissions bucket comes at R2 |
 | **GitHub** | Repo, Actions CI/CD, GHCR images, Issues | Free (→ Pro ~$4/mo) | Repo is **public for now** — make private + Pro (branch protection) before launch |
@@ -60,6 +62,7 @@ Every external account the project depends on. All free-tier unless noted — **
 | **UptimeRobot** | Uptime monitors (see §6) | Free | The DB probe must poll at **30–60 min**, never 5 min |
 | **Domain** | `beecompete.com` (DNS on Cloudflare) | Annual renewal | Keep auto-renew on — losing the domain is fatal |
 | **Google/Bing Webmaster** | Search Console + Bing — sitemap submission | Free | Only matters after the indexing flip (§10) |
+| **Amazon Associates** | Affiliate commissions on curated prep resources (M11 / DQ10). Associate ID (tracking tag) **`beecompete-20`** — US store (`amazon.com`) | Free | **Application is provisional:** Associates Central access is granted now, but Amazon only *reviews* the application after we refer qualified sales, and **withdraws it if there are none within 180 days** (enrolled 2026-08-25 → deadline **~2027-02-21**, §9). Every Amazon resource URL must carry `?tag=beecompete-20`, be saved with `is_affiliate = true`, and render the disclosure (§11) |
 
 ---
 
@@ -199,7 +202,8 @@ entire launch strategy. Any rule that cannot tell Googlebot from a cloner costs 
   Curation is **permanent labor** — budget a few hours/week post-launch.
 - **S5 freshness loop:** check for stale/passed Edition dates and re-verify listings on their annual cycle.
 - **Weekly digest send:** manual, curated, from Brevo (automated matching sends are Phase 2 / M26).
-- Clear the admin queues: import reviews, correction proposals, competition requests.
+- Clear the admin queues: import reviews, correction proposals, competition requests. With more
+  than one curator, the queue note records who reviewed a record (“… · by name@…”).
 - Skim Sentry for new errors; skim the support@ inbox.
 
 **Monthly**
@@ -262,6 +266,8 @@ Nothing has a hard expiry date, but these can silently run out or lapse:
 | **Brevo daily send cap** | Digest sends throttle on free tier | Watch as lists grow; upgrade when digest > ~300/day |
 | **PostHog / Sentry free events** | Data loss past quota | Glance quarterly |
 | **GitHub Actions minutes** | CI stalls (free on public repos; metered when repo goes private) | Watch after the private flip |
+| **Amazon Associates 180-day clock** | Application + Associates Central access are **withdrawn** if no qualified sale is referred by **~2027-02-21** (180 days from the 2026-08-25 enrollment). Re-applying is possible but starts over | Check once the catalog has affiliate-tagged resources live; revisit by ~Dec 2026 |
+| **Curator access list** | Someone who stopped curating keeps their login until their address leaves the Cloudflare Access policy | Review when a curator moves on — procedure in `setup-runbook.md` §3b |
 | **`ADMIN_API_TOKEN` / Brevo key / AWS keys** | No expiry, but rotate if ever exposed | Rotate on incident; Neon prod password rotation is **already owed** (§5) |
 
 ---
@@ -305,7 +311,10 @@ bound**, Neon PITR **enabled** (done at the plan level 2026-08-20) + one tested 
 
 - **No selling student data. No behavioral ad-targeting to minors.** Contextual targeting only, ever.
 - **No 1:1 private messaging between adults/hosts and minors — ever.** Broadcast or public-moderated only.
-- **Affiliate links always carry the disclosure** (FTC).
+- **Affiliate links always carry the disclosure** (FTC — and, for Amazon links, the Associates
+  Operating Agreement's own required sentence, "As an Amazon Associate, we earn from qualifying
+  purchases," live in the Affiliate Disclosure page summary since 2026-08-25. Never reword or bury
+  it — Amazon can terminate the account over it; counsel still reviews the page with the other three).
 - **WCAG 2.1 AA** on all new public UI.
 - Analytics stay **cookieless, anonymous, no replay/autocapture**.
 - **Never paste organizers' prose** into listings — facts are free, descriptions are written fresh (copyright).

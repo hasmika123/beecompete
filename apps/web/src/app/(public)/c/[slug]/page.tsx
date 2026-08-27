@@ -15,15 +15,19 @@ import {
   buttonClasses,
   cn,
 } from '@beecompete/ui';
-import { AboutPanel, hasAboutData } from '@/components/detail/about-panel';
+import { MorePanel, hasMoreData } from '@/components/detail/more-panel';
 import { AtAGlance } from '@/components/detail/at-a-glance';
 import { DescriptionExcerpt } from '@/components/detail/description-excerpt';
 import { DetailTabs } from '@/components/detail/detail-tabs';
 import { FaqList } from '@/components/detail/faq-list';
+import { EligibilityPanel, JudgingPanel, hasJudgingData } from '@/components/detail/key-facts';
+import { LogisticsPanel } from '@/components/detail/logistics-panel';
+import { ContactCard, hasContactData } from '@/components/detail/contact-card';
+import { AwardsPanel, hasAwardsData } from '@/components/detail/awards-panel';
 import { KeyDatesTimeline } from '@/components/detail/key-dates-timeline';
-import { KeyFacts } from '@/components/detail/key-facts';
 import { RelatedCompetitions } from '@/components/detail/related-competitions';
 import { ResourcesRow } from '@/components/detail/resources-row';
+import { TagRow } from '@/components/detail/tag-row';
 import { StickyBottomBar } from '@/components/detail/sticky-bottom-bar';
 import { StickyRail } from '@/components/detail/sticky-rail';
 import { EmailCaptureCta } from '@/components/detail/email-capture-cta';
@@ -33,10 +37,25 @@ import { ClaimListingCta } from '@/components/detail/claim-listing-cta';
 import { TrustPanel } from '@/components/detail/trust-panel';
 import { fetchCompetition } from '@/lib/catalog-api';
 import type { CompetitionDetail } from '@/lib/catalog-types';
-import { currentEdition } from '@/lib/detail-display';
+import { currentEdition, editionStatusLabel } from '@/lib/detail-display';
 import { PublicApiError } from '@/lib/public-api';
 import { pageMetadata } from '@/lib/seo';
 import { breadcrumbJsonLd, eventJsonLd, faqJsonLd, jsonLdScript } from '@/lib/structured-data';
+
+/** Status tag tone: open reads as the brand invitation; done states go quiet. */
+/**
+ * Status → badge color (owner 2026-08-24): a traffic-light read at a glance — green while you
+ * can still get in (open), gold while the season is running (ongoing = brand-warm, not an
+ * invitation to register), quiet outline before it starts, red tint once entry is closed, and
+ * neutral for archived history.
+ */
+function statusBadgeVariant(status: string): 'gold' | 'outline' | 'neutral' | 'success' | 'danger' {
+  if (status === 'open') return 'success';
+  if (status === 'ongoing') return 'gold';
+  if (status === 'upcoming') return 'outline';
+  if (status === 'closed') return 'danger';
+  return 'neutral';
+}
 
 // Competition detail — page-blueprints Page 3, the primary SEO landing surface (schema.org
 // Event + BreadcrumbList + FAQPage, per-competition OG image, canonical). Route locked to
@@ -71,7 +90,6 @@ export async function generateMetadata({
   const competition = await load((await params).slug);
   if (!competition) return {};
   const description =
-    competition.summary ??
     competition.description?.slice(0, 200) ??
     `${competition.name}: grades, deadlines, cost, and how to enter.`;
   // The per-competition OG image comes from the sibling opengraph-image route (file convention).
@@ -183,9 +201,20 @@ export default async function CompetitionDetailPage({
               ⚠ The bar is `lg:hidden` while this appears at sm, so 768–1023px deliberately shows
               both: that width has room for the labelled pills and is where the bar starts feeling
               like a phone affordance. */}
-          <div className="hidden items-center gap-2 sm:flex">
-            <FollowTrigger />
-            <ShareMenu title={competition.name} path={path} />
+          <div className="flex items-center gap-2">
+            {/* Status rides the action row (owner 2026-08-23) — a tag, not a strip tile. Visible
+                on phones too (unlike Follow/Share, which the sticky bar carries there).
+                size="action" (owner 2026-08-24): same box as the sm Follow/Share buttons beside
+                it, so the row reads as one scale. */}
+            {edition && (
+              <Badge size="action" variant={statusBadgeVariant(edition.effectiveStatus)}>
+                {editionStatusLabel(edition.effectiveStatus)}
+              </Badge>
+            )}
+            <div className="hidden items-center gap-2 sm:flex">
+              <FollowTrigger />
+              <ShareMenu title={competition.name} path={path} />
+            </div>
           </div>
         </div>
 
@@ -273,6 +302,11 @@ export default async function CompetitionDetailPage({
                   three lines with See more, so a long one can't push At-a-glance off screen.
                   It used to BE the About tab; that tab is the leftovers bin now. */}
               {competition.description && <DescriptionExcerpt text={competition.description} />}
+              {/* Tags ride WITH the description (owner 2026-08-26) — they were on the More tab
+                  behind a "Tags" heading, which buried the one curated field that reads as part
+                  of the pitch. Inside <header> so they stay glued to the description in the
+                  phone's ordered column (the header is one `max-lg:order-3` item). */}
+              <TagRow tags={competition.tags ?? []} />
             </header>
 
             {/* At-a-glance moved INTO the folder as its first tab (owner #94) — the header ends
@@ -283,12 +317,33 @@ export default async function CompetitionDetailPage({
                 the two sections below. */}
             <div className="max-lg:order-5 lg:mt-6">
               <DetailTabs
-                glance={<AtAGlance competition={competition} />}
-                keyFacts={<KeyFacts competition={competition} />}
-                about={
-                  hasAboutData(competition) ? <AboutPanel competition={competition} /> : undefined
+                // Overview is the At-a-glance strip alone since #108 — the category-details
+                // overflow that used to trail it moved out to the "More" tab.
+                overview={<AtAGlance competition={competition} />}
+                logistics={<LogisticsPanel competition={competition} />}
+                eligibility={<EligibilityPanel competition={competition} />}
+                judging={
+                  hasJudgingData(competition) ? (
+                    <JudgingPanel competition={competition} />
+                  ) : undefined
                 }
-                faq={competition.faqs.length > 0 ? <FaqList faqs={competition.faqs} /> : undefined}
+                awards={
+                  hasAwardsData(competition) ? <AwardsPanel competition={competition} /> : undefined
+                }
+                // FAQ carries the organizer contact since #110 — the tab that answers questions
+                // is where "how do I reach them" belongs. Either half alone still shows the tab:
+                // a listing with contacts but no curated Q&As gets the card on its own.
+                faq={
+                  competition.faqs.length > 0 || hasContactData(competition) ? (
+                    <div className="grid gap-5">
+                      {competition.faqs.length > 0 && <FaqList faqs={competition.faqs} />}
+                      <ContactCard competition={competition} />
+                    </div>
+                  ) : undefined
+                }
+                more={
+                  hasMoreData(competition) ? <MorePanel competition={competition} /> : undefined
+                }
               />
             </div>
 
@@ -299,11 +354,7 @@ export default async function CompetitionDetailPage({
             )}
 
             <div className="mt-4 max-lg:order-9 lg:mt-12">
-              <RelatedCompetitions
-                categorySlug={competition.category.slug}
-                categoryName={competition.category.name}
-                excludeId={competition.id}
-              />
+              <RelatedCompetitions competition={competition} />
             </div>
           </div>
 
@@ -454,7 +505,7 @@ export default async function CompetitionDetailPage({
                     </h2>
                     {edition.cycleLabel && <Badge>{edition.cycleLabel}</Badge>}
                   </div>
-                  <div className="rounded-[var(--radius-panel)] border border-border bg-surface-raised p-5">
+                  <div className="rounded-[var(--radius-panel)] border border-border bg-surface-raised px-4 py-5">
                     <KeyDatesTimeline
                       edition={edition}
                       competitionName={competition.name}
@@ -465,7 +516,7 @@ export default async function CompetitionDetailPage({
               )}
 
               {/* Trust & attribution */}
-              <div className="rounded-[var(--radius-panel)] border border-border bg-surface-raised p-5 max-lg:order-7">
+              <div className="rounded-[var(--radius-panel)] border border-border bg-surface-raised px-4 py-5 max-lg:order-7">
                 <TrustPanel competition={competition} />
                 <div className="mt-4 grid gap-2 border-t border-border pt-4">
                   {/* Claim is a FORM → admin inbox, not a list capture (R1-15c): it needs context

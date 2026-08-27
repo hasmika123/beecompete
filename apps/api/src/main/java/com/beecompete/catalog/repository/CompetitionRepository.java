@@ -1,6 +1,7 @@
 package com.beecompete.catalog.repository;
 
 import com.beecompete.catalog.domain.Competition;
+import com.beecompete.catalog.domain.ListingStatus;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -10,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface CompetitionRepository extends JpaRepository<Competition, UUID> {
 
@@ -19,6 +21,37 @@ public interface CompetitionRepository extends JpaRepository<Competition, UUID> 
 
 	/** Admin list search (R1-3) — a plain contains match; the public FTS search is CompetitionSearchService. */
 	Page<Competition> findByNameContainingIgnoreCase(String name, Pageable pageable);
+
+	/** Admin list filtered to one lifecycle state (§8a) — the review queue reads IN_REVIEW. Archived rows excluded: they have no lifecycle to act on. */
+	Page<Competition> findByListingStatusAndNameContainingIgnoreCaseAndArchivedAtIsNull(
+			ListingStatus listingStatus, String name, Pageable pageable);
+
+	/**
+	 * Admin list, filtered to ZOMBIE listings: not archived, yet no non-archived edition — so the
+	 * readiness gate (&sect;8a) hides them from the public catalog unintentionally. Archived rows
+	 * are excluded: they are hidden on purpose, and listing them here would bury real zombies. Same EXISTS predicate as
+	 * {@link #countPublicListings()} and the search gate, negated — one rule for "is this
+	 * browsable", never two that can drift.
+	 */
+	@Query("""
+			SELECT c FROM Competition c
+			WHERE lower(c.name) LIKE lower(concat('%', :name, '%'))
+			  AND c.archivedAt IS NULL
+			  AND NOT EXISTS (
+			    SELECT 1 FROM Edition e WHERE e.competition = c AND e.archivedAt IS NULL)
+			""")
+	Page<Competition> findMissingLiveEdition(@Param("name") String name, Pageable pageable);
+
+	/**
+	 * Which of these ids have a live edition — one query per admin page, not one per row (same
+	 * reasoning as {@link #findBySlugIn(Collection)}). Drives the "no edition" badge.
+	 */
+	@Query("""
+			SELECT c.id FROM Competition c
+			WHERE c.id IN :ids
+			  AND EXISTS (SELECT 1 FROM Edition e WHERE e.competition = c AND e.archivedAt IS NULL)
+			""")
+	List<UUID> idsWithLiveEdition(@Param("ids") Collection<UUID> ids);
 
 	/**
 	 * Bulk slug lookup for the import queue's duplicate flag (one query per page, not one per row).
@@ -35,6 +68,7 @@ public interface CompetitionRepository extends JpaRepository<Competition, UUID> 
 	@Query(value = """
 			SELECT count(*) FROM competition c
 			WHERE c.archived_at IS NULL
+			  AND c.listing_status = 'PUBLISHED'
 			  AND EXISTS (SELECT 1 FROM edition e WHERE e.competition_id = c.id AND e.archived_at IS NULL)
 			""", nativeQuery = true)
 	long countPublicListings();
@@ -60,6 +94,7 @@ public interface CompetitionRepository extends JpaRepository<Competition, UUID> 
 			  LEFT JOIN resource r ON r.competition_id = c.id
 			  LEFT JOIN competition_faq f ON f.competition_id = c.id
 			WHERE c.archived_at IS NULL
+			  AND c.listing_status = 'PUBLISHED'
 			  AND EXISTS (SELECT 1 FROM edition le
 			    WHERE le.competition_id = c.id AND le.archived_at IS NULL)
 			GROUP BY c.id, c.slug, cat.slug, c.updated_at

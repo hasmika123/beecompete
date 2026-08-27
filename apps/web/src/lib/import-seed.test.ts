@@ -40,12 +40,28 @@ describe('splitImportPayload', () => {
       {
         type: 'REG_CLOSE',
         date: '2026-11-02',
+        endDate: '',
         time: '23:59',
         timezone: 'America/New_York',
         tbd: false,
         label: '',
       },
     ]);
+  });
+
+  it('reads a multi-day row’s end day in the row’s own zone', () => {
+    const withRange = payload();
+    (withRange.keyDates as Record<string, unknown>[])[0] = {
+      type: 'ROUND_START',
+      startsAt: '2027-03-20T16:00:00Z',
+      endsAt: '2027-03-21T23:00:00Z',
+      timezone: 'America/Los_Angeles',
+    };
+    const [row] = splitImportPayload(withRange).keyDates;
+    // 23:00Z on the 21st is 16:00 PDT the SAME day — read in UTC it would still be the 21st, but
+    // the zone is what keeps a range aligned with the start it is measured against.
+    expect(row?.date).toBe('2027-03-20');
+    expect(row?.endDate).toBe('2027-03-21');
   });
 
   it('round-trips a key date back to the same instant it came from', () => {
@@ -75,7 +91,6 @@ describe('splitImportPayload', () => {
     const seed = splitImportPayload(
       payload({
         name: 42,
-        summary: '   ',
         tags: ['math', '', 7],
         minGrade: 'not a grade',
         attributes: ['not', 'an', 'object'],
@@ -83,7 +98,6 @@ describe('splitImportPayload', () => {
       }),
     );
     expect(seed.competition.name).toBe('');
-    expect(seed.competition.summary).toBeNull();
     expect(seed.competition.tags).toEqual(['math']);
     expect(seed.competition.minGrade).toBeNull();
     expect(seed.competition.attributes).toBeNull();
@@ -110,7 +124,10 @@ describe('splitImportPayload', () => {
       }),
     );
     expect(seed.extras.competition).toEqual({ reviewerNotes: 'fee unclear' });
-    expect(seed.extras.edition).toEqual({ prizeValue: 500 });
+    // `status` left the form 2026-08-22 (derived on create) — an extracted one is an extra now;
+    // prizeValue gained a control the same day, so it is MAPPED, not an extra.
+    expect(seed.extras.edition).toEqual({ status: 'OPEN' });
+    expect(seed.edition?.prizeValue).toBe('500');
   });
 });
 

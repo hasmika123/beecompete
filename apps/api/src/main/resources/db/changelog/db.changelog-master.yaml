@@ -28,3 +28,21 @@ databaseChangeLog:
       file: db/changelog/changes/0012-organizer-mandatory.yaml
   - include:
       file: db/changelog/changes/0013-import-origin.yaml
+  - include:
+      file: db/changelog/changes/0014-import-summary-to-description.yaml
+  - include:
+      file: db/changelog/changes/0015-judging-info-attributes.yaml
+  - include:
+      file: db/changelog/changes/0016-entry-pathway-open.yaml
+  - include:
+      file: db/changelog/changes/0017-other-eligibility-requirements.yaml
+  - include:
+      file: db/changelog/changes/0018-seed-cities.yaml
+  - include:
+      file: db/changelog/changes/0019-contact-attributes.yaml
+  - include:
+      file: db/changelog/changes/0020-resource-image.yaml
+  - include:
+      file: db/changelog/changes/0021-listing-status.yaml
+  - include:
+      file: db/changelog/changes/0022-student-status-boolean.yaml

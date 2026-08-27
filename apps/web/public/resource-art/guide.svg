@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="210" height="280" viewBox="0 0 210 280">
+  <!-- Generic GUIDE placeholder (resources-row fallback art). Page with a bookmark ribbon and a
+       checklist, emerald per the resource-type hue convention. -->
+  <rect width="210" height="280" rx="10" fill="#ecfdf5"/>
+  <rect width="210" height="280" rx="10" fill="none" stroke="#a7f3d0" stroke-width="2"/>
+  <!-- bookmark ribbon -->
+  <path d="M156 0 H184 V74 L170 60 L156 74 Z" fill="#10b981"/>
+  <!-- title -->
+  <rect x="26" y="34" width="104" height="14" rx="7" fill="#047857"/>
+  <rect x="26" y="58" width="72" height="10" rx="5" fill="#6ee7b7"/>
+  <!-- checklist -->
+  <circle cx="36" cy="118" r="10" fill="#34d399"/>
+  <path d="M31 118 l4 4 l7 -8" fill="none" stroke="#ecfdf5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="58" y="112" width="120" height="10" rx="5" fill="#a7f3d0"/>
+  <circle cx="36" cy="158" r="10" fill="#34d399"/>
+  <path d="M31 158 l4 4 l7 -8" fill="none" stroke="#ecfdf5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="58" y="152" width="102" height="10" rx="5" fill="#a7f3d0"/>
+  <circle cx="36" cy="198" r="10" fill="none" stroke="#34d399" stroke-width="3"/>
+  <rect x="58" y="192" width="112" height="10" rx="5" fill="#a7f3d0"/>
+  <circle cx="36" cy="238" r="10" fill="none" stroke="#34d399" stroke-width="3"/>
+  <rect x="58" y="232" width="88" height="10" rx="5" fill="#a7f3d0"/>
+</svg>

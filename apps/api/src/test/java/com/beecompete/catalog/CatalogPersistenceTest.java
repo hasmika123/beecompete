@@ -131,7 +131,7 @@ class CatalogPersistenceTest {
 		Competition amc = new Competition("amc-10", "AMC 10", math, ParticipationMode.INDIVIDUAL,
 				Delivery.IN_PERSON, EntryPathway.SCHOOL_OR_CHAPTER, CostType.PAID, Recurrence.ANNUAL);
 		amc.setOrganizer(maa);
-		amc.setSummary("The classic 25-question contest for students in grade 10 and below.");
+		amc.setDescription("The classic 25-question contest for students in grade 10 and below.");
 		amc.setMinGrade((short) 9);
 		amc.setMaxGrade((short) 10);
 		amc.setTags(List.of("math", "olympiad"));
@@ -199,7 +199,7 @@ class CatalogPersistenceTest {
 		assertThat(reloaded.getCreatedAt()).isNotNull(); // DB default now()
 		assertThat(reloaded.getUpdatedAt()).isNotNull(); // @UpdateTimestamp (sitemap lastmod)
 		assertThat(reloaded.getArchivedAt()).isNull(); // not soft-deleted
-		assertThat(reloaded.getSummary()).startsWith("The classic 25-question contest"); // card blurb
+		assertThat(reloaded.getDescription()).startsWith("The classic 25-question contest"); // card blurb
 		// Organizer attribution — the card shows org name + DQ13 seal from the ORG record.
 		assertThat(reloaded.getOrganizer().getName()).isEqualTo("Mathematical Association of America");
 		assertThat(reloaded.getOrganizer().getType()).isEqualTo(OrganizationType.HOST);

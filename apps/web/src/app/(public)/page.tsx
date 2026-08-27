@@ -24,9 +24,9 @@ export function generateMetadata(): Metadata {
   return pageMetadata({
     // Brand-led title — absolute so the layout template doesn't append "· BeeCompete" again.
     absoluteTitle: true,
-    title: 'BeeCompete: Find K-12 Academic Competitions',
+    title: 'BeeCompete: Find Academic Competitions',
     description:
-      'One place to find K-12 academic competitions: math, science, coding, debate, writing, and more. Curated listings with real dates, grade ranges, and costs.',
+      'One place to find academic competitions, from elementary school to graduate school: math, science, coding, debate, writing, and more. Curated listings with real dates, grade ranges, and costs.',
     path: '/',
   });
 }
@@ -85,9 +85,12 @@ const HERO_BROWSE_LINKS: {
     iconClass: 'text-sky-600 dark:text-sky-400',
   },
   {
-    label: 'High school competitions',
-    shortLabel: 'High school',
-    href: marketplaceHref('/competitions', { page: 0 }, bandRange('high')),
+    // Grad school, not high school (owner 2026-08-25): the tag row is the landing page's claim
+    // about who the catalog is for, and leading it with the top of the ladder says "every level"
+    // where "high school" said "school-age".
+    label: 'Grad school competitions',
+    shortLabel: 'Grad school',
+    href: marketplaceHref('/competitions', { page: 0 }, bandRange('grad')),
   },
 ];
 
@@ -275,8 +278,8 @@ export default async function LandingPage() {
               clearance for the gold streak, which hangs ~29px below the headline box at the 112px
               step; shrink this back and the streak collides with this paragraph. */}
           <p className="mt-10 max-w-xl text-base text-muted">
-            Every K-12 academic competition, from math and science to coding and debate, in one
-            place, so your student never misses the right one.
+            Every academic competition, from math and science to coding and debate, in one place, so
+            your student never misses the right one.
           </p>
           {/* One row on phones (mobile pass). At size=lg the two CTAs measure 188 + 182px against
               a 343px row, so they stacked and the primary action lost the weight that pairing them

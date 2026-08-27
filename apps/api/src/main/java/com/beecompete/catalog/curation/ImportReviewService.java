@@ -3,6 +3,7 @@ package com.beecompete.catalog.curation;
 import com.beecompete.catalog.domain.Competition;
 import com.beecompete.catalog.domain.ImportRecord;
 import com.beecompete.catalog.domain.ImportStatus;
+import com.beecompete.catalog.domain.ListingStatus;
 import com.beecompete.catalog.domain.Provenance;
 import com.beecompete.catalog.repository.ImportRecordRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import com.beecompete.platform.web.CuratorAuditFilter;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -72,7 +74,7 @@ public class ImportReviewService {
 	 * <p><b>Deliberately lenient — read before adding validation.</b> We assemble a
 	 * {@link CompetitionWithEditionRequest} to reuse that atomic create, but validate its PARTS and
 	 * never the wrapper. The wrapper's {@code @AssertTrue} rules encode the ADMIN CREATE FORM's
-	 * completeness policy (organizer, summary, prize, region, registration URL ...); applying them
+	 * completeness policy (organizer, description, prize, region, registration URL ...); applying them
 	 * here would make most extracted rows unapprovable, since a competition's own page routinely
 	 * states no prize or fee. That split is the existing design intent — see the class note on
 	 * {@link CompetitionWithEditionRequest}. The review form mirrors it: it SHOWS what is missing,
@@ -114,14 +116,17 @@ public class ImportReviewService {
 			List<CompetitionWithEditionRequest.FirstEditionKeyDate> dates = convertKeyDates(keyDatesNode);
 			dates.forEach(d -> validateOrThrow(d, "key date invalid"));
 			created = listingCuration.createWithFirstEdition(
-					new CompetitionWithEditionRequest(request, edition, dates, convertRegionIds(regionIdsNode)),
+					// PUBLISHED explicitly: approving from the queue IS the review (§8a) — a second
+					// approval step for the same record would be the owner reviewing twice.
+					new CompetitionWithEditionRequest(request, edition, dates, convertRegionIds(regionIdsNode),
+							ListingStatus.PUBLISHED),
 					stamp);
 		}
 
 		record.setPayload(payload);
 		record.setStatus(ImportStatus.APPROVED);
 		record.setReviewedAt(Instant.now());
-		record.setNote("created competition " + created.getId());
+		record.setNote(attribute("created competition " + created.getId()));
 		return record;
 	}
 
@@ -130,8 +135,24 @@ public class ImportReviewService {
 		ImportRecord record = requirePending(id);
 		record.setStatus(ImportStatus.REJECTED);
 		record.setReviewedAt(Instant.now());
-		record.setNote(note);
+		record.setNote(attribute(note));
 		return record;
+	}
+
+	/**
+	 * Append WHO reviewed this to the queue note. The queue is the one place a curator needs to
+	 * see another curator's decision in the UI ("did someone already look at this?"), and
+	 * {@code reviewed_by} cannot hold it — it is a UUID reserved for a real user id at R2-7. When
+	 * that lands, {@code reviewed_by} becomes the record and this suffix stops being written; the
+	 * historical notes stay readable either way. Unattributed (a script, local dev) appends
+	 * nothing rather than "by null".
+	 */
+	private static String attribute(String note) {
+		String curator = CuratorAuditFilter.current();
+		if (curator == null) {
+			return note;
+		}
+		return (note == null || note.isBlank()) ? "reviewed by " + curator : note + " · by " + curator;
 	}
 
 	private List<CompetitionWithEditionRequest.FirstEditionKeyDate> convertKeyDates(Object node) {

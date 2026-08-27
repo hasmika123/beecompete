@@ -3,6 +3,7 @@
 import { useActionState, useEffect } from 'react';
 import { Alert, Button, FormField, Input, Select, Textarea, useToast } from '@beecompete/ui';
 import { FormSection } from '@/components/admin/form-section';
+import { AwardsInput, awardRowsFromSeed } from '@/components/admin/awards-input';
 import { enumOptions } from '@/components/admin/enum-labels';
 import { createEdition, updateEdition } from '@/app/admin/competitions/[id]/editions/actions';
 import { EDITION_STATUSES, SCOPE_LEVELS, type Edition, type FormState } from '@/lib/admin-types';
@@ -31,7 +32,34 @@ export function EditionForm({
   }, [state.ok, toast]);
 
   const e = edition;
-  const attributesText = e?.attributes ? JSON.stringify(e.attributes, null, 2) : '';
+  // The rows editor owns `attributes.awards`; the raw JSON textarea gets the REST of the bag,
+  // and the action merges the two back together — so the same key is never edited twice.
+  const {
+    awards: storedAwards,
+    prize_display_mode: storedPrizeMode,
+    ...otherAttributes
+  } = (e?.attributes ?? {}) as {
+    awards?: unknown;
+    prize_display_mode?: unknown;
+  } & Record<string, unknown>;
+  const attributesText = Object.keys(otherAttributes).length
+    ? JSON.stringify(otherAttributes, null, 2)
+    : '';
+  // Editions saved before the rows editor (2026-08-23) carry only the flat prize fields — seed
+  // one row from them so legacy prizes edit as rows instead of silently vanishing.
+  const initialAwards = awardRowsFromSeed(
+    Array.isArray(storedAwards) && storedAwards.length > 0
+      ? (storedAwards as { title: string; type?: string; value?: number; currency?: string }[])
+      : e?.prizeSummary || e?.prizeValue
+        ? [
+            {
+              title: e?.prizeSummary ?? '',
+              value: e?.prizeValue ?? undefined,
+              currency: e?.prizeCurrency ?? undefined,
+            },
+          ]
+        : [],
+  );
 
   return (
     <form action={formAction} className="grid max-w-3xl gap-8">
@@ -69,7 +97,7 @@ export function EditionForm({
         </FormField>
       </FormSection>
 
-      <FormSection title="Fees & prize" cols="sm:grid-cols-3">
+      <FormSection title="Fees" cols="sm:grid-cols-3">
         <FormField label="Entry fee">
           <Input
             name="entryFee"
@@ -87,24 +115,21 @@ export function EditionForm({
             pattern="[A-Za-z]{3}"
           />
         </FormField>
-        <FormField label="Prize summary">
-          <Input name="prizeSummary" defaultValue={e?.prizeSummary ?? ''} maxLength={500} />
-        </FormField>
-        <FormField label="Prize value">
-          <Input
-            name="prizeValue"
-            type="number"
-            step="0.01"
-            min={0}
-            defaultValue={e?.prizeValue ?? ''}
-          />
-        </FormField>
-        <FormField label="Prize currency">
-          <Input
-            name="prizeCurrency"
-            defaultValue={e?.prizeCurrency ?? ''}
-            maxLength={3}
-            pattern="[A-Za-z]{3}"
+      </FormSection>
+
+      <FormSection title="Awards">
+        <FormField
+          label="Award rows"
+          labelAsText
+          hintAs="icon"
+          hint="listed in display order — the first money award leads the card; the prize summary, value and currency are derived from these rows on save."
+        >
+          <AwardsInput
+            name="awards"
+            initial={initialAwards}
+            initialMode={typeof storedPrizeMode === 'string' ? storedPrizeMode : 'titles'}
+            // A custom card line IS the saved summary — that's where the text round-trips from.
+            initialCustom={storedPrizeMode === 'custom' ? (e?.prizeSummary ?? '') : ''}
           />
         </FormField>
       </FormSection>
@@ -130,7 +155,10 @@ export function EditionForm({
       )}
 
       <FormSection title="Attributes">
-        <FormField label="Attributes (JSON)" hint="Edition-specific display fields.">
+        <FormField
+          label="Attributes (JSON)"
+          hint="edition-specific display fields — awards are edited above, not here."
+        >
           <Textarea
             name="attributes"
             defaultValue={attributesText}

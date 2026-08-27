@@ -1,6 +1,7 @@
 package com.beecompete.catalog.service;
 
 import com.beecompete.catalog.domain.Competition;
+import com.beecompete.catalog.domain.ListingStatus;
 import com.beecompete.catalog.domain.CostType;
 import com.beecompete.catalog.domain.Delivery;
 import com.beecompete.catalog.domain.EntryPathway;
@@ -97,6 +98,20 @@ public class CompetitionSearchService {
 			 ) d ON true
 			""";
 
+	/**
+	 * Stored pathway tokens a filter value should match (2026-08-23 widening). EITHER is the
+	 * pre-0016 spelling of OPEN and is still accepted so a stale row can never fall out of search.
+	 */
+	private static List<String> pathwayMatches(EntryPathway filter) {
+		return switch (filter) {
+			case INDIVIDUAL -> List.of("INDIVIDUAL", "OPEN", "EITHER");
+			case SCHOOL -> List.of("SCHOOL", "SCHOOL_OR_CHAPTER", "OPEN", "EITHER");
+			case CHAPTER -> List.of("CHAPTER", "SCHOOL_OR_CHAPTER", "OPEN", "EITHER");
+			case SCHOOL_OR_CHAPTER -> List.of("SCHOOL_OR_CHAPTER", "SCHOOL", "CHAPTER", "OPEN", "EITHER");
+			case OPEN, EITHER -> List.of("OPEN", "EITHER");
+		};
+	}
+
 	// Readiness gate (domain-model §8a): a competition is publicly visible only when it has at
 	// least one non-archived edition. Kills "zombie" listings (live with no edition/deadline,
 	// from admin-create OR import-approve) — invisible until an edition exists. Appended to every
@@ -153,7 +168,11 @@ public class CompetitionSearchService {
 
 	/** Builds the WHERE clause; {@code exclude} drops one facet dimension (standard facet counting). */
 	private Where where(Criteria c, UUID categoryId, List<UUID> regionIds, Instant now, String exclude) {
-		StringBuilder sql = new StringBuilder("c.archived_at IS NULL").append(LIVE_EDITION_EXISTS);
+		// §8a public gate: archived_at IS NULL AND listing_status = 'PUBLISHED' AND a live edition
+		// exists. All three, everywhere a visitor can see a listing — one drifted predicate is a
+		// draft leaking into search.
+		StringBuilder sql = new StringBuilder("c.archived_at IS NULL AND c.listing_status = 'PUBLISHED'")
+				.append(LIVE_EDITION_EXISTS);
 		Map<String, Object> params = new HashMap<>();
 		boolean needsLateral = false;
 
@@ -197,8 +216,16 @@ public class CompetitionSearchService {
 			params.put("participation", c.participation().name());
 		}
 		if (c.entryPathway() != null) {
-			sql.append(" AND c.entry_pathway IN ('EITHER', :pathway)");
-			params.put("pathway", c.entryPathway().name());
+			// A pathway filter matches its own token PLUS the broader ones that include it: an
+			// OPEN listing accepts everyone, and a SCHOOL_OR_CHAPTER one satisfies both SCHOOL and
+			// CHAPTER. Filtering OPEN itself stays strict — "open to all" means only those.
+			List<String> tokens = pathwayMatches(c.entryPathway());
+			List<String> placeholders = new ArrayList<>();
+			for (int i = 0; i < tokens.size(); i++) {
+				placeholders.add(":pw" + i);
+				params.put("pw" + i, tokens.get(i));
+			}
+			sql.append(" AND c.entry_pathway IN (").append(String.join(", ", placeholders)).append(')');
 		}
 		if (c.evaluationTypes() != null && !c.evaluationTypes().isEmpty()) {
 			List<String> placeholders = new ArrayList<>();
@@ -314,7 +341,7 @@ public class CompetitionSearchService {
 		Where where = where(c, categoryId, regionIds, now, "grade");
 		String sql = "SELECT gs.grade, count(*) FROM competition c"
 				+ (where.needsLateral() ? DEADLINE_LATERAL : "")
-				+ " JOIN generate_series(-1, 12) AS gs(grade)"
+				+ " JOIN generate_series(-1, 17) AS gs(grade)"
 				+ " ON (c.min_grade IS NULL OR c.min_grade <= gs.grade)"
 				+ " AND (c.max_grade IS NULL OR c.max_grade >= gs.grade)"
 				+ " WHERE " + where.sql()
@@ -331,7 +358,8 @@ public class CompetitionSearchService {
 	public List<CategoryOption> categoryOptions() {
 		String sql = "SELECT cat.slug, cat.name, count(c.id) FROM category cat"
 				+ " LEFT JOIN competition c ON c.category_id = cat.id AND c.archived_at IS NULL"
-				+ LIVE_EDITION_EXISTS // readiness gate: only listings that are actually browsable count
+				+ " AND c.listing_status = 'PUBLISHED'"
+				+ LIVE_EDITION_EXISTS // §8a gate: only listings that are actually browsable count
 				+ " GROUP BY cat.slug, cat.name ORDER BY cat.name";
 		return mapRows(sql, Map.of(), row -> new CategoryOption((String) row[0], (String) row[1],
 				((Number) row[2]).longValue()));
@@ -349,7 +377,8 @@ public class CompetitionSearchService {
 		Set<UUID> live = idsWithLiveEdition(ids); // readiness gate (§8a) — same rule as search
 		Map<UUID, Competition> byId = new HashMap<>();
 		competitions.findAllById(ids).forEach(comp -> {
-			if (comp.getArchivedAt() == null && live.contains(comp.getId())) {
+			if (comp.getArchivedAt() == null && comp.getListingStatus() == ListingStatus.PUBLISHED
+					&& live.contains(comp.getId())) {
 				byId.put(comp.getId(), comp);
 			}
 		});
@@ -411,6 +440,7 @@ public class CompetitionSearchService {
 				+ " JOIN edition e ON e.id = er.edition_id"
 				+ " JOIN competition c ON c.id = e.competition_id"
 				+ " WHERE e.archived_at IS NULL AND c.archived_at IS NULL"
+				+ " AND c.listing_status = 'PUBLISHED'"
 				+ " GROUP BY r.id, r.level, r.name, r.code ORDER BY r.name";
 		return mapRows(sql, Map.of(), row -> new RegionOption(asUuid(row[0]),
 				String.valueOf(row[1]).toLowerCase(java.util.Locale.ROOT), (String) row[2],

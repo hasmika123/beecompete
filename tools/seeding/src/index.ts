@@ -10,6 +10,8 @@
 import { loadConfig } from './config.ts';
 import { resolveInputs } from './input.ts';
 import { runItem, type ItemReport, type RunOptions } from './pipeline.ts';
+import { resolveTemplates } from './templates.ts';
+import { useTemplates } from './validate.ts';
 
 interface Args extends RunOptions {
   input?: string;
@@ -91,10 +93,24 @@ async function main(): Promise<number> {
 
   const config = loadConfig();
   const forcedOffline = args.offline || !config.anthropicApiKey;
+
+  // Category Templates come from the SERVER when we can reach it (see templates.ts for why the
+  // checked-in mirror cannot be trusted as authority). Resolved ONCE per run, not per item: it is
+  // one request, and a mid-run change would mean two items extracted against different schemas.
+  // `args.offline` — not `forcedOffline`: a run with no ANTHROPIC_API_KEY still submits to the
+  // real API, so it should still validate against the real templates. Only an explicit --offline
+  // means "touch no network".
+  const resolved = await resolveTemplates(config, args.offline);
+  // Offline validation compiles against the same map the prompt was generated from, so what we
+  // check here matches what the server re-checks on approve.
+  useTemplates(resolved.templates);
+  for (const note of resolved.notes) process.stderr.write(`${note}\n`);
+
   const opts: RunOptions = {
     dryRun: args.dryRun,
     offline: forcedOffline,
     allowPrivate: args.allowPrivate,
+    templates: resolved.templates,
   };
 
   const items = await resolveInputs(args);
@@ -104,9 +120,8 @@ async function main(): Promise<number> {
   }
 
   process.stderr.write(
-    `S3 pipeline: ${items.length} item(s) · backend=${forcedOffline ? 'stub(offline)' : 'anthropic'} · ${
-      args.dryRun ? 'dry-run' : 'SUBMIT'
-    }\n`,
+    `S3 pipeline: ${items.length} item(s) · backend=${forcedOffline ? 'stub(offline)' : 'anthropic'} · ` +
+      `templates=${resolved.source} · ${args.dryRun ? 'dry-run' : 'SUBMIT'}\n`,
   );
 
   const reports: ItemReport[] = [];

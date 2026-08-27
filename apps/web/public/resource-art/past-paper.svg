@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="210" height="280" viewBox="0 0 210 280">
+  <!-- Generic PAST PAPER / PDF placeholder (resources-row fallback art). Letter-ish page with a
+       folded corner, rose per the resource-type hue convention. -->
+  <path d="M10 0 H150 L210 60 V270 A10 10 0 0 1 200 280 H10 A10 10 0 0 1 0 270 V10 A10 10 0 0 1 10 0 Z" fill="#fff1f2"/>
+  <path d="M10 0 H150 L210 60 V270 A10 10 0 0 1 200 280 H10 A10 10 0 0 1 0 270 V10 A10 10 0 0 1 10 0 Z" fill="none" stroke="#fecdd3" stroke-width="2"/>
+  <!-- folded corner -->
+  <path d="M150 0 L210 60 H160 A10 10 0 0 1 150 50 Z" fill="#fda4af"/>
+  <!-- header row: question number chip + title line -->
+  <rect x="26" y="88" width="26" height="14" rx="7" fill="#e11d48"/>
+  <rect x="62" y="90" width="96" height="10" rx="5" fill="#fda4af"/>
+  <!-- body lines -->
+  <rect x="26" y="122" width="158" height="8" rx="4" fill="#fecdd3"/>
+  <rect x="26" y="140" width="140" height="8" rx="4" fill="#fecdd3"/>
+  <rect x="26" y="158" width="152" height="8" rx="4" fill="#fecdd3"/>
+  <!-- second question -->
+  <rect x="26" y="190" width="26" height="14" rx="7" fill="#e11d48"/>
+  <rect x="62" y="192" width="80" height="10" rx="5" fill="#fda4af"/>
+  <rect x="26" y="224" width="146" height="8" rx="4" fill="#fecdd3"/>
+  <rect x="26" y="242" width="112" height="8" rx="4" fill="#fecdd3"/>
+</svg>

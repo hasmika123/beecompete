@@ -3,10 +3,10 @@ import Link from 'next/link';
 import {
   ArrowUpRight,
   Clock,
-  Flag,
   Globe,
   GraduationCap,
   MapPin,
+  Restore,
   Ticket,
   Trophy,
   Users,
@@ -20,12 +20,11 @@ import {
   currentEdition,
   deadlineFact,
   deliveryLabel,
-  editionStatusLabel,
-  hasTbdDeadline,
   locationLabel,
   nextDeadline,
   participationLabel,
   prizeLabel,
+  recurrenceLabel,
   regOpensAt,
 } from '@/lib/detail-display';
 import type { CompetitionDetail } from '@/lib/catalog-types';
@@ -48,8 +47,10 @@ import type { CompetitionDetail } from '@/lib/catalog-types';
 // a decision point (deadline in the sticky bar / timeline, entry pathway at the Register button
 // and under Eligibility). Format + Delivery moved up from the Details tab; "How to enter" moved
 // OUT (Register area + Eligibility group). Category + Status were the header tags until #88.
-// Prize, Status and deadline are omitted when unknown (rather than a hollow "—"); the order of
-// whatever remains never changes.
+// Every item in this list ALWAYS renders (owner 2026-08-23): each value has a truthful fallback
+// — "All grades", "Paid", "TBD" for an unknown deadline, "Bragging rights" for an uncurated
+// prize — so the strip has the same shape on every competition and a missing fact never reads as
+// an absent one. Status is the exception, and it left the strip entirely (breadcrumb action row).
 
 interface Item {
   key: string;
@@ -101,16 +102,8 @@ export function AtAGlance({ competition }: { competition: CompetitionDetail }) {
     },
   ];
 
-  // 3. WHEN — Status and the deadline are one thought ("can we still enter, and by when?"), so
-  // they sit together; the old order had Grades wedged between them.
-  if (edition) {
-    items.push({
-      key: 'status',
-      icon: Flag,
-      label: 'Status',
-      value: editionStatusLabel(edition.effectiveStatus),
-    });
-  }
+  // 3. WHEN. (Status left the strip 2026-08-23 — it rides the breadcrumb action row as a tag,
+  // next to Follow/Share, where "can we still enter" reads before any tab is opened.)
   if (opens) {
     // Registration hasn't opened (#82): "Opens Mar 3" — a bare close date here implied you could
     // enter now. The close date still lives in the Key dates timeline.
@@ -131,8 +124,11 @@ export function AtAGlance({ competition }: { competition: CompetitionDetail }) {
       hint: fact.hint,
       urgent: fact.urgent,
     });
-  } else if (hasTbdDeadline(competition.editions)) {
-    // A deadline milestone exists but its date is TBD (R1-18) — show it rather than omit.
+  } else {
+    // No usable date: either a deadline milestone exists with a TBD date (R1-18) or the
+    // competition has no future reg_close/submission_due at all. The slot still renders
+    // (owner 2026-08-23) — an absent row read as "no deadline to worry about"; "TBD" says the
+    // truth, that we don't know it yet, and keeps the strip's fixed shape across competitions.
     items.push({ key: 'deadline', icon: Clock, label: 'Next deadline', value: 'TBD' });
   }
 
@@ -153,19 +149,44 @@ export function AtAGlance({ competition }: { competition: CompetitionDetail }) {
       label: 'Location',
       value: locationLabel(competition, edition),
     },
+    // Recurrence moved HERE from the old Details tab's format group (#87) — it's an overview
+    // fact ("runs every year"), and the tab that used to hold it became Judging.
+    {
+      key: 'recurrence',
+      icon: Restore,
+      label: 'Runs',
+      value: recurrenceLabel(competition.recurrence),
+    },
   );
   // 6. PAYOFF — last on purpose: it is the reward, and the one value long enough to want the
   // full phone width (col-span-2 below), which only works cleanly on the final row.
-  if (prize) {
-    items.push({ key: 'prize', icon: Trophy, label: 'Prize', value: prize });
-  }
+  items.push({ key: 'prize', icon: Trophy, label: 'Prize', value: prize });
 
   return (
     // No chrome of its own since #94: this renders INSIDE the detail tabs' filled card as the
     // first tab, so the TabPanel supplies the box, the padding, and (via aria-labelledby from the
     // "At a glance" tab itself) the accessible name. The #91 no-visible-heading decision carries
     // over — the tab label plays that role now.
-    <dl className="grid grid-cols-2 gap-x-5 gap-y-6 sm:grid-cols-3">
+    // UNEVEN COLUMNS at sm+ (owner 2026-08-27, #116): the middle column is narrower because its
+    // three values are always the short ones. The strip renders exactly NINE items in a fixed
+    // order — category · grades · format · (registration|deadline) · cost · delivery · location ·
+    // runs · prize — and every branch above pushes exactly one item per slot, so the column each
+    // field lands in is STABLE, not a coincidence of this listing:
+    //   left   Category · Registration/Deadline · Location   (long: names, dates, place lists)
+    //   middle Grades · Cost · Runs                          (short: "Grades 9–12", "$45.00")
+    //   right  Format · Delivery · Prize                     (long: the prize line especially)
+    // ⚠ If a future item is added or made conditional, that mapping shifts and this ratio stops
+    // matching the content — re-check the three columns before changing the item list.
+    //
+    // minmax(0, …fr), NOT a bare `1.1fr` (owner 2026-08-27, #117 — "keep a consistent ratio").
+    // A bare fr track is minmax(AUTO, 1.1fr): its floor is the content's min-content width, so any
+    // cell with a long unbreakable value silently widens its whole column and steals the
+    // difference from the others. That is what happened here — the Prize line pinned the right
+    // column at ~310px and the ratio bent to 216/131/310 on a narrow main column. Flooring at 0
+    // makes the three tracks hold their proportions at EVERY width; the cost is that a long value
+    // now truncates (as the strip's one-line design intends, `title` carrying the full text)
+    // instead of pushing its column wider.
+    <dl className="grid grid-cols-2 gap-x-5 gap-y-6 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,0.8fr)_minmax(0,1.1fr)]">
       {items.map((item) => {
         const Icon = item.icon;
         const isPrize = item.key === 'prize';

@@ -2,6 +2,7 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import type { ValidateFunction } from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import { CATEGORY_IDS, CATEGORY_TEMPLATES, type CategorySlug } from './categories.ts';
+import type { TemplateMap } from './templates.ts';
 import {
   COST_TYPES,
   DELIVERIES,
@@ -30,10 +31,25 @@ const ajv = addFormats(new Ajv2020({ allErrors: true, strict: false }));
 /** Compiled-validator cache — one ajv compile per category, not per record (L2). */
 const compiledTemplates = new Map<CategorySlug, ValidateFunction>();
 
+/**
+ * The templates validation compiles against. Defaults to the checked-in mirror so every existing
+ * caller (and every test) keeps working untouched; a real run calls `useTemplates()` first with
+ * the SERVER's copy, so the offline check matches what the server will re-check on approve.
+ * Module-level rather than a parameter because the compiled-validator cache is module-level too —
+ * they have to be swapped together or the cache serves validators for the previous schema.
+ */
+let activeTemplates: TemplateMap = CATEGORY_TEMPLATES as TemplateMap;
+
+/** Swap in this run's templates. Clears the compiled cache — stale validators outlive their schema. */
+export function useTemplates(templates: TemplateMap): void {
+  activeTemplates = templates;
+  compiledTemplates.clear();
+}
+
 function templateValidator(slug: CategorySlug): ValidateFunction {
   let validate = compiledTemplates.get(slug);
   if (!validate) {
-    validate = ajv.compile(CATEGORY_TEMPLATES[slug]);
+    validate = ajv.compile(activeTemplates[slug] ?? CATEGORY_TEMPLATES[slug]);
     compiledTemplates.set(slug, validate);
   }
   return validate;
@@ -233,12 +249,6 @@ function validateSpine(p: CompetitionPayload, errors: string[], warnings: string
     errors.push('name is required');
   } else if (p.name.length > 300) {
     errors.push('name exceeds 300 chars');
-  }
-
-  if (p.summary != null && typeof p.summary !== 'string') {
-    errors.push('summary must be a string');
-  } else if (p.summary && p.summary.length > 300) {
-    errors.push('summary exceeds 300 chars');
   }
 
   checkHttpUrl(errors, 'officialUrl', p.officialUrl);

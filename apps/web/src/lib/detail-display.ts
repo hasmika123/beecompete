@@ -26,19 +26,40 @@ const DELIVERY_LABELS: Record<string, string> = {
 const PARTICIPATION_LABELS: Record<string, string> = {
   individual: 'Individual',
   team: 'Team',
-  both: 'Individual or team',
+  // "Team" capitalised (owner 2026-08-27, #116) to match `entryFormatLabel` on the Logistics
+  // tab — both name a mode, so both are proper nouns of the taxonomy, not descriptions.
+  both: 'Individual or Team',
 };
 
 const PATHWAY_LABELS: Record<string, string> = {
   individual: 'Enter as an individual',
+  school: 'Through a school',
+  chapter: 'Through a chapter',
   school_or_chapter: 'Through a school or chapter',
-  either: 'Individually or through a school',
+  open: 'Open to all',
+  // Pre-0016 spelling of `open` — kept so a stale row never renders a raw token.
+  either: 'Open to all',
 };
 
 const RECURRENCE_LABELS: Record<string, string> = {
   annual: 'Annual',
   one_off: 'One-time',
   rolling: 'Rolling / ongoing',
+};
+
+/**
+ * Edition scope level (domain `ScopeLevel`) — how far a running reaches. Lowercase public
+ * tokens per the R1-1 rule. `virtual` is a SCOPE ("no fixed geography"), not the delivery mode,
+ * so it is worded differently from DELIVERY_LABELS.virtual to keep the two rows distinguishable
+ * when both render on the Logistics tab.
+ */
+const SCOPE_LABELS: Record<string, string> = {
+  international: 'International',
+  national: 'National',
+  state: 'Statewide',
+  regional: 'Regional',
+  local: 'Local',
+  virtual: 'Online — no fixed region',
 };
 
 const EVALUATION_LABELS: Record<string, string> = {
@@ -49,10 +70,23 @@ const EVALUATION_LABELS: Record<string, string> = {
   portfolio: 'Portfolio',
 };
 
+/**
+ * The wording the PUBLIC timeline uses for a milestone type when no curated label overrides it.
+ * Case-insensitive because the admin enums are UPPERCASE and the stored/public tokens are not.
+ *
+ * Exported so the admin's Label field can show it as a PLACEHOLDER (2026-08-24): the curator sees
+ * exactly what a visitor will read and only types when they want something else. Deliberately not
+ * pre-FILLED — storing "Registration opens" would duplicate the type, and a stored label wins over
+ * this map forever, so every listing curated today would be frozen at today's wording.
+ */
+export function defaultKeyDateLabel(type: string): string {
+  return KEY_DATE_LABELS[type.toLowerCase()] ?? type;
+}
+
 /** Key-date type → label; CUSTOM falls back to the curated per-date label when present. */
 export function keyDateLabel(date: KeyDateView): string {
   if (date.type === 'custom' && date.label) return date.label;
-  return date.label ?? KEY_DATE_LABELS[date.type] ?? date.type;
+  return date.label ?? defaultKeyDateLabel(date.type);
 }
 
 export function deliveryLabel(token: string): string {
@@ -69,6 +103,60 @@ export function recurrenceLabel(token: string): string {
 }
 export function evaluationLabel(token: string): string {
   return EVALUATION_LABELS[token] ?? token;
+}
+export function scopeLabel(token: string): string {
+  return SCOPE_LABELS[token] ?? token;
+}
+
+// --- Logistics row values (owner 2026-08-27, #111) ---------------------------------------------
+// The tab briefly opened with a composed sentence (#110); it is now a plain ledger of icon rows,
+// so the only thing left to derive is the entry format — participation mode and team size read as
+// one fact ("Individual or team of 1–3"), not two rows, because a bare "1–3 members" row means
+// nothing without the mode beside it and the two icons would have had to be near-identical.
+
+function teamRange(min: number | null, max: number | null): string | null {
+  if (min != null && max != null) return `${min}–${max}`;
+  if (max != null) return `up to ${max}`;
+  if (min != null) return `${min} or more`;
+  return null;
+}
+
+/**
+ * Participation mode with its team bounds folded in, as "Individual or Team (1–3)" (owner
+ * 2026-08-27, #114). The bounds ride in parentheses so the mode stays the scannable part and the
+ * size reads as its qualifier; Team is capitalised to match Individual, since both name a mode
+ * rather than describing one. Degrades to the bare mode when a listing has no curated sizes —
+ * never "Team (null)".
+ */
+export function entryFormatLabel(competition: CompetitionDetail): string {
+  const range = teamRange(competition.teamSizeMin, competition.teamSizeMax);
+  const team = range ? `Team (${range})` : 'Team';
+  if (competition.participationMode === 'team') return team;
+  if (competition.participationMode === 'both') return `Individual or ${team}`;
+  return 'Individual';
+}
+
+/**
+ * `student_status_required` as a REQUIREMENT rather than a yes/no (owner 2026-08-27, #114): the
+ * field reads "Student status · Required", not "Student status required · Yes". Falls back to the
+ * generic renderer for a non-boolean, which `0022` should have made impossible but which a stale
+ * row or a hand-edited bag could still produce.
+ */
+export function studentStatusLabel(value: unknown): string | null {
+  if (typeof value === 'boolean') return value ? 'Required' : 'Not required';
+  return renderAttrValue(value);
+}
+
+/**
+ * A URL as a human reads it: no scheme, no `www.`, no trailing slash. The FULL remaining address
+ * is returned — truncation is the layout's job (CSS ellipsis), never this function's, so a copied
+ * link is always the real one and the visible text never lies about where it goes.
+ */
+export function displayUrl(url: string): string {
+  return url
+    .replace(/^https?:\/\//i, '')
+    .replace(/^www\./i, '')
+    .replace(/\/$/, '');
 }
 
 const EDITION_STATUS_LABELS: Record<string, string> = {
@@ -103,8 +191,38 @@ export function editionStatusLabel(token: string): string {
 export const ELIGIBILITY_ATTR_LABELS: Record<string, string> = {
   eligible_countries: 'Eligible countries',
   citizenship_countries: 'Citizenship',
+  // "Student status", not "…required": the requirement is the VALUE (Required / Not required),
+  // so folding it into the label made the row read "Student status required — Yes" (#114).
   student_status_required: 'Student status',
+  // The catch-all prose row (2026-08-24) — last on purpose: it qualifies the typed rows above
+  // it, and it's the one value long enough to be a sentence rather than a fact.
+  other_eligibility_requirements: 'Other requirements',
 };
+
+/**
+ * Judging catalog-info keys (2026-08-22 template additions) — rendered on the Judging tab, so
+ * excluded from the Overview overflow the same way the eligibility keys are. `rules_url` is
+ * handled separately (it renders as a link, not a text row).
+ */
+export const JUDGING_ATTR_LABELS: Record<string, string> = {
+  judging_criteria: 'What judges look for',
+  tie_breakers: 'Tie-breakers',
+};
+
+/**
+ * Contact keys from the attributes bag (declared on EVERY category template by changelog `0019`,
+ * curated on the admin form's Administration step). Rendered on the FAQ tab since #110 (they were
+ * Logistics rows before), so excluded from the More overflow the same way the eligibility and
+ * judging keys are — this map is what performs that exclusion, wherever the values end up drawn.
+ * ⚠ Both render as links (mailto:/tel:), so they are validated at the point of use — see
+ * `contactEmail`/`contactPhone` in contact-card.tsx: the bag is untrusted JSONB.
+ */
+export const LOGISTICS_ATTR_LABELS: Record<string, string> = {
+  contact_email: 'Contact email',
+  contact_phone: 'Contact phone',
+};
+
+export const RULES_URL_ATTR = 'rules_url';
 
 export function humanizeAttrKey(key: string): string {
   return key
@@ -124,15 +242,27 @@ export function renderAttrValue(value: unknown): string | null {
   return String(value);
 }
 
+/**
+ * A humanized attributes-bag entry. Presentation-free on purpose: rendering (columns, icons,
+ * links, notes) belongs to DetailLedger, which takes ReactNode values — this type only carries
+ * what `categoryAttributeRows` can derive from the JSONB bag.
+ */
 export interface AttrRow {
   label: string;
   value: string;
 }
 
-/** Every attribute EXCEPT the eligibility keys, humanized — the About tab's payload (#106). */
+/** Every attribute EXCEPT keys that earned a designed home (Eligibility/Judging/Logistics tabs)
+ * — the More tab's payload (#106, retabbed by #87, moved off Overview by #108). */
 export function categoryAttributeRows(attributes: Record<string, unknown> | null): AttrRow[] {
   return Object.entries(attributes ?? {})
-    .filter(([key]) => !(key in ELIGIBILITY_ATTR_LABELS))
+    .filter(
+      ([key]) =>
+        !(key in ELIGIBILITY_ATTR_LABELS) &&
+        !(key in JUDGING_ATTR_LABELS) &&
+        !(key in LOGISTICS_ATTR_LABELS) &&
+        key !== RULES_URL_ATTR,
+    )
     .map(([key, value]) => ({ label: humanizeAttrKey(key), value: renderAttrValue(value) }))
     .filter((r): r is AttrRow => r.value != null);
 }
@@ -235,19 +365,6 @@ export function deadlineFact(deadline: NextDeadline, now?: Date): DeadlineFact {
   };
 }
 
-/**
- * True when a deadline milestone (reg_close / submission_due) exists but its date is TBD
- * (null startsAt, R1-18). Used only as a fallback when {@link nextDeadline} is undefined, to
- * show "Deadline · TBD" instead of omitting the row entirely.
- */
-export function hasTbdDeadline(editions: EditionView[]): boolean {
-  return editions.some((e) =>
-    e.keyDates.some(
-      (d) => d.startsAt == null && (d.type === 'reg_close' || d.type === 'submission_due'),
-    ),
-  );
-}
-
 export interface TimelineDate {
   date: KeyDateView;
   label: string;
@@ -288,15 +405,22 @@ export function timelineDates(edition: EditionView, now: Date = new Date()): Tim
   ];
 }
 
-/** "Location/Online" for the at-a-glance strip: delivery drives it, regions add specificity. */
+/**
+ * "Location/Online" for the at-a-glance strip: delivery drives it, regions add specificity.
+ *
+ * ⚠ NO "· Hybrid" SUFFIX since #116 (owner 2026-08-27). It used to append the delivery mode for
+ * hybrid runnings, which (a) duplicated the strip's own Delivery cell two columns away, and
+ * (b) pushed the value past the cell's truncation point, so a visitor read
+ * "Washington, Oregon +2 · Hy…" — an ellipsis stacked on top of the "+2" that already says
+ * "there are more". The count is the overflow signal here; nothing should follow it.
+ */
 export function locationLabel(competition: CompetitionDetail, edition?: EditionView): string {
   if (competition.delivery === 'virtual') return 'Online';
   const regions = edition?.regions ?? [];
   if (regions.length > 0) {
     const names = regions.map((r) => r.name);
     const head = names.slice(0, 2).join(', ');
-    const label = names.length > 2 ? `${head} +${names.length - 2}` : head;
-    return competition.delivery === 'hybrid' ? `${label} · Hybrid` : label;
+    return names.length > 2 ? `${head} +${names.length - 2}` : head;
   }
   return deliveryLabel(competition.delivery);
 }

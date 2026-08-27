@@ -60,7 +60,8 @@ that competition/edition `verification_state` stays `CURATED` on every write pat
 
 **Problem.** `CompetitionSummary.regions` is a flat `string[]` of names. The DB has everything the
 card wants — `Region` is a structured tree (`COUNTRY|STATE|COUNTY|CITY|VIRTUAL`, `code`, `parent`)
-with 50 states + DC + ~25 cities + the virtual region seeded (Liquibase `0010`) — but none of it
+with 50 states + DC + ~1000 cities + the virtual region seeded (Liquibase `0010`, cities widened
+by `0018`) — but none of it
 survives into the search payload. So the web now carries a hand-written **name→USPS-code map +
 name heuristics** (`apps/web/src/lib/us-states.ts`, `regionLabel` in `catalog-display.ts`) to
 render "Austin, TX" / "Texas" / "Online": a *city* is guessed as "any name that isn't a known
@@ -87,6 +88,39 @@ compatibility mid-R1.
 - Composition rule stays exactly as pinned by the #77 tests: full state name alone, "City, ST"
   when paired, "Nationwide" for country-only, "Online" for virtual, undefined when untagged.
   The tests are the contract; only the classification source changes.
+
+### 12a. Detail page shows only ONE edition — past/future runnings are invisible (found 2026-08-25)
+
+**Problem.** Every panel on `/c/[slug]` resolves a single edition through `currentEdition(...)`
+(`at-a-glance`, `key-facts`, `awards-panel`, the timeline, the page's own JSON-LD). The public
+payload carries the FULL `editions` array, so for a competition with more than one running the page
+silently renders one and drops the rest — no year switcher, no "past runnings", no way to see last
+year's dates, fee or results. Found while auditing the all-fields fixture
+(`scripts/seed-mock-competition.mjs`) against the payload: 45 fields checked, this was the largest
+gap.
+
+**Decision: not now.** Two reasons. (1) It is a **blueprint change, not a bug fix** — what a listing
+should show when it has history (a year selector? a collapsed "previous runnings" list? results
+links?) is a design question, and `page-blueprints.md` Page 3 has to change before any code does
+(the hero-page rule in CLAUDE.md). (2) **Impact is near-zero today**: the catalog is one season old,
+so effectively every listing has exactly one edition. The gap widens only as seasons accumulate,
+which is an R2 timeframe anyway.
+
+**Watch for the collision with §13.** Phase 3 renames per-place runnings to **Stages** under a
+single annual Edition. A multi-edition UI designed now against the R1 interim shape (separate
+Edition records per place) would be designed against a model that is already scheduled to change —
+so whatever ships here must be about **seasons over time** (2025-26 vs 2026-27), never about places
+within one season, which is §13's job.
+
+**Plan sketch (R2, blueprint first):**
+
+- `page-blueprints.md` Page 3: where prior runnings live, and what a prior running shows (probably
+  cycle label + its deadline + results link, not a full second at-a-glance strip).
+- Web only, no schema and no payload change — `editions` is already fully populated; this is
+  presentation. `currentEdition()` stays the source for the primary panels.
+- Decide the archive rule: does an archived edition appear? (Public payload already excludes them.)
+- SEO: confirm one canonical URL per competition — prior runnings are sections, not routes, unless
+  the blueprint deliberately says otherwise.
 
 ---
 
@@ -161,7 +195,10 @@ page's Eligibility group (#82). **Owner decision: promote them to real Spine col
 become filterable/indexable; leave as JSONB for now.**
 
 **When:** with **H36 eligibility pre-screening (Phase 3)** — the first feature that *reads* these
-fields programmatically. Promoting earlier buys an index nobody queries; promoting later than H36
+fields programmatically. H36 also picks up the **school-enrollment restriction** ("must be
+enrolled at one of: [school orgs]") decided 2026-08-23 — design + the visibility lever live in
+domain-model §8b (owner-decisions block); it is an eligibility mechanism for inter- AND
+intraschool competitions, not a visibility setting. Promoting earlier buys an index nobody queries; promoting later than H36
 would force H36 to parse JSONB. If an "eligible from my country" *filter* is demanded sooner
 (international expansion), pull it into the then-current R-batch instead.
 
@@ -173,8 +210,10 @@ would force H36 to parse JSONB. If an "eligible from my country" *filter* is dem
 2. Backfill from `attributes` where the keys exist; **leave the JSONB keys in place** during a
    deprecation window so nothing breaks mid-deploy; strip them from Category Templates + bag in a
    follow-up change once admin writes target the columns.
-3. Admin: typed inputs on the competition form (country multi-select, status text) replacing
-   free-JSON entry; correction-queue fields ride along.
+3. Admin: typed inputs on the competition form replacing free-JSON entry — **done early
+   (2026-08-23):** the Eligibility tab writes all three keys (CSV country lists + status text)
+   into the attributes bag; at promotion time only the write target changes. Correction-queue
+   fields still ride along at promotion.
 4. API: columns onto `CompetitionSummary`/`CompetitionDetail`; add `eligibleCountry` search param
    when the filter ships. Web: `ELIGIBILITY_ATTR_LABELS` in `key-facts.tsx` switches from bag keys
    to DTO fields — display labels and grouping survive unchanged.
@@ -190,7 +229,14 @@ one `Edition` + per-level milestones as `KeyDate`s (typed key dates make this pr
 structure in prose/FAQ; defaults with a "select your region for specifics" disclaimer. **Do not**
 hand-model tiers as separate Editions at R1.
 
-### 14. Listing-status state machine + host publish controls — deferred from §8a
+### 14. Listing-status state machine + host publish controls — ✅ BUILT 2026-08-25 (migration `0021`)
+
+**Built 2026-08-25** (owner pulled it forward for multi-curator review; as-built in
+domain-model §8a). Landed: `listing_status` (incl. `IN_REVIEW`, live now as curator
+submit-for-review), Publish/Unlist/Re-list/Send-back actions + badges + Save-as-draft, the
+`approved_at`/`approved_by` stamp, the three-leg public gate, and the unified `/admin/review`
+queue (IN_REVIEW listings + pending imports). Still Phase 3: DQ12 host review semantics
+(edit-keeps-live-version), `visibility` (H48), `list_at`. Original sketch kept below.
 
 Deferred 2026-07-14 (real driver — self-serve hosts — is Phase 3; R1 is covered by archive/restore +
 the readiness gate). **Plan sketch (full design: domain-model §8a):** additive migration (next free

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Buildings,
+  CheckCircle,
   Dashboard,
   Flag,
   ImageSquare,
@@ -20,6 +21,7 @@ const NAV = [
   { href: '/admin/organizations', label: 'Organizations', icon: Buildings },
   { href: '/admin/categories', label: 'Categories', icon: Tag },
   { href: '/admin/regions', label: 'Regions', icon: MapPin },
+  { href: '/admin/review', label: 'Review queue', icon: CheckCircle },
   { href: '/admin/import-records', label: 'Import queue', icon: Tray },
   { href: '/admin/corrections', label: 'Corrections', icon: Flag },
   { href: '/admin/landing', label: 'Landing content', icon: ImageSquare },

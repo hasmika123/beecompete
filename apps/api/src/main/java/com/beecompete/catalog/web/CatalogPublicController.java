@@ -1,6 +1,7 @@
 package com.beecompete.catalog.web;
 
 import com.beecompete.catalog.domain.Competition;
+import com.beecompete.catalog.domain.ListingStatus;
 import com.beecompete.catalog.domain.CompetitionFaq;
 import com.beecompete.catalog.domain.CostType;
 import com.beecompete.catalog.domain.Delivery;
@@ -176,7 +177,9 @@ public class CatalogPublicController {
 	@GetMapping("/competitions/{slug}")
 	public CompetitionDetail get(@PathVariable String slug) {
 		Competition competition = competitions.findBySlug(slug)
-				.filter(c -> c.getArchivedAt() == null)
+				// §8a gate, detail leg: an archived OR non-published listing 404s — a draft with a
+				// guessable slug must not be reachable by URL while invisible in browse.
+				.filter(c -> c.getArchivedAt() == null && c.getListingStatus() == ListingStatus.PUBLISHED)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "competition not found"));
 		Instant now = Instant.now();
 		List<Edition> liveEditions =
@@ -204,6 +207,32 @@ public class CatalogPublicController {
 		return value == null ? null : value.name().toLowerCase(Locale.ROOT);
 	}
 
+	/** Card blurb cap — the CompetitionCard clamps to two lines, so more is bytes nobody renders. */
+	private static final int CARD_BLURB_MAX = 300;
+
+	/**
+	 * The CompetitionCard's two-line blurb, derived from the description (the curated
+	 * {@code summary} it used to render was retired 2026-08-21).
+	 *
+	 * <p>Truncated HERE rather than sent whole: a description runs to 10 000 chars and a search
+	 * page carries up to 24 of them, so shipping the full text would be a ~240 KB response for
+	 * two rendered lines. Cuts on a word boundary and appends an ellipsis so the card never shows
+	 * a word sliced mid-way.
+	 */
+	private static String cardBlurb(String description) {
+		if (description == null || description.isBlank()) {
+			return null;
+		}
+		String text = description.strip();
+		if (text.length() <= CARD_BLURB_MAX) {
+			return text;
+		}
+		String cut = text.substring(0, CARD_BLURB_MAX);
+		int lastSpace = cut.lastIndexOf(' ');
+		// Guard against a 300-char run with no space (rare, but it would otherwise blank the blurb).
+		return (lastSpace > 0 ? cut.substring(0, lastSpace) : cut).stripTrailing() + "…";
+	}
+
 	// --- DTOs (public shapes — no version/audit columns, no affiliate meta) ---
 
 	public record ProvenanceView(String source, Instant lastVerifiedAt, BigDecimal confidence) {
@@ -225,7 +254,7 @@ public class CatalogPublicController {
 	/** One row of the sitemap feed (R1-10) — enough to build a URL + its {@code <lastmod>}. */
 	public record SitemapEntry(String slug, String categorySlug, Instant updatedAt) {}
 
-	public record CompetitionSummary(UUID id, String slug, String name, String summary, String logo,
+	public record CompetitionSummary(UUID id, String slug, String name, String blurb, String logo,
 			CategoryView category, OrganizerView organizer, List<String> tags, String participationMode,
 			Short teamSizeMin, Short teamSizeMax, String delivery, String entryPathway,
 			List<String> evaluationType, Short minGrade, Short maxGrade, Short minAge, Short maxAge,
@@ -234,7 +263,8 @@ public class CatalogPublicController {
 
 		static CompetitionSummary from(CompetitionSearchService.Item item) {
 			Competition c = item.competition();
-			return new CompetitionSummary(c.getId(), c.getSlug(), c.getName(), c.getSummary(), c.getLogo(),
+			return new CompetitionSummary(c.getId(), c.getSlug(), c.getName(), cardBlurb(c.getDescription()),
+					c.getLogo(),
 					new CategoryView(c.getCategory().getSlug(), c.getCategory().getName()),
 					OrganizerView.from(c.getOrganizer()), c.getTags(), token(c.getParticipationMode()),
 					c.getTeamSizeMin(), c.getTeamSizeMax(), token(c.getDelivery()), token(c.getEntryPathway()),
@@ -304,10 +334,10 @@ public class CatalogPublicController {
 	}
 
 	public record ResourceView(UUID id, String title, String url, String type, boolean isAffiliate,
-			short displayOrder) {
+			short displayOrder, String imageUrl) {
 		static ResourceView from(Resource r) {
 			return new ResourceView(r.getId(), r.getTitle(), r.getUrl(), token(r.getType()), r.isAffiliate(),
-					r.getDisplayOrder());
+					r.getDisplayOrder(), r.getImageUrl());
 		}
 	}
 
@@ -317,7 +347,7 @@ public class CatalogPublicController {
 		}
 	}
 
-	public record CompetitionDetail(UUID id, String slug, String name, String summary, String description,
+	public record CompetitionDetail(UUID id, String slug, String name, String description,
 			String officialUrl, String logo, CategoryView category, OrganizerView organizer, List<String> tags,
 			String participationMode, Short teamSizeMin, Short teamSizeMax, String delivery,
 			String entryPathway, List<String> evaluationType, Short minGrade, Short maxGrade, Short minAge,
@@ -327,7 +357,7 @@ public class CatalogPublicController {
 
 		static CompetitionDetail from(Competition c, List<EditionView> editions, List<Resource> resources,
 				List<CompetitionFaq> faqs) {
-			return new CompetitionDetail(c.getId(), c.getSlug(), c.getName(), c.getSummary(),
+			return new CompetitionDetail(c.getId(), c.getSlug(), c.getName(),
 					c.getDescription(), c.getOfficialUrl(), c.getLogo(),
 					new CategoryView(c.getCategory().getSlug(), c.getCategory().getName()),
 					OrganizerView.from(c.getOrganizer()), c.getTags(), token(c.getParticipationMode()),

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="180" viewBox="0 0 240 180">
+  <!-- Generic LINK placeholder (resources-row fallback art) for type "other". Neutral browser
+       card with a link glyph — no hue, matching the neutral tag. -->
+  <rect width="240" height="180" rx="12" fill="#e9e8e2"/>
+  <rect width="240" height="180" rx="12" fill="none" stroke="#d6d4cb" stroke-width="2"/>
+  <!-- browser chrome -->
+  <rect x="0" y="0" width="240" height="34" fill="#d6d4cb"/>
+  <path d="M0 12 A12 12 0 0 1 12 0 H228 A12 12 0 0 1 240 12 V34 H0 Z" fill="#d6d4cb"/>
+  <circle cx="20" cy="17" r="5" fill="#b0aea3"/>
+  <circle cx="38" cy="17" r="5" fill="#b0aea3"/>
+  <rect x="56" y="10" width="140" height="14" rx="7" fill="#f4f4f1"/>
+  <!-- link glyph: two chain links -->
+  <g fill="none" stroke="#6c6a61" stroke-width="9" stroke-linecap="round">
+    <path d="M104 122 l-8 8 a22 22 0 0 1 -31 -31 l16 -16 a22 22 0 0 1 31 0"/>
+    <path d="M136 92 l8 -8 a22 22 0 0 1 31 31 l-16 16 a22 22 0 0 1 -31 0"/>
+  </g>
+</svg>

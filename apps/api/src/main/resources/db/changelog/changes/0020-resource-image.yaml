@@ -1,0 +1,16 @@
+# Optional preview image on a prep resource (owner 2026-08-25): a URL to cover art / a thumbnail
+# the resource card renders in place of its type-tint header — a book cover, a video still.
+#
+# A URL column, NOT an upload: resources already point at third-party content by URL (the R1
+# files rule is S3-presign for OUR files; this is a pointer to theirs, same class as `url`
+# itself). Additive and nullable — every existing row keeps its tint header.
+databaseChangeLog:
+  - changeSet:
+      id: 0020-resource-image
+      author: beecompete
+      comment: Add nullable image_url to resource (card preview art).
+      changes:
+        - addColumn:
+            tableName: resource
+            columns:
+              - column: { name: image_url, type: VARCHAR(1000) }

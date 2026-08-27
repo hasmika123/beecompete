@@ -37,7 +37,7 @@ export function generateMetadata(): Metadata {
   return pageMetadata({
     title: 'Privacy Policy',
     description:
-      'How BeeCompete handles data on our browse-only catalog of K-12 academic competitions: what we collect, how we protect children’s privacy, and what we never do (no selling data, no targeted ads).',
+      'How BeeCompete handles data on our browse-only catalog of academic competitions: what we collect, how we protect children’s privacy, and what we never do (no selling data, no targeted ads).',
     path: '/privacy',
   });
 }
@@ -54,7 +54,7 @@ export default function PrivacyPolicyPage() {
       <LegalSection id="summary" heading="The short version">
         <LegalP>
           BeeCompete (&ldquo;BeeCompete,&rdquo; &ldquo;we,&rdquo; &ldquo;us&rdquo;) is a free,
-          browse-only catalog of K-12 academic competitions. You can search and read every listing{' '}
+          browse-only catalog of academic competitions. You can search and read every listing{' '}
           <strong className="font-medium text-foreground">
             without an account and without giving us any personal information
           </strong>
@@ -117,8 +117,11 @@ export default function PrivacyPolicyPage() {
 
       <LegalSection id="children" heading="Children's privacy (COPPA)">
         <LegalP>
-          BeeCompete is directed to a K-12 audience, so protecting children is central to how we
-          build. The current browse-only service is designed so that{' '}
+          BeeCompete lists competitions for every level, from elementary school through graduate
+          school, and it is{' '}
+          <strong className="font-medium text-foreground">not directed to children under 13</strong>
+          . We do expect some of our visitors to be under 13, though, so we build as if they are
+          here: the browse-only service is designed so that{' '}
           <strong className="font-medium text-foreground">
             no one needs to provide personal information to use it
           </strong>

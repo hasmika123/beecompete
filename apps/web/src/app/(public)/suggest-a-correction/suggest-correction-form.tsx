@@ -40,7 +40,6 @@ interface FieldOption {
 const FIELD_OPTIONS: Record<string, FieldOption[]> = {
   COMPETITION: [
     { key: 'name', label: 'Name' },
-    { key: 'summary', label: 'Short summary' },
     { key: 'description', label: 'Description' },
     { key: 'officialUrl', label: 'Official website URL' },
     { key: 'minGrade', label: 'Minimum grade', hint: 'K = 0, Pre-K = -1, grades 1–12' },

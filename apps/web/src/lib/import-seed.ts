@@ -20,7 +20,6 @@ import { DEFAULT_TIMEZONE, instantToZonedWallClock } from '@/lib/dates';
 import {
   COST_TYPES,
   DELIVERIES,
-  EDITION_STATUSES,
   ENTRY_PATHWAYS,
   KEY_DATE_TYPES,
   PARTICIPATION_MODES,
@@ -44,7 +43,6 @@ export interface CompetitionSeed {
   organizerOrgId: string | null;
   officialUrl: string | null;
   logo: string | null;
-  summary: string | null;
   description: string | null;
   tags: string[] | null;
   participationMode: string;
@@ -65,18 +63,22 @@ export interface CompetitionSeed {
 /** The first-edition block, as the form's `edition_*` fields want it. */
 export interface EditionSeed {
   cycleLabel: string;
-  status: string;
   scopeLevel: string;
   registrationUrl: string;
   entryFee: string;
   currency: string;
   prizeSummary: string;
+  prizeValue: string;
+  prizeCurrency: string;
+  ageCutoffDate: string;
 }
 
 /** One editable key-date row: wall clock in `timezone`, or TBD (R1-18). */
 export interface KeyDateSeed {
   type: string;
   date: string;
+  /** Calendar day the milestone ends on, for a multi-day row; '' when it is a single day. */
+  endDate: string;
   time: string;
   timezone: string;
   tbd: boolean;
@@ -151,7 +153,6 @@ const MAPPED_COMPETITION_KEYS = new Set([
   'officialUrl',
   'logo',
   'description',
-  'summary',
   'categoryId',
   'tags',
   'participationMode',
@@ -176,12 +177,14 @@ const MAPPED_COMPETITION_KEYS = new Set([
 /** Edition keys the first-edition step renders. `prizeValue`/`ageCutoffDate`/… ride along as extras. */
 const MAPPED_EDITION_KEYS = new Set([
   'cycleLabel',
-  'status',
   'scopeLevel',
   'registrationUrl',
   'entryFee',
   'currency',
   'prizeSummary',
+  'prizeValue',
+  'prizeCurrency',
+  'ageCutoffDate',
 ]);
 
 function unmapped(
@@ -205,7 +208,6 @@ export function splitImportPayload(payload: Record<string, unknown>): ImportSeed
       organizerOrgId: text(payload.organizerOrgId),
       officialUrl: text(payload.officialUrl),
       logo: text(payload.logo),
-      summary: text(payload.summary),
       description: text(payload.description),
       tags: strings(payload.tags),
       participationMode: token(payload.participationMode, PARTICIPATION_MODES, 'INDIVIDUAL'),
@@ -224,12 +226,15 @@ export function splitImportPayload(payload: Record<string, unknown>): ImportSeed
     },
     edition: edition && {
       cycleLabel: text(edition.cycleLabel) ?? '',
-      status: token(edition.status, EDITION_STATUSES, 'UPCOMING'),
       scopeLevel: token(edition.scopeLevel, SCOPE_LEVELS, 'NATIONAL'),
       registrationUrl: text(edition.registrationUrl) ?? '',
       entryFee: decimalText(edition.entryFee),
       currency: (text(edition.currency) ?? '').toUpperCase(),
       prizeSummary: text(edition.prizeSummary) ?? '',
+      prizeValue: int(edition.prizeValue) != null ? String(int(edition.prizeValue)) : '',
+      prizeCurrency: text(edition.prizeCurrency) ?? '',
+      // Already a plain calendar date in payloads (extractor rule: bare dates for cutoffs).
+      ageCutoffDate: text(edition.ageCutoffDate) ?? '',
     },
     keyDates: keyDateSeeds(payload.keyDates),
     regionIds: strings(payload.regionIds) ?? [],
@@ -260,10 +265,15 @@ function keyDateSeeds(value: unknown): KeyDateSeed[] {
     if (type === null || !(KEY_DATE_TYPES as readonly string[]).includes(type)) return [];
     const timezone = text(row.timezone) ?? 'UTC';
     const wall = instantToZonedWallClock(text(row.startsAt), timezone);
+    // The END day, read in the SAME zone as the start so a range never shifts a day relative to
+    // it. Only the day survives into the form (the control is a date, not a datetime); the end
+    // time is re-derived as end-of-day on save.
+    const endWall = instantToZonedWallClock(text(row.endsAt), timezone);
     return [
       {
         type,
         date: wall ? wall.slice(0, 10) : '',
+        endDate: endWall ? endWall.slice(0, 10) : '',
         time: wall ? wall.slice(11, 16) : '',
         timezone,
         tbd: wall === null,
@@ -347,7 +357,12 @@ export function importSeedWarnings(
 
   const extraKeys = [
     ...Object.keys(seed.extras.competition),
-    ...Object.keys(seed.extras.edition).map((k) => `edition.${k}`),
+    // `status` is an extra by DESIGN (the form derives it; an extracted value still rides through
+    // and the server honors it) — every pipeline payload carries one, so warning on it would put
+    // a false alarm on every single import review.
+    ...Object.keys(seed.extras.edition)
+      .filter((k) => k !== 'status')
+      .map((k) => `edition.${k}`),
   ];
   if (extraKeys.length > 0) {
     warnings.push({
