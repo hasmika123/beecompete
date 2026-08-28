@@ -88,7 +88,7 @@ export function LogisticsPanel({ competition }: { competition: CompetitionDetail
     {
       key: 'cost',
       icon: DollarSign,
-      label: 'Cost',
+      label: 'Entry fee',
       value: costLabel(competition, edition),
       compact: true,
     },

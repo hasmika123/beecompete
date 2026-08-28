@@ -60,6 +60,58 @@ export function gradeLabel(min: number | null, max: number | null): string | und
     : `Grade ${gradeName(min as number)}+`;
 }
 
+/** "13–18" · "Up to 18" · "13+" · undefined when no age range is on record. */
+export function ageRangeLabel(min: number | null, max: number | null): string | undefined {
+  if (min == null && max == null) return undefined;
+  if (min != null && max != null) return `${min}–${max}`;
+  return max != null ? `Up to ${max}` : `${min}+`;
+}
+
+export interface EligibilityFacts {
+  eligibilityBasis: string | null;
+  minGrade: number | null;
+  maxGrade: number | null;
+  minAge: number | null;
+  maxAge: number | null;
+}
+
+/**
+ * WHO MAY ENTER, as the organizer states it — the single derivation behind the card badge and the
+ * At-a-glance strip (blueprints decision 99, owner 2026-08-28).
+ *
+ * `eligibility_basis` says which axis is STATED. The other axis, when populated, is a range we
+ * derived for filtering, and it is deliberately NOT rendered here: a derived grade range is lossy
+ * by construction (age 18 maps to grade 12 or 13), so showing it as the rule tells a 12-year-old in
+ * grade 7 that they qualify for an ages-13+ competition. The Eligibility tab shows both, labeling
+ * the derived one — this is the headline, and the headline has to be true.
+ *
+ * ⚠ NO "All grades" FALLBACK. It was the old behavior and it asserted a verified fact about who may
+ * enter on every listing where nobody had recorded one. `undefined` means "not stated" and the
+ * callers say exactly that; `OPEN` — the organizer stating there IS no restriction — is the only
+ * value that reads as open to everyone.
+ */
+export function eligibilityLabel(c: EligibilityFacts): string | undefined {
+  const grades = gradeLabel(c.minGrade, c.maxGrade);
+  const ages = ageRangeLabel(c.minAge, c.maxAge);
+  const agesWithUnit = ages ? `Ages ${ages}` : undefined;
+  switch (c.eligibilityBasis) {
+    case 'open':
+      return 'Open to all ages';
+    case 'age':
+      return agesWithUnit;
+    case 'grade':
+      return grades;
+    case 'both':
+      // Both stated and independent ("grades 7–12, and age 13+"): neither one alone is the rule,
+      // so the headline carries both rather than picking a winner.
+      return [grades, agesWithUnit].filter(Boolean).join(' · ') || undefined;
+    default:
+      // Basis not recorded (legacy rows pre-0023, or a curator hasn't reached it). Fall back to
+      // whatever IS on record rather than showing nothing — but never invent the other axis.
+      return [grades, agesWithUnit].filter(Boolean).join(' · ') || undefined;
+  }
+}
+
 const RELATIVE_WINDOW_DAYS = 14;
 const URGENT_DAYS = 3;
 
@@ -138,7 +190,7 @@ export function toCardData(item: CompetitionSummary): CompetitionCardData {
     categorySlug: item.category.slug,
     categoryName: item.category.name,
     coverUrl: item.logo ?? undefined,
-    gradeLabel: gradeLabel(item.minGrade, item.maxGrade),
+    eligibilityLabel: eligibilityLabel(item),
     organizerName: item.organizer?.name,
     organizerVerified: item.organizer?.verificationState === 'verified',
     blurb: item.blurb ?? undefined,

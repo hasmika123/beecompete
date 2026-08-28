@@ -171,9 +171,9 @@ export function FilterPanel({
         </RadioGroup>
       </Facet>
 
-      <Facet legend="Cost" defaultOpen={!!params.cost}>
+      <Facet legend="Entry fee" defaultOpen={!!params.cost}>
         <RadioGroup
-          aria-label="Cost"
+          aria-label="Entry fee"
           className="grid gap-1.5"
           value={params.cost ?? ''}
           onValueChange={(v) => set({ cost: v || undefined })}

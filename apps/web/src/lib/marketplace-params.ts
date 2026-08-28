@@ -222,7 +222,7 @@ export const RELAX_ORDER: { key: keyof MarketplaceParams | 'grade'; label: strin
   { key: 'delivery', label: 'delivery' },
   { key: 'pathway', label: 'entry pathway' },
   { key: 'participation', label: 'individual/team' },
-  { key: 'cost', label: 'cost' },
+  { key: 'cost', label: 'entry fee' },
   { key: 'deadlineWithinDays', label: 'deadline window' },
   { key: 'region', label: 'region' },
   { key: 'grade', label: 'grade range' },

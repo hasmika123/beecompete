@@ -46,3 +46,5 @@ databaseChangeLog:
       file: db/changelog/changes/0021-listing-status.yaml
   - include:
       file: db/changelog/changes/0022-student-status-boolean.yaml
+  - include:
+      file: db/changelog/changes/0023-eligibility-basis.yaml

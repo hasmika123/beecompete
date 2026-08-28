@@ -59,7 +59,10 @@ function createModeWarnings(
   ) {
     warnings.push({
       key: 'organizerUnmatched',
-      message: `No organization is named “${seed.organizerName}” — pick the right one below, or add it first.`,
+      // Still blocking — the server rejects a listing with no organizer, and the dialog can be
+      // dismissed. It reads as a reminder rather than an errand now that the form opens with the
+      // reuse-or-create choice already on screen (owner 2026-08-28).
+      message: `No organization is named “${seed.organizerName}” yet — resolve it in the prompt that just opened, or pick one in the Organizer field.`,
       blocking: true,
     });
   }

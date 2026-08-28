@@ -150,6 +150,94 @@ describe('importSeedWarnings', () => {
     expect(importSeedWarnings(p, splitImportPayload(p)).map((w) => w.key)).toContain('deadline');
   });
 
+  // Prep resources ride the payload since 2026-08-28 (the paste prompt asks for ~5 links plus 2-3
+  // Amazon ones). Before that they had no reader at all and were reported as a dropped field.
+  it('reads prep resources into form rows', () => {
+    const seed = splitImportPayload(
+      payload({
+        resources: [
+          { title: 'Official past papers', url: 'https://example.org/past', type: 'PAST_PAPER' },
+          { title: 'Prep book', url: 'https://www.amazon.com/dp/123', type: 'book' },
+        ],
+      }),
+    );
+    expect(seed.resources).toHaveLength(2);
+    expect(seed.resources[0]).toMatchObject({ title: 'Official past papers', type: 'PAST_PAPER' });
+    // Lowercase from a model is accepted — the form's dropdown is uppercase-only.
+    expect(seed.resources[1]!.type).toBe('BOOK');
+  });
+
+  it('never flags a suggested resource as affiliate on its own', () => {
+    // The prompt emits PLAIN Amazon links for a curator to swap for tagged ones. A link that earns
+    // nothing must not render the affiliate disclosure (compliance DQ10), so the flag stays false
+    // unless the payload says otherwise outright.
+    const seed = splitImportPayload(
+      payload({
+        resources: [{ title: 'Prep book', url: 'https://www.amazon.com/dp/123', type: 'BOOK' }],
+      }),
+    );
+    expect(seed.resources[0]!.isAffiliate).toBe(false);
+  });
+
+  it('drops half-written and unusable resource rows instead of coercing them', () => {
+    const seed = splitImportPayload(
+      payload({
+        resources: [
+          { title: 'No link here' },
+          { url: 'https://example.org/no-title' },
+          'not an object',
+          { title: 'Odd type', url: 'https://example.org/x', type: 'PODCAST' },
+        ],
+      }),
+    );
+    expect(seed.resources).toHaveLength(1);
+    // The link is the valuable part, so an unknown type falls back rather than losing the row.
+    expect(seed.resources[0]).toMatchObject({ title: 'Odd type', type: 'OTHER' });
+  });
+
+  it('reads FAQ rows into form rows', () => {
+    const seed = splitImportPayload(
+      payload({
+        faqs: [
+          { question: 'Who can enter?', answer: 'Students in grades 6-8.' },
+          { question: 'What does it cost?', answer: 'There is a $30 entry fee.' },
+        ],
+      }),
+    );
+    expect(seed.faqs).toEqual([
+      { question: 'Who can enter?', answer: 'Students in grades 6-8.' },
+      { question: 'What does it cost?', answer: 'There is a $30 entry fee.' },
+    ]);
+  });
+
+  it('drops an FAQ row missing either half', () => {
+    // A question with no answer would publish as an unanswered question on the FAQ tab, with
+    // FAQPage markup on it.
+    const seed = splitImportPayload(
+      payload({
+        faqs: [
+          { question: 'Unanswered?' },
+          { answer: 'Orphan answer' },
+          { question: 'Real?', answer: 'Yes.' },
+        ],
+      }),
+    );
+    expect(seed.faqs).toEqual([{ question: 'Real?', answer: 'Yes.' }]);
+  });
+
+  it('does not report resources as a dropped field', () => {
+    // It is a mapped key now; before that the curator was told their links "WON'T be saved".
+    const p = payload({ resources: [{ title: 'A', url: 'https://example.org/a', type: 'GUIDE' }] });
+    const extras = importSeedWarnings(p, splitImportPayload(p)).find((w) => w.key === 'extras');
+    expect(extras?.message ?? '').not.toContain('resources');
+  });
+
+  it('does not report faqs as a dropped field', () => {
+    const p = payload({ faqs: [{ question: 'Q?', answer: 'A.' }] });
+    const extras = importSeedWarnings(p, splitImportPayload(p)).find((w) => w.key === 'extras');
+    expect(extras?.message ?? '').not.toContain('faqs');
+  });
+
   it('flags rows it had to leave out and keys it is carrying through untouched', () => {
     const p = payload({ keyDates: [{ type: 'NONSENSE' }], reviewerNotes: 'x' });
     const keys = importSeedWarnings(p, splitImportPayload(p)).map((w) => w.key);

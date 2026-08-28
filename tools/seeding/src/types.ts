@@ -12,6 +12,11 @@ export const PARTICIPATION_MODES = ['INDIVIDUAL', 'TEAM', 'BOTH'] as const;
 export const DELIVERIES = ['IN_PERSON', 'VIRTUAL', 'HYBRID'] as const;
 export const ENTRY_PATHWAYS = ['INDIVIDUAL', 'SCHOOL_OR_CHAPTER', 'EITHER'] as const;
 export const COST_TYPES = ['FREE', 'PAID'] as const;
+// Which axis the ORGANIZER states (0023). Mirrors apps/api's EligibilityBasis. Absent is a real
+// value here — "the page doesn't say" — and must never be defaulted to GRADE.
+export const ELIGIBILITY_BASES = ['GRADE', 'AGE', 'BOTH', 'OPEN'] as const;
+// Prep-resource kinds, mirroring apps/api's ResourceType.
+export const RESOURCE_TYPES = ['BOOK', 'PAST_PAPER', 'GUIDE', 'VIDEO', 'OTHER'] as const;
 export const RECURRENCES = ['ANNUAL', 'ONE_OFF', 'ROLLING'] as const;
 
 /** Edition/key-date enums — mirror apps/api `EditionStatus`, `ScopeLevel`, `KeyDateType`. */
@@ -46,6 +51,8 @@ export type ParticipationMode = (typeof PARTICIPATION_MODES)[number];
 export type Delivery = (typeof DELIVERIES)[number];
 export type EntryPathway = (typeof ENTRY_PATHWAYS)[number];
 export type CostType = (typeof COST_TYPES)[number];
+export type EligibilityBasis = (typeof ELIGIBILITY_BASES)[number];
+export type ResourceType = (typeof RESOURCE_TYPES)[number];
 export type Recurrence = (typeof RECURRENCES)[number];
 export type EditionStatus = (typeof EDITION_STATUSES)[number];
 export type ScopeLevel = (typeof SCOPE_LEVELS)[number];
@@ -75,6 +82,23 @@ export interface CompetitionPayload {
   delivery: Delivery;
   entryPathway: EntryPathway;
   evaluationType?: string[] | null;
+  /**
+   * Which axis the page STATES as the entry rule. Governs what the listing displays; the other
+   * axis, if we fill it, is a derived search range and is never shown as the rule.
+   */
+  eligibilityBasis?: EligibilityBasis | null;
+  /**
+   * Suggested prep links (2026-08-28). Created as sub-resources when a curator approves the
+   * record. `isAffiliate` is always false here — the extractor emits PLAIN links and a curator
+   * adds the Amazon tag by hand, because the flag is what triggers our disclosure obligation.
+   */
+  resources?: ResourcePayload[] | null;
+  /**
+   * Suggested FAQ entries (2026-08-28). Created as sub-resources on approve. The ANSWER is prose
+   * we publish under our own name, with FAQPage structured data on it — so it is held to the same
+   * bar as `description`: our words, grounded in facts the source states.
+   */
+  faqs?: FaqPayload[] | null;
   /** Grade encoding: Pre-K -1, K 0, 1..12. */
   minGrade?: number | null;
   maxGrade?: number | null;
@@ -83,6 +107,18 @@ export interface CompetitionPayload {
   costType: CostType;
   recurrence: Recurrence;
   attributes?: Record<string, unknown> | null;
+}
+
+export interface FaqPayload {
+  question: string;
+  answer: string;
+}
+
+export interface ResourcePayload {
+  title: string;
+  url: string;
+  type: ResourceType;
+  isAffiliate?: boolean;
 }
 
 /**

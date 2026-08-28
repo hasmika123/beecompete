@@ -108,7 +108,18 @@ public class Competition {
 	@Column(name = "evaluation_type", columnDefinition = "text[]")
 	private List<String> evaluationType;
 
-	/** Grade encoding (Q2): Pre-K −1, K 0, grades 1–12; 13 College, 14 Graduate (2026-08-23). */
+	/**
+	 * Which axis the organizer STATES (0023). Governs display; the other axis, when populated, is a
+	 * derived search range and is never rendered as a rule. Null = not stated, NOT "all grades".
+	 */
+	@Enumerated(EnumType.STRING)
+	@Column(name = "eligibility_basis", length = 20)
+	private EligibilityBasis eligibilityBasis;
+
+	/**
+	 * Grade encoding (Q2): Pre-K −1, K 0, grades 1–12; 13–16 the four college years, 17 Graduate
+	 * (2026-08-23, split into named years 2026-08-24).
+	 */
 	@Column(name = "min_grade")
 	private Short minGrade;
 
@@ -307,6 +318,14 @@ public class Competition {
 
 	public void setEvaluationType(List<String> evaluationType) {
 		this.evaluationType = evaluationType;
+	}
+
+	public EligibilityBasis getEligibilityBasis() {
+		return eligibilityBasis;
+	}
+
+	public void setEligibilityBasis(EligibilityBasis eligibilityBasis) {
+		this.eligibilityBasis = eligibilityBasis;
 	}
 
 	public Short getMinGrade() {

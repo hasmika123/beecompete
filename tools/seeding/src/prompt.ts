@@ -4,11 +4,13 @@ import {
   COST_TYPES,
   DELIVERIES,
   EDITION_STATUSES,
+  ELIGIBILITY_BASES,
   ENTRY_PATHWAYS,
   EVALUATION_TOKENS,
   KEY_DATE_TYPES,
   PARTICIPATION_MODES,
   RECURRENCES,
+  RESOURCE_TYPES,
   SCOPE_LEVELS,
   type SeedHints,
 } from './types.ts';
@@ -17,8 +19,10 @@ import {
  * The extraction system prompt. It maps official-page prose to the BeeCompete Spine + the
  * category `attributes` bag. Two hard rules encoded below:
  *   1. FACTS ONLY — the model records dates/fees/eligibility/format, never rewrites marketing prose.
- *   2. NO original description — `description` stays null (a draft blurb is S4 curator work; facts
- *      aren't copyrightable but prose is, so we never paste theirs).
+ *   2. THE DESCRIPTION IS ORIGINAL PROSE FROM FACTS — written by the model, never lifted or
+ *      paraphrased from the organizer (facts aren't copyrightable, their sentences are). Matched to
+ *      the hand-paste prompt on 2026-08-28 (owner); before that it stayed null for S4 curator work,
+ *      which in practice meant 200 listings arriving blank. S4 still reviews every word.
  *   3. TBD BEATS A GUESS — an unknown date is emitted as null, never estimated. A wrong deadline
  *      on a minors-facing catalog can cost a student a real entry.
  */
@@ -112,7 +116,16 @@ Return ONLY a JSON object with this exact top-level shape (no markdown, no comme
   from the page (e.g. "Mathematical Association of America"); null if the page doesn't state it.
 - officialUrl (string|null): the canonical official URL for the competition.
 - logo (string|null): absolute URL of the logo image if clearly present, else null.
-- description (MUST be null): do NOT write a description. Human curators write our own prose later.
+- description (string|null): 3-6 sentences of plain factual English, IN YOUR OWN WORDS, aimed at a
+  student or parent deciding whether to enter: what the competition is, who enters, how it runs,
+  what the rounds/format are, what you win.
+  ⚠ WRITE IT FROM THE FACTS, NOT FROM THEIR SENTENCES. Read the page, then look away and write it
+  fresh. Do not paste, translate, reorder, or thesaurus the organizer's copy — a paraphrase of their
+  paragraph is still their paragraph. If the page gives you nothing but prose and you cannot restate
+  it from underlying facts, use null.
+  The FIRST ~300 CHARACTERS become the listing card's blurb, so lead with what it IS, not with
+  history or the organizer's mission. No marketing voice ("prestigious", "premier", "world-class"),
+  no second person, no exclamation marks, nothing you could not point to on the page.
 - categoryId: OMIT this — you output categorySlug instead (see below); the tool resolves the id.
 - categorySlug (string, REQUIRED): the single best-fit category, one of:
   ${CATEGORY_SLUGS.join(', ')}.
@@ -123,12 +136,86 @@ Return ONLY a JSON object with this exact top-level shape (no markdown, no comme
 - entryPathway (REQUIRED): one of ${ENTRY_PATHWAYS.join(', ')} — how you enter (as an individual,
   via a school/chapter, or either). Distinct from who is eligible.
 - evaluationType (string[]|null): how work is judged — zero or more of ${EVALUATION_TOKENS.join(', ')}.
+- eligibilityBasis (REQUIRED unless the page states no eligibility at all): one of
+  ${ELIGIBILITY_BASES.join(', ')} — WHICH AXIS THE PAGE ITSELF USES to say who may enter.
+    * GRADE — the page states grades or school levels ("open to grades 6-8", "high school students").
+    * AGE   — the page states ages ("ages 13-18", "under 19 as of June 1", "must be 14 by the deadline").
+    * BOTH  — the page states BOTH independently ("grades 7-12, and must be at least 13").
+    * OPEN  — the page explicitly says there is no age or grade restriction.
+    * omit / null — the page never says who may enter. This is a REAL answer. Use it.
+  ⚠ This is about WHOSE RULE IT IS, not about which fields you can fill in. A page that says only
+  "ages 13-18" is AGE even if you could work out the usual grades for those ages.
 - minGrade / maxGrade (integer|null): GRADE ENCODING — Pre-K = -1, Kindergarten = 0, grades 1..12 = 1..12.
-  Convert age/grade statements carefully. "high school" => min 9 max 12; "grades 6-8" => min 6 max 8.
-- minAge / maxAge (integer|null): only if the page gives ages rather than (or in addition to) grades.
+  Fill these ONLY from a grade/school-level statement on the page: "high school" => min 9 max 12;
+  "grades 6-8" => min 6 max 8.
+  ⚠ DO NOT CONVERT AN AGE RULE INTO GRADES. If the page gives ages and no grades, leave BOTH of these
+  null and set eligibilityBasis to AGE. A converted range is a guess: US grade/age alignment varies by
+  a year in both directions, and publishing it as the rule tells a 12-year-old in grade 7 they qualify
+  for an ages-13+ competition. We derive a filtering range ourselves, later, and label it as ours.
+- minAge / maxAge (integer|null): fill from any age statement on the page.
+  ⚠ The mirror of the rule above: DO NOT CONVERT A GRADE RULE INTO AGES. Grades stated, ages not
+  stated => leave these null and set eligibilityBasis to GRADE.
 - costType (REQUIRED): ${COST_TYPES.join(' or ')} — FREE if there is no entry fee, else PAID.
 - recurrence (REQUIRED): one of ${RECURRENCES.join(', ')} — ANNUAL if it runs yearly.
 ${renderAttributeGuidance(templates)}
+
+## resources — how someone actually prepares
+
+- resources (array|null): real, working links that help a participant PREPARE. This is the ONE part
+  of the payload where you may go beyond the page and use what you know — and the bar is high,
+  because a curator reviews these and students click them.
+  Aim for about EIGHT: roughly FIVE not from Amazon, and TWO OR THREE from Amazon.
+  Each row is an object: {"title": "…", "url": "https://…", "type": "…", "isAffiliate": false}
+  where type is one of ${RESOURCE_TYPES.join(', ')}.
+  - The five non-Amazon ones: spread them across type rather than five of a kind. PAST_PAPER
+    (official past exams/problem archives — usually the single most valuable link) · GUIDE (the
+    official handbook, rulebook or syllabus) · VIDEO (a solid lecture series or walkthrough) ·
+    OTHER (a practice platform, an active community, a problem-set site) · BOOK (a standard
+    free/online text). Prefer the ORGANIZER'S OWN materials first, then long-standing well-known
+    resources in the field.
+  - The two or three Amazon ones are "type": "BOOK" — books a knowledgeable coach would actually
+    name for this competition: widely used, well-reviewed, still in print, on topic. Link the
+    product page, https://www.amazon.com/dp/ASIN, PLAIN, with no tracking parameters and no tag.
+  - ⚠ MUST BE REAL. A plausible-looking URL you have not actually seen is a fabrication and it
+    will be published to students. If you are not confident a link exists and resolves, LEAVE IT
+    OUT. FIVE REAL LINKS BEAT EIGHT WITH TWO INVENTED ONES. Few or none is a fine answer for an
+    obscure competition — use null.
+  - ⚠ NEVER EMIT imageUrl, a thumbnail, a cover-art link, or any other image field on a resource.
+    Not for Amazon, not for anything else. An Amazon image URL contains an opaque id that cannot be
+    derived from the ASIN, and an og:image cannot be known without fetching the page — so anything
+    you produce is a guess. Our card silently swaps a broken image for generic art, so a guessed
+    URL fails INVISIBLY: the page looks right while every cover 404s. Images are fetched by us or
+    licensed through the merchant's API. Omit the field.
+  - ⚠ MUST BE SPECIFIC AND ABOUT THIS COMPETITION. Deep-link to the archive/handbook/book, never a
+    homepage or a search page, and never a generic "best books in this subject" listicle.
+  - ⚠ "isAffiliate" IS ALWAYS false. You emit plain links. The Amazon tag is added by a curator,
+    who ticks the affiliate box at the same moment — the flag is a claim that the link earns us
+    money, and flagging an untagged link puts a legal disclosure on a listing with nothing to
+    disclose.
+
+## faqs — the questions a parent actually asks
+
+- faqs (array|null): 3-5 question/answer rows for the listing's FAQ tab. Each row is an object:
+  {"question": "…", "answer": "…"}. Question <= 500 characters; both halves required.
+  FIRST, look for a real FAQ on the page — an FAQ page, a "common questions" block, a rules
+  document's Q&A section. If one exists, use ITS questions: they are the ones entrants actually
+  ask about this competition.
+  ⚠ Use their QUESTIONS, write your OWN ANSWERS. Same rule as description: the facts are ours to
+  restate, their sentences are not. Never paste an answer.
+  If the page has no FAQ, WRITE 3-5 from the facts you extracted — the things a parent or student
+  would actually ask before entering: who may enter, what it costs, when it closes, whether you
+  enter through a school or on your own, individual or team, in person or online, what you win,
+  how it is judged.
+  ⚠ ANSWER ONLY FROM FACTS THE SOURCE STATES. This is the strictest rule in this section, because
+  these answers publish on our site under OUR name with FAQPage structured data on them. Do not
+  invent a policy. If you do not know whether homeschoolers may enter, whether late entries are
+  accepted, or whether the fee is refundable — DO NOT WRITE THAT ROW. An FAQ that confidently
+  states a rule the organizer never stated is the single most damaging thing in this payload: a
+  student reads it as settled and acts on it.
+  ⚠ A question you cannot answer from facts is simply LEFT OUT. Do not answer it with "check the
+  official site" filler, and do not pad to reach five. Two solid rows beat five with one guess.
+  Answers are 1-3 plain sentences. No marketing voice, no second person plural ("we"), no
+  exclamation marks. Use null if the source gave you too little to answer anything honestly.
 
 ## edition + key dates (the competition's CURRENT or NEXT running)
 A listing is only useful with a running attached, so also fill these INSIDE "payload":

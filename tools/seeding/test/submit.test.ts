@@ -51,7 +51,7 @@ const COMPETITION_REQUEST_FIELDS = new Set([
  * splits these back out before mapping the competition half, so they are contract too — if the
  * server ever renames them, this test is the tripwire.
  */
-const SEED_PAYLOAD_EXTRAS = new Set(['edition', 'keyDates']);
+const SEED_PAYLOAD_EXTRAS = new Set(['edition', 'keyDates', 'resources', 'faqs']);
 
 /** apps/api `EditionRequest` — the fields the pipeline may emit (advancesToEditionId is curator-only). */
 const EDITION_REQUEST_FIELDS = new Set([
@@ -148,6 +148,8 @@ test('submitToImportQueue POSTs the exact ImportSubmission contract shape', asyn
       );
     }
     assert.equal(payload.categorySlug, undefined);
+    // The fixture states no description, so it is a stated null. When the model DOES write one it
+    // rides through (2026-08-28) — see the normalize test in validate.test.ts.
     assert.equal(payload.description, null);
     assert.equal(typeof payload.slug, 'string');
     assert.equal(typeof payload.name, 'string');

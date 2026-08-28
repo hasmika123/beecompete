@@ -47,20 +47,43 @@ import type { CompetitionDetail } from '@/lib/catalog-types';
 // The prose catch-all stays full width, as does everything on Judging: every one of its values is
 // prose or an unbounded list.
 
+/**
+ * Which axis, if either, is OURS rather than the organizer's. `BOTH` and `OPEN` are stated in full,
+ * and a null basis (legacy rows, or nothing recorded yet) claims nothing either way — in all three
+ * cases nothing is marked approximate, because we cannot honestly say which one we derived.
+ */
+function derivedAxis(basis: string | null): 'grade' | 'age' | null {
+  if (basis === 'age') return 'grade';
+  if (basis === 'grade') return 'age';
+  return null;
+}
+
 function eligibilityRows(competition: CompetitionDetail): LedgerItem[] {
   const edition = currentEdition(competition.editions);
   const rows: LedgerItem[] = [];
+  // BOTH axes render here — this tab is where the full picture belongs, and it is the one place
+  // a reader can see how the two relate. Since blueprints decision 99, the axis the organizer did
+  // NOT state is marked as ours: a grade range derived from an age rule is a search aid, and
+  // labeling it "Approx." is what keeps this tab from repeating the claim the strip stopped making.
+  const derived = derivedAxis(competition.eligibilityBasis);
   const grades = gradeLabel(competition.minGrade, competition.maxGrade);
   if (grades)
     rows.push({
       key: 'grades',
       icon: GraduationCap,
-      label: 'Grades',
-      value: grades,
+      label: derived === 'grade' ? 'Grades (approx.)' : 'Grades',
+      value: derived === 'grade' ? `${grades} — the organizer states ages` : grades,
       compact: true,
     });
   const age = ageLabel(competition, edition);
-  if (age) rows.push({ key: 'age', icon: Calendar, label: 'Age', value: age, compact: true });
+  if (age)
+    rows.push({
+      key: 'age',
+      icon: Calendar,
+      label: derived === 'age' ? 'Age (approx.)' : 'Age',
+      value: derived === 'age' ? `${age} — the organizer states grades` : age,
+      compact: true,
+    });
   rows.push({
     key: 'pathway',
     icon: Ticket,

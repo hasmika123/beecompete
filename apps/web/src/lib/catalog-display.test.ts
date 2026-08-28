@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isHostMaintained, regionLabel } from '@/lib/catalog-display';
+import { eligibilityLabel, isHostMaintained, regionLabel } from '@/lib/catalog-display';
 
 // #77 (supersedes #76): a state abbreviates ONLY beside a city ("Austin, TX"); alone it keeps its
 // full name. US country tag dropped on a US-only catalog. The distinction worth pinning is the
@@ -73,5 +73,75 @@ describe('isHostMaintained', () => {
 
   it('is false for an unknown/legacy state', () => {
     expect(isHostMaintained({ organizer: { verificationState: 'unverified' } })).toBe(false);
+  });
+});
+
+// Blueprints decision 99 (owner 2026-08-28): the card badge and the At-a-glance strip render the
+// axis the ORGANIZER states. The case that matters is a listing carrying BOTH ranges where only
+// one of them is the organizer's — the shape the seeding extractor produced for every age-gated
+// competition it touched.
+describe('eligibilityLabel', () => {
+  const BJC = { minGrade: 7, maxGrade: 12, minAge: 13, maxAge: 18 };
+
+  it('shows ONLY the ages for an age-based rule, never the derived grades', () => {
+    // Breakthrough Junior Challenge: states ages 13–18. The stored grades 7–12 are ours, and
+    // publishing them as the rule tells a 12-year-old in grade 7 they qualify when they do not.
+    expect(eligibilityLabel({ ...BJC, eligibilityBasis: 'age' })).toBe('Ages 13–18');
+  });
+
+  it('shows ONLY the grades for a grade-based rule, never the derived ages', () => {
+    expect(eligibilityLabel({ ...BJC, eligibilityBasis: 'grade' })).toBe('Grades 7–12');
+  });
+
+  it('shows both when the organizer states both', () => {
+    expect(eligibilityLabel({ ...BJC, eligibilityBasis: 'both' })).toBe('Grades 7–12 · Ages 13–18');
+  });
+
+  it('reads open only when the organizer says so — never as a fallback', () => {
+    expect(
+      eligibilityLabel({
+        eligibilityBasis: 'open',
+        minGrade: null,
+        maxGrade: null,
+        minAge: null,
+        maxAge: null,
+      }),
+    ).toBe('Open to all ages');
+  });
+
+  it('is undefined when nothing is on record, so callers say "Not stated"', () => {
+    // The retired "All grades" fallback asserted a verified fact on ~21% of listings. Undefined
+    // is the honest answer and it is what makes the strip say so.
+    expect(
+      eligibilityLabel({
+        eligibilityBasis: null,
+        minGrade: null,
+        maxGrade: null,
+        minAge: null,
+        maxAge: null,
+      }),
+    ).toBeUndefined();
+  });
+
+  it('falls back to whatever IS recorded when the basis is unset (legacy rows)', () => {
+    // Pre-0023 rows have no basis. Show what we have — but never invent the other axis.
+    expect(
+      eligibilityLabel({
+        eligibilityBasis: null,
+        minGrade: 9,
+        maxGrade: 12,
+        minAge: null,
+        maxAge: null,
+      }),
+    ).toBe('Grades 9–12');
+    expect(
+      eligibilityLabel({
+        eligibilityBasis: null,
+        minGrade: null,
+        maxGrade: null,
+        minAge: 13,
+        maxAge: null,
+      }),
+    ).toBe('Ages 13+');
   });
 });

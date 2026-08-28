@@ -1,10 +1,12 @@
 package com.beecompete.catalog.curation;
 
 import com.beecompete.catalog.domain.Competition;
+import com.beecompete.catalog.domain.CompetitionFaq;
 import com.beecompete.catalog.domain.ImportRecord;
 import com.beecompete.catalog.domain.ImportStatus;
 import com.beecompete.catalog.domain.ListingStatus;
 import com.beecompete.catalog.domain.Provenance;
+import com.beecompete.catalog.repository.CompetitionFaqRepository;
 import com.beecompete.catalog.repository.ImportRecordRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,18 +43,27 @@ public class ImportReviewService {
 	private static final String EDITION_KEY = "edition";
 	private static final String KEY_DATES_KEY = "keyDates";
 	private static final String REGION_IDS_KEY = "regionIds";
+	/** Prep-resource rows the S3 extractor suggests (2026-08-28) — sub-resources of the created row. */
+	private static final String RESOURCES_KEY = "resources";
+	/** FAQ rows the S3 extractor suggests (2026-08-28) — also sub-resources, same lifecycle. */
+	private static final String FAQS_KEY = "faqs";
 
 	private final ImportRecordRepository importRecords;
 	private final CompetitionCurationService curation;
 	private final ListingCurationService listingCuration;
+	private final ResourceCurationService resourceCuration;
+	private final CompetitionFaqRepository competitionFaqs;
 	private final ObjectMapper mapper;
 	private final Validator validator;
 
 	public ImportReviewService(ImportRecordRepository importRecords, CompetitionCurationService curation,
-			ListingCurationService listingCuration, ObjectMapper mapper, Validator validator) {
+			ListingCurationService listingCuration, ResourceCurationService resourceCuration,
+			CompetitionFaqRepository competitionFaqs, ObjectMapper mapper, Validator validator) {
 		this.importRecords = importRecords;
 		this.curation = curation;
 		this.listingCuration = listingCuration;
+		this.resourceCuration = resourceCuration;
+		this.competitionFaqs = competitionFaqs;
 		this.mapper = mapper;
 		this.validator = validator;
 	}
@@ -92,6 +103,8 @@ public class ImportReviewService {
 		Object editionNode = competitionPayload.remove(EDITION_KEY);
 		Object keyDatesNode = competitionPayload.remove(KEY_DATES_KEY);
 		Object regionIdsNode = competitionPayload.remove(REGION_IDS_KEY);
+		Object resourcesNode = competitionPayload.remove(RESOURCES_KEY);
+		Object faqsNode = competitionPayload.remove(FAQS_KEY);
 
 		CompetitionRequest request = convertOrThrow(competitionPayload, CompetitionRequest.class, "competition");
 		validateOrThrow(request, "payload invalid");
@@ -123,6 +136,13 @@ public class ImportReviewService {
 					stamp);
 		}
 
+		// Prep resources are SUB-resources: they need the competition's id, so they are created after
+		// it, not inside the atomic create. This runs in the approve transaction, so an invalid row
+		// rolls the whole approval back rather than leaving a listing missing links a curator
+		// believed they were approving — the same "fail loudly" stance as keyDates without an edition.
+		createResources(resourcesNode, created);
+		createFaqs(faqsNode, created);
+
 		record.setPayload(payload);
 		record.setStatus(ImportStatus.APPROVED);
 		record.setReviewedAt(Instant.now());
@@ -153,6 +173,54 @@ public class ImportReviewService {
 			return note;
 		}
 		return (note == null || note.isBlank()) ? "reviewed by " + curator : note + " · by " + curator;
+	}
+
+	/**
+	 * Suggested prep links → Resource rows. `displayOrder` is assigned from position rather than
+	 * trusted from the payload: the extractor emits an ordered list, and a duplicated or missing
+	 * order value would otherwise decide how the public Prep resources row reads.
+	 */
+	private void createResources(Object node, Competition competition) {
+		if (node == null) {
+			return;
+		}
+		List<ResourceRequest> requests;
+		try {
+			requests = mapper.convertValue(node, new TypeReference<List<ResourceRequest>>() {});
+		} catch (IllegalArgumentException e) {
+			throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+					"resources invalid: " + e.getMessage());
+		}
+		for (int i = 0; i < requests.size(); i++) {
+			ResourceRequest row = requests.get(i);
+			validateOrThrow(row, "resource invalid");
+			resourceCuration.create(competition.getId(),
+					new ResourceRequest(row.title(), row.url(), row.type(), row.isAffiliate(),
+							row.affiliateMeta(), (short) i, row.imageUrl()));
+		}
+	}
+
+	/**
+	 * Suggested FAQ entries → CompetitionFaq rows. Same shape and same reasoning as
+	 * {@link #createResources}: sub-resources of the competition, created inside the approve
+	 * transaction, with {@code displayOrder} taken from position rather than trusted from the
+	 * payload — order decides how the public FAQ tab reads.
+	 */
+	private void createFaqs(Object node, Competition competition) {
+		if (node == null) {
+			return;
+		}
+		List<FaqRequest> requests;
+		try {
+			requests = mapper.convertValue(node, new TypeReference<List<FaqRequest>>() {});
+		} catch (IllegalArgumentException e) {
+			throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "faqs invalid: " + e.getMessage());
+		}
+		for (int i = 0; i < requests.size(); i++) {
+			FaqRequest row = requests.get(i);
+			validateOrThrow(row, "faq invalid");
+			competitionFaqs.save(new CompetitionFaq(competition, row.question(), row.answer(), (short) i));
+		}
 	}
 
 	private List<CompetitionWithEditionRequest.FirstEditionKeyDate> convertKeyDates(Object node) {

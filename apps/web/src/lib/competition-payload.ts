@@ -69,6 +69,9 @@ export function buildCompetitionBody(form: FormData): Record<string, unknown> {
     delivery: str(form, 'delivery'),
     entryPathway: str(form, 'entryPathway'),
     evaluationType: multi(form, 'evaluationType') ?? null,
+    // '' (the "not stated" option) posts as null, not as an empty string: the server's enum
+    // binding rejects '', and null IS the value we mean — nobody has recorded the rule.
+    eligibilityBasis: str(form, 'eligibilityBasis') ?? null,
     minGrade: num(form, 'minGrade') ?? null,
     maxGrade: num(form, 'maxGrade') ?? null,
     minAge: num(form, 'minAge') ?? null,
@@ -392,6 +395,16 @@ export function buildImportApprovalPayload(form: FormData): Record<string, unkno
   }
 
   const payload: Record<string, unknown> = { ...extras.competition, ...competition };
+
+  // Prep resources ride the approve payload since 2026-08-28 — the API creates them as
+  // sub-resources once the competition exists. They are a MAPPED key now, so they no longer arrive
+  // via `extras`: the form's rows are the only source, which is the point — a curator approves the
+  // links they actually reviewed. Omitted entirely when there are none, so an approval that
+  // touched no links sends no key rather than an empty list.
+  const resources = buildResources(form);
+  if (resources.length > 0) payload.resources = resources;
+  const faqs = buildFaqs(form);
+  if (faqs.length > 0) payload.faqs = faqs;
 
   if (str(form, 'edition_cycleLabel') !== undefined) {
     const edition: Record<string, unknown> = { ...extras.edition, ...buildFirstEdition(form) };

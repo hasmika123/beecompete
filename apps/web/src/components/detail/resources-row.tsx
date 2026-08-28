@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Badge, Info, cn } from '@beecompete/ui';
 import { ScrollRow } from '@/components/scroll-row';
 import { ResourceArt } from '@/components/detail/resource-art';
-import { resourceTypeLabel } from '@/lib/detail-display';
+import { resourceTypeLabel, youtubeThumbnail } from '@/lib/detail-display';
 import type { ResourceView } from '@/lib/catalog-types';
 
 // Resources section (blueprints Page 3.3b, → M11) + affiliate disclosure (🔒 DQ10, R1-8). A
@@ -65,6 +65,11 @@ const TYPE_TAG: Record<string, string> = {
 
 function ResourceCard({ resource }: { resource: ResourceView }) {
   const fallbackArt = TYPE_FALLBACK_ART[resource.type] ?? '/resource-art/other.svg';
+  // Art precedence: curated `imageUrl` → a YouTube link's own thumbnail → the per-type SVG. The
+  // middle rung is DERIVED from the video id in the resource's URL (owner 2026-08-28) rather than
+  // stored, so it costs nothing, cannot go stale, and cannot be a guess. ResourceArt's onError
+  // still backstops it: a thumbnail that 404s drops to the generic art like any other dead link.
+  const art = resource.imageUrl ?? youtubeThumbnail(resource.url) ?? null;
   const tagTint = TYPE_TAG[resource.type] ?? TYPE_TAG.other;
   const rel = resource.isAffiliate
     ? 'sponsored nofollow noopener noreferrer'
@@ -100,7 +105,7 @@ function ResourceCard({ resource }: { resource: ResourceView }) {
             fight it. p-2.5 insets the art: edge-to-edge the image read as a bleed panel rather
             than a picture OF something, and its top corners were the card's own. */}
         <div className="flex h-52 shrink-0 items-center justify-center bg-surface p-2.5">
-          <ResourceArt imageUrl={resource.imageUrl} fallbackSrc={fallbackArt} />
+          <ResourceArt imageUrl={art} fallbackSrc={fallbackArt} />
         </div>
         <div className="flex flex-1 flex-col gap-2 p-3">
           {/* Type is a TAG now (owner 2026-08-26), so it reads as a peer of the Affiliate chip

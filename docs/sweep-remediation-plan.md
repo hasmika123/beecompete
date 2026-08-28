@@ -22,6 +22,44 @@ _(Settled: **whole-row-click on admin tables** stays deferred — decision + rat
 
 ---
 
+## Blocked on an external gate — check back, don't plan around it
+
+### 17. Amazon product images via PA-API — **BLOCKED until the Associates account qualifies** (owner 2026-08-28)
+
+**The trigger to check:** Associates Central → **Tools → Product Advertising API**. If the account
+qualifies, that page issues an access key + secret; if it doesn't, it says so instead. The gate is
+**qualifying sales** — Amazon's documented threshold has been **3 within 180 days** of enrolling,
+and access can lapse again if sales stop. The owner is treating **10 sales** as the moment to go
+look, which is a comfortable margin over the documented number. Amazon has changed these terms
+before: **read the page, don't trust this paragraph.** Enrolled 2026-08-25, tag `beecompete-20`.
+
+**Why it is worth doing then.** Book cards on the Prep resources row currently render the generic
+per-type SVG. PA-API is the **licensed** way to show real cover art — the Associates Operating
+Agreement permits product images obtained through it, and permits no other route (scraping or
+hotlinking `m.media-amazon.com` is not a grey area, it is a breach that costs the account). It also
+solves freshness: price, availability and cover all come from the same call.
+
+**What to build when it unblocks:**
+- Server-side PA-API client (credentials via env, never committed) — `GetItems` by ASIN.
+- Populate `resource.image_url` for `BOOK` rows whose URL is an Amazon product link.
+- Honor the API's caching rules: the Operating Agreement caps how long responses may be stored and
+  requires content to be refreshed or dropped. **This is the part that makes it a scheduled job,
+  not a one-off backfill** — budget for a refresh task, and see the Neon cost note in
+  `setup-runbook.md` before pointing any recurring job at the database.
+- Leave the fallback chain intact underneath: a missing or expired image must still land on the
+  per-type SVG.
+
+**What NOT to do in the meantime:** do not scrape product images, do not let a model emit an
+`imageUrl` (both prompts forbid it and `tools/seeding` strips it — a guessed URL fails invisibly
+behind `ResourceArt`'s onError), and do not hotlink covers from publisher sites either — same
+copyright, without even an affiliate agreement to sit under. Non-Amazon merchants have the same
+shape of answer: **the affiliate network's product feed is the image licence**, per merchant.
+
+**Already done and not blocked:** YouTube thumbnails, which are derived from the video id in the
+resource's own URL (`youtubeThumbnail`, `detail-display.ts`) — no API, no key, nothing to guess.
+
+---
+
 ## Phase 2 — R2 schema/payload batch (don't build now)
 
 ### 8. Import → created-competition link — schema (additive)

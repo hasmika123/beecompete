@@ -2,6 +2,7 @@ package com.beecompete.catalog.curation;
 
 import com.beecompete.catalog.domain.CostType;
 import com.beecompete.catalog.domain.Delivery;
+import com.beecompete.catalog.domain.EligibilityBasis;
 import com.beecompete.catalog.domain.EntryPathway;
 import com.beecompete.catalog.domain.ParticipationMode;
 import com.beecompete.catalog.domain.Recurrence;
@@ -45,6 +46,9 @@ public record CompetitionRequest(
 		@NotNull Delivery delivery,
 		@NotNull EntryPathway entryPathway,
 		List<String> evaluationType,
+		// Which axis the ORGANIZER states (0023). Nullable on purpose: null is "not stated", a real
+		// state that renders as such, and NOT a default to GRADE.
+		EligibilityBasis eligibilityBasis,
 		// Grade ladder runs past high school since 2026-08-23: 13-16 = the four college years,
 		// 17 = Graduate (Q2; the single College rung was split into named years 2026-08-24).
 		@Min(-1) @Max(17) Short minGrade,
@@ -68,6 +72,28 @@ public record CompetitionRequest(
 	@AssertTrue(message = "minAge must be less than or equal to maxAge")
 	public boolean isAgeRangeValid() {
 		return minAge == null || maxAge == null || minAge <= maxAge;
+	}
+
+	/**
+	 * The stated axis has to BE there. Claiming basis GRADE with no grade range (or AGE with no age
+	 * range) would leave the card and strip with a basis they cannot render — the exact "we assert
+	 * an eligibility we do not have" failure 0023 exists to end. OPEN and null carry no range by
+	 * definition, so both are exempt.
+	 */
+	@AssertTrue(message = "eligibilityBasis must match the ranges provided: "
+			+ "GRADE needs a grade range, AGE needs an age range, BOTH needs both")
+	public boolean isEligibilityBasisBacked() {
+		boolean hasGrade = minGrade != null || maxGrade != null;
+		boolean hasAge = minAge != null || maxAge != null;
+		if (eligibilityBasis == null) {
+			return true;
+		}
+		return switch (eligibilityBasis) {
+			case GRADE -> hasGrade;
+			case AGE -> hasAge;
+			case BOTH -> hasGrade && hasAge;
+			case OPEN -> true;
+		};
 	}
 
 	@AssertTrue(message = "teamSizeMin must be less than or equal to teamSizeMax")

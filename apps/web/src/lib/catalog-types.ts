@@ -34,6 +34,8 @@ export interface CompetitionSummary {
   delivery: string;
   entryPathway: string;
   evaluationType: string[] | null;
+  /** Which axis the ORGANIZER states: 'grade' | 'age' | 'both' | 'open'; null = not stated. */
+  eligibilityBasis: string | null;
   minGrade: number | null;
   maxGrade: number | null;
   minAge: number | null;

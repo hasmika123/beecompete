@@ -31,8 +31,13 @@ export interface CompetitionCardData {
   categoryName: string;
   /** Uploaded cover image URL; falls back to the generated category art when absent. */
   coverUrl?: string;
-  /** e.g. "Grades 8–10" · "All grades" — derived by the caller (Q2 encoding lives there). */
-  gradeLabel?: string;
+  /**
+   * WHO MAY ENTER, as the organizer states it: "Grades 8–10" · "Ages 13–18" · "Open to all ages".
+   * Derived by the caller (`eligibilityLabel` — Q2 encoding and the stated-vs-derived rule live
+   * there). Absent when nothing is on record; the badge then does not render, because the card
+   * must not claim an eligibility nobody recorded (blueprints decision 99).
+   */
+  eligibilityLabel?: string;
   organizerName?: string;
   /**
    * Renders the verified seal on the organizer row. Verification is an ORGANIZATION property
@@ -91,12 +96,15 @@ export function CompetitionCard({
 
       <div className="flex flex-col gap-1 p-4 pb-3">
         {/* Slot 1 — tags, exactly one fixed-height line: the category tag truncates if needed,
-            the grade badge never shrinks (and its absence can't change the row height). */}
+            the eligibility badge never shrinks (and its absence can't change the row height).
+            The badge carries the STATED axis since blueprints decision 99 — "Ages 13–18" for an
+            not the grade range we derived from it. "Ages 13–18" is narrower than "Grades 9–12",
+            which this slot already sized for, so the swap needed no retuning. */}
         <div className="flex h-6 items-center gap-1.5 overflow-hidden">
           <CategoryTag slug={data.categorySlug} name={data.categoryName} />
-          {data.gradeLabel && (
+          {data.eligibilityLabel && (
             <Badge variant="outline" className="shrink-0">
-              {data.gradeLabel}
+              {data.eligibilityLabel}
             </Badge>
           )}
         </div>

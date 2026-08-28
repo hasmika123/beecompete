@@ -19,6 +19,7 @@ function summary(over: Partial<CompetitionSummary> & { id: string }): Competitio
     delivery: 'in_person',
     entryPathway: 'open',
     evaluationType: null,
+    eligibilityBasis: null,
     minGrade: null,
     maxGrade: null,
     minAge: null,

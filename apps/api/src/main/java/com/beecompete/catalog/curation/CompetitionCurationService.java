@@ -12,7 +12,6 @@ import com.beecompete.catalog.repository.CategoryRepository;
 import com.beecompete.catalog.repository.CompetitionRepository;
 import com.beecompete.catalog.repository.OrganizationRepository;
 import com.beecompete.catalog.service.CategoryAttributeValidator;
-import java.net.URI;
 import java.util.List;
 import java.time.Instant;
 import java.util.UUID;
@@ -156,6 +155,7 @@ public class CompetitionCurationService {
 		competition.setTeamSizeMin(request.teamSizeMin());
 		competition.setTeamSizeMax(request.teamSizeMax());
 		competition.setEvaluationType(request.evaluationType());
+		competition.setEligibilityBasis(request.eligibilityBasis());
 		competition.setMinGrade(request.minGrade());
 		competition.setMaxGrade(request.maxGrade());
 		competition.setMinAge(request.minAge());
@@ -210,7 +210,7 @@ public class CompetitionCurationService {
 							+ ". Set organizerOrgId to reuse one, or confirmNewOrganizer=true to create new.");
 		}
 		Organization created = new Organization(name, OrganizationType.HOST);
-		created.setDomain(registrableHost(request.officialUrl()));
+		created.setDomain(WebDomains.registrableHost(request.officialUrl()));
 		created.setProvenance(stamp); // same stamp as the competition; verificationState defaults CURATED
 		return organizations.save(created);
 	}
@@ -222,31 +222,6 @@ public class CompetitionCurationService {
 		}
 		String collapsed = raw.trim().replaceAll("\\s+", " ");
 		return collapsed.isEmpty() ? null : collapsed;
-	}
-
-	/**
-	 * Registrable host for the new org's domain (later the anchor for host verification, DQ11).
-	 * Naive: the URL host with a leading {@code www.} stripped (e.g. maa.org). Null-safe — a missing
-	 * or malformed URL just leaves the domain unset.
-	 */
-	private static String registrableHost(String officialUrl) {
-		if (officialUrl == null || officialUrl.isBlank()) {
-			return null;
-		}
-		String host;
-		try {
-			host = URI.create(officialUrl.trim()).getHost();
-		} catch (IllegalArgumentException e) {
-			return null;
-		}
-		if (host == null) {
-			return null;
-		}
-		host = host.toLowerCase();
-		if (host.startsWith("www.")) {
-			host = host.substring(4);
-		}
-		return host.isBlank() ? null : host;
 	}
 
 	private void validateAttributes(CompetitionRequest request) {

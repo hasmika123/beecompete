@@ -16,14 +16,131 @@ async function loadGoodPayload(): Promise<SeedPayload> {
   return normalize(raw, 'https://novamath.example.org').payload;
 }
 
-test('normalize resolves categorySlug -> categoryId and nulls description', async () => {
+test('normalize resolves categorySlug -> categoryId; an absent description stays a stated null', async () => {
   const extraction = normalize(
     JSON.parse(await readFile(fileURLToPath(fixtureUrl), 'utf8')),
     'https://novamath.example.org',
   );
   assert.equal(extraction.payload.categoryId, 'beec0000-0000-4000-8000-000000000001'); // math
+  // The fixture writes none. The KEY still has to be there — the submit contract pins the field set.
   assert.equal(extraction.payload.description, null);
   assert.equal((extraction.payload as unknown as Record<string, unknown>).categorySlug, undefined);
+});
+
+// Descriptions ride through since 2026-08-28 (owner): the extractor writes original prose from the
+// facts, matching the hand-paste prompt. It used to be forced to null here, which meant every
+// seeded listing reached the queue blank.
+test('normalize carries a model-written description, sanitized', async () => {
+  const raw = JSON.parse(await readFile(fileURLToPath(fixtureUrl), 'utf8'));
+  raw.payload.description = 'A written <script>alert(1)</script> maths contest for grades 9-12.';
+  const { payload } = normalize(raw, 'https://novamath.example.org');
+  assert.equal(
+    payload.description,
+    'A written scriptalert(1)/script maths contest for grades 9-12.',
+    'description must survive normalize, with M4 stripping < and >',
+  );
+});
+
+test('normalize sanitizes resource titles but never rewrites their URLs', async () => {
+  const raw = JSON.parse(await readFile(fileURLToPath(fixtureUrl), 'utf8'));
+  raw.payload.resources = [
+    { title: 'Past <b>papers</b>', url: 'https://example.org/past?a=1&b=2', type: 'PAST_PAPER' },
+  ];
+  const { payload } = normalize(raw, 'https://novamath.example.org');
+  const rows = (payload as unknown as Record<string, unknown>).resources as Record<
+    string,
+    unknown
+  >[];
+  assert.equal(rows[0]!.title, 'Past bpapers/b');
+  // Stripping characters out of a URL would silently produce a DIFFERENT link.
+  assert.equal(rows[0]!.url, 'https://example.org/past?a=1&b=2');
+});
+
+test('validatePayload rejects unusable resource rows and any self-declared affiliate link', async () => {
+  const payload = await loadGoodPayload();
+  const p = payload as unknown as Record<string, unknown>;
+  p.resources = [
+    { title: 'No url', type: 'GUIDE' },
+    { title: 'Bad url', url: 'not-a-url', type: 'GUIDE' },
+    { title: 'Bad type', url: 'https://example.org/x', type: 'PODCAST' },
+    { title: 'Tagged', url: 'https://amazon.com/dp/1', type: 'BOOK', isAffiliate: true },
+  ];
+  const { ok, errors } = validatePayload(payload);
+  assert.equal(ok, false);
+  assert.ok(errors.some((e) => e.includes('resources[0].url')));
+  assert.ok(errors.some((e) => e.includes('resources[1].url')));
+  assert.ok(errors.some((e) => e.includes('resources[2].type')));
+  // The affiliate flag is a legal claim; the extractor has no business making it.
+  assert.ok(errors.some((e) => e.includes('resources[3].isAffiliate')));
+});
+
+test('normalize drops a guessed resource imageUrl', async () => {
+  // Both prompts forbid it. A model that emits one anyway must not have it published: the value
+  // can only be a guess, and ResourceArt's onError fallback makes a guessed URL fail INVISIBLY.
+  const raw = JSON.parse(await readFile(fileURLToPath(fixtureUrl), 'utf8'));
+  raw.payload.resources = [
+    {
+      title: 'Prep book',
+      url: 'https://www.amazon.com/dp/123',
+      type: 'BOOK',
+      imageUrl: 'https://m.media-amazon.com/images/I/totally-made-up.jpg',
+    },
+  ];
+  const { payload } = normalize(raw, 'https://novamath.example.org');
+  const rows = (payload as unknown as Record<string, unknown>).resources as Record<
+    string,
+    unknown
+  >[];
+  assert.equal(rows[0]!.imageUrl, undefined);
+  assert.equal(rows[0]!.url, 'https://www.amazon.com/dp/123', 'the link itself is untouched');
+});
+
+test('validatePayload rejects FAQ rows missing either half', async () => {
+  const payload = await loadGoodPayload();
+  const p = payload as unknown as Record<string, unknown>;
+  p.faqs = [
+    { question: 'No answer?' },
+    { answer: 'No question.' },
+    { question: 'x'.repeat(501), answer: 'Too long a question.' },
+  ];
+  const { ok, errors } = validatePayload(payload);
+  assert.equal(ok, false);
+  assert.ok(errors.some((e) => e.includes('faqs[0].answer')));
+  assert.ok(errors.some((e) => e.includes('faqs[1].question')));
+  assert.ok(errors.some((e) => e.includes('faqs[2].question')));
+});
+
+test('normalize sanitizes both halves of an FAQ row', async () => {
+  const raw = JSON.parse(await readFile(fileURLToPath(fixtureUrl), 'utf8'));
+  raw.payload.faqs = [{ question: 'Who <b>enters</b>?', answer: 'Grades <i>9-12</i>.' }];
+  const { payload } = normalize(raw, 'https://novamath.example.org');
+  const rows = (payload as unknown as Record<string, unknown>).faqs as Record<string, unknown>[];
+  assert.equal(rows[0]!.question, 'Who benters/b?');
+  assert.equal(rows[0]!.answer, 'Grades i9-12/i.');
+});
+
+test('validatePayload accepts a well-formed faq list', async () => {
+  const payload = await loadGoodPayload();
+  const p = payload as unknown as Record<string, unknown>;
+  p.faqs = [{ question: 'Who can enter?', answer: 'Students in grades 9-12.' }];
+  const { ok, errors } = validatePayload(payload);
+  assert.equal(ok, true, `expected valid, got: ${errors.join(' | ')}`);
+});
+
+test('validatePayload accepts a well-formed resource list', async () => {
+  const payload = await loadGoodPayload();
+  const p = payload as unknown as Record<string, unknown>;
+  p.resources = [
+    { title: 'Official past papers', url: 'https://example.org/past', type: 'PAST_PAPER' },
+    {
+      title: 'Prep book',
+      url: 'https://www.amazon.com/dp/0977304561',
+      type: 'BOOK',
+      isAffiliate: false,
+    },
+  ];
+  const { ok, errors } = validatePayload(payload);
+  assert.equal(ok, true, `expected valid, got: ${errors.join(' | ')}`);
 });
 
 test('a good extracted record passes schema + spine validation', async () => {

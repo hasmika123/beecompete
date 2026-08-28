@@ -16,6 +16,14 @@ export interface FormState {
   error?: string;
 }
 
+/**
+ * Create-organization result. Carries the created row so the caller can show it and — in the
+ * add-a-listing flow — select it immediately, without a page refresh to re-fetch the list.
+ */
+export interface OrganizationFormState extends FormState {
+  organization?: Organization;
+}
+
 export const PARTICIPATION_MODES = ['INDIVIDUAL', 'TEAM', 'BOTH'] as const;
 export const DELIVERIES = ['IN_PERSON', 'VIRTUAL', 'HYBRID'] as const;
 // Widened 2026-08-23 (owner): school/chapter split, EITHER renamed OPEN. Legacy EITHER is NOT
@@ -28,6 +36,12 @@ export const ENTRY_PATHWAYS = [
   'SCHOOL_OR_CHAPTER',
   'OPEN',
 ] as const;
+// Which axis the ORGANIZER states (0023, glossary "Eligibility basis"). The stated axis is what
+// every summary surface renders; the other, when present, is a derived search range and must never
+// be shown as a rule. Absent (null) is a real state — "not stated" — and NOT a default to GRADE.
+export const ELIGIBILITY_BASES = ['GRADE', 'AGE', 'BOTH', 'OPEN'] as const;
+export type EligibilityBasis = (typeof ELIGIBILITY_BASES)[number];
+
 export const COST_TYPES = ['FREE', 'PAID'] as const;
 export const RECURRENCES = ['ANNUAL', 'ONE_OFF', 'ROLLING'] as const;
 // Org trust ladder (R1-19): CURATED (unclaimed) → CLAIMED → VERIFIED. Competitions have no
@@ -108,6 +122,8 @@ export interface Competition {
   delivery: string;
   entryPathway: string;
   evaluationType: string[] | null;
+  /** Which axis the ORGANIZER states: 'GRADE' | 'AGE' | 'BOTH' | 'OPEN'; null = not stated. */
+  eligibilityBasis: EligibilityBasis | null;
   minGrade: number | null;
   maxGrade: number | null;
   minAge: number | null;

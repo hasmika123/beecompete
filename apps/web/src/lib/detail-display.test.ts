@@ -10,6 +10,7 @@ import {
   prizeLabel,
   regOpensAt,
   scopeLabel,
+  youtubeThumbnail,
 } from '@/lib/detail-display';
 import type { CompetitionDetail, EditionView } from '@/lib/catalog-types';
 
@@ -269,5 +270,54 @@ describe('displayUrl', () => {
   it("never truncates — shortening is the layout's job, so a copied link stays real", () => {
     const long = `https://example.org/${'a'.repeat(120)}`;
     expect(displayUrl(long)).toHaveLength(long.length - 'https://'.length);
+  });
+});
+
+// Derived from the id in the resource's own URL (owner 2026-08-28) — a pure function of the link,
+// so it never needs a fetch, an API key, or a model's guess. The id pattern is the security
+// boundary: this builds a URL from caller-supplied text.
+describe('youtubeThumbnail', () => {
+  const THUMB = 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg';
+
+  it('reads the id from every shape a YouTube link takes', () => {
+    for (const url of [
+      'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      'https://youtube.com/watch?v=dQw4w9WgXcQ&t=42s',
+      'https://m.youtube.com/watch?v=dQw4w9WgXcQ',
+      'https://youtu.be/dQw4w9WgXcQ',
+      'https://www.youtube.com/shorts/dQw4w9WgXcQ',
+      'https://www.youtube.com/embed/dQw4w9WgXcQ',
+      'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+    ]) {
+      expect(youtubeThumbnail(url), url).toBe(THUMB);
+    }
+  });
+
+  it('is undefined for anything that is not a YouTube video', () => {
+    for (const url of [
+      'https://example.org/watch?v=dQw4w9WgXcQ', // right shape, wrong host
+      'https://www.youtube.com/@somechannel', // a channel, not a video
+      'https://www.youtube.com/', // no id at all
+      'not a url',
+      '',
+      null,
+      undefined,
+    ]) {
+      expect(youtubeThumbnail(url as string | null | undefined), String(url)).toBeUndefined();
+    }
+  });
+
+  it('refuses an id that is not exactly 11 valid characters', () => {
+    // The guard that keeps arbitrary pasted text out of an image URL we render.
+    expect(youtubeThumbnail('https://youtu.be/short')).toBeUndefined();
+    expect(youtubeThumbnail('https://youtu.be/waaaaaaaaaaaaytoolong')).toBeUndefined();
+    expect(youtubeThumbnail('https://youtu.be/bad!!chars$')).toBeUndefined();
+    expect(youtubeThumbnail('https://www.youtube.com/watch?v=../../etc/pw')).toBeUndefined();
+  });
+
+  it('ignores a non-http scheme even on a YouTube host', () => {
+    expect(
+      youtubeThumbnail('javascript:alert(1)//youtube.com/watch?v=dQw4w9WgXcQ'),
+    ).toBeUndefined();
   });
 });

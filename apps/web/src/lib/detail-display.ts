@@ -516,3 +516,58 @@ export function ageLabel(
     ? range
     : `${range} (as of ${anchored.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })})`;
 }
+
+/**
+ * A YouTube video's thumbnail, DERIVED from the id already sitting in the resource's own URL
+ * (owner 2026-08-28). No fetch, no API key, and — the point — nothing to guess: unlike an Amazon
+ * image id or an `og:image`, this URL is a pure function of the link we were given, so it is
+ * computed in code rather than asked of a model that could only hallucinate it.
+ *
+ * Rendered, never STORED: `imageUrl` stays whatever a curator set, and this fills the gap at
+ * display time. That keeps a value we never verified out of the database and means the day
+ * YouTube changes the pattern, one function changes rather than every stored row going stale.
+ *
+ * `hqdefault` on purpose — `maxresdefault` is higher-resolution but only exists for some uploads,
+ * and a 404 there would drop the card to generic art for no reason. hqdefault exists for every
+ * video, and the art box contains rather than crops it, so its 4:3 frame renders whole.
+ *
+ * ⚠ The id pattern is the security boundary. This builds a URL from caller-supplied text, so only
+ * an exact 11-character YouTube id may reach the output — never an arbitrary substring of a URL a
+ * curator or a model pasted.
+ */
+const YOUTUBE_HOSTS = new Set([
+  'youtube.com',
+  'www.youtube.com',
+  'm.youtube.com',
+  'youtu.be',
+  'www.youtu.be',
+  'youtube-nocookie.com',
+  'www.youtube-nocookie.com',
+]);
+const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
+
+export function youtubeThumbnail(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return undefined;
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return undefined;
+  if (!YOUTUBE_HOSTS.has(parsed.hostname.toLowerCase())) return undefined;
+
+  const segments = parsed.pathname.split('/').filter(Boolean);
+  // youtu.be/<id> puts the id in the path; every youtube.com form either uses ?v= or a
+  // /<kind>/<id> path (shorts, embed, live, v).
+  const candidate = parsed.hostname.toLowerCase().endsWith('youtu.be')
+    ? segments[0]
+    : (parsed.searchParams.get('v') ??
+      (segments.length >= 2 && ['shorts', 'embed', 'live', 'v'].includes(segments[0]!)
+        ? segments[1]
+        : undefined));
+
+  return candidate && YOUTUBE_ID.test(candidate)
+    ? `https://i.ytimg.com/vi/${candidate}/hqdefault.jpg`
+    : undefined;
+}

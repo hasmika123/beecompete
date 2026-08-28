@@ -6,7 +6,7 @@ const DATA = {
   href: '/c/amc-10',
   categorySlug: 'math',
   categoryName: 'Math',
-  gradeLabel: 'Grades 8–10',
+  eligibilityLabel: 'Grades 8–10',
   organizerName: 'MAA',
   organizerVerified: true,
   blurb: 'The classic 25-question contest.',
@@ -57,7 +57,7 @@ describe('CompetitionCard', () => {
           organizerName: undefined,
           organizerVerified: undefined,
           blurb: undefined,
-          gradeLabel: undefined,
+          eligibilityLabel: undefined,
         }}
       />,
     );

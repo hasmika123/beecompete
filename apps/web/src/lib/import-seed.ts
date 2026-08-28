@@ -19,11 +19,14 @@
 import { DEFAULT_TIMEZONE, instantToZonedWallClock } from '@/lib/dates';
 import {
   COST_TYPES,
+  ELIGIBILITY_BASES,
+  type EligibilityBasis,
   DELIVERIES,
   ENTRY_PATHWAYS,
   KEY_DATE_TYPES,
   PARTICIPATION_MODES,
   RECURRENCES,
+  RESOURCE_TYPES,
   SCOPE_LEVELS,
 } from '@/lib/admin-types';
 
@@ -51,6 +54,8 @@ export interface CompetitionSeed {
   costType: string;
   recurrence: string;
   evaluationType: string[] | null;
+  /** Which axis the organizer states; null when the extraction didn't say (pre-0023 payloads). */
+  eligibilityBasis: EligibilityBasis | null;
   teamSizeMin: number | null;
   teamSizeMax: number | null;
   minGrade: number | null;
@@ -85,11 +90,43 @@ export interface KeyDateSeed {
   label: string;
 }
 
+/**
+ * A prep-resource row (books, past papers, guides, videos) the payload suggested. Optional
+ * everywhere: an extraction routinely has none, and the form starts with one blank row when so.
+ *
+ * ⚠ `isAffiliate` is a CLAIM ABOUT THE LINK, not a wish. It is true only when the URL already
+ * carries our Amazon Associates tag — a bare amazon.com link earns nothing and must not render the
+ * disclosure, and an unflagged tagged link is an FTC problem (compliance.md, DQ10). The paste
+ * prompt therefore emits plain links with `isAffiliate: false` and tells the curator to tick the
+ * box at the same moment they swap the tagged URL in.
+ */
+export interface ResourceSeed {
+  title: string;
+  url: string;
+  type: string;
+  isAffiliate: boolean;
+  imageUrl: string;
+}
+
+/**
+ * A suggested FAQ entry. The ANSWER is prose we publish under our own name and it renders with
+ * FAQPage structured data, so it carries the same rule as the description: our words, grounded in
+ * stated facts. A curator reads every one before approval.
+ */
+export interface FaqSeed {
+  question: string;
+  answer: string;
+}
+
 export interface ImportSeed {
   competition: CompetitionSeed;
   /** null when the payload described no running — the form then offers to add one. */
   edition: EditionSeed | null;
   keyDates: KeyDateSeed[];
+  /** Prep resources from the payload; empty when it suggested none. */
+  resources: ResourceSeed[];
+  /** Suggested FAQ entries; empty when the payload had none. */
+  faqs: FaqSeed[];
   regionIds: string[];
   /** The organizer as extracted, when it hasn't already been resolved to an org id. */
   organizerName: string | null;
@@ -141,6 +178,12 @@ function token(value: unknown, allowed: readonly string[], fallback: string): st
   return s !== null && allowed.includes(s) ? s : fallback;
 }
 
+/** Like {@link token} but with no fallback: an absent or unrecognized value stays null. */
+function optionalToken<T extends string>(value: unknown, allowed: readonly T[]): T | null {
+  const s = text(value)?.toUpperCase();
+  return s != null && (allowed as readonly string[]).includes(s) ? (s as T) : null;
+}
+
 // --- the mapping ------------------------------------------------------------------------------
 
 /** Payload keys the form has a control for — everything else is preserved as an extra. */
@@ -161,6 +204,7 @@ const MAPPED_COMPETITION_KEYS = new Set([
   'delivery',
   'entryPathway',
   'evaluationType',
+  'eligibilityBasis',
   'minGrade',
   'maxGrade',
   'minAge',
@@ -169,6 +213,8 @@ const MAPPED_COMPETITION_KEYS = new Set([
   'recurrence',
   'attributes',
   // Seeding extras the form renders in their own sections.
+  'resources',
+  'faqs',
   'edition',
   'keyDates',
   'regionIds',
@@ -216,6 +262,11 @@ export function splitImportPayload(payload: Record<string, unknown>): ImportSeed
       costType: token(payload.costType, COST_TYPES, 'FREE'),
       recurrence: token(payload.recurrence, RECURRENCES, 'ANNUAL'),
       evaluationType: strings(payload.evaluationType),
+      // Read-either-shape, same approach as the retired `summary` and the singular `entryPathway`:
+      // the ~56 payloads extracted before 0023 carry no basis at all, and a missing one is NULL
+      // ("not stated"), never a default to GRADE — defaulting is exactly how a derived grade range
+      // would go on publishing itself as the organizer's rule.
+      eligibilityBasis: optionalToken(payload.eligibilityBasis, ELIGIBILITY_BASES),
       teamSizeMin: int(payload.teamSizeMin),
       teamSizeMax: int(payload.teamSizeMax),
       minGrade: int(payload.minGrade),
@@ -237,6 +288,8 @@ export function splitImportPayload(payload: Record<string, unknown>): ImportSeed
       ageCutoffDate: text(edition.ageCutoffDate) ?? '',
     },
     keyDates: keyDateSeeds(payload.keyDates),
+    resources: resourceSeeds(payload.resources),
+    faqs: faqSeeds(payload.faqs),
     regionIds: strings(payload.regionIds) ?? [],
     organizerName: text(payload.organizerOrgId) ? null : text(payload.organizerName),
     extras: {
@@ -255,6 +308,45 @@ export function splitImportPayload(payload: Record<string, unknown>): ImportSeed
  * PREVIOUS calendar day — turning "Nov. 3" on the page into "Nov 2" in the form on most date-only
  * extractions. (Same reasoning as the raw-JSON edition panel.)
  */
+function resourceSeeds(value: unknown): ResourceSeed[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((raw): ResourceSeed[] => {
+    const row = obj(raw);
+    if (!row) return [];
+    // Title AND url or nothing: the submit path skips incomplete rows anyway, so a half row would
+    // only look like data the curator has to clear by hand.
+    const title = text(row.title);
+    const url = text(row.url);
+    if (title === null || url === null) return [];
+    const type = text(row.type)?.toUpperCase() ?? '';
+    return [
+      {
+        title,
+        url,
+        // An unrecognized type falls back to OTHER rather than dropping the row — the link is the
+        // valuable part and the curator can retype a dropdown in one click.
+        type: (RESOURCE_TYPES as readonly string[]).includes(type) ? type : 'OTHER',
+        isAffiliate: row.isAffiliate === true,
+        imageUrl: text(row.imageUrl) ?? '',
+      },
+    ];
+  });
+}
+
+function faqSeeds(value: unknown): FaqSeed[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((raw): FaqSeed[] => {
+    const row = obj(raw);
+    if (!row) return [];
+    // Both halves or neither: a question with no answer is worse than no row — it would publish an
+    // unanswered question on the listing's FAQ tab.
+    const question = text(row.question);
+    const answer = text(row.answer);
+    if (question === null || answer === null) return [];
+    return [{ question, answer }];
+  });
+}
+
 function keyDateSeeds(value: unknown): KeyDateSeed[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((raw): KeyDateSeed[] => {

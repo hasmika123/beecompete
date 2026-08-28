@@ -7,11 +7,13 @@ import {
   COST_TYPES,
   DELIVERIES,
   EDITION_STATUSES,
+  ELIGIBILITY_BASES,
   ENTRY_PATHWAYS,
   EVALUATION_TOKENS,
   KEY_DATE_TYPES,
   PARTICIPATION_MODES,
   RECURRENCES,
+  RESOURCE_TYPES,
   SCOPE_LEVELS,
   type CompetitionPayload,
   type EditionPayload,
@@ -282,6 +284,82 @@ function validateSpine(p: CompetitionPayload, errors: string[], warnings: string
           `unknown evaluationType token(s): ${bad.join(', ')} — allowed: ${EVALUATION_TOKENS.join(', ')}`,
         );
       }
+    }
+  }
+
+  // Eligibility basis: which axis the page states. Absent is VALID and means "the page doesn't
+  // say" — the one thing that is not allowed is an unrecognized token silently sailing through.
+  if (p.eligibilityBasis != null && !ELIGIBILITY_BASES.includes(p.eligibilityBasis as never)) {
+    errors.push(
+      `unknown eligibilityBasis: ${String(p.eligibilityBasis)} — allowed: ${ELIGIBILITY_BASES.join(', ')}`,
+    );
+  }
+  // The stated axis has to be backed by the range it claims, mirroring the server's @AssertTrue:
+  // a payload claiming AGE with no age range publishes a rule it cannot show.
+  const hasGrade = isNum(p.minGrade) || isNum(p.maxGrade);
+  const hasAge = isNum(p.minAge) || isNum(p.maxAge);
+  if (p.eligibilityBasis === 'GRADE' && !hasGrade) {
+    errors.push('eligibilityBasis GRADE needs a grade range');
+  }
+  if (p.eligibilityBasis === 'AGE' && !hasAge) {
+    errors.push('eligibilityBasis AGE needs an age range');
+  }
+  if (p.eligibilityBasis === 'BOTH' && !(hasGrade && hasAge)) {
+    errors.push('eligibilityBasis BOTH needs both a grade range and an age range');
+  }
+
+  // Prep resources (2026-08-28). Absent is fine — plenty of competitions have little written
+  // about them, and the prompt says so explicitly. What is NOT fine is a malformed row reaching a
+  // curator's review screen looking like a real link.
+  if (p.resources != null) {
+    if (!Array.isArray(p.resources)) {
+      errors.push('resources must be an array');
+    } else {
+      p.resources.forEach((r, i) => {
+        const at = `resources[${i}]`;
+        if (r === null || typeof r !== 'object' || Array.isArray(r)) {
+          errors.push(`${at} must be an object`);
+          return;
+        }
+        if (typeof r.title !== 'string' || r.title.trim() === '') {
+          errors.push(`${at}.title is required`);
+        }
+        if (typeof r.url !== 'string' || !/^https?:\/\/\S+$/i.test(r.url.trim())) {
+          errors.push(`${at}.url must be an absolute http(s) URL`);
+        }
+        if (!RESOURCE_TYPES.includes(r.type as never)) {
+          errors.push(`${at}.type must be one of: ${RESOURCE_TYPES.join(', ')}`);
+        }
+        // A tagged link is a legal disclosure obligation (compliance DQ10). The extractor has no
+        // business claiming one: tags are added by a curator, who ticks the box at the same time.
+        if (r.isAffiliate === true) {
+          errors.push(`${at}.isAffiliate must be false — affiliate tagging is a curator step`);
+        }
+      });
+    }
+  }
+
+  // FAQ entries (2026-08-28). Absent is fine. A row missing either half is not: an unanswered
+  // question would publish on the listing's FAQ tab, with FAQPage markup on it.
+  if (p.faqs != null) {
+    if (!Array.isArray(p.faqs)) {
+      errors.push('faqs must be an array');
+    } else {
+      p.faqs.forEach((f, i) => {
+        const at = `faqs[${i}]`;
+        if (f === null || typeof f !== 'object' || Array.isArray(f)) {
+          errors.push(`${at} must be an object`);
+          return;
+        }
+        if (typeof f.question !== 'string' || f.question.trim() === '') {
+          errors.push(`${at}.question is required`);
+        } else if (f.question.length > 500) {
+          errors.push(`${at}.question must be <= 500 characters`);
+        }
+        if (typeof f.answer !== 'string' || f.answer.trim() === '') {
+          errors.push(`${at}.answer is required`);
+        }
+      });
     }
   }
 

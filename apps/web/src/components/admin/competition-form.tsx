@@ -18,6 +18,7 @@ import {
   ImageUpload,
   Info,
   Input,
+  Modal,
   Plus,
   ProgressRing,
   Select,
@@ -33,6 +34,8 @@ import { RegionSelect } from '@/components/admin/region-select';
 import { AwardsInput, awardRowsFromSeed } from '@/components/admin/awards-input';
 import { TagsInput } from '@/components/admin/tags-input';
 import { enumLabel, enumOptions } from '@/components/admin/enum-labels';
+import { OrganizationForm } from '@/components/admin/organization-form';
+import { OrganizationCreatedModal } from '@/components/admin/organization-created-modal';
 import { GRADE_VALUES, gradeOptionLabel } from '@/lib/catalog-display';
 import { defaultKeyDateLabel } from '@/lib/detail-display';
 import { uploadCoverImage } from '@/lib/cover-upload';
@@ -43,6 +46,7 @@ import { DEFAULT_TIMEZONE } from '@/lib/dates';
 import {
   ADMIN_TIMEZONES,
   COST_TYPES,
+  ELIGIBILITY_BASES,
   DELIVERIES,
   ENTRY_PATHWAYS,
   EVALUATION_TYPES,
@@ -76,6 +80,23 @@ function slugify(s: string): string {
 
 // Eligibility dropdown options. "" = "Any" (open on that side, posts null). Grade uses the SAME
 // ladder as the marketplace grade filter (GRADE_VALUES); age runs 0…99 with 99 shown as "99+".
+/**
+ * Eligibility-basis choices, spelled out rather than run through `enumOptions` — twice over. The
+ * shared humanizer maps BOTH → "Individual or team" and OPEN → "Open to all" (participation and
+ * entry-pathway wording), which would be actively wrong here; and this is the one control whose
+ * whole job is to make a curator think about WHOSE rule they are recording, so each option says it.
+ *
+ * '' is a real, savable value: not stated. It leads, because it is where an un-curated listing
+ * honestly sits until someone checks the official page.
+ */
+const ELIGIBILITY_BASIS_OPTIONS = [
+  { value: '', label: 'Not stated — nobody has checked yet' },
+  { value: 'GRADE', label: 'Grades — the page gives grades' },
+  { value: 'AGE', label: 'Ages — the page gives ages' },
+  { value: 'BOTH', label: 'Both — the page gives grades AND ages' },
+  { value: 'OPEN', label: 'Open — the page says there is no age or grade limit' },
+];
+
 const GRADE_OPTIONS = [
   { value: '', label: 'Any' },
   ...GRADE_VALUES.map((g) => ({ value: String(g), label: gradeOptionLabel(g) })),
@@ -189,6 +210,25 @@ const REQUIRED_KEY_DATE_TYPES = ['REG_OPEN', 'REG_CLOSE', 'SUBMISSION_DUE', 'RES
 /** Case- and whitespace-insensitive org-name key — mirrors the server's normalize on resolve. */
 const orgNameKey = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
 
+/**
+ * Registrable host of a URL, for PREFILLING the new-organization form's Official website field.
+ *
+ * A convenience copy of the server's `WebDomains.registrableHost` — not a second source of truth:
+ * whatever is submitted is normalized again server-side, so the worst a disagreement here can do is
+ * show a curator a slightly different default before they save. Kept local for that reason; if a
+ * third caller ever appears, promote it to a lib module rather than copying it again.
+ */
+function registrableHost(url: string | undefined): string | undefined {
+  if (!url || url.trim() === '') return undefined;
+  try {
+    const host = new URL(url.trim()).hostname.toLowerCase();
+    const bare = host.startsWith('www.') ? host.slice(4) : host;
+    return bare === '' ? undefined : bare;
+  } catch {
+    return undefined;
+  }
+}
+
 export function CompetitionForm({
   competition,
   mode = competition ? 'edit' : 'create',
@@ -260,8 +300,49 @@ export function CompetitionForm({
     : [];
   const exactOrganizer = organizerNameMatches.find((o) => !o.archivedAt);
   const archivedOrganizer = exactOrganizer ? undefined : organizerNameMatches[0];
+  // Organizations created WITHOUT leaving this form (owner 2026-08-28). `organizations` is a
+  // server prop, so a new row could not appear in the dropdown until the page re-rendered — which
+  // is why creating one used to mean a new tab and a refresh, and why curators saw the new
+  // organization missing until they reloaded. Merging locally is what makes it appear instantly,
+  // and it is also what PROTECTS the half-filled listing: a router.refresh() would re-render this
+  // form from the server and take every unsaved field with it.
+  const [createdOrgs, setCreatedOrgs] = useState<Organization[]>([]);
+  // Two phases, deliberately separate: the form, then its confirmation. `justCreatedOrg` outlives
+  // `addingOrg` so the success message sits over the LISTING form, not over the org form.
+  const [addingOrg, setAddingOrg] = useState(false);
+  const [justCreatedOrg, setJustCreatedOrg] = useState<Organization | null>(null);
+
+  // ORGANIZER RESOLUTION FOR A PASTED LISTING (owner 2026-08-28). A payload names its organizer as
+  // TEXT, and the form needs an id — so an unmatched name used to surface only as a blocking
+  // warning telling the curator to go sort it out themselves. It now opens as the first thing they
+  // see, with the decision already laid out: reuse one of these, or create it.
+  //
+  // SIMILAR = containment either way, case-insensitive. That mirrors the server's resolve-or-create
+  // guard (CompetitionCurationService: `findByNameContainingIgnoreCase`, "no fuzzy/acronym matching,
+  // no auto-merge — a wrong merge is worse than a duplicate") and widens it by ONE step, matching
+  // the reverse direction too so "Mathematical Association of America (MAA)" surfaces the plain
+  // "Mathematical Association of America". Deliberately not fuzzier: these are candidates a human
+  // picks from, and a tempting-but-wrong suggestion is how two organizations become one by accident.
+  const similarOrganizers = extractedOrganizer
+    ? [...organizations, ...createdOrgs].filter((o) => {
+        if (o.archivedAt) return false;
+        const a = orgNameKey(o.name);
+        const b = orgNameKey(extractedOrganizer);
+        return a !== b && (a.includes(b) || b.includes(a));
+      })
+    : [];
+  // Opens on MOUNT, via a state initializer rather than an effect: the form is remounted per paste
+  // (`key={pasteCount}`), so "is this a fresh paste with an unresolved organizer" is knowable at
+  // first render and needs no post-render correction.
+  const [resolvingOrg, setResolvingOrg] = useState(
+    () => importing === false && extractedOrganizer !== null && exactOrganizer === undefined,
+  );
+
   const categoryOptions = categories.map((cat) => ({ value: cat.id, label: cat.name }));
-  const orgOptions = organizations.map((o) => ({ value: o.id, label: o.name }));
+  const orgOptions = [...organizations, ...createdOrgs].map((o) => ({
+    value: o.id,
+    label: o.name,
+  }));
   // Organizer is mandatory now (create, edit and import alike) — no "— none —" escape hatch. The
   // server rejects an empty organizer, and every listing carries one after migration 0012.
   //
@@ -293,6 +374,9 @@ export function CompetitionForm({
   // Cost drives the fee fields (item 17): a FREE competition has no entry fee, so the fee +
   // currency inputs are hidden and dropped from the required-ring. Controlled so the toggle is live.
   const [costType, setCostType] = useState(c?.costType ?? 'FREE');
+  // Which axis the ORGANIZER states (0023). '' = not stated, and it is a legitimate saved value:
+  // a curator who cannot find the rule must be able to leave it unanswered rather than pick one.
+  const [eligibilityBasis, setEligibilityBasis] = useState<string>(c?.eligibilityBasis ?? '');
   const isFree = costType === 'FREE';
 
   // Delivery + scope feed the region picker's soft assist (item 22) — controlled for that only.
@@ -358,10 +442,39 @@ export function CompetitionForm({
     question: string;
     answer: string;
   }
-  const [resourceRows, setResourceRows] = useState<ResourceRow[]>([
-    { key: 0, title: '', url: '', type: 'GUIDE', affiliate: false, image: '' },
-  ]);
-  const [faqRows, setFaqRows] = useState<FaqRow[]>([{ key: 0, question: '', answer: '' }]);
+  // Seeded from the payload when one suggested resources (the paste prompt asks for ~5 prep links
+  // plus 2-3 Amazon ones), otherwise the single blank row the editor has always opened with. A
+  // trailing blank row is appended so the editor is still ready to type after a seeded set.
+  const [resourceRows, setResourceRows] = useState<ResourceRow[]>(() => {
+    const seeded = (seed?.resources ?? []).map((r, i) => ({
+      key: i,
+      title: r.title,
+      url: r.url,
+      type: r.type,
+      affiliate: r.isAffiliate,
+      image: r.imageUrl,
+    }));
+    return [
+      ...seeded,
+      {
+        key: seeded.length,
+        title: '',
+        url: '',
+        type: 'GUIDE',
+        affiliate: false,
+        image: '',
+      },
+    ];
+  });
+  // Seeded like the resource rows, with the same trailing blank so the editor stays ready to type.
+  const [faqRows, setFaqRows] = useState<FaqRow[]>(() => {
+    const seeded = (seed?.faqs ?? []).map((f, i) => ({
+      key: i,
+      question: f.question,
+      answer: f.answer,
+    }));
+    return [...seeded, { key: seeded.length, question: '', answer: '' }];
+  });
   const patchResourceRow = (key: number, patch: Partial<ResourceRow>) =>
     setResourceRows((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
   const patchFaqRow = (key: number, patch: Partial<FaqRow>) =>
@@ -817,9 +930,11 @@ export function CompetitionForm({
                   value={organizerOrgId}
                   onValueChange={(v) => {
                     if (v === ADD_ORG) {
-                      // Open the add-organization form in a new tab so the in-progress listing isn't
-                      // lost; refresh this page afterward to pick the new org from the list.
-                      window.open('/admin/organizations/new', '_blank', 'noopener,noreferrer');
+                      // Opens OVER this form rather than in a new tab (owner 2026-08-28). The tab
+                      // kept the listing safe only by leaving it behind: the curator then had to
+                      // come back and reload, which lost the listing anyway. A modal never unmounts
+                      // this form, so every field typed so far is still here afterward.
+                      setAddingOrg(true);
                       return;
                     }
                     setOrganizerOrgId(v);
@@ -880,7 +995,7 @@ export function CompetitionForm({
     {
       id: 'administration',
       label: 'Administration',
-      meta: 'Sign-up · cost · delivery',
+      meta: 'Sign-up · entry fee · delivery',
       // NOT hideOnEdit: delivery/cost/recurrence are competition-level and must stay editable.
       // The seasonal fields inside (location, fee, sign-up link, scope) carry their own !editing
       // guards — those are edited per-edition on the Editions tab.
@@ -909,7 +1024,7 @@ export function CompetitionForm({
               />
             </FormField>
           )}
-          <FormField label="Cost" labelAsText>
+          <FormField label="Entry fee" labelAsText>
             <div className="flex items-start gap-2">
               <Select
                 name="costType"
@@ -1110,6 +1225,25 @@ export function CompetitionForm({
         // other requirements) carry the structured-mode gate; in raw-JSON mode they drop out and
         // the rest repacks, so the table above holds for the create/import form specifically.
         <div className="grid gap-4 sm:grid-cols-2">
+          {/* Row 0 — WHICH AXIS IS THE RULE (0023, blueprints decision 99). Full width and first,
+              because it governs the two ranges under it: whichever axis is not stated becomes a
+              derived search range and is never published as a rule. Leaving it unanswered is
+              allowed and honest — the listing then reads "Not stated" rather than "All grades". */}
+          <FormField
+            label="What does the organizer state?"
+            labelAsText
+            className="sm:col-span-2"
+            hintAs="icon"
+            hint="the axis the official page actually gives. Pick Ages when the page says “ages 13–18” even if you also fill a grade range — that range is then ours, used for filtering and never shown as the rule."
+          >
+            <Select
+              name="eligibilityBasis"
+              options={ELIGIBILITY_BASIS_OPTIONS}
+              value={eligibilityBasis}
+              onValueChange={setEligibilityBasis}
+              aria-label="What does the organizer state?"
+            />
+          </FormField>
           {/* Row 1 — the two ranges. Min+max share a cell so the row reads as two bands, not
               four loose selects; the range error hangs off the cell that owns both ends. */}
           <FormField label="Grades" labelAsText error={eligErrors.minGrade}>
@@ -1656,16 +1790,19 @@ export function CompetitionForm({
     },
     // Resources + FAQ (owner 2026-08-25): the two curated extras the create flow never collected
     // — both previously reachable only via the edit page's managers AFTER a save, which meant a
-    // second trip for data the curator had on screen during the first. Create-only: the edit page
-    // keeps its managers (they edit rows in place), and import review hides this step outright
-    // because the approve response carries no competition id to hang the sub-posts off
-    // (hideOnImport — no controls beats controls that silently discard).
+    // second trip for data the curator had on screen during the first. The edit page keeps its
+    // managers (they edit rows in place), so this step stays create/import-only.
+    //
+    // IMPORT REVIEW SHOWS THIS STEP (2026-08-28). It used to be hidden outright because approve
+    // could not persist a sub-resource; ImportReviewService now creates the payload's `resources`
+    // AND `faqs` rows after the competition exists, and the S3 extractor suggests both — so hiding
+    // them would mean approving links and published answers a curator never saw. The rule the step
+    // was built on is unchanged, it just points the other way now: controls that persist, or none.
     {
       id: 'extras',
       label: 'Resources & FAQ',
       meta: 'Prep links · questions',
       hideOnEdit: true,
-      hideOnImport: true,
       content: (
         <div className="grid gap-6">
           <FormField
@@ -2237,6 +2374,96 @@ export function CompetitionForm({
           </Alert>
         )}
       </form>
+
+      {/* ADD AN ORGANIZATION WITHOUT LEAVING THIS LISTING (owner 2026-08-28).
+          Both modals render OUTSIDE the <form> above — Modal portals to document.body anyway, but
+          keeping them out of the element tree also keeps the nested form's fields out of this
+          form's submission. Nothing here unmounts the listing form, which is the whole point: a
+          curator four steps into a listing can create the organizer and carry on where they were. */}
+      {/* STEP 1 — the pasted payload named an organizer we have no id for. Reuse or create, decided
+          before anything else, because every other field is reviewable without it and this one is
+          not. Dismissing (✕/Escape) is allowed and lands on the form with the Organizer field
+          empty: the required-ring already says it is missing, and forcing a choice here would trap
+          a curator who wants to look at the rest of the listing first. */}
+      <Modal
+        open={resolvingOrg}
+        onClose={() => setResolvingOrg(false)}
+        title="Which organization runs this?"
+        description={
+          similarOrganizers.length > 0
+            ? `The JSON names “${extractedOrganizer}”. Nothing matches it exactly, but these are close — reuse one, or create it as new.`
+            : `The JSON names “${extractedOrganizer}”, and no organization matches. Create it, or pick a different one on the form.`
+        }
+        className="max-w-lg"
+      >
+        <div className="grid gap-2">
+          {similarOrganizers.map((org) => (
+            <button
+              key={org.id}
+              type="button"
+              onClick={() => {
+                setOrganizerOrgId(org.id);
+                setResolvingOrg(false);
+              }}
+              className="flex flex-col items-start gap-0.5 rounded-[var(--radius-field)] border border-border p-3 text-left transition-colors hover:border-muted/50 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              <span className="text-sm font-medium text-foreground">{org.name}</span>
+              <span className="text-xs text-muted">
+                {enumLabel(org.type)}
+                {org.domain ? ` · ${org.domain}` : ''}
+              </span>
+            </button>
+          ))}
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Button
+              variant={similarOrganizers.length > 0 ? 'secondary' : 'primary'}
+              onClick={() => {
+                setResolvingOrg(false);
+                setAddingOrg(true);
+              }}
+            >
+              <Plus aria-hidden="true" className="size-4" />
+              Add “{extractedOrganizer}” as new
+            </Button>
+            <Button variant="ghost" onClick={() => setResolvingOrg(false)}>
+              I’ll choose on the form
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={addingOrg}
+        onClose={() => setAddingOrg(false)}
+        title="New organization"
+        description="It’s selected as this listing’s organizer as soon as it’s created."
+        className="max-w-lg"
+      >
+        <OrganizationForm
+          prefill={{
+            // Prefilled from the payload so a curator confirms rather than retypes. The domain
+            // mirrors what the SERVER would infer for an auto-created org (registrable host of the
+            // official URL), so both routes to a new organization land on the same value.
+            name: extractedOrganizer ?? undefined,
+            domain: registrableHost(c?.officialUrl ?? undefined),
+          }}
+          onCreated={(org) => {
+            // Order matters: merge into the options BEFORE selecting, or the Select is handed a
+            // value that isn't in its list yet and renders blank.
+            setCreatedOrgs((prev) => [...prev, org]);
+            // No `mark()` here: organizer readiness is DERIVED (`orgChosen`), not a `filled` flag,
+            // so selecting the row is all the required-ring needs.
+            setOrganizerOrgId(org.id);
+            setAddingOrg(false);
+            setJustCreatedOrg(org);
+          }}
+        />
+      </Modal>
+      <OrganizationCreatedModal
+        organization={justCreatedOrg}
+        onClose={() => setJustCreatedOrg(null)}
+        returnLabel="Back to the listing"
+      />
     </div>
   );
 }

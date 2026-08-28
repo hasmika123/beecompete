@@ -171,6 +171,7 @@ public class CorrectionApplyService {
 						c.getOfficialUrl(), c.getLogo(), c.getDescription(),
 						c.getCategory().getId(), c.getTags(), c.getParticipationMode(), c.getTeamSizeMin(),
 						c.getTeamSizeMax(), c.getDelivery(), c.getEntryPathway(), c.getEvaluationType(),
+						c.getEligibilityBasis(),
 						c.getMinGrade(), c.getMaxGrade(), c.getMinAge(), c.getMaxAge(), c.getCostType(),
 						c.getRecurrence(), c.getAttributes());
 			}

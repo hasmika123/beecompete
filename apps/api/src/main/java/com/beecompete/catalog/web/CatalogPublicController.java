@@ -257,7 +257,8 @@ public class CatalogPublicController {
 	public record CompetitionSummary(UUID id, String slug, String name, String blurb, String logo,
 			CategoryView category, OrganizerView organizer, List<String> tags, String participationMode,
 			Short teamSizeMin, Short teamSizeMax, String delivery, String entryPathway,
-			List<String> evaluationType, Short minGrade, Short maxGrade, Short minAge, Short maxAge,
+			List<String> evaluationType, String eligibilityBasis, Short minGrade, Short maxGrade,
+			Short minAge, Short maxAge,
 			String costType, String recurrence, String verificationState, ProvenanceView provenance,
 			Instant nextDeadline, String prizeSummary, List<String> regions) {
 
@@ -268,7 +269,8 @@ public class CatalogPublicController {
 					new CategoryView(c.getCategory().getSlug(), c.getCategory().getName()),
 					OrganizerView.from(c.getOrganizer()), c.getTags(), token(c.getParticipationMode()),
 					c.getTeamSizeMin(), c.getTeamSizeMax(), token(c.getDelivery()), token(c.getEntryPathway()),
-					c.getEvaluationType(), c.getMinGrade(), c.getMaxGrade(), c.getMinAge(), c.getMaxAge(),
+					c.getEvaluationType(), token(c.getEligibilityBasis()), c.getMinGrade(), c.getMaxGrade(),
+					c.getMinAge(), c.getMaxAge(),
 					token(c.getCostType()), token(c.getRecurrence()), token(c.getVerificationState()),
 					ProvenanceView.from(c.getProvenance()), item.nextDeadline(), item.prizeSummary(),
 					item.regions());
@@ -350,7 +352,8 @@ public class CatalogPublicController {
 	public record CompetitionDetail(UUID id, String slug, String name, String description,
 			String officialUrl, String logo, CategoryView category, OrganizerView organizer, List<String> tags,
 			String participationMode, Short teamSizeMin, Short teamSizeMax, String delivery,
-			String entryPathway, List<String> evaluationType, Short minGrade, Short maxGrade, Short minAge,
+			String entryPathway, List<String> evaluationType, String eligibilityBasis, Short minGrade,
+			Short maxGrade, Short minAge,
 			Short maxAge, String costType, String recurrence, Map<String, Object> attributes,
 			String verificationState, ProvenanceView provenance, List<EditionView> editions,
 			List<ResourceView> resources, List<FaqView> faqs) {
@@ -362,7 +365,8 @@ public class CatalogPublicController {
 					new CategoryView(c.getCategory().getSlug(), c.getCategory().getName()),
 					OrganizerView.from(c.getOrganizer()), c.getTags(), token(c.getParticipationMode()),
 					c.getTeamSizeMin(), c.getTeamSizeMax(), token(c.getDelivery()), token(c.getEntryPathway()),
-					c.getEvaluationType(), c.getMinGrade(), c.getMaxGrade(), c.getMinAge(), c.getMaxAge(),
+					c.getEvaluationType(), token(c.getEligibilityBasis()), c.getMinGrade(), c.getMaxGrade(),
+					c.getMinAge(), c.getMaxAge(),
 					token(c.getCostType()), token(c.getRecurrence()), c.getAttributes(),
 					token(c.getVerificationState()), ProvenanceView.from(c.getProvenance()), editions,
 					resources.stream().map(ResourceView::from).toList(),
