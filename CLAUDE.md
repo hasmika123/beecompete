@@ -104,7 +104,7 @@ per-competition Follow · Host Waitlist · Claim Request (a form emailing
 `https://beecompete.com` (+ `www`→apex) and `https://staging.beecompete.com`. Infra =
 `infra/docker-compose.{edge,staging,prod}.yml` + `infra/Caddyfile` (edge owns 80/443 on the `web_edge`
 network; per-stack files run web+api only; Neon is off-box). Pipeline = **build-once-promote**: staging
-on a `main` push, prod on an `R*` tag (currently **R1.2**). Authoritative as-built + every gotcha: the
+on a `main` push, prod on an `R*` tag (currently **R1.6**). Authoritative as-built + every gotcha: the
 "Current deployment — AS BUILT" section in `setup-runbook.md`.
 
 **R1-17 launch activation DONE (2026-07-18):** analytics live (Cloudflare Web Analytics + PostHog,
