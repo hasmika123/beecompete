@@ -51,6 +51,7 @@ import {
   ENTRY_PATHWAYS,
   EVALUATION_TYPES,
   KEY_DATE_TYPES,
+  SPAN_KEY_DATE_TYPES,
   PARTICIPATION_MODES,
   RECURRENCES,
   RESOURCE_TYPES,
@@ -1657,7 +1658,14 @@ export function CompetitionForm({
                             name={`keydate_${i}_type`}
                             options={enumOptions(KEY_DATE_TYPES)}
                             value={row.type}
-                            onValueChange={(v) => patchKeyDateRow(row.key, { type: v })}
+                            onValueChange={(v) =>
+                              // Drop any end date when moving to a type that cannot span, so a
+                              // value typed under the old type can't post from a hidden field.
+                              patchKeyDateRow(row.key, {
+                                type: v,
+                                ...(SPAN_KEY_DATE_TYPES.includes(v) ? {} : { endDate: '' }),
+                              })
+                            }
                           />
                         </FormField>
                         <FormField
@@ -1699,27 +1707,32 @@ export function CompetitionForm({
                             className="w-full min-w-0"
                           />
                         </FormField>
-                        <FormField
-                          label="Ends"
-                          hintAs="icon"
-                          hint="optional — only for a milestone that runs over more than one day (a two-day finals). Leave empty for a single day; it ends at end-of-day in the zone below."
-                          className="min-w-36 flex-1"
-                          error={
-                            row.endDate !== '' && row.date !== '' && row.endDate <= row.date
-                              ? 'Must be after the start date.'
-                              : undefined
-                          }
-                        >
-                          <Input
-                            name={`keydate_${i}_enddate`}
-                            type="date"
-                            disabled={row.tbd}
-                            min={row.date || undefined}
-                            value={row.endDate}
-                            onChange={(e) => patchKeyDateRow(row.key, { endDate: e.target.value })}
-                            className="w-full min-w-0"
-                          />
-                        </FormField>
+                        {/* Only for the types that can actually span days — see
+                            SPAN_KEY_DATE_TYPES. "Registration closes" is an instant, and offering
+                            it an end date invited a value that means nothing. */}
+                        {SPAN_KEY_DATE_TYPES.includes(row.type) && (
+                          <FormField
+                            label="Ends"
+                            hintAs="icon"
+                            hint="optional — only for a milestone that runs over more than one day (a two-day finals). Leave empty for a single day; it ends at end-of-day in the zone below."
+                            className="min-w-36 flex-1"
+                            error={
+                              row.endDate !== '' && row.date !== '' && row.endDate <= row.date
+                                ? 'Must be after the start date.'
+                                : undefined
+                            }
+                          >
+                            <Input
+                              name={`keydate_${i}_enddate`}
+                              type="date"
+                              disabled={row.tbd}
+                              min={row.date || undefined}
+                              value={row.endDate}
+                              onChange={(e) => patchKeyDateRow(row.key, { endDate: e.target.value })}
+                              className="w-full min-w-0"
+                            />
+                          </FormField>
+                        )}
                         {row.tbd && <input type="hidden" name={`keydate_${i}_tbd`} value="on" />}
                         <button
                           type="button"
