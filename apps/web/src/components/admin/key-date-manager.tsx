@@ -12,7 +12,7 @@ import {
   useConfirm,
   useToast,
 } from '@beecompete/ui';
-import { enumLabel, enumOptions } from '@/components/admin/enum-labels';
+import { enumLabel, keyDateOptions } from '@/components/admin/enum-labels';
 import { addKeyDate, deleteKeyDate } from '@/app/admin/competitions/[id]/editions/actions';
 import { formatInZone, keyDateZone } from '@/lib/dates';
 import {
@@ -116,7 +116,7 @@ export function KeyDateManager({
         <FormField label="Type">
           <Select
             name="type"
-            options={enumOptions(KEY_DATE_TYPES)}
+            options={keyDateOptions(KEY_DATE_TYPES)}
             value={type}
             onValueChange={setType}
           />

@@ -256,6 +256,14 @@ A listing is only useful with a running attached, so also fill these INSIDE "pay
     reconstruct later. Optional on the other types, to name an unusual milestone.
 
 ### DATE RULES — read carefully, these matter more than completeness
+- **SWEEP FIRST, CLASSIFY SECOND.** Before you pick any type, list every date the page states about
+  THIS competition — including the ones with no obvious home. Then give each one a row. A date you
+  cannot fit to a named type becomes a CUSTOM row; it is never a dropped row. The named types and
+  the canonical labels below are the COMMON shapes, not the full set of things a competition
+  schedules.
+  Do NOT sweep in: page metadata ("last updated", copyright years), dates belonging to a DIFFERENT
+  competition the same organizer runs, dates from a PAST year's running, and dates sitting in
+  navigation or footer boilerplate.
 - **A milestone you know exists but cannot date MUST be emitted with startsAt: null.** That is the
   supported "date TBD" encoding, not a failure. "Registration opens in the fall" => a REG_OPEN row
   with startsAt null.
@@ -282,10 +290,28 @@ A listing is only useful with a running attached, so also fill these INSIDE "pay
   factual label.** The five named types cover the common shape of a competition, not every one:
   qualifying and regional rounds, awards ceremonies, mandatory information sessions, team-formation
   or intent-to-enter deadlines, project-plan approvals, shipping/mailing deadlines and finals week
-  all belong on the timeline as CUSTOM rows. Label them the way the page names them ("Regional
-  qualifier", "Awards ceremony", "Research plan due"), 2-4 words, no sentences. Every date rule
-  above applies unchanged — a CUSTOM milestone you cannot date is still startsAt: null, never a
-  guess. ROUND_START exists for a competition round proper; use CUSTOM when nothing else fits.
+  all belong on the timeline as CUSTOM rows. Every date rule above applies unchanged — a CUSTOM
+  milestone you cannot date is still startsAt: null, never a guess. ROUND_START exists for a
+  competition round proper; use CUSTOM when nothing else fits.
+- **CUSTOM labels: use the CANONICAL spelling when the milestone is one of these kinds, even when
+  the page words it differently.** Different pages call the same thing different things, and a
+  timeline that says "Early Bird Registration Discount Deadline" on one listing and "Early
+  registration ends" on the next reads as two unrelated milestones. Match the KIND, then use our
+  wording verbatim:
+    * Early-bird deadline  (a discounted or reduced registration cutoff)
+    * Intent to enter due  (declare you are entering, before real registration)
+    * Research plan due    (a plan/proposal approved before you may begin work)
+    * Team roster due      (teams locked; no member changes after this)
+    * Regional qualifier   (a qualifying round feeding a later level)
+    * Info session         (a briefing, webinar or Q&A for entrants)
+    * Awards ceremony      (results presented at an event)
+    * Materials due        (physical work posted or delivered)
+  Only when NONE of these is the kind of thing the page describes, write the page's own wording in
+  2-4 words, no sentences — "Finals week", "Coaches meeting", "Lab safety review", "Photo day".
+  That residual case is EXPECTED, not a failure: it is how anything unusual reaches the timeline at
+  all, so reach for it rather than forcing an odd milestone into a label that nearly fits.
+  The canonical label replaces the page's phrasing; it never replaces a DATE, and it never licenses
+  inventing a milestone the page does not mention.
 
 ## rules
 - Output valid JSON only. Use null (not empty strings) for unknown scalar fields; omit unknown attribute keys.

@@ -229,6 +229,13 @@ Convert carefully: "high school" → 9–12; "grades 6-8" → 6–8; "middle and
 instead, use minAge/maxAge and leave the grade fields null. Never fill both from one statement unless the source states both.
 
 ### DATE RULES — read these twice
+- **SWEEP FIRST, CLASSIFY SECOND.** Before picking any type, list every date the source states about
+  THIS competition — including ones with no obvious home. Then give each a row. A date you can't fit
+  to a named type becomes a CUSTOM row; it is never a dropped row. The named types and the canonical
+  labels below are the COMMON shapes, not the full set of things a competition schedules.
+  Do NOT sweep in: page metadata ("last updated", copyright years), dates belonging to a DIFFERENT
+  competition the same organizer runs, dates from a PAST year's running, and dates in navigation or
+  footer boilerplate.
 - `startsAt` must be a FULL ISO-8601 instant WITH a time: "2026-11-03T00:00:00Z". A bare
   "2026-11-03" is rejected outright. When the source gives a day but no clock time, use
   T00:00:00Z and say so in your notes.
@@ -250,10 +257,32 @@ instead, use minAge/maxAge and leave the grade fields null. Never fill both from
   and a short factual `label`.** The named types cover the common shape of a competition, not every
   one: qualifying and regional rounds, awards ceremonies, mandatory info sessions, team-formation or
   intent-to-enter deadlines, project-plan approvals, mailing deadlines and finals week all belong on
-  the timeline as CUSTOM rows. Label them the way the source names them ("Regional qualifier",
-  "Awards ceremony", "Research plan due") — 2-4 words, no sentences. Every date rule above still
-  applies: a CUSTOM milestone you can't date is `"startsAt": null`, never a guess. Use `ROUND_START`
-  for a competition round proper, and CUSTOM when nothing else fits.
+  the timeline as CUSTOM rows. Every date rule above still applies: a CUSTOM milestone you can't
+  date is `"startsAt": null`, never a guess. Use `ROUND_START` for a competition round proper, and
+  CUSTOM when nothing else fits.
+- **CUSTOM labels: use the CANONICAL spelling when the milestone is one of these kinds, even when
+  the source words it differently.** Different sites call the same thing different things, and a
+  timeline reading "Early Bird Registration Discount Deadline" on one listing and "Early
+  registration ends" on the next looks like two unrelated milestones. Match the KIND, then use our
+  wording verbatim:
+
+  | canonical `label`  | use it when the milestone is…                          |
+  | ------------------ | ------------------------------------------------------ |
+  | `Early-bird deadline` | a discounted or reduced registration cutoff         |
+  | `Intent to enter due` | declaring you are entering, before real registration |
+  | `Research plan due`   | a plan/proposal approved before you may begin work   |
+  | `Team roster due`     | teams locked; no member changes after this          |
+  | `Regional qualifier`  | a qualifying round feeding a later level            |
+  | `Info session`        | a briefing, webinar or Q&A for entrants             |
+  | `Awards ceremony`     | results presented at an event                       |
+  | `Materials due`       | physical work posted or delivered                   |
+
+  Only when NONE of these is the kind of thing the source describes, write the source's own wording
+  in 2-4 words, no sentences — "Finals week", "Coaches meeting", "Lab safety review", "Photo day".
+  That residual case is EXPECTED, not a failure: it is how anything unusual reaches the timeline at
+  all, so reach for it rather than forcing an odd milestone into a label that nearly fits.
+  The canonical label replaces the source's PHRASING — never a date, and never a licence to invent a
+  milestone the source does not mention.
 - **`ROUND_START` also REQUIRES a `label`**, by the same rule and for the same reason: unlabelled, the
   public timeline can only say "Round begins", which tells a student nothing about which round.
   Name it the way the source does ("National Finals", "Day 1 written round") — 2-4 words.

@@ -35,7 +35,7 @@ import { FormSection, SubSectionHeading } from '@/components/admin/form-section'
 import { RegionSelect } from '@/components/admin/region-select';
 import { AwardsInput, awardRowsFromSeed } from '@/components/admin/awards-input';
 import { TagsInput } from '@/components/admin/tags-input';
-import { enumLabel, enumOptions } from '@/components/admin/enum-labels';
+import { enumLabel, enumOptions, keyDateOptions } from '@/components/admin/enum-labels';
 import { OrganizationForm } from '@/components/admin/organization-form';
 import { OrganizationCreatedModal } from '@/components/admin/organization-created-modal';
 import { GRADE_VALUES, gradeOptionLabel } from '@/lib/catalog-display';
@@ -2028,7 +2028,12 @@ export function CompetitionForm({
                       keyDateDragKey === row.key && 'bg-brand-gold-soft/50 opacity-80',
                     )}
                   >
-                    <div className="mt-7 flex shrink-0 items-center gap-1">
+                    {/* Top-left of the row, not centred on the first control band (owner
+                        2026-08-30). The grip and the position number are row-level chrome — they
+                        belong to the whole milestone, not to the Milestone field they used to sit
+                        beside — and anchoring them to the top keeps them in one place as the row
+                        grows or shrinks (an "Ends" field appearing, an error wrapping). */}
+                    <div className="flex shrink-0 items-center gap-1 self-start pt-0.5">
                       {/* The grip appears ONLY on rows with no date to sort them by (owner
                           2026-08-24): once a milestone has a date the calendar owns its position,
                           so offering a handle there would promise a reorder that snaps back. TBD
@@ -2070,7 +2075,7 @@ export function CompetitionForm({
                         >
                           <Select
                             name={`keydate_${i}_type`}
-                            options={enumOptions(KEY_DATE_TYPES)}
+                            options={keyDateOptions(KEY_DATE_TYPES)}
                             value={row.type}
                             onValueChange={(v) =>
                               // Drop any end date when moving to a type that cannot span, so a
@@ -2149,21 +2154,6 @@ export function CompetitionForm({
                             />
                           </FormField>
                         )}
-                        {row.tbd && <input type="hidden" name={`keydate_${i}_tbd`} value="on" />}
-                        <button
-                          type="button"
-                          aria-pressed={row.tbd}
-                          aria-label={`Key date ${i + 1} date is TBD`}
-                          onClick={() => patchKeyDateRow(row.key, { tbd: !row.tbd })}
-                          className={cn(
-                            'h-10 shrink-0 rounded-[var(--radius-field)] border px-2.5 text-xs font-semibold transition-colors',
-                            row.tbd
-                              ? 'border-primary bg-surface-raised text-foreground'
-                              : 'border-border text-muted hover:bg-background hover:text-foreground',
-                          )}
-                        >
-                          TBD
-                        </button>
                         <FormField label="Time" className="w-28 shrink-0">
                           <Input
                             name={`keydate_${i}_time`}
@@ -2183,6 +2173,24 @@ export function CompetitionForm({
                             onValueChange={(v) => patchKeyDateRow(row.key, { timezone: v })}
                           />
                         </FormField>
+                        {/* Last on the line (owner 2026-08-30): TBD is a verdict on the three
+                            fields to its left — "we checked, none of this is published yet" — so it
+                            reads after them rather than interrupting date → time → zone. */}
+                        {row.tbd && <input type="hidden" name={`keydate_${i}_tbd`} value="on" />}
+                        <button
+                          type="button"
+                          aria-pressed={row.tbd}
+                          aria-label={`Key date ${i + 1} date is TBD`}
+                          onClick={() => patchKeyDateRow(row.key, { tbd: !row.tbd })}
+                          className={cn(
+                            'h-10 shrink-0 rounded-[var(--radius-field)] border px-2.5 text-xs font-semibold transition-colors',
+                            row.tbd
+                              ? 'border-primary bg-surface-raised text-foreground'
+                              : 'border-border text-muted hover:bg-background hover:text-foreground',
+                          )}
+                        >
+                          TBD
+                        </button>
                       </div>
                     </div>
                     {/* Dimmed until hover/focus — present for touch and keyboard, quiet otherwise
@@ -2195,7 +2203,7 @@ export function CompetitionForm({
                         type="button"
                         aria-label={`Remove key date ${i + 1}`}
                         onClick={() => removeKeyDateRow(row.key)}
-                        className="mt-7 grid size-7 shrink-0 place-items-center self-start rounded text-muted opacity-50 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 hover:bg-background hover:text-danger"
+                        className="mt-0.5 grid size-7 shrink-0 place-items-center self-start rounded text-muted opacity-50 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 hover:bg-background hover:text-danger"
                       >
                         <Trash aria-hidden="true" className="size-3.5" />
                       </button>
