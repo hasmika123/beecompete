@@ -173,6 +173,18 @@ function validateKeyDates(dates: KeyDatePayload[], errors: string[], warnings: s
     if (typeof d.timezone === 'string' && d.timezone.length > MAX_TIMEZONE) {
       errors.push(`${at}.timezone exceeds ${MAX_TIMEZONE} chars`);
     }
+    // A ROUND_START or CUSTOM row carries no meaning without the page's own name for it (owner
+    // 2026-08-30): unlabelled, the public timeline can only render the type — "Round begins" — which
+    // says nothing about WHICH round. Unlike every other extraction gap this one is unrecoverable
+    // without re-reading the source page, so it is surfaced at extraction time rather than left for
+    // a later cleanup. A WARNING, not an error: the server accepts the row, and the curator can name
+    // it during review.
+    if (
+      (d.type === 'ROUND_START' || d.type === 'CUSTOM') &&
+      (typeof d.label !== 'string' || d.label.trim() === '')
+    ) {
+      warnings.push(`${at} is ${d.type} with no label — name the round/milestone as the page does`);
+    }
     const start = checkInstant(errors, `${at}.startsAt`, d.startsAt);
     const end = checkInstant(errors, `${at}.endsAt`, d.endsAt);
     // Server @AssertTrue: an endsAt without a startsAt, or before it, is rejected.

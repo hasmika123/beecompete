@@ -514,6 +514,34 @@ test('an all-TBD timeline is valid but flagged for curator lookup', async () => 
   );
 });
 
+test('an unlabelled ROUND_START warns — the timeline can only say "Round begins"', async () => {
+  const payload = await loadGoodPayload();
+  payload.keyDates = [
+    { type: 'REG_CLOSE', startsAt: '2026-03-01T00:00:00Z' },
+    { type: 'ROUND_START', startsAt: '2026-04-01T00:00:00Z', endsAt: '2026-04-02T00:00:00Z' },
+  ];
+  const { ok, warnings } = validatePayload(payload);
+  // Not an error: the server accepts the row and a curator can name it at review.
+  assert.equal(ok, true);
+  assert.ok(
+    warnings.some((w) => w.includes('ROUND_START with no label')),
+    `expected the unlabelled-round warning, got: ${warnings.join(' | ')}`,
+  );
+});
+
+test('a LABELLED round is accepted without the warning', async () => {
+  const payload = await loadGoodPayload();
+  payload.keyDates = [
+    { type: 'REG_CLOSE', startsAt: '2026-03-01T00:00:00Z' },
+    { type: 'ROUND_START', startsAt: '2026-04-01T00:00:00Z', label: 'National Finals' },
+  ];
+  const { warnings } = validatePayload(payload);
+  assert.ok(
+    !warnings.some((w) => w.includes('no label')),
+    `expected no unlabelled warning, got: ${warnings.join(' | ')}`,
+  );
+});
+
 test('a timeline with no deadline row warns that the card will show none', async () => {
   const payload = await loadGoodPayload();
   payload.keyDates = [{ type: 'ROUND_START', startsAt: '2026-03-01T00:00:00Z' }];

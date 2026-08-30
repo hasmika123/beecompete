@@ -185,7 +185,7 @@ Anything worth knowing that fits none of the above — including things you noti
       "startsAt": "2026-11-03T00:00:00Z",           // FULL ISO instant, or null for TBD
       "endsAt": null,                               // only for a milestone spanning days
       "timezone": null,                             // null BECAUSE the source gave a day, no time
-      "label": null                                 // only for CUSTOM, or to name an odd milestone
+      "label": null                                 // required on CUSTOM + ROUND_START; else optional
     },
     {
       "type": "SUBMISSION_DUE",
@@ -199,7 +199,7 @@ Anything worth knowing that fits none of the above — including things you noti
       "startsAt": "2027-03-20T16:00:00Z",
       "endsAt": "2027-03-21T23:00:00Z",
       "timezone": null,
-      "label": null
+      "label": "National Finals"                    // REQUIRED on ROUND_START — name the round
     },
     {
       "type": "RESULTS",
@@ -248,6 +248,9 @@ instead, use minAge/maxAge and leave the grade fields null. Never fill both from
   "Awards ceremony", "Research plan due") — 2-4 words, no sentences. Every date rule above still
   applies: a CUSTOM milestone you can't date is `"startsAt": null`, never a guess. Use `ROUND_START`
   for a competition round proper, and CUSTOM when nothing else fits.
+- **`ROUND_START` also REQUIRES a `label`**, by the same rule and for the same reason: unlabelled, the
+  public timeline can only say "Round begins", which tells a student nothing about which round.
+  Name it the way the source does ("National Finals", "Day 1 written round") — 2-4 words.
 - `edition.ageCutoffDate` is the exception: it is a plain date, "2026-10-31", with no time.
 
 ### resources — how someone actually prepares

@@ -241,8 +241,12 @@ A listing is only useful with a running attached, so also fill these INSIDE "pay
   - ageCutoffDate (string|null): ISO yyyy-mm-dd, only if the page states an eligibility cutoff date.
 - keyDates (array|null): the running's timeline. One entry per milestone the page mentions:
   - type (REQUIRED): one of ${KEY_DATE_TYPES.join(', ')}.
-  - startsAt (ISO-8601 instant|null), endsAt (|null), timezone (IANA, e.g. "America/New_York"|null),
-    label (string|null, only for CUSTOM or to name an unusual milestone).
+  - startsAt (ISO-8601 instant|null), endsAt (|null), timezone (IANA, e.g. "America/New_York"|null).
+  - label (string|null): **REQUIRED for CUSTOM and for ROUND_START.** Name the round or event the
+    way the page names it — "National Finals", "Regional qualifier", "Day 1 written round" — 2-4
+    words, no sentences. Without a label the timeline can only say "Round begins", which tells a
+    student nothing about WHICH round; the page's own name for it is information we cannot
+    reconstruct later. Optional on the other types, to name an unusual milestone.
 
 ### DATE RULES — read carefully, these matter more than completeness
 - **A milestone you know exists but cannot date MUST be emitted with startsAt: null.** That is the
