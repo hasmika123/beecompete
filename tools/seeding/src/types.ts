@@ -151,7 +151,7 @@ export interface EditionPayload {
 /**
  * A typed row on the edition's timeline — mirrors `CompetitionWithEditionRequest.FirstEditionKeyDate`.
  *
- * `startsAt` null means "this milestone exists, the date is not yet known" (TBD, R1-18). That
+ * `startsAt` null means "this key date exists, the date is not yet known" (TBD, R1-18). That
  * encoding is REQUIRED rather than optional: a guessed deadline on a minors-facing catalog can make
  * a student miss a real one, so an unknown date must stay unknown. See the prompt's date rules.
  */

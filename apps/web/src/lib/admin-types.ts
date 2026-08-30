@@ -55,7 +55,7 @@ export const SCOPE_LEVELS = [
   'VIRTUAL',
 ] as const;
 /**
- * The milestone types that can SPAN days, and so are the only ones offered an end date (owner
+ * The key date types that can SPAN days, and so are the only ones offered an end date (owner
  * 2026-08-30, `docs/timeline-model-plan.md` §9).
  *
  * The rest are instants — "registration closes", "results announced" — and an end date on them is
@@ -63,7 +63,7 @@ export const SCOPE_LEVELS = [
  * prompted the question that plan answers. Live data agrees: of 52 key dates only 3 carry an
  * `endsAt`, all of them ROUND_START.
  *
- * CUSTOM stays here because it is the only escape hatch for a genuine multi-day milestone
+ * CUSTOM stays here because it is the only escape hatch for a genuine multi-day key date
  * ("finals week") until the plan's generic PERIOD type exists.
  */
 export const SPAN_KEY_DATE_TYPES: readonly string[] = ['ROUND_START', 'CUSTOM'];
@@ -183,7 +183,7 @@ export interface KeyDate {
   id: string;
   type: string;
   label: string | null;
-  /** null = TBD (R1-18): the milestone exists but its date isn't known yet. */
+  /** null = TBD (R1-18): the key date exists but its date isn't known yet. */
   startsAt: string | null;
   endsAt: string | null;
   timezone: string | null;

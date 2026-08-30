@@ -333,13 +333,13 @@ function endsAtFor(
 
 /**
  * The first edition's typed key dates from the form's indexed row fields (`keydate_0_type`,
- * `keydate_0_date`, …) — item 21. Per row: TBD (checkbox) records the milestone with no date; a
+ * `keydate_0_date`, …) — item 21. Per row: TBD (checkbox) records the key date with no date; a
  * typed wall-clock is converted in the admin's chosen zone (never the server's — same rule as
  * addKeyDate), with the time defaulting to end-of-day when only a date is given. Rows with neither
  * a date nor TBD are skipped (an empty "Add date" row posts nothing). The server re-validates the
  * list (including the REG_CLOSE/SUBMISSION_DUE requirement on the admin create path).
  *
- * A row may also carry an END date, for a milestone spanning days (a two-day finals). It posts as
+ * A row may also carry an END date, for a key date spanning days (a two-day finals). It posts as
  * end-of-day in the same zone, and ONLY when it is strictly after `startsAt` — the server's
  * {@code endsAt must be after startsAt} assertion. The form shows an inline error for an earlier
  * end rather than relying on that 400; this used to be hardcoded null, so a range entered at

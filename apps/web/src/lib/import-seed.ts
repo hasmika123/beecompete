@@ -82,7 +82,7 @@ export interface EditionSeed {
 export interface KeyDateSeed {
   type: string;
   date: string;
-  /** Calendar day the milestone ends on, for a multi-day row; '' when it is a single day. */
+  /** Calendar day the key date ends on, for a multi-day row; '' when it is a single day. */
   endDate: string;
   time: string;
   timezone: string;
@@ -380,7 +380,7 @@ function keyDateSeeds(value: unknown): KeyDateSeed[] {
     const row = obj(raw);
     if (!row) return [];
     const type = text(row.type);
-    // A row whose type isn't a real milestone can't be posted back; the warnings surface it.
+    // A row whose type isn't a real key date can't be posted back; the warnings surface it.
     if (type === null || !(KEY_DATE_TYPES as readonly string[]).includes(type)) return [];
     const timezone = text(row.timezone) ?? 'UTC';
     const wall = instantToZonedWallClock(text(row.startsAt), timezone);
@@ -453,7 +453,7 @@ export function importSeedWarnings(
   if (dropped > 0) {
     warnings.push({
       key: 'keyDates',
-      message: `${dropped} extracted key date${dropped === 1 ? '' : 's'} had an unusable milestone type and ${dropped === 1 ? 'was' : 'were'} left out. Check the raw payload.`,
+      message: `${dropped} extracted key date${dropped === 1 ? '' : 's'} had an unusable type and ${dropped === 1 ? 'was' : 'were'} left out. Check the raw payload.`,
     });
   }
   if (
@@ -470,7 +470,7 @@ export function importSeedWarnings(
     warnings.push({
       key: 'allTbd',
       message:
-        'Every extracted date is TBD. That is the correct extraction for a page that never dated its milestones — it just means someone has to look them up.',
+        'Every extracted date is TBD. That is the correct extraction for a page that never dated its key dates — it just means someone has to look them up.',
     });
   }
 

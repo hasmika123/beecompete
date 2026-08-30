@@ -39,7 +39,7 @@ public class KeyDate {
 	@Column(length = 200)
 	private String label;
 
-	// Nullable = "TBD" (R1-18): the milestone exists but its date isn't known yet.
+	// Nullable = "TBD" (R1-18): the key date exists but its date isn't known yet.
 	@Column(name = "starts_at")
 	private Instant startsAt;
 

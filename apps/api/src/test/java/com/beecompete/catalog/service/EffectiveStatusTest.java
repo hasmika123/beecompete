@@ -41,7 +41,7 @@ class EffectiveStatusTest {
 		assertEquals(EditionStatus.CLOSED, EffectiveStatus.compute(EditionStatus.OPEN, submissionPassed, NOW));
 
 		// …but REG_CLOSE wins when both exist: a future REG_CLOSE keeps it open even if a
-		// submission milestone already passed (multi-round shapes).
+		// submission key date already passed (multi-round shapes).
 		List<KeyDate> both = List.of(date(KeyDateType.SUBMISSION_DUE, NOW.minus(1, ChronoUnit.HOURS)),
 				date(KeyDateType.REG_CLOSE, NOW.plus(5, ChronoUnit.DAYS)));
 		assertEquals(EditionStatus.OPEN, EffectiveStatus.compute(EditionStatus.OPEN, both, NOW));
@@ -71,7 +71,7 @@ class EffectiveStatusTest {
 		List<KeyDate> tbdClose = List.of(date(KeyDateType.REG_CLOSE, null));
 		assertEquals(EditionStatus.OPEN, EffectiveStatus.compute(EditionStatus.OPEN, tbdClose, NOW));
 
-		// A real passed deadline still closes even when a TBD milestone is also present.
+		// A real passed deadline still closes even when a TBD key date is also present.
 		List<KeyDate> mixed = List.of(date(KeyDateType.REG_CLOSE, null),
 				date(KeyDateType.SUBMISSION_DUE, NOW.minus(1, ChronoUnit.HOURS)));
 		assertEquals(EditionStatus.CLOSED, EffectiveStatus.compute(EditionStatus.OPEN, mixed, NOW));

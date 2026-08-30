@@ -183,7 +183,7 @@ function validateKeyDates(dates: KeyDatePayload[], errors: string[], warnings: s
       (d.type === 'ROUND_START' || d.type === 'CUSTOM') &&
       (typeof d.label !== 'string' || d.label.trim() === '')
     ) {
-      warnings.push(`${at} is ${d.type} with no label — name the round/milestone as the page does`);
+      warnings.push(`${at} is ${d.type} with no label — name the round/key date as the page does`);
     }
     const start = checkInstant(errors, `${at}.startsAt`, d.startsAt);
     const end = checkInstant(errors, `${at}.endsAt`, d.endsAt);
@@ -202,7 +202,7 @@ function validateKeyDates(dates: KeyDatePayload[], errors: string[], warnings: s
     warnings.push('no REG_CLOSE or SUBMISSION_DUE key date — the listing will show no deadline');
   }
   if (typed.length > 0 && typed.every((d) => d.startsAt == null)) {
-    // Expected and CORRECT for a page that announces milestones without dates (TBD beats a
+    // Expected and CORRECT for a page that announces key dates without dates (TBD beats a
     // guess), but it is exactly the row a curator should chase, so surface it.
     warnings.push('every key date is TBD (no dates on the page) — curator lookup needed');
   }

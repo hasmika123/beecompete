@@ -131,14 +131,14 @@ export function KeyDateManager({
             closes" is an instant; offering it an end date invited a value that means nothing.
             Unmounting rather than disabling means nothing stale can post. */}
         {SPAN_KEY_DATE_TYPES.includes(type) && (
-          <FormField label="Ends" hint="optional, for a milestone spanning days">
+          <FormField label="Ends" hint="optional, for a key date spanning days">
             <Input name="endsAt" type="datetime-local" disabled={tbd} />
           </FormField>
         )}
         <FormField label="Label" hint="optional, shown for Custom dates">
           <Input name="label" maxLength={200} />
         </FormField>
-        {/* TBD (R1-18): the milestone exists but its date is unknown — submit without a date.
+        {/* TBD (R1-18): the key date exists but its date is unknown — submit without a date.
             mt-[26px] + h-10 centers the checkbox on the neighbors' control band (label 20px +
             gap 6px above a 40px control). */}
         <div className="mt-[26px] flex h-10 items-center">

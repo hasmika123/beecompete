@@ -69,7 +69,7 @@ const EVALUATION_LABELS: Record<string, string> = {
 };
 
 /**
- * The wording the PUBLIC timeline uses for a milestone type when no curated label overrides it.
+ * The wording the PUBLIC timeline uses for a key date type when no curated label overrides it.
  * Case-insensitive because the admin enums are UPPERCASE and the stored/public tokens are not.
  *
  * Exported so the admin's Label field can show it as a PLACEHOLDER (2026-08-24): the curator sees

@@ -246,14 +246,14 @@ A listing is only useful with a running attached, so also fill these INSIDE "pay
     sentence copied from the page.
   - prizeValue (number|null) + prizeCurrency: only when a single headline cash value is stated.
   - ageCutoffDate (string|null): ISO yyyy-mm-dd, only if the page states an eligibility cutoff date.
-- keyDates (array|null): the running's timeline. One entry per milestone the page mentions:
+- keyDates (array|null): the running's timeline. One entry per key date the page mentions:
   - type (REQUIRED): one of ${KEY_DATE_TYPES.join(', ')}.
   - startsAt (ISO-8601 instant|null), endsAt (|null), timezone (IANA, e.g. "America/New_York"|null).
   - label (string|null): **REQUIRED for CUSTOM and for ROUND_START.** Name the round or event the
     way the page names it — "National Finals", "Regional qualifier", "Day 1 written round" — 2-4
     words, no sentences. Without a label the timeline can only say "Round begins", which tells a
     student nothing about WHICH round; the page's own name for it is information we cannot
-    reconstruct later. Optional on the other types, to name an unusual milestone.
+    reconstruct later. Optional on the other types, to name an unusual key date.
 
 ### DATE RULES — read carefully, these matter more than completeness
 - **SWEEP FIRST, CLASSIFY SECOND.** Before you pick any type, list every date the page states about
@@ -264,7 +264,7 @@ A listing is only useful with a running attached, so also fill these INSIDE "pay
   Do NOT sweep in: page metadata ("last updated", copyright years), dates belonging to a DIFFERENT
   competition the same organizer runs, dates from a PAST year's running, and dates sitting in
   navigation or footer boilerplate.
-- **A milestone you know exists but cannot date MUST be emitted with startsAt: null.** That is the
+- **A key date you know exists but whose date you cannot read MUST be emitted with startsAt: null.** That is the
   supported "date TBD" encoding, not a failure. "Registration opens in the fall" => a REG_OPEN row
   with startsAt null.
 - **NEVER estimate, infer from last year, or round a date.** If the page says "early March" with no
@@ -286,17 +286,17 @@ A listing is only useful with a running attached, so also fill these INSIDE "pay
   Never name a timezone you aren't certain the stated time belongs to.
 - Emit a REG_CLOSE or SUBMISSION_DUE row whenever the page implies a closing date exists, even when
   the date itself is TBD — that row is what the public card and search read as the deadline.
-- **A milestone that is not one of the listed types is NOT dropped — emit it as CUSTOM with a short
+- **A key date that is not one of the listed types is NOT dropped — emit it as CUSTOM with a short
   factual label.** The five named types cover the common shape of a competition, not every one:
   qualifying and regional rounds, awards ceremonies, mandatory information sessions, team-formation
   or intent-to-enter deadlines, project-plan approvals, shipping/mailing deadlines and finals week
   all belong on the timeline as CUSTOM rows. Every date rule above applies unchanged — a CUSTOM
-  milestone you cannot date is still startsAt: null, never a guess. ROUND_START exists for a
+  CUSTOM row whose date you cannot read is still startsAt: null, never a guess. ROUND_START exists for a
   competition round proper; use CUSTOM when nothing else fits.
-- **CUSTOM labels: use the CANONICAL spelling when the milestone is one of these kinds, even when
+- **CUSTOM labels: use the CANONICAL spelling when the key date is one of these kinds, even when
   the page words it differently.** Different pages call the same thing different things, and a
   timeline that says "Early Bird Registration Discount Deadline" on one listing and "Early
-  registration ends" on the next reads as two unrelated milestones. Match the KIND, then use our
+  registration ends" on the next reads as two unrelated key dates. Match the KIND, then use our
   wording verbatim:
     * Early-bird deadline  (a discounted or reduced registration cutoff)
     * Intent to enter due  (declare you are entering, before real registration)
@@ -309,9 +309,9 @@ A listing is only useful with a running attached, so also fill these INSIDE "pay
   Only when NONE of these is the kind of thing the page describes, write the page's own wording in
   2-4 words, no sentences — "Finals week", "Coaches meeting", "Lab safety review", "Photo day".
   That residual case is EXPECTED, not a failure: it is how anything unusual reaches the timeline at
-  all, so reach for it rather than forcing an odd milestone into a label that nearly fits.
+  all, so reach for it rather than forcing an odd key date into a label that nearly fits.
   The canonical label replaces the page's phrasing; it never replaces a DATE, and it never licenses
-  inventing a milestone the page does not mention.
+  inventing a key date the page does not mention.
 
 ## rules
 - Output valid JSON only. Use null (not empty strings) for unknown scalar fields; omit unknown attribute keys.

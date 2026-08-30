@@ -82,7 +82,7 @@ describe('splitImportPayload', () => {
     expect(seed.keyDates[0]).toMatchObject({ date: '2026-11-03', timezone: 'UTC' });
   });
 
-  it('keeps a TBD milestone undated rather than inventing one', () => {
+  it('keeps a TBD key date undated rather than inventing one', () => {
     const seed = splitImportPayload(payload({ keyDates: [{ type: 'REG_CLOSE', startsAt: null }] }));
     expect(seed.keyDates[0]).toMatchObject({ tbd: true, date: '', time: '' });
   });
@@ -161,7 +161,7 @@ describe('importSeedWarnings', () => {
     expect(keys).toContain('edition');
   });
 
-  it('flags a timeline with no deadline milestone', () => {
+  it('flags a timeline with no deadline key date', () => {
     const p = payload({ keyDates: [{ type: 'RESULTS', startsAt: '2026-12-01T00:00:00Z' }] });
     expect(importSeedWarnings(p, splitImportPayload(p)).map((w) => w.key)).toContain('deadline');
   });

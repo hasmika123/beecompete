@@ -149,7 +149,7 @@ export function AtAGlance({ competition }: { competition: CompetitionDetail }) {
       urgent: fact.urgent,
     });
   } else {
-    // No usable date: either a deadline milestone exists with a TBD date (R1-18) or the
+    // No usable date: either a deadline key date exists with a TBD date (R1-18) or the
     // competition has no future reg_close/submission_due at all. The slot still renders
     // (owner 2026-08-23) — an absent row read as "no deadline to worry about"; "TBD" says the
     // truth, that we don't know it yet, and keeps the strip's fixed shape across competitions.

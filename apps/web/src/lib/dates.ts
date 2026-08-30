@@ -149,7 +149,7 @@ export function zonedWallClockToInstant(local: string, timeZone: string): string
  * The inverse of {@link zonedWallClockToInstant}: a stored UTC instant → the wall clock a form
  * should show for it in the given zone, as "YYYY-MM-DDTHH:mm". Used to seed the admin key-date
  * rows from an extracted import payload, so what the curator edits round-trips back to the same
- * instant. Returns null for a missing or unparseable instant (a TBD milestone).
+ * instant. Returns null for a missing or unparseable instant (a TBD key date).
  */
 export function instantToZonedWallClock(
   iso: string | null | undefined,

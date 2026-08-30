@@ -28,11 +28,11 @@ export function enumOptions(tokens: readonly string[]): SelectOption[] {
 }
 
 /**
- * Key-date milestone options for the two curation editors (owner 2026-08-30).
+ * Key-date key date options for the two curation editors (owner 2026-08-30).
  *
  * Labels come from `defaultKeyDateLabel` — the SAME map the public timeline renders — rather than
  * from the token, so the dropdown says exactly what a visitor will read: "Registration opens", not
- * the token-derived "Reg open". A curator picking a milestone should be choosing the published
+ * the token-derived "Reg open". A curator picking a key date should be choosing the published
  * wording, not an abbreviation of the database token.
  *
  * CUSTOM is the one exception. Publicly it renders as "Event"; in the editor it is the escape

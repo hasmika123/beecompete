@@ -33,7 +33,7 @@ export function KeyDatesTimeline({
           !sameCalendarDay(date.startsAt, date.endsAt, keyDateZone(date.timezone));
         return (
           <li key={`${date.type}-${date.startsAt}-${i}`} className="ml-4 pb-5 last:pb-0">
-            {/* Past milestones get a CHECK in the marker (#84) — "done", not just dimmed.
+            {/* Past key dates get a CHECK in the marker (#84) — "done", not just dimmed.
                 Future/next keep the plain dot; markers stay aria-hidden with the sr-only
                 "(completed)" on the label carrying the semantics. */}
             {past ? (
@@ -65,7 +65,7 @@ export function KeyDatesTimeline({
             </div>
             {/* Full-strength muted (not /70) — the dimmed variant fell below AA (2.97:1 light,
                 3.94:1 dark). #84 dropped the line-through: strikethrough reads as CANCELLED, and a
-                passed milestone is completed, not cancelled — the check marker + sr-only
+                passed key date is completed, not cancelled — the check marker + sr-only
                 "(completed)" carry that now. TBD renders as text (R1-18). */}
             <p className="text-sm text-muted">
               {isTbd || !date.startsAt ? (

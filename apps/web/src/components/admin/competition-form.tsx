@@ -309,7 +309,7 @@ const IMPORT_BLOCKING_KEYS = [
 ];
 
 /**
- * The milestones a CREATE-form listing must account for (owner 2026-08-24) — each needs a date
+ * The key dates a CREATE-form listing must account for (owner 2026-08-24) — each needs a date
  * or an explicit TBD before the form will submit. Blank rows for all four are seeded, so the ask
  * is "fill these in", not "know which ones to add".
  *
@@ -515,13 +515,13 @@ export function CompetitionForm({
   const [scopeLevel, setScopeLevel] = useState(editionSeed?.scopeLevel ?? '');
 
   // First-edition typed key dates (item 21, create only): repeatable rows posted as indexed
-  // fields (keydate_0_type…). Per row, "Date TBD" records the milestone without a date (R1-18) —
+  // fields (keydate_0_type…). Per row, "Date TBD" records the key date without a date (R1-18) —
   // the date/time inputs are then disabled (and not posted). First row defaults to REG_CLOSE.
   interface KeyDateRow {
     key: number;
     type: string;
     date: string;
-    /** Optional — set only for a milestone that spans days; posts as end-of-day in `timezone`. */
+    /** Optional — set only for a key date that spans days; posts as end-of-day in `timezone`. */
     endDate: string;
     time: string;
     timezone: string;
@@ -539,7 +539,7 @@ export function CompetitionForm({
     label: '',
   });
   // Import starts from the extracted timeline (already read into wall-clock rows in their own
-  // zones); create starts empty. EITHER WAY the four required milestones are topped up with blank
+  // zones); create starts empty. EITHER WAY the four required key dates are topped up with blank
   // rows, so a curator is never asked for a date whose row they'd have to add first.
   const [keyDateRows, setKeyDateRows] = useState<KeyDateRow[]>(() => {
     const seeded = seed?.keyDates.map((row, i) => ({ key: i, ...row })) ?? [];
@@ -669,7 +669,7 @@ export function CompetitionForm({
    */
   const isUndatedRow = (r: KeyDateRow) => r.tbd || r.date === '';
 
-  /** True when this row is the sole carrier of a required milestone type — removing it would
+  /** True when this row is the sole carrier of a required key date type — removing it would
    *  strand the form on an unsatisfiable requirement. */
   const isOnlyRequiredRow = (r: KeyDateRow) =>
     (REQUIRED_KEY_DATE_TYPES as readonly string[]).includes(r.type) &&
@@ -911,7 +911,7 @@ export function CompetitionForm({
   const eligibilityValid = !eligErrors.minGrade && !eligErrors.minAge && !basisUnbacked;
 
   const orgChosen = organizerOrgId !== '' && organizerOrgId !== ADD_ORG;
-  // A required milestone is satisfied by a row of that type carrying either a real date or an
+  // A required key date is satisfied by a row of that type carrying either a real date or an
   // explicit TBD — "we checked and it isn't published yet" is a complete answer, an untouched
   // blank row is not. This supersedes the old single "Deadline" check: REG_CLOSE and
   // SUBMISSION_DUE are now each required outright, so the server's either/or gate is met by
@@ -919,7 +919,7 @@ export function CompetitionForm({
   const keyDateOk = (type: string) =>
     keyDateRows.some((r) => r.type === type && (r.tbd || r.date !== ''));
   /**
-   * A SECOND row of a required milestone type (owner 2026-08-30). Flagged, not blocked.
+   * A SECOND row of a required key date type (owner 2026-08-30). Flagged, not blocked.
    *
    * Two reasons, one live and one ahead of us. Live: `nextDeadline` is `min(starts_at)` over the
    * REG_CLOSE rows, so a duplicate silently makes the EARLIER date the listing's deadline — an
@@ -1998,11 +1998,11 @@ export function CompetitionForm({
             label="Key dates"
             labelAsText
             hintAs="icon"
-            hint="needs a Reg close or Submission due (dated or TBD); add the rest as you have them."
+            hint="needs a Registration closes or Submission due row (dated or TBD); add the rest as you have them."
           >
             {/* ONE panel of hairline-divided rows with "Add date" as its last row — the same
                 shape the Awards editor settled on (owner 2026-08-24).
-                TWO LINES per row, not one strip of six controls: line 1 is what the milestone IS
+                TWO LINES per row, not one strip of six controls: line 1 is what the key date IS
                 (type + label), line 2 is WHEN it happens (date + TBD + time + zone). The main
                 column is ~650px, so a single line gave every control ~90px and the date input was
                 clipping its own placeholder; splitting by meaning gives each field room without
@@ -2030,12 +2030,12 @@ export function CompetitionForm({
                   >
                     {/* Top-left of the row, not centred on the first control band (owner
                         2026-08-30). The grip and the position number are row-level chrome — they
-                        belong to the whole milestone, not to the Milestone field they used to sit
+                        belong to the whole key date, not to the Key date field they used to sit
                         beside — and anchoring them to the top keeps them in one place as the row
                         grows or shrinks (an "Ends" field appearing, an error wrapping). */}
                     <div className="flex shrink-0 items-center gap-1 self-start pt-0.5">
                       {/* The grip appears ONLY on rows with no date to sort them by (owner
-                          2026-08-24): once a milestone has a date the calendar owns its position,
+                          2026-08-24): once a key date has a date the calendar owns its position,
                           so offering a handle there would promise a reorder that snaps back. TBD
                           rows are exactly the case where order is still the curator's call. */}
                       {isUndatedRow(row) ? (
@@ -2052,7 +2052,7 @@ export function CompetitionForm({
                       ) : (
                         <span aria-hidden="true" className="hidden size-4 sm:block" />
                       )}
-                      {/* Position, not identity: the number tracks where this milestone falls in
+                      {/* Position, not identity: the number tracks where this key date falls in
                           the CHRONOLOGY the rows are sorted into, so it renumbers as dates change
                           and as undated rows are dragged. */}
                       <span
@@ -2065,7 +2065,7 @@ export function CompetitionForm({
                     <div className="grid min-w-0 flex-1 gap-3">
                       <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
                         <FormField
-                          label="Milestone"
+                          label="Type"
                           className="min-w-0"
                           error={
                             duplicateRequiredType(row)
@@ -2090,11 +2090,11 @@ export function CompetitionForm({
                         <FormField
                           label="Label"
                           hintAs="icon"
-                          hint="optional — leave empty and the public timeline uses the milestone's own wording (shown greyed here). Type only to override it, or to name a Custom date."
+                          hint="optional — leave empty and the public timeline uses the key date's own wording (shown greyed here). Type only to override it, or to name a Custom date."
                           className="min-w-0"
                         >
                           {/* Placeholder, never a pre-filled VALUE: it shows the exact wording
-                              visitors will read for the chosen milestone, so an empty field is
+                              visitors will read for the chosen key date, so an empty field is
                               visibly a deliberate "use the standard name", not an unfinished one. */}
                           <Input
                             name={`keydate_${i}_label`}
@@ -2133,7 +2133,7 @@ export function CompetitionForm({
                           <FormField
                             label="Ends"
                             hintAs="icon"
-                            hint="optional — only for a milestone that runs over more than one day (a two-day finals). Leave empty for a single day; it ends at end-of-day in the zone below."
+                            hint="optional — only for a key date that runs over more than one day (a two-day finals). Leave empty for a single day; it ends at end-of-day in the zone below."
                             className="min-w-36 flex-1"
                             error={
                               row.endDate !== '' && row.date !== '' && row.endDate <= row.date
@@ -2195,7 +2195,7 @@ export function CompetitionForm({
                     </div>
                     {/* Dimmed until hover/focus — present for touch and keyboard, quiet otherwise
                         (the Awards editor's row-control grammar). */}
-                    {/* A required milestone's LAST remaining row can't be removed — deleting it
+                    {/* A required key date's LAST remaining row can't be removed — deleting it
                         would make the form unsubmittable with no hint as to what vanished.
                         Duplicates of a required type, and any optional row, still go. */}
                     {keyDateRows.length > 1 && !isOnlyRequiredRow(row) ? (
