@@ -31,14 +31,12 @@ const PARTICIPATION_LABELS: Record<string, string> = {
   both: 'Individual or Team',
 };
 
+// Three tokens since `0024` — the composites (school_or_chapter, open, the pre-0016 either) were
+// the single-value column faking a set and were expanded by its backfill, so nothing stores them.
 const PATHWAY_LABELS: Record<string, string> = {
   individual: 'Enter as an individual',
   school: 'Through a school',
   chapter: 'Through a chapter',
-  school_or_chapter: 'Through a school or chapter',
-  open: 'Open to all',
-  // Pre-0016 spelling of `open` — kept so a stale row never renders a raw token.
-  either: 'Open to all',
 };
 
 const RECURRENCE_LABELS: Record<string, string> = {
@@ -95,8 +93,20 @@ export function deliveryLabel(token: string): string {
 export function participationLabel(token: string): string {
   return PARTICIPATION_LABELS[token] ?? token;
 }
-export function pathwayLabel(token: string): string {
-  return PATHWAY_LABELS[token] ?? token;
+/**
+ * The routes a listing accepts, as one phrase. All three is "Open to all" — the wildcard token
+ * `0024` retired, restated from the data rather than stored.
+ */
+export function pathwayLabel(tokens: string[] | null | undefined): string | undefined {
+  const known = (tokens ?? []).filter((t) => t in PATHWAY_LABELS);
+  if (known.length === 0) return undefined;
+  if (known.length === Object.keys(PATHWAY_LABELS).length) return 'Open to all';
+  // Ordered by the canonical list, not by however the array came back, so two listings with the
+  // same routes always read identically.
+  return Object.keys(PATHWAY_LABELS)
+    .filter((t) => known.includes(t))
+    .map((t) => PATHWAY_LABELS[t]!)
+    .join(' · ');
 }
 export function recurrenceLabel(token: string): string {
   return RECURRENCE_LABELS[token] ?? token;

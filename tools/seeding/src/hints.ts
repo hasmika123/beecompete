@@ -48,16 +48,27 @@ export function compareHints(payload: CompetitionPayload, hints: SeedHints): str
     );
   }
 
+  // The index hint is still a single word; the payload is a SET (`0024`). A hint "matches" when the
+  // route it names is one of the extracted routes — a school-entry hint against {SCHOOL, CHAPTER}
+  // is agreement, not a mismatch, and flagging it would be noise on exactly the listings the set
+  // model exists to describe. The retired composites map onto what they used to mean.
   const path = norm(hints.entryPathway);
-  const extractedPath = norm(payload.entryPathway);
-  if (
-    path &&
-    ['individual', 'school_or_chapter', 'either'].includes(path) &&
-    extractedPath &&
-    extractedPath !== path
-  ) {
+  const extracted = (payload.entryPathways ?? []).map((t) => norm(t));
+  const hinted =
+    path === 'school_or_chapter'
+      ? ['school', 'chapter']
+      : path === 'either' || path === 'open'
+        ? ['individual', 'school', 'chapter']
+        : path
+          ? [path]
+          : [];
+  // An unrecognized hint is ignored, not flagged — same guard the single-value version had. The
+  // index is unverified editorial data; a word we cannot map says nothing about the extraction.
+  const KNOWN_ROUTES = ['individual', 'school', 'chapter'];
+  const recognized = hinted.length > 0 && hinted.every((h) => KNOWN_ROUTES.includes(h));
+  if (recognized && extracted.length > 0 && !hinted.some((h) => extracted.includes(h))) {
     warnings.push(
-      `entry-pathway mismatch: index hint "${path}" vs extracted ${payload.entryPathway} — verify`,
+      `entry-pathway mismatch: index hint "${path}" vs extracted ${extracted.join('+')} — verify`,
     );
   }
 

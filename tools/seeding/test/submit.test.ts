@@ -35,7 +35,7 @@ const COMPETITION_REQUEST_FIELDS = new Set([
   'teamSizeMin',
   'teamSizeMax',
   'delivery',
-  'entryPathway',
+  'entryPathways',
   'evaluationType',
   'minGrade',
   'maxGrade',
@@ -157,17 +157,18 @@ test('submitToImportQueue POSTs the exact ImportSubmission contract shape', asyn
 
     // Enum casing: spine enums are the server enum CONSTANT names (Jackson binds case-
     // sensitively on approve); evaluationType is the canonical LOWERCASE token set.
-    for (const field of [
-      'participationMode',
-      'delivery',
-      'entryPathway',
-      'costType',
-      'recurrence',
-    ]) {
+    for (const field of ['participationMode', 'delivery', 'costType', 'recurrence']) {
       assert.ok(
         typeof payload[field] === 'string' && UPPER.test(payload[field] as string),
         `${field} must be an UPPERCASE enum constant (got ${String(payload[field])})`,
       );
+    }
+    // entryPathways is an ARRAY since `0024`, and its tokens are UPPERCASE like the spine enums
+    // they came from — the one multi-valued facet that is not the lowercase evaluationType set.
+    const entryPathways = (payload.entryPathways ?? []) as string[];
+    assert.ok(entryPathways.length > 0, 'entryPathways must list at least one route');
+    for (const token of entryPathways) {
+      assert.ok(UPPER.test(token), `entryPathways tokens are UPPERCASE (got ${token})`);
     }
     const evaluationType = (payload.evaluationType ?? []) as string[];
     for (const token of evaluationType) {

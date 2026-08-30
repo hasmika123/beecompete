@@ -79,10 +79,17 @@ const MONEY_TYPES = new Set(['monetary', 'scholarship']);
  * storing the word — the server validates ISO-4217 and `Intl.NumberFormat` needs a real code, so
  * "OTHER" would be rejected on save and print as a bare number in the preview.
  */
+// CODE ONLY, no symbol (owner 2026-08-28). "USD · $" was the widest thing in this select and is
+// what forced its w-28; the symbol adds nothing a curator needs, since the code IS what gets
+// stored and shown. Dropping it lets the select shrink to w-20 and hands the ~32px back to the
+// Title — reversing the trade #118 had to make in the other direction.
 const CURRENCY_OPTIONS = [
-  { value: 'USD', label: 'USD · $' },
-  { value: 'CAD', label: 'CAD · C$' },
-  { value: OTHER_CURRENCY, label: 'Other…' },
+  { value: 'USD', label: 'USD' },
+  { value: 'CAD', label: 'CAD' },
+  // "Other", not "Other…": the ellipsis was the only part that did not fit the narrowed select,
+  // and it is redundant here — choosing it reveals a code input immediately beside the trigger, so
+  // the "more input follows" it promises is already on screen.
+  { value: OTHER_CURRENCY, label: 'Other' },
 ];
 const LISTED_CURRENCIES = ['USD', 'CAD'];
 const DEFAULT_CURRENCY = 'USD';
@@ -140,7 +147,10 @@ const emptyRow = (key: number): AwardRow => ({
   currency: '',
   currencyOther: false,
   detail: '',
-  count: '',
+  // Opens at 1 rather than blank (owner 2026-08-29). Blank already MEANT one — `toAwardJson`
+  // stores a count only at 2+ — but a placeholder reads as unanswered on a step that now asks for
+  // a complete row. Nothing about what gets saved changes.
+  count: '1',
 });
 
 /** The rows exactly as the payload builder will read them — shared by post + preview. */
@@ -210,11 +220,20 @@ export function AwardsInput({
     });
   };
 
-  const titled = rows.filter((r) => r.title.trim() !== '').length;
-  // What the ring needs to know is whether the listing will HAVE a prize line — not whether rows
-  // exist. "No award provided?" clears the rows and writes a custom line, which is a complete
-  // answer; counting rows would have reported it as unfinished.
-  const hasPrizeLine = titled > 0 || (mode === 'custom' && customText.trim() !== '');
+  /**
+   * A row with every field its TYPE actually asks for: a money award needs a value, anything else
+   * needs its detail line. A bare title is a started row, not a finished one (owner 2026-08-29).
+   */
+  const isComplete = (r: AwardRow) =>
+    r.title.trim() !== '' &&
+    (MONEY_TYPES.has(r.type) ? r.value.trim() !== '' : r.detail.trim() !== '');
+  /**
+   * What the ring needs is whether the awards question is ANSWERED — not whether rows exist.
+   * Two answers count, and the second is why this cannot just count rows: "No award provided?"
+   * deliberately clears them and writes a custom line, and plenty of real competitions award
+   * nothing but the placing. Requiring a filled row there would make an honest answer unsubmittable.
+   */
+  const hasPrizeLine = rows.some(isComplete) || (mode === 'custom' && customText.trim() !== '');
   // (mode, not effectiveMode: `custom` is never auto-switched away from.)
   useEffect(() => {
     onPrizeLineChange?.(hasPrizeLine);
@@ -283,12 +302,21 @@ export function AwardsInput({
                 // 16px too narrow, which left the ×N group and the delete button stranded alone on
                 // a second line while everything else fitted. The row now clears that width.
                 //
-                // The space came from the TITLE's basis (10rem → 5rem), not from the fixed
-                // controls: trimming the type and currency selects was tried first and made their
-                // labels truncate ("USD · $" → "USD ·…", "Monetary" → "Monetar…"), which is a
-                // worse defect than a narrow text input — the input scrolls, a clipped label just
-                // lies. Title is `flex-1`, so it reclaims every spare pixel and is ~180px once the
-                // column reaches 712px.
+                // The space originally came from the TITLE's basis (10rem → 5rem), not from the
+                // fixed controls: trimming the selects made their labels truncate ("USD · $" →
+                // "USD ·…", "Monetary" → "Monetar…"), which is a worse defect than a narrow text
+                // input — the input scrolls, a clipped label just lies.
+                // ↻ PARTLY REVERSED 2026-08-28 (owner): the currency label lost its symbol, so that
+                // select fits 5.25rem instead of w-28 WITHOUT truncating, and the freed 28px goes
+                // to the Title. Measured, not guessed: the widest label ("Other") is 37px, and the
+                // trigger spends 52px on chrome at the default padding — so 96px really was the
+                // floor until `dense` cut that to 44px. ⚠ A className on Select styles its ROOT,
+                // not its trigger; padding passed there just shrinks the trigger inside it.
+                // ⚠ The title's BASIS stays 5rem. It does not need raising — Title is `flex-1`, so
+                // it already absorbs every pixel the fixed controls give up. Raising the basis only
+                // moves the WRAP POINT, because a flex line breaks on the sum of its children's
+                // BASE sizes: basis-32 was tried and put the row back onto two lines at a 609px
+                // panel, which is the exact defect this note exists to prevent.
                 // ⚠ The type select still truncates its LONGEST options ("Internship / job") at
                 // any width — that predates this and is what its `truncate` is for.
                 // If you add a control here, re-measure at a ~620px panel before assuming it fits.
@@ -354,7 +382,8 @@ export function AwardsInput({
                         currency: v === OTHER_CURRENCY ? '' : v,
                       })
                     }
-                    className="w-28 shrink-0"
+                    dense
+                    className="w-[5.25rem] shrink-0"
                   />
                   {row.currencyOther && (
                     <Input
@@ -450,7 +479,11 @@ export function AwardsInput({
               setMode('custom');
               setCustomText(NO_AWARD_TEXT);
             }}
-            className="px-3.5 py-2.5 text-sm font-medium text-muted underline-offset-2 transition-colors hover:text-foreground hover:underline"
+            // Underlined at REST, not only on hover (owner 2026-08-29): it sat as plain grey text
+            // next to "Add award", so nothing said it was clickable until a pointer found it —
+            // and a touch user never gets that hint at all. `decoration-muted/50` keeps it quiet
+            // enough not to compete with the add button beside it.
+            className="px-3.5 py-2.5 text-sm font-medium text-muted underline decoration-muted/50 underline-offset-2 transition-colors hover:text-foreground hover:decoration-current"
           >
             No award provided?
           </button>

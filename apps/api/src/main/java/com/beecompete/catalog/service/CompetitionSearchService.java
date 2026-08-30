@@ -4,7 +4,6 @@ import com.beecompete.catalog.domain.Competition;
 import com.beecompete.catalog.domain.ListingStatus;
 import com.beecompete.catalog.domain.CostType;
 import com.beecompete.catalog.domain.Delivery;
-import com.beecompete.catalog.domain.EntryPathway;
 import com.beecompete.catalog.domain.ParticipationMode;
 import com.beecompete.catalog.domain.Region;
 import com.beecompete.catalog.repository.CategoryRepository;
@@ -56,7 +55,7 @@ public class CompetitionSearchService {
 	/** Raw filter values as the public API receives them (category = slug, region = id-or-code). */
 	public record Criteria(String query, String categorySlug, Short minGrade, Short maxGrade,
 			String region, CostType costType, Delivery delivery, ParticipationMode participation,
-			EntryPathway entryPathway, List<String> evaluationTypes, Integer deadlineWithinDays,
+			String entryPathway, List<String> evaluationTypes, Integer deadlineWithinDays,
 			SortOption sort, boolean includeFacets, int page, int size) {
 
 		public boolean hasQuery() {
@@ -102,15 +101,6 @@ public class CompetitionSearchService {
 	 * Stored pathway tokens a filter value should match (2026-08-23 widening). EITHER is the
 	 * pre-0016 spelling of OPEN and is still accepted so a stale row can never fall out of search.
 	 */
-	private static List<String> pathwayMatches(EntryPathway filter) {
-		return switch (filter) {
-			case INDIVIDUAL -> List.of("INDIVIDUAL", "OPEN", "EITHER");
-			case SCHOOL -> List.of("SCHOOL", "SCHOOL_OR_CHAPTER", "OPEN", "EITHER");
-			case CHAPTER -> List.of("CHAPTER", "SCHOOL_OR_CHAPTER", "OPEN", "EITHER");
-			case SCHOOL_OR_CHAPTER -> List.of("SCHOOL_OR_CHAPTER", "SCHOOL", "CHAPTER", "OPEN", "EITHER");
-			case OPEN, EITHER -> List.of("OPEN", "EITHER");
-		};
-	}
 
 	// Readiness gate (domain-model §8a): a competition is publicly visible only when it has at
 	// least one non-archived edition. Kills "zombie" listings (live with no edition/deadline,
@@ -219,13 +209,12 @@ public class CompetitionSearchService {
 			// A pathway filter matches its own token PLUS the broader ones that include it: an
 			// OPEN listing accepts everyone, and a SCHOOL_OR_CHAPTER one satisfies both SCHOOL and
 			// CHAPTER. Filtering OPEN itself stays strict — "open to all" means only those.
-			List<String> tokens = pathwayMatches(c.entryPathway());
-			List<String> placeholders = new ArrayList<>();
-			for (int i = 0; i < tokens.size(); i++) {
-				placeholders.add(":pw" + i);
-				params.put("pw" + i, tokens.get(i));
-			}
-			sql.append(" AND c.entry_pathway IN (").append(String.join(", ", placeholders)).append(')');
+			// One token against the row's SET (0024). The old version had to expand the filter into
+			// every composite token that implied it (SCHOOL also matched SCHOOL_OR_CHAPTER and the
+			// OPEN wildcard); with a real set the containment IS the query, and a {SCHOOL,CHAPTER}
+			// listing is found by both "school" and "chapter" without any of that.
+			sql.append(" AND c.entry_pathways && CAST(ARRAY[:pathway] AS text[])");
+			params.put("pathway", c.entryPathway());
 		}
 		if (c.evaluationTypes() != null && !c.evaluationTypes().isEmpty()) {
 			List<String> placeholders = new ArrayList<>();

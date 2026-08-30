@@ -67,7 +67,7 @@ export function buildCompetitionBody(form: FormData): Record<string, unknown> {
     teamSizeMin: num(form, 'teamSizeMin') ?? null,
     teamSizeMax: num(form, 'teamSizeMax') ?? null,
     delivery: str(form, 'delivery'),
-    entryPathway: str(form, 'entryPathway'),
+    entryPathways: multi(form, 'entryPathways') ?? [],
     evaluationType: multi(form, 'evaluationType') ?? null,
     // '' (the "not stated" option) posts as null, not as an empty string: the server's enum
     // binding rejects '', and null IS the value we mean — nobody has recorded the rule.

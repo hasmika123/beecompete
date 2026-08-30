@@ -170,7 +170,7 @@ public class CorrectionApplyService {
 						c.getOrganizer() != null ? c.getOrganizer().getId() : null, null, null,
 						c.getOfficialUrl(), c.getLogo(), c.getDescription(),
 						c.getCategory().getId(), c.getTags(), c.getParticipationMode(), c.getTeamSizeMin(),
-						c.getTeamSizeMax(), c.getDelivery(), c.getEntryPathway(), c.getEvaluationType(),
+						c.getTeamSizeMax(), c.getDelivery(), c.getEntryPathways(), c.getEvaluationType(),
 						c.getEligibilityBasis(),
 						c.getMinGrade(), c.getMaxGrade(), c.getMinAge(), c.getMaxAge(), c.getCostType(),
 						c.getRecurrence(), c.getAttributes());

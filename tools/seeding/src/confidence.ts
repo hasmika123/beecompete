@@ -28,7 +28,7 @@ function completenessScore(p: CompetitionPayload): number {
     [2, Boolean(p.categoryId)],
     [1, p.participationMode != null],
     [1, p.delivery != null],
-    [1, p.entryPathway != null],
+    [1, (p.entryPathways ?? []).length > 0],
     [1, p.costType != null],
     [1, p.recurrence != null],
     [1, gradesOrAges(p)],

@@ -96,6 +96,11 @@ class CatalogSearchIntegrationTest {
 				"r15-writing-award");
 		assertSlugs("pathway=individual", "r15-algebra-open", "r15-essay-prize",
 				"r15-writing-award");
+		// 0024 (domain-model §7a.1): entry pathway is a SET, so the robotics league — stored as
+		// {SCHOOL, CHAPTER} — must be found by BOTH tokens. Under the old single-value column this
+		// needed the composite token SCHOOL_OR_CHAPTER and a filter that expanded into it.
+		assertSlugs("pathway=school", "r15-essay-prize", "r15-robotics-league");
+		assertSlugs("pathway=chapter", "r15-essay-prize", "r15-robotics-league");
 		assertSlugs("evaluation=portfolio", "r15-essay-prize");
 		assertSlugs("region=tx", "r15-robotics-league"); // by code, case-insensitive
 		// Deadline = next future REG_CLOSE, falling back to SUBMISSION_DUE (submission-only
@@ -267,7 +272,7 @@ class CatalogSearchIntegrationTest {
 	private String competitionJson(String slug, String name, String catId) {
 		return """
 				{"slug": "%s", "name": "%s", "categoryId": "%s", "description": "%s",
-				 "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL", "entryPathway": "INDIVIDUAL",
+				 "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL", "entryPathways": ["INDIVIDUAL"],
 				 "costType": "FREE", "recurrence": "ANNUAL", "evaluationType": []}
 				""".formatted(slug, name, catId, MARK);
 	}
@@ -287,7 +292,7 @@ class CatalogSearchIntegrationTest {
 				{"slug": "r15-algebra-open", "name": "Algebra Open r15", "categoryId": "%s",
 				 "description": "A friendly algebra contest %s. Algebra problem solving contest.",
 				 "minGrade": 3, "maxGrade": 8, "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL",
-				 "entryPathway": "INDIVIDUAL", "costType": "FREE", "recurrence": "ANNUAL",
+				 "entryPathways": ["INDIVIDUAL"], "costType": "FREE", "recurrence": "ANNUAL",
 				 "evaluationType": ["exam"]}
 				""".formatted(math, MARK));
 		String algebraEdition = createEdition(algebra);
@@ -298,7 +303,7 @@ class CatalogSearchIntegrationTest {
 		String robotics = createCompetition("""
 				{"slug": "r15-robotics-league", "name": "Robotics League r15", "categoryId": "%s",
 				 "description": "Build-season league %s", "minGrade": 6, "maxGrade": 12,
-				 "participationMode": "TEAM", "delivery": "IN_PERSON", "entryPathway": "SCHOOL_OR_CHAPTER",
+				 "participationMode": "TEAM", "delivery": "IN_PERSON", "entryPathways": ["SCHOOL", "CHAPTER"],
 				 "costType": "PAID", "recurrence": "ANNUAL", "evaluationType": ["live_performance"]}
 				""".formatted(sciEng, MARK));
 		String roboticsEdition = createEdition(robotics);
@@ -318,7 +323,8 @@ class CatalogSearchIntegrationTest {
 		String essay = createCompetition("""
 				{"slug": "r15-essay-prize", "name": "Essay Prize r15", "categoryId": "%s",
 				 "description": "Open essay prize %s", "participationMode": "BOTH", "delivery": "HYBRID",
-				 "entryPathway": "EITHER", "costType": "FREE", "recurrence": "ANNUAL",
+				 "entryPathways": ["INDIVIDUAL", "SCHOOL", "CHAPTER"], "costType": "FREE",
+				 "recurrence": "ANNUAL",
 				 "evaluationType": ["submission", "portfolio"]}
 				""".formatted(compSci, MARK));
 		createBareEdition(essay);
@@ -327,7 +333,7 @@ class CatalogSearchIntegrationTest {
 		String writing = createCompetition("""
 				{"slug": "r15-writing-award", "name": "Writing Award r15", "categoryId": "%s",
 				 "description": "Submission-only writing award %s", "participationMode": "INDIVIDUAL",
-				 "delivery": "VIRTUAL", "entryPathway": "INDIVIDUAL", "costType": "FREE",
+				 "delivery": "VIRTUAL", "entryPathways": ["INDIVIDUAL"], "costType": "FREE",
 				 "recurrence": "ANNUAL", "evaluationType": ["submission"]}
 				""".formatted(writingEssay, MARK));
 		String writingEdition = createEdition(writing);
@@ -335,7 +341,7 @@ class CatalogSearchIntegrationTest {
 
 		String archived = createCompetition("""
 				{"slug": "r15-archived", "name": "Archived r15", "categoryId": "%s", "description": "%s",
-				 "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL", "entryPathway": "INDIVIDUAL",
+				 "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL", "entryPathways": ["INDIVIDUAL"],
 				 "costType": "FREE", "recurrence": "ANNUAL"}
 				""".formatted(math, MARK));
 		mvc.perform(withToken(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
@@ -348,7 +354,7 @@ class CatalogSearchIntegrationTest {
 		createCompetition("""
 				{"slug": "r15-shell-no-edition", "name": "Shell No Edition r15", "categoryId": "%s",
 				 "description": "Editionless zombie %s", "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL",
-				 "entryPathway": "INDIVIDUAL", "costType": "FREE", "recurrence": "ANNUAL"}
+				 "entryPathways": ["INDIVIDUAL"], "costType": "FREE", "recurrence": "ANNUAL"}
 				""".formatted(math, MARK));
 	}
 

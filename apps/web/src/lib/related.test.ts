@@ -17,7 +17,7 @@ function summary(over: Partial<CompetitionSummary> & { id: string }): Competitio
     teamSizeMin: null,
     teamSizeMax: null,
     delivery: 'in_person',
-    entryPathway: 'open',
+    entryPathways: ['individual', 'school', 'chapter'],
     evaluationType: null,
     eligibilityBasis: null,
     minGrade: null,

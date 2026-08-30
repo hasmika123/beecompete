@@ -210,7 +210,7 @@ class CatalogPublicApiIntegrationTest {
 								{"slug": "%s", "name": "%s", "categoryId": "%s", "organizerOrgId": "%s",
 								 "description": "Public read API test seed.",
 								 "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL",
-								 "entryPathway": "INDIVIDUAL", "costType": "FREE", "recurrence": "ANNUAL"}
+								 "entryPathways": ["INDIVIDUAL"], "costType": "FREE", "recurrence": "ANNUAL"}
 								""".formatted(slug, name, categoryId, orgId)))
 				.andExpect(status().isCreated())
 				.andReturn().getResponse().getContentAsString();

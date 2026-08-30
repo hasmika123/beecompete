@@ -50,7 +50,7 @@ export interface CompetitionSeed {
   tags: string[] | null;
   participationMode: string;
   delivery: string;
-  entryPathway: string;
+  entryPathways: string[];
   costType: string;
   recurrence: string;
   evaluationType: string[] | null;
@@ -169,16 +169,22 @@ function strings(value: unknown): string[] | null {
 }
 
 /**
- * An enum token the form's dropdown can actually show. An unrecognised token falls back to
- * `fallback` — the select would otherwise render blank and silently post the fallback anyway, and
- * the mismatch is reported separately by {@link importSeedWarnings}.
+ * An enum token the form's dropdown can actually show; an absent or unrecognized value becomes
+ * `''`, which the form renders as an unanswered dropdown (owner 2026-08-28).
+ *
+ * This replaced a `token(value, allowed, fallback)` helper that substituted a default. Why the
+ * defaults went: a payload that never mentioned recurrence used to
+ * arrive at the form showing "Annual", indistinguishable from a payload that said so. The curator
+ * reviewing it has no way to tell our guess from the source's fact, and publishes the guess. Blank
+ * is the honest rendering of "the source didn't say", and the form's required-ring turns it into a
+ * question instead of a silent default.
  */
-function token(value: unknown, allowed: readonly string[], fallback: string): string {
+function enumOrBlank(value: unknown, allowed: readonly string[]): string {
   const s = text(value);
-  return s !== null && allowed.includes(s) ? s : fallback;
+  return s !== null && allowed.includes(s) ? s : '';
 }
 
-/** Like {@link token} but with no fallback: an absent or unrecognized value stays null. */
+/** Like {@link enumOrBlank} but null rather than '' — for a field the form treats as absent. */
 function optionalToken<T extends string>(value: unknown, allowed: readonly T[]): T | null {
   const s = text(value)?.toUpperCase();
   return s != null && (allowed as readonly string[]).includes(s) ? (s as T) : null;
@@ -203,6 +209,7 @@ const MAPPED_COMPETITION_KEYS = new Set([
   'teamSizeMax',
   'delivery',
   'entryPathway',
+  'entryPathways',
   'evaluationType',
   'eligibilityBasis',
   'minGrade',
@@ -256,11 +263,11 @@ export function splitImportPayload(payload: Record<string, unknown>): ImportSeed
       logo: text(payload.logo),
       description: text(payload.description),
       tags: strings(payload.tags),
-      participationMode: token(payload.participationMode, PARTICIPATION_MODES, 'INDIVIDUAL'),
-      delivery: token(payload.delivery, DELIVERIES, 'IN_PERSON'),
-      entryPathway: token(payload.entryPathway, ENTRY_PATHWAYS, 'INDIVIDUAL'),
-      costType: token(payload.costType, COST_TYPES, 'FREE'),
-      recurrence: token(payload.recurrence, RECURRENCES, 'ANNUAL'),
+      participationMode: enumOrBlank(payload.participationMode, PARTICIPATION_MODES),
+      delivery: enumOrBlank(payload.delivery, DELIVERIES),
+      entryPathways: entryPathwaySeeds(payload),
+      costType: enumOrBlank(payload.costType, COST_TYPES),
+      recurrence: enumOrBlank(payload.recurrence, RECURRENCES),
       evaluationType: strings(payload.evaluationType),
       // Read-either-shape, same approach as the retired `summary` and the singular `entryPathway`:
       // the ~56 payloads extracted before 0023 carry no basis at all, and a missing one is NULL
@@ -277,7 +284,7 @@ export function splitImportPayload(payload: Record<string, unknown>): ImportSeed
     },
     edition: edition && {
       cycleLabel: text(edition.cycleLabel) ?? '',
-      scopeLevel: token(edition.scopeLevel, SCOPE_LEVELS, 'NATIONAL'),
+      scopeLevel: enumOrBlank(edition.scopeLevel, SCOPE_LEVELS),
       registrationUrl: text(edition.registrationUrl) ?? '',
       entryFee: decimalText(edition.entryFee),
       currency: (text(edition.currency) ?? '').toUpperCase(),
@@ -308,6 +315,26 @@ export function splitImportPayload(payload: Record<string, unknown>): ImportSeed
  * PREVIOUS calendar day — turning "Nov. 3" on the page into "Nov 2" in the form on most date-only
  * extractions. (Same reasoning as the raw-JSON edition panel.)
  */
+/**
+ * Entry pathways, reading EITHER shape (`0024`, domain-model §7a.1).
+ *
+ * The ~46 queued extractions predate the change and carry a singular `entryPathway` string,
+ * including the composite tokens the set model retired. Mapping them here rather than rewriting
+ * stored payloads is what the plan calls for — the same treatment the retired `summary` got — so a
+ * queued row still reviews correctly without a data migration. The expansion matches `0024`'s
+ * backfill exactly: SCHOOL_OR_CHAPTER is both school routes, OPEN/EITHER is all three.
+ */
+function entryPathwaySeeds(payload: Record<string, unknown>): string[] {
+  const many = strings(payload.entryPathways);
+  if (many)
+    return many.map((t) => t.toUpperCase()).filter((t) => ENTRY_PATHWAYS.includes(t as never));
+  const single = text(payload.entryPathway)?.toUpperCase();
+  if (single == null) return [];
+  if (single === 'SCHOOL_OR_CHAPTER') return ['SCHOOL', 'CHAPTER'];
+  if (single === 'OPEN' || single === 'EITHER') return ['INDIVIDUAL', 'SCHOOL', 'CHAPTER'];
+  return ENTRY_PATHWAYS.includes(single as never) ? [single] : [];
+}
+
 function resourceSeeds(value: unknown): ResourceSeed[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((raw): ResourceSeed[] => {

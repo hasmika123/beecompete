@@ -98,10 +98,17 @@ public class Competition {
 	@Column(nullable = false, length = 20)
 	private Delivery delivery;
 
-	@NotNull
-	@Enumerated(EnumType.STRING)
-	@Column(name = "entry_pathway", nullable = false, length = 20)
-	private EntryPathway entryPathway;
+	/**
+	 * HOW you enter, as a SET (0024, domain-model §7a.1). Tokens validated at the curation write
+	 * boundary, exactly like {@link #evaluationType}.
+	 *
+	 * ⚠ The old single-value {@code entry_pathway} column still EXISTS and is deliberately
+	 * UNMAPPED here — dormant, like the retired {@code summary}. Reading it would give pre-0024
+	 * data: right for old rows, silently stale for everything written since.
+	 */
+	@JdbcTypeCode(SqlTypes.ARRAY)
+	@Column(name = "entry_pathways", columnDefinition = "text[]")
+	private List<String> entryPathways;
 
 	/** Allowed tokens validated against evaluation types at the service boundary (R1-4/R1-5). */
 	@JdbcTypeCode(SqlTypes.ARRAY)
@@ -193,13 +200,13 @@ public class Competition {
 	protected Competition() {}
 
 	public Competition(String slug, String name, Category category, ParticipationMode participationMode,
-			Delivery delivery, EntryPathway entryPathway, CostType costType, Recurrence recurrence) {
+			Delivery delivery, List<String> entryPathways, CostType costType, Recurrence recurrence) {
 		this.slug = slug;
 		this.name = name;
 		this.category = category;
 		this.participationMode = participationMode;
 		this.delivery = delivery;
-		this.entryPathway = entryPathway;
+		this.entryPathways = entryPathways;
 		this.costType = costType;
 		this.recurrence = recurrence;
 	}
@@ -304,12 +311,12 @@ public class Competition {
 		this.delivery = delivery;
 	}
 
-	public EntryPathway getEntryPathway() {
-		return entryPathway;
+	public List<String> getEntryPathways() {
+		return entryPathways;
 	}
 
-	public void setEntryPathway(EntryPathway entryPathway) {
-		this.entryPathway = entryPathway;
+	public void setEntryPathways(List<String> entryPathways) {
+		this.entryPathways = entryPathways;
 	}
 
 	public List<String> getEvaluationType() {

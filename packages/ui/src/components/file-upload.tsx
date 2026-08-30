@@ -119,8 +119,12 @@ export function FileUpload({
       commit(stored);
       setNote(null);
     } catch {
+      // The note only — the URL row is NOT forced open (owner 2026-08-28). A failed upload is
+      // usually worth retrying, and swapping the drop zone's companion row in unprompted both
+      // moves the layout under the cursor and reads as "uploading is broken, do it the other way"
+      // when the honest answer is "that attempt failed". The "or paste … URL" toggle is right
+      // there for anyone who wants it.
       setNote(`That upload didn’t go through. Try again, or paste ${nounPhrase} URL.`);
-      setShowUrl(true);
     } finally {
       setUploading(false);
     }
@@ -200,7 +204,23 @@ export function FileUpload({
           Uploading…
         </div>
       ) : (
+        // THE WHOLE ZONE IS CLICKABLE (owner 2026-08-28) — it looks like a target, so clicking
+        // anywhere in it should do the thing: browse when uploads are on, open URL entry when not. The inner "browse" button stays a real <button> because it
+        // is what makes this keyboard-reachable; both it and the URL toggle stopPropagation so a
+        // click on either doesn't also fire this handler. Not a <button> itself: it contains
+        // buttons, and nesting those is invalid HTML and breaks AT.
         <div
+          onClick={() => {
+            // Uploads OFF is a designed half-state, not a broken one (a rubric that lives on the
+            // organizer's site should be linked, never re-hosted) — so the zone still responds:
+            // it opens URL entry, the same thing its "browse" button does in that mode. Doing
+            // nothing made the box look dead.
+            if (uploadEnabled) fileRef.current?.click();
+            else {
+              setNote(pendingNote);
+              setShowUrl(true);
+            }
+          }}
           onDragOver={(e) => {
             e.preventDefault();
             setDragOver(true);
@@ -215,6 +235,7 @@ export function FileUpload({
             'flex flex-col items-center justify-center rounded-[var(--radius-panel)] border border-dashed text-center transition-colors',
             compact ? 'gap-1.5 px-3 py-3' : 'gap-2 px-5 py-6',
             dragOver ? 'border-brand-gold bg-brand-gold-soft/40' : 'border-border bg-surface',
+            'cursor-pointer',
             dropZoneClassName,
           )}
         >
@@ -230,11 +251,14 @@ export function FileUpload({
             <p className="text-sm text-foreground">
               <button
                 type="button"
-                onClick={() =>
-                  uploadEnabled
-                    ? fileRef.current?.click()
-                    : (setNote(pendingNote), setShowUrl(true))
-                }
+                onClick={(e) => {
+                  e.stopPropagation(); // the zone itself already handles this click
+                  if (uploadEnabled) fileRef.current?.click();
+                  else {
+                    setNote(pendingNote);
+                    setShowUrl(true);
+                  }
+                }}
                 className="font-semibold text-brand-gold hover:underline"
               >
                 Drag {nounPhrase} here, or browse
@@ -243,10 +267,16 @@ export function FileUpload({
             {/* Compact drops the spec line: it's advisory, and the caller's ⓘ hint carries the
                 guidance in dense layouts. */}
             {!compact && hint != null && <p className="text-xs text-muted">{hint}</p>}
+            {/* Padding, not font size: the target was a 10px-tall line of text inside a zone that
+                now browses on click, so a near-miss opened a file dialog instead. The negative
+                margin keeps it visually where it was while giving it a real hit area. */}
             <button
               type="button"
-              onClick={() => setShowUrl((s) => !s)}
-              className="text-xs text-muted underline underline-offset-2 hover:text-foreground"
+              onClick={(e) => {
+                e.stopPropagation(); // must not also trigger the zone's browse
+                setShowUrl((v) => !v);
+              }}
+              className="-mx-2 -my-1 rounded px-2 py-1 text-xs text-muted underline underline-offset-2 hover:text-foreground"
             >
               or paste {nounPhrase} URL
             </button>

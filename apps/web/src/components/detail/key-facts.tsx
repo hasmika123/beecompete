@@ -88,19 +88,24 @@ function eligibilityRows(competition: CompetitionDetail): LedgerItem[] {
     key: 'pathway',
     icon: Ticket,
     label: 'How to enter',
-    value: pathwayLabel(competition.entryPathway),
+    value: pathwayLabel(competition.entryPathways) ?? 'Not provided',
     compact: true,
   });
+  // ALWAYS RENDERED, even with nothing on record (owner 2026-08-28). These three are the questions
+  // a parent checks before entering, and an omitted row is indistinguishable from a rule that does
+  // not exist — a reader cannot tell "no citizenship requirement" from "we never looked". The
+  // curator now answers each one explicitly (including "Not provided"), so the row can state the
+  // answer either way. NOT extended to the prose catch-all or the age cutoff, which are genuinely
+  // optional extras rather than gates.
+  const NOT_STATED = 'Not provided';
   const studentStatus = studentStatusLabel(competition.attributes?.student_status_required);
-  if (studentStatus != null) {
-    rows.push({
-      key: 'student_status_required',
-      icon: User,
-      label: ELIGIBILITY_ATTR_LABELS.student_status_required!,
-      value: studentStatus,
-      compact: true,
-    });
-  }
+  rows.push({
+    key: 'student_status_required',
+    icon: User,
+    label: ELIGIBILITY_ATTR_LABELS.student_status_required!,
+    value: studentStatus ?? NOT_STATED,
+    compact: true,
+  });
   // The two country fields pair with each other (owner 2026-08-27, #113) — they are the same
   // kind of fact and read best compared side by side. They are the one COMPACT exception to the
   // bounded-value rule: a country list is technically unbounded, so a long one wraps to more
@@ -112,9 +117,13 @@ function eligibilityRows(competition: CompetitionDetail): LedgerItem[] {
   ];
   for (const [key, icon] of countryKeys) {
     const value = renderAttrValue(competition.attributes?.[key]);
-    if (value != null) {
-      rows.push({ key, icon, label: ELIGIBILITY_ATTR_LABELS[key]!, value, compact: true });
-    }
+    rows.push({
+      key,
+      icon,
+      label: ELIGIBILITY_ATTR_LABELS[key]!,
+      value: value ?? NOT_STATED,
+      compact: true,
+    });
   }
   // The prose catch-all always takes the full width.
   const other = renderAttrValue(competition.attributes?.other_eligibility_requirements);

@@ -2,6 +2,7 @@ package com.beecompete.catalog.curation;
 
 import com.beecompete.catalog.domain.Category;
 import com.beecompete.catalog.domain.Competition;
+import com.beecompete.catalog.domain.EntryPathways;
 import com.beecompete.catalog.domain.EvaluationTypes;
 import com.beecompete.catalog.domain.Organization;
 import com.beecompete.catalog.domain.OrganizationType;
@@ -88,8 +89,9 @@ public class CompetitionCurationService {
 		Category category = requireCategory(request.categoryId());
 		validateAttributes(request);
 		validateEvaluationTypes(request);
+		validateEntryPathways(request);
 		Competition competition = new Competition(slugFor(request.slug(), stamp), request.name(), category,
-				request.participationMode(), request.delivery(), request.entryPathway(), request.costType(),
+				request.participationMode(), request.delivery(), request.entryPathways(), request.costType(),
 				request.recurrence());
 		apply(competition, request, category, stamp);
 		return competitions.save(competition);
@@ -105,11 +107,12 @@ public class CompetitionCurationService {
 		Category category = requireCategory(request.categoryId());
 		validateAttributes(request);
 		validateEvaluationTypes(request);
+		validateEntryPathways(request);
 		competition.setSlug(request.slug());
 		competition.setName(request.name());
 		competition.setParticipationMode(request.participationMode());
 		competition.setDelivery(request.delivery());
-		competition.setEntryPathway(request.entryPathway());
+		competition.setEntryPathways(request.entryPathways());
 		competition.setCostType(request.costType());
 		competition.setRecurrence(request.recurrence());
 		apply(competition, request, category, stamp);
@@ -229,6 +232,26 @@ public class CompetitionCurationService {
 		if (!problems.isEmpty()) {
 			throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
 					"attributes do not match the category template: " + String.join("; ", problems));
+		}
+	}
+
+	/**
+	 * Entry-pathway tokens (0024, domain-model §7a.1). Same shape as the evaluation-type check — a
+	 * text[] facet validated at the write boundary rather than by a DB enum, so widening the
+	 * vocabulary stays additive. @NotEmpty on the request covers "none given"; this covers "given
+	 * something we do not recognise", including the composite tokens 0024 retired.
+	 */
+	private void validateEntryPathways(CompetitionRequest request) {
+		if (request.entryPathways() == null) {
+			return;
+		}
+		List<String> unknown = request.entryPathways().stream()
+			.filter(token -> !EntryPathways.TOKENS.contains(token))
+			.toList();
+		if (!unknown.isEmpty()) {
+			throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+				"unknown entry pathway(s): " + String.join(", ", unknown) + "; allowed: "
+					+ String.join(", ", EntryPathways.TOKENS.stream().sorted().toList()));
 		}
 	}
 

@@ -32,7 +32,7 @@ export interface CompetitionSummary {
   teamSizeMin: number | null;
   teamSizeMax: number | null;
   delivery: string;
-  entryPathway: string;
+  entryPathways: string[];
   evaluationType: string[] | null;
   /** Which axis the ORGANIZER states: 'grade' | 'age' | 'both' | 'open'; null = not stated. */
   eligibilityBasis: string | null;

@@ -7,7 +7,7 @@ import com.beecompete.catalog.domain.CostType;
 import com.beecompete.catalog.domain.Delivery;
 import com.beecompete.catalog.domain.EditionStatus;
 import com.beecompete.catalog.domain.EligibilityBasis;
-import com.beecompete.catalog.domain.EntryPathway;
+import com.beecompete.catalog.domain.EntryPathways;
 import com.beecompete.catalog.domain.ParticipationMode;
 import com.beecompete.catalog.domain.Recurrence;
 import com.beecompete.catalog.domain.ScopeLevel;
@@ -17,6 +17,7 @@ import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 import java.math.BigDecimal;
 import java.util.Set;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -40,7 +41,7 @@ class ValidationRulesTest {
 		// organizerName (not id) satisfies the mandatory-organizer rule — the resolve-or-create path.
 		return new CompetitionRequest("amc-10", "AMC 10", null, "Test Org", null, null, null, null,
 				UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, teamMin, teamMax, Delivery.IN_PERSON,
-				EntryPathway.INDIVIDUAL, null, EligibilityBasis.GRADE, minGrade, maxGrade, null, null,
+				List.of(EntryPathways.INDIVIDUAL), null, EligibilityBasis.GRADE, minGrade, maxGrade, null, null,
 				CostType.FREE, Recurrence.ANNUAL, null);
 	}
 
@@ -54,7 +55,7 @@ class ValidationRulesTest {
 		// Neither organizerOrgId nor organizerName → the mandatory-organizer @AssertTrue fails.
 		CompetitionRequest noOrg = new CompetitionRequest("amc-10", "AMC 10", null, null, null, null, null, null,
 				UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, null, null, Delivery.IN_PERSON,
-				EntryPathway.INDIVIDUAL, null, EligibilityBasis.GRADE, (short) 9, (short) 12, null, null,
+				List.of(EntryPathways.INDIVIDUAL), null, EligibilityBasis.GRADE, (short) 9, (short) 12, null, null,
 				CostType.FREE, Recurrence.ANNUAL, null);
 		assertTrue(hasMessage(V.validate(noOrg), "organizer is required"));
 	}
@@ -64,7 +65,7 @@ class ValidationRulesTest {
 		// An organizerOrgId (no name) also satisfies the rule.
 		CompetitionRequest byId = new CompetitionRequest("amc-10", "AMC 10", UUID.randomUUID(), null, null, null,
 				null, null, UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, null, null,
-				Delivery.IN_PERSON, EntryPathway.INDIVIDUAL, null, EligibilityBasis.GRADE, (short) 9, (short) 12,
+				Delivery.IN_PERSON, List.of(EntryPathways.INDIVIDUAL), null, EligibilityBasis.GRADE, (short) 9, (short) 12,
 				null, null, CostType.FREE, Recurrence.ANNUAL, null);
 		assertTrue(V.validate(byId).isEmpty());
 	}
@@ -75,7 +76,7 @@ class ValidationRulesTest {
 		// asserting an eligibility nobody recorded.
 		CompetitionRequest unbacked = new CompetitionRequest("amc-10", "AMC 10", null, "Test Org", null, null,
 				null, null, UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, null, null,
-				Delivery.IN_PERSON, EntryPathway.INDIVIDUAL, null, EligibilityBasis.GRADE, null, null, null,
+				Delivery.IN_PERSON, List.of(EntryPathways.INDIVIDUAL), null, EligibilityBasis.GRADE, null, null, null,
 				null, CostType.FREE, Recurrence.ANNUAL, null);
 		assertTrue(hasMessage(V.validate(unbacked), "eligibilityBasis must match the ranges provided"));
 	}
@@ -86,7 +87,7 @@ class ValidationRulesTest {
 		// precisely the listing the old grade-only model could not represent honestly.
 		CompetitionRequest ageOnly = new CompetitionRequest("bjc", "Breakthrough Junior Challenge", null,
 				"Test Org", null, null, null, null, UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL,
-				null, null, Delivery.VIRTUAL, EntryPathway.INDIVIDUAL, null, EligibilityBasis.AGE, null, null,
+				null, null, Delivery.VIRTUAL, List.of(EntryPathways.INDIVIDUAL), null, EligibilityBasis.AGE, null, null,
 				(short) 13, (short) 18, CostType.FREE, Recurrence.ANNUAL, null);
 		assertTrue(V.validate(ageOnly).isEmpty());
 	}
@@ -97,7 +98,7 @@ class ValidationRulesTest {
 		for (EligibilityBasis basis : new EligibilityBasis[] {EligibilityBasis.OPEN, null}) {
 			CompetitionRequest noRange = new CompetitionRequest("open-comp", "Open Comp", null, "Test Org",
 					null, null, null, null, UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, null, null,
-					Delivery.VIRTUAL, EntryPathway.INDIVIDUAL, null, basis, null, null, null, null,
+					Delivery.VIRTUAL, List.of(EntryPathways.INDIVIDUAL), null, basis, null, null, null, null,
 					CostType.FREE, Recurrence.ANNUAL, null);
 			assertTrue(V.validate(noRange).isEmpty(), "basis " + basis + " should need no range");
 		}

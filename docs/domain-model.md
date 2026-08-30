@@ -100,7 +100,15 @@ only through a school/chapter — filterable, shown in the Details at-a-glance s
 > United States / Canada / Other, `citizenship_countries` is United States or nothing (owner:
 > free-typed spellings can never be filtered on, so the promotion would have inherited dirty
 > data). Each still stores a one-element array, so the shape is unchanged. The closure is what
-> `other_eligibility_requirements` exists for: the prose catch-all (added 2026-08-24, `0017`,
+> ⚠ **Vocabularies revised 2026-08-28 (owner).** `eligible_countries` is now **Open to all /
+> United States / Canada**; `citizenship_countries` is **Open to all / United States**.
+> **"Other" is retired** — no row ever stored it, and anything the list cannot say belongs in
+> `other_eligibility_requirements` anyway. **"Open to all" is new and IS stored**, because "the
+> organizer says anyone may enter" and "the page never mentions countries" are different facts and
+> an absent key could only ever express the second. The admin form's third option, *Not provided*,
+> is that absent key; both fields are required there, and the public Eligibility tab now renders
+> all three gates unconditionally so a missing row can no longer be read as "no such rule".
+> > `other_eligibility_requirements` exists for: the prose catch-all (added 2026-08-24, `0017`,
 > declared on every template) that absorbs what the closed lists can't say — including what a
 > curator meant by "Other". It is deliberately NOT promotion-bound; nothing filters on prose.
 
@@ -384,7 +392,7 @@ re-deriving the design.
 
 ---
 
-### 7a.1 `entry_pathway` → multi-select `entry_pathways` *(decided 2026-08-23, not built)*
+### 7a.1 `entry_pathway` → multi-select `entry_pathways` — ✅ **BUILT 2026-08-28** (migration `0024`)
 
 **Why.** Entry pathway is genuinely a SET — a competition may accept individual entry *and* school
 entry. The single-value column forced composite tokens (`SCHOOL_OR_CHAPTER`) and a wildcard
@@ -397,7 +405,16 @@ multi-valued facet: `TEXT[]` column (`0002`), GIN index (`0007`), `&&` overlap i
 `CompetitionSearchService`, `@JdbcTypeCode(SqlTypes.ARRAY) List<String>` on the entity, checkbox
 group in the admin form, token validation at the service boundary.
 
-**Migration (next free number, additive-only):**
+**As built.** Executed exactly as planned below, with two notes worth carrying:
+`EntryPathway` (the enum) was **retired in favour of a token set**, `EntryPathways`, mirroring
+`EvaluationTypes` — the alternative the plan offered, chosen because the composites were the only
+reason an enum bought anything. And tokens stay **UPPERCASE** in storage (the backfill inherited
+the old enum column's casing rather than rewriting every row for cosmetics), so the public DTOs
+lowercase them on the way out, as they already did for every other enum. The old `entry_pathway`
+column is dormant and unmapped; the singular key is still READ from queued import payloads
+(`import-seed.ts`), which is why the ~46 PENDING records needed no data migration.
+
+**Migration (as executed, additive-only):**
 1. `addColumn competition.entry_pathways TEXT[]`.
 2. Backfill from `entry_pathway`: `INDIVIDUAL→{INDIVIDUAL}` · `SCHOOL→{SCHOOL}` ·
    `CHAPTER→{CHAPTER}` · `SCHOOL_OR_CHAPTER→{SCHOOL,CHAPTER}` · `OPEN`/`EITHER`→

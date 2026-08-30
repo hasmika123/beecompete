@@ -131,7 +131,13 @@ Anything worth knowing that fits none of the above — including things you noti
   "teamSizeMin": null,                              // integers, only if TEAM/BOTH and stated
   "teamSizeMax": null,
   "delivery": "IN_PERSON",                          // IN_PERSON | VIRTUAL | HYBRID
-  "entryPathway": "SCHOOL",                         // INDIVIDUAL | SCHOOL | CHAPTER | SCHOOL_OR_CHAPTER | OPEN
+  "entryPathways": ["SCHOOL", "CHAPTER"],           // REQUIRED, a LIST, at least one:
+                                                    //   INDIVIDUAL (sign up on their own) ·
+                                                    //   SCHOOL · CHAPTER. Every route the page
+                                                    //   allows — all three = open to anyone.
+                                                    //   NOT SCHOOL_OR_CHAPTER / OPEN / EITHER:
+                                                    //   those were the old single-value
+                                                    //   spellings of these combinations.
   "evaluationType": ["exam"],                       // zero or more of: exam, submission,
                                                     //   live_performance, interview, portfolio
                                                     //   (lowercase), or null

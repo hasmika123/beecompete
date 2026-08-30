@@ -3,13 +3,13 @@ package com.beecompete.catalog.curation;
 import com.beecompete.catalog.domain.CostType;
 import com.beecompete.catalog.domain.Delivery;
 import com.beecompete.catalog.domain.EligibilityBasis;
-import com.beecompete.catalog.domain.EntryPathway;
 import com.beecompete.catalog.domain.ParticipationMode;
 import com.beecompete.catalog.domain.Recurrence;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -44,7 +44,7 @@ public record CompetitionRequest(
 		@Min(1) Short teamSizeMin,
 		@Min(1) Short teamSizeMax,
 		@NotNull Delivery delivery,
-		@NotNull EntryPathway entryPathway,
+		@NotEmpty List<String> entryPathways,
 		List<String> evaluationType,
 		// Which axis the ORGANIZER states (0023). Nullable on purpose: null is "not stated", a real
 		// state that renders as such, and NOT a default to GRADE.

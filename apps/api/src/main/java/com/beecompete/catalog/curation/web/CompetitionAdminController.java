@@ -262,7 +262,7 @@ public class CompetitionAdminController {
 
 	public record CompetitionResponse(UUID id, String slug, String name, UUID organizerOrgId, String officialUrl,
 			String logo, String description, UUID categoryId, List<String> tags,
-			String participationMode, Short teamSizeMin, Short teamSizeMax, String delivery, String entryPathway,
+			String participationMode, Short teamSizeMin, Short teamSizeMax, String delivery, List<String> entryPathways,
 			List<String> evaluationType, String eligibilityBasis, Short minGrade, Short maxGrade,
 			Short minAge, Short maxAge,
 			String costType, String recurrence, Map<String, Object> attributes, String provenanceSource,
@@ -286,7 +286,7 @@ public class CompetitionAdminController {
 					c.getOrganizer() != null ? c.getOrganizer().getId() : null, c.getOfficialUrl(), c.getLogo(),
 					c.getDescription(), c.getCategory().getId(), c.getTags(),
 					c.getParticipationMode().name(), c.getTeamSizeMin(), c.getTeamSizeMax(),
-					c.getDelivery().name(), c.getEntryPathway().name(), c.getEvaluationType(),
+					c.getDelivery().name(), c.getEntryPathways(), c.getEvaluationType(),
 					c.getEligibilityBasis() != null ? c.getEligibilityBasis().name() : null, c.getMinGrade(),
 					c.getMaxGrade(), c.getMinAge(), c.getMaxAge(), c.getCostType().name(),
 					c.getRecurrence().name(), c.getAttributes(),

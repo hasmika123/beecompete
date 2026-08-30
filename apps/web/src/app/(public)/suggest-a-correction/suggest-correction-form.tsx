@@ -49,7 +49,7 @@ const FIELD_OPTIONS: Record<string, FieldOption[]> = {
     { key: 'costType', label: 'Entry fee', values: COST_TYPES },
     { key: 'participationMode', label: 'Individual or team', values: PARTICIPATION_MODES },
     { key: 'delivery', label: 'In person or online', values: DELIVERIES },
-    { key: 'entryPathway', label: 'How you enter', values: ENTRY_PATHWAYS },
+    { key: 'entryPathways', label: 'How you enter', values: ENTRY_PATHWAYS },
     { key: 'recurrence', label: 'How often it runs', values: RECURRENCES },
   ],
   EDITION: [

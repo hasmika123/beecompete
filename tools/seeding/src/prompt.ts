@@ -133,8 +133,15 @@ Return ONLY a JSON object with this exact top-level shape (no markdown, no comme
 - participationMode (REQUIRED): one of ${PARTICIPATION_MODES.join(', ')} — how participants compete.
 - teamSizeMin / teamSizeMax (integer|null): only if TEAM/BOTH and stated.
 - delivery (REQUIRED): one of ${DELIVERIES.join(', ')}.
-- entryPathway (REQUIRED): one of ${ENTRY_PATHWAYS.join(', ')} — how you enter (as an individual,
-  via a school/chapter, or either). Distinct from who is eligible.
+- entryPathways (string[], REQUIRED, at least one): every route the page says you can enter by —
+  zero or more of ${ENTRY_PATHWAYS.join(', ')}. Distinct from who is ELIGIBLE.
+    * INDIVIDUAL — a student can sign up on their own account.
+    * SCHOOL — entry only through a participating school.
+    * CHAPTER — entry only through a participating chapter or club.
+  It is a LIST because a competition may accept more than one: a page that says "enter through your
+  school or your local chapter" is ["SCHOOL", "CHAPTER"], and one that says anyone may enter by any
+  route is all three. Do NOT emit SCHOOL_OR_CHAPTER, OPEN, or EITHER — those were the old
+  single-value spellings of exactly these combinations and are rejected.
 - evaluationType (string[]|null): how work is judged — zero or more of ${EVALUATION_TOKENS.join(', ')}.
 - eligibilityBasis (REQUIRED unless the page states no eligibility at all): one of
   ${ELIGIBILITY_BASES.join(', ')} — WHICH AXIS THE PAGE ITSELF USES to say who may enter.

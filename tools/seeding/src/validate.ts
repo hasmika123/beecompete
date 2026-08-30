@@ -282,7 +282,19 @@ function validateSpine(p: CompetitionPayload, errors: string[], warnings: string
 
   requireEnum(errors, 'participationMode', p.participationMode, PARTICIPATION_MODES);
   requireEnum(errors, 'delivery', p.delivery, DELIVERIES);
-  requireEnum(errors, 'entryPathway', p.entryPathway, ENTRY_PATHWAYS);
+  // A SET now (`0024`): required, non-empty, and every token known. The composites it replaced
+  // (SCHOOL_OR_CHAPTER / EITHER) are rejected by the token check, which is the point — a payload
+  // still emitting them was written against the old shape.
+  if (!Array.isArray(p.entryPathways) || p.entryPathways.length === 0) {
+    errors.push('entryPathways is required and must list at least one route');
+  } else {
+    const bad = p.entryPathways.filter((t) => !ENTRY_PATHWAYS.includes(t as never));
+    if (bad.length) {
+      errors.push(
+        `unknown entryPathways token(s): ${bad.join(', ')} — allowed: ${ENTRY_PATHWAYS.join(', ')}`,
+      );
+    }
+  }
   requireEnum(errors, 'costType', p.costType, COST_TYPES);
   requireEnum(errors, 'recurrence', p.recurrence, RECURRENCES);
 

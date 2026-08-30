@@ -104,10 +104,26 @@ describe('splitImportPayload', () => {
     expect(seed.keyDates.map((r) => r.type)).toEqual(['RESULTS']);
   });
 
-  it('falls back to a renderable token for an enum the dropdown does not know', () => {
+  // Owner 2026-08-28: these enums no longer get a substituted default. A payload that never said
+  // "annual" used to reach the form showing Annual, indistinguishable from one that did — so a
+  // curator could not tell our guess from the source's fact, and published the guess.
+  it('leaves an absent or unknown enum UNANSWERED rather than substituting a default', () => {
     const seed = splitImportPayload(payload({ costType: 'FREEMIUM', delivery: null }));
-    expect(seed.competition.costType).toBe('FREE');
-    expect(seed.competition.delivery).toBe('IN_PERSON');
+    expect(seed.competition.costType).toBe('');
+    expect(seed.competition.delivery).toBe('');
+  });
+
+  it('still reads a stated enum straight through', () => {
+    const seed = splitImportPayload(payload({ costType: 'PAID', recurrence: 'ROLLING' }));
+    expect(seed.competition.costType).toBe('PAID');
+    expect(seed.competition.recurrence).toBe('ROLLING');
+  });
+
+  it('leaves an unstated edition scope level unanswered', () => {
+    // 5 queued extractions have no scopeLevel and had been approving as NATIONAL. It is @NotNull
+    // server-side, so the form now blocks on it instead of inventing one.
+    const seed = splitImportPayload(payload({ edition: { cycleLabel: '2026' } }));
+    expect(seed.edition?.scopeLevel).toBe('');
   });
 
   it('prefers an already-resolved organizer id over the extracted name', () => {
@@ -193,6 +209,37 @@ describe('importSeedWarnings', () => {
     expect(seed.resources).toHaveLength(1);
     // The link is the valuable part, so an unknown type falls back rather than losing the row.
     expect(seed.resources[0]).toMatchObject({ title: 'Odd type', type: 'OTHER' });
+  });
+
+  // `0024`: the ~46 queued extractions predate the set and carry a singular `entryPathway`,
+  // including the composite tokens it retired. They must still review correctly without a data
+  // migration, so the reader takes either shape and expands exactly like the migration's backfill.
+  it('expands a legacy singular entryPathway, composites included', () => {
+    const cases: [string, string[]][] = [
+      ['INDIVIDUAL', ['INDIVIDUAL']],
+      ['SCHOOL', ['SCHOOL']],
+      ['SCHOOL_OR_CHAPTER', ['SCHOOL', 'CHAPTER']],
+      ['OPEN', ['INDIVIDUAL', 'SCHOOL', 'CHAPTER']],
+      ['EITHER', ['INDIVIDUAL', 'SCHOOL', 'CHAPTER']],
+    ];
+    for (const [stored, expected] of cases) {
+      const seed = splitImportPayload(payload({ entryPathway: stored }));
+      expect(seed.competition.entryPathways, stored).toEqual(expected);
+    }
+  });
+
+  it('prefers the array shape and drops tokens it does not know', () => {
+    expect(
+      splitImportPayload(payload({ entryPathways: ['SCHOOL', 'CHAPTER'] })).competition
+        .entryPathways,
+    ).toEqual(['SCHOOL', 'CHAPTER']);
+    expect(
+      splitImportPayload(payload({ entryPathways: ['SCHOOL', 'NONSENSE'] })).competition
+        .entryPathways,
+    ).toEqual(['SCHOOL']);
+    expect(
+      splitImportPayload(payload({ entryPathway: 'NONSENSE' })).competition.entryPathways,
+    ).toEqual([]);
   });
 
   it('reads FAQ rows into form rows', () => {

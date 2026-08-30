@@ -29,13 +29,10 @@ export const DELIVERIES = ['IN_PERSON', 'VIRTUAL', 'HYBRID'] as const;
 // Widened 2026-08-23 (owner): school/chapter split, EITHER renamed OPEN. Legacy EITHER is NOT
 // offered — migration 0016 rewrites those rows — but SCHOOL_OR_CHAPTER stays selectable, since
 // some competitions genuinely accept either route.
-export const ENTRY_PATHWAYS = [
-  'INDIVIDUAL',
-  'SCHOOL',
-  'CHAPTER',
-  'SCHOOL_OR_CHAPTER',
-  'OPEN',
-] as const;
+// Three tokens since `0024` (domain-model §7a.1): entry pathway is a SET, so the composites it
+// used to need — SCHOOL_OR_CHAPTER, OPEN, and the pre-0016 EITHER — are expressible directly and
+// are gone. {SCHOOL, CHAPTER} IS "school or chapter"; all three selected IS "open to all".
+export const ENTRY_PATHWAYS = ['INDIVIDUAL', 'SCHOOL', 'CHAPTER'] as const;
 // Which axis the ORGANIZER states (0023, glossary "Eligibility basis"). The stated axis is what
 // every summary surface renders; the other, when present, is a derived search range and must never
 // be shown as a rule. Absent (null) is a real state — "not stated" — and NOT a default to GRADE.
@@ -134,7 +131,7 @@ export interface Competition {
   teamSizeMin: number | null;
   teamSizeMax: number | null;
   delivery: string;
-  entryPathway: string;
+  entryPathways: string[];
   evaluationType: string[] | null;
   /** Which axis the ORGANIZER states: 'GRADE' | 'AGE' | 'BOTH' | 'OPEN'; null = not stated. */
   eligibilityBasis: EligibilityBasis | null;

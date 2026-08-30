@@ -10,7 +10,9 @@
 
 export const PARTICIPATION_MODES = ['INDIVIDUAL', 'TEAM', 'BOTH'] as const;
 export const DELIVERIES = ['IN_PERSON', 'VIRTUAL', 'HYBRID'] as const;
-export const ENTRY_PATHWAYS = ['INDIVIDUAL', 'SCHOOL_OR_CHAPTER', 'EITHER'] as const;
+// Three tokens since `0024` (domain-model §7a.1): entry pathway is a SET, so the composites the
+// single-value column needed — SCHOOL_OR_CHAPTER and the EITHER wildcard — are expressible directly.
+export const ENTRY_PATHWAYS = ['INDIVIDUAL', 'SCHOOL', 'CHAPTER'] as const;
 export const COST_TYPES = ['FREE', 'PAID'] as const;
 // Which axis the ORGANIZER states (0023). Mirrors apps/api's EligibilityBasis. Absent is a real
 // value here — "the page doesn't say" — and must never be defaulted to GRADE.
@@ -80,7 +82,7 @@ export interface CompetitionPayload {
   teamSizeMin?: number | null;
   teamSizeMax?: number | null;
   delivery: Delivery;
-  entryPathway: EntryPathway;
+  entryPathways: EntryPathway[];
   evaluationType?: string[] | null;
   /**
    * Which axis the page STATES as the entry rule. Governs what the listing displays; the other
