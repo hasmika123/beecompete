@@ -768,6 +768,23 @@ export function CompetitionForm({
   // construction.
   const keyDateOk = (type: string) =>
     keyDateRows.some((r) => r.type === type && (r.tbd || r.date !== ''));
+  /**
+   * A SECOND row of a required milestone type (owner 2026-08-30). Flagged, not blocked.
+   *
+   * Two reasons, one live and one ahead of us. Live: `nextDeadline` is `min(starts_at)` over the
+   * REG_CLOSE rows, so a duplicate silently makes the EARLIER date the listing's deadline — an
+   * early-bird cutoff would masquerade as the real one. (Early-bird belongs on a CUSTOM row, which
+   * is how the seeded data already does it.) Ahead: `docs/timeline-model-plan.md` merges REG_OPEN +
+   * REG_CLOSE into one REGISTRATION row by pairing them per edition, which is only unambiguous
+   * while there is at most one of each — true of all 52 rows today, and worth keeping true through
+   * the seeding run.
+   *
+   * Not a hard block: a competition with genuinely staged deadlines is imaginable, and the curator
+   * is better placed to judge that than this rule is.
+   */
+  const duplicateRequiredType = (row: KeyDateRow) =>
+    (REQUIRED_KEY_DATE_TYPES as readonly string[]).includes(row.type) &&
+    keyDateRows.filter((o) => o.type === row.type).length > 1;
   // Create front-loads everything the public card/detail shows (item 5/9): the listing is
   // complete-by-default. Edit keeps only the base spine required, so legacy listings still save.
   // Import uses the SAME full checklist as create, but only to SHOW what a curator would have to
@@ -1653,7 +1670,15 @@ export function CompetitionForm({
                     </div>
                     <div className="grid min-w-0 flex-1 gap-3">
                       <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
-                        <FormField label="Milestone" className="min-w-0">
+                        <FormField
+                          label="Milestone"
+                          className="min-w-0"
+                          error={
+                            duplicateRequiredType(row)
+                              ? 'Already on the timeline — a second one would become the listing’s deadline. Use Custom for an extra cutoff.'
+                              : undefined
+                          }
+                        >
                           <Select
                             name={`keydate_${i}_type`}
                             options={enumOptions(KEY_DATE_TYPES)}
