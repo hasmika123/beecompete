@@ -1,6 +1,6 @@
 import type { CompetitionDetail, EditionView, KeyDateView } from '@/lib/catalog-types';
 import { deadlineDisplay } from '@/lib/catalog-display';
-import { formatDate } from '@/lib/dates';
+import { formatDate, keyDateZone } from '@/lib/dates';
 
 // Display derivation for the competition-detail page (R1-7, page-blueprints Page 3). Pure,
 // server+client safe: no side-effecting imports. Wording rules live here (the components stay
@@ -355,7 +355,7 @@ export interface DeadlineFact {
  * print it twice.
  */
 export function deadlineFact(deadline: NextDeadline, now?: Date): DeadlineFact {
-  const absolute = formatDate(deadline.iso, deadline.timezone);
+  const absolute = formatDate(deadline.iso, keyDateZone(deadline.timezone));
   const view = deadlineDisplay(deadline.iso, now, deadline.timezone);
   const value = view?.label ?? `Closes ${absolute}`;
   return {

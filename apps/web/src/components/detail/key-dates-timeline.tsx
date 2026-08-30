@@ -1,7 +1,7 @@
 import { Check, cn } from '@beecompete/ui';
 import { AddToCalendar } from '@/components/detail/add-to-calendar';
 import { timelineDates } from '@/lib/detail-display';
-import { formatDate, sameCalendarDay } from '@/lib/dates';
+import { formatDate, keyDateZone, sameCalendarDay } from '@/lib/dates';
 import type { EditionView } from '@/lib/catalog-types';
 
 // The edition's key-date timeline (blueprints Page 3.4b): reg opens → closes → rounds →
@@ -30,7 +30,7 @@ export function KeyDatesTimeline({
           !isTbd &&
           date.startsAt &&
           date.endsAt &&
-          !sameCalendarDay(date.startsAt, date.endsAt, date.timezone);
+          !sameCalendarDay(date.startsAt, date.endsAt, keyDateZone(date.timezone));
         return (
           <li key={`${date.type}-${date.startsAt}-${i}`} className="ml-4 pb-5 last:pb-0">
             {/* Past milestones get a CHECK in the marker (#84) — "done", not just dimmed.
@@ -72,8 +72,9 @@ export function KeyDatesTimeline({
                 'Date TBD'
               ) : (
                 <>
-                  {formatDate(date.startsAt, date.timezone)}
-                  {multiDay && ` – ${formatDate(date.endsAt as string, date.timezone)}`}
+                  {formatDate(date.startsAt, keyDateZone(date.timezone))}
+                  {multiDay &&
+                    ` – ${formatDate(date.endsAt as string, keyDateZone(date.timezone))}`}
                 </>
               )}
             </p>

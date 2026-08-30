@@ -14,7 +14,7 @@ import {
 } from '@beecompete/ui';
 import { enumLabel, enumOptions } from '@/components/admin/enum-labels';
 import { addKeyDate, deleteKeyDate } from '@/app/admin/competitions/[id]/editions/actions';
-import { formatInZone } from '@/lib/dates';
+import { formatInZone, keyDateZone } from '@/lib/dates';
 import { ADMIN_TIMEZONES, KEY_DATE_TYPES, type KeyDate } from '@/lib/admin-types';
 
 export function KeyDateManager({
@@ -45,10 +45,12 @@ export function KeyDateManager({
               <span className="font-medium text-foreground">{enumLabel(k.type)}</span>
               {k.label && <span className="ml-2 text-foreground">· {k.label}</span>}
               <span className="ml-2 text-muted">
-                {k.startsAt ? formatInZone(k.startsAt, k.timezone) : 'Date TBD'}
+                {k.startsAt ? formatInZone(k.startsAt, keyDateZone(k.timezone)) : 'Date TBD'}
               </span>
               {k.endsAt && (
-                <span className="ml-1 text-muted">→ {formatInZone(k.endsAt, k.timezone)}</span>
+                <span className="ml-1 text-muted">
+                  → {formatInZone(k.endsAt, keyDateZone(k.timezone))}
+                </span>
               )}
             </span>
             <Button

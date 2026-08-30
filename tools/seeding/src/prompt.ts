@@ -257,7 +257,14 @@ A listing is only useful with a running attached, so also fill these INSIDE "pay
   never a bare date like "2026-11-03".** The server stores these as instants and rejects a
   date-only value outright. When the page gives a day but no clock time, use T00:00:00Z and say
   so in reviewerNotes. (This does NOT apply to edition.ageCutoffDate, which is a plain date.)
-- If no timezone is stated, leave timezone null rather than assuming one.
+- **timezone and startsAt must agree, or the date lands on the WRONG DAY.** A date is read as the
+  wall clock in the zone you name, so "2026-11-03T00:00:00Z" paired with timezone
+  "America/New_York" does NOT read as Nov 3 — it reads as Nov 2, and a student sees a deadline a
+  day early. The rule that avoids it:
+    - Page gave a DAY but no clock time -> "...T00:00:00Z" AND timezone null. A null timezone is
+      what marks the value as day-only, so never fill one in to be helpful.
+    - Page gave a real time -> that instant with its true offset, and name the zone it stated.
+  Never name a timezone you aren't certain the stated time belongs to.
 - Emit a REG_CLOSE or SUBMISSION_DUE row whenever the page implies a closing date exists, even when
   the date itself is TBD — that row is what the public card and search read as the deadline.
 - **A milestone that is not one of the listed types is NOT dropped — emit it as CUSTOM with a short

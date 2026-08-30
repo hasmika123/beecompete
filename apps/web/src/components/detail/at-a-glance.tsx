@@ -14,7 +14,7 @@ import {
   cn,
 } from '@beecompete/ui';
 import { eligibilityLabel } from '@/lib/catalog-display';
-import { formatDate } from '@/lib/dates';
+import { formatDate, keyDateZone } from '@/lib/dates';
 import {
   costLabel,
   currentEdition,
@@ -135,7 +135,7 @@ export function AtAGlance({ competition }: { competition: CompetitionDetail }) {
       key: 'deadline',
       icon: Clock,
       label: 'Registration',
-      value: `Opens ${formatDate(opens.iso, opens.timezone ?? undefined)}`,
+      value: `Opens ${formatDate(opens.iso, keyDateZone(opens.timezone))}`,
     });
   } else if (deadline) {
     // Relative value + absolute date underneath — see deadlineFact (pinned by detail-display.test).

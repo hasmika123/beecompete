@@ -8,8 +8,10 @@ working prototype that would otherwise be lost. **What the review *decided* is n
 choices live normatively in the decision logs of `feature-registry.md` (Rev 7/8), `domain-model.md`,
 `monetization.md` §8, and `compliance.md`. This doc is the *raw material*, not the ruling.
 
-> **Source:** the legacy repo lives outside this repo (reviewed at
-> `~/Downloads/legacy-transfer-hub-main/`). **Archive it somewhere durable** — once it's gone, the
+> **Source:** the legacy repo lives outside this repo. It is **archived** at
+> `Workbench/BeeCompete/Repositories/master-beecompete` (confirmed 2026-08-30; the original review
+> path `~/Downloads/legacy-transfer-hub-main/` is stale). Sibling copies `legacy-transfer-hub`,
+> `legacy-lift-*` and `beehive-legacy-import` sit alongside it. Keep it durable — if it goes, the
 > sections below are the only record. Key artifacts: `DATABASE_SCHEMA.sql`, `db/patches/*.sql`
 > (~70 files), `TESTING_USECASES.md`, and the feature guides.
 
@@ -34,6 +36,9 @@ stages" seeded on creation (created / registration / event / submission / result
 CUSTOM_LIST); `depends_on_stage_id` + auto-unlock; per-stage submission windows/artifacts,
 instructions, resources, notification toggles (on publish / 24h before end / on update), and
 internal host notes; `visible_to_participants_at` scheduling.
+*Features only — for how this model **failed** in practice (arity unenforced, registration seeded as
+a point type, the same date stored in two places, drifted vocabularies), see*
+`timeline-model-plan.md` §3.
 
 **Registration form builder** (for H5/H37): 24+ field types — basic (text/long-text/email/phone/
 URL/number/date/dropdown/multi-select/radio/checkbox/file), advanced (country, state), team fields

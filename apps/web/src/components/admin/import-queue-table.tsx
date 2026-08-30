@@ -18,7 +18,7 @@ import {
 import { ConfidenceMeter } from '@/components/admin/confidence-meter';
 import { ImportOriginBadge, ReviewStatusBadge } from '@/components/admin/status-badges';
 import { bulkReviewImports } from '@/app/admin/import-records/actions';
-import { formatDate } from '@/lib/dates';
+import { formatDate, keyDateZone } from '@/lib/dates';
 import { summarizeImportRow } from '@/lib/import-queue';
 import type { BulkOutcome, Category, ImportRecord, Organization } from '@/lib/admin-types';
 
@@ -298,7 +298,9 @@ function DeadlineChip({ summary }: { summary: ReturnType<typeof summarizeImportR
     return <span className="text-xs text-muted">deadline TBD</span>;
   }
   return (
-    <span className="text-xs text-muted">{formatDate(deadline.startsAt, deadline.timezone)}</span>
+    <span className="text-xs text-muted">
+      {formatDate(deadline.startsAt, keyDateZone(deadline.timezone))}
+    </span>
   );
 }
 

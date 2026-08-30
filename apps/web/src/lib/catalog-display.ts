@@ -1,6 +1,6 @@
 import type { CompetitionCardData } from '@beecompete/ui';
 import type { CompetitionSummary } from '@/lib/catalog-types';
-import { calendarDaysUntil, formatDate } from '@/lib/dates';
+import { calendarDaysUntil, formatDate, keyDateZone } from '@/lib/dates';
 import { displayRegionName, isUsCountry, stateCode } from '@/lib/us-states';
 
 // Display derivation for catalog data — the CompetitionCard is presentation-only, so the
@@ -133,13 +133,14 @@ export function deadlineDisplay(
 ): DeadlineDisplay | undefined {
   if (!nextDeadline) return undefined;
   if (new Date(nextDeadline).getTime() < now.getTime()) return undefined; // passed — say nothing
-  const days = calendarDaysUntil(nextDeadline, now, timeZone);
+  const zone = keyDateZone(timeZone);
+  const days = calendarDaysUntil(nextDeadline, now, zone);
   if (days <= RELATIVE_WINDOW_DAYS) {
     const label =
       days <= 0 ? 'Closes today' : days === 1 ? 'Closes tomorrow' : `${days} days to go`;
     return { label, urgent: days <= URGENT_DAYS };
   }
-  return { label: `Closes ${formatDate(nextDeadline, timeZone)}`, urgent: false };
+  return { label: `Closes ${formatDate(nextDeadline, zone)}`, urgent: false };
 }
 
 /**

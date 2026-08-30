@@ -1,7 +1,7 @@
 'use client';
 
 import { CalendarPlus, ExternalLink } from '@beecompete/ui';
-import { compactDateInZone, compactNextDayInZone } from '@/lib/dates';
+import { compactDateInZone, compactNextDayInZone, keyDateZone } from '@/lib/dates';
 
 // Per-date add-to-calendar (blueprints Page 3, decision #17): ics download + Google link, no
 // account needed at R1. Client component — the .ics is built and downloaded in-browser (no
@@ -64,8 +64,9 @@ function utcStamp(date: Date): string {
 
 export function AddToCalendar({ title, start, end, timezone, uid, details }: AddToCalendarProps) {
   // All-day span in the key date's zone; the end date is EXCLUSIVE per RFC 5545 / Google.
-  const startDay = compactDateInZone(start, timezone);
-  const endDayExclusive = compactNextDayInZone(end ?? start, timezone);
+  const zone = keyDateZone(timezone);
+  const startDay = compactDateInZone(start, zone);
+  const endDayExclusive = compactNextDayInZone(end ?? start, zone);
 
   const googleUrl = (() => {
     const params = new URLSearchParams({

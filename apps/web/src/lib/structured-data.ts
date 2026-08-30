@@ -6,7 +6,7 @@ import type {
   KeyDateView,
 } from '@/lib/catalog-types';
 import { currentEdition } from '@/lib/detail-display';
-import { isoDateInZone } from '@/lib/dates';
+import { isoDateInZone, keyDateZone } from '@/lib/dates';
 import { SITE_NAME, SITE_URL, absoluteUrl } from '@/lib/site';
 
 // schema.org JSON-LD for the detail page (page-blueprints Page 3 — the SEO landing surface).
@@ -44,8 +44,8 @@ export function eventJsonLd(competition: CompetitionDetail): JsonLd | undefined 
   if (!first) return undefined; // no event-phase dates → not a valid Event
   const last = dates[dates.length - 1] ?? first;
   // Non-null asserted: eventDates() filtered out null startsAt above.
-  const start = isoDateInZone(first.startsAt!, first.timezone);
-  const end = isoDateInZone(last.endsAt ?? last.startsAt!, last.timezone);
+  const start = isoDateInZone(first.startsAt!, keyDateZone(first.timezone));
+  const end = isoDateInZone(last.endsAt ?? last.startsAt!, keyDateZone(last.timezone));
 
   // Paid Offer only with a real fee — price 0 on a paid competition reads as "free" (L1).
   const fee = edition.entryFee != null ? Number(edition.entryFee) : null;
