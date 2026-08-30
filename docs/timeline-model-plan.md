@@ -143,10 +143,22 @@ One table, typed rows, arity declared by type. `key_date` keeps its name and its
 | `PERIOD` | **window** | — | generic window; label carries the specifics |
 | `RESULTS` | **point** | `RESULTS` | results announced |
 | `ANNOUNCEMENT` | **point** | — | a dated announcement |
-| `MILESTONE` | **point** | `CUSTOM` | generic dated point |
+| `CUSTOM` | **point** | `CUSTOM` (kept) | generic dated point; label carries the specifics |
 
 Eight types, two arities, one generic of each so the vocabulary does not need to grow for every
 one-off. `label` stays on every row.
+
+**`CUSTOM` stays `CUSTOM`** (revised 2026-08-30, glossary-first). This plan originally renamed it to
+`MILESTONE`. Writing the glossary entries surfaced why that is wrong: **Milestone is already a
+canonical term** — "a deadline-gated, approval-driven step in a participant's structured workflow,
+with visible status" (registry HC7, 🛑 Gate B). A generic dated point on a public timeline has no
+approval, no status and no workflow; reusing the word would collide with a reserved concept. Keeping
+`CUSTOM` costs nothing and avoids the clash, so open question 4 is closed: **no rename.**
+
+⚠ Related, and NOT fixed here: the curation form labels the key-date type field "Milestone", and both
+seeding prompts use "milestone" throughout for what the glossary calls a **Key date**. That predates
+this plan and is flagged in the glossary's Milestone row; reconciling the UI copy is its own small
+task.
 
 **`EVENT`, not `ROUND`** (revised 2026-08-30 on owner input). `Round` is already a canonical glossary
 term — *"a sequential phase within a Stage (written → oral)"* — and a **reserved Phase-3 entity**
@@ -257,7 +269,7 @@ Additive-only, following `0024`'s pattern. The old `key_date` rows are rewritten
 | `SUBMISSION_DUE` (8) | `SUBMISSION` | `ends_at` ← `starts_at`; `starts_at` ← NULL |
 | `ROUND_START` (5) | `EVENT` | unchanged (3 keep their `ends_at`) |
 | `RESULTS` (10) | `RESULTS` | unchanged (no `ends_at` exists) |
-| `CUSTOM` (6) | `MILESTONE` | unchanged (no `ends_at` exists) |
+| `CUSTOM` (6) | `CUSTOM` | unchanged — no rename, no rewrite (§4.1) |
 
 **Pairing rule.** Within an edition, pair the *i*-th `REG_OPEN` with the *i*-th `REG_CLOSE` ordered by
 `starts_at`. Surplus rows on either side become half-open `REGISTRATION` rows. Any edition holding
@@ -436,10 +448,13 @@ support to be real, and an unused column is debt. It lands when the feature does
 
 3. ~~`all_day` and the midnight-deadline defect.~~ **Done 2026-08-30** — the display bug is fixed
    (§4.4); `all_day` is downgraded to optional and no longer blocks `0025`.
-4. **`CUSTOM` → `MILESTONE` rename.** Worth the churn for a vocabulary that reads as a set, or keep
-   `CUSTOM`?
-5. **Glossary.** `Timeline entry`, `Window`, `Point` need entries **before** any code is written
-   (glossary-first). Proposed in §4.1; not yet added.
+4. ~~`CUSTOM` → `MILESTONE` rename.~~ **Closed 2026-08-30 — no rename.** `Milestone` is a reserved
+   glossary term (HC7); see §4.1.
+5. ~~Glossary entries.~~ **Done 2026-08-30** — `Key date`, `Window` and `Point` are in `glossary.md`,
+   and the `Milestone` row now records why the rename was dropped.
+
+**Newly open:** the curation form's "Milestone" field label and the prompts' loose use of the word
+both refer to a **Key date**. Pre-existing, low-risk, and worth a small copy pass before `0025`.
 
 ## 9. If this is deferred
 
