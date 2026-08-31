@@ -148,6 +148,33 @@ describe('splitImportPayload', () => {
 });
 
 describe('importSeedWarnings', () => {
+  /**
+   * A token the payload STATED but we can't map renders blank — same as "the source never said".
+   * Without a warning a curator can't tell which happened, so can't tell whether to read the page
+   * or report an extractor bug. The key-date path has always warned; these did not.
+   */
+  it('names an unrecognised enum token rather than blanking it silently', () => {
+    const p = payload({ delivery: 'ONLINE', costType: 'GRATIS' });
+    const warnings = importSeedWarnings(p, splitImportPayload(p));
+    const w = warnings.find((x) => x.key === 'unmappedEnums');
+    expect(w).toBeDefined();
+    expect(w!.message).toContain('delivery ("ONLINE")');
+    expect(w!.message).toContain('entry fee type ("GRATIS")');
+  });
+
+  it('stays quiet when a field is simply absent — that is a different answer', () => {
+    const p = payload();
+    delete (p as Record<string, unknown>).delivery;
+    const keys = importSeedWarnings(p, splitImportPayload(p)).map((x) => x.key);
+    expect(keys).not.toContain('unmappedEnums');
+  });
+
+  it('names an unrecognised scope level from inside the edition', () => {
+    const p = payload({ edition: { cycleLabel: '2026', scopeLevel: 'GALACTIC' } });
+    const w = importSeedWarnings(p, splitImportPayload(p)).find((x) => x.key === 'unmappedEnums');
+    expect(w?.message).toContain('scope level ("GALACTIC")');
+  });
+
   it('says nothing about a complete extraction beyond what is genuinely missing', () => {
     const p = payload();
     expect(importSeedWarnings(p, splitImportPayload(p)).map((w) => w.key)).toEqual([]);

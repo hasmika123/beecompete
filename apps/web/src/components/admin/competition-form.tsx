@@ -41,10 +41,13 @@ import { OrganizationCreatedModal } from '@/components/admin/organization-create
 import { GRADE_VALUES, gradeOptionLabel } from '@/lib/catalog-display';
 import { defaultKeyDateLabel } from '@/lib/detail-display';
 import {
+  BOUNDS,
   currencyRule,
+  intRule,
   isComplete,
   LIMITS,
   moneyRule,
+  rangeRule,
   slugRule,
   textRule,
   urlRule,
@@ -902,6 +905,8 @@ export function CompetitionForm({
     registrationUrl: editionSeed?.registrationUrl ?? '',
     entryFee: editionSeed?.entryFee ?? '',
     currency: editionSeed?.currency ?? '',
+    teamSizeMin: c?.teamSizeMin != null ? String(c.teamSizeMin) : '',
+    teamSizeMax: c?.teamSizeMax != null ? String(c.teamSizeMax) : '',
   });
   type TextKey = keyof typeof text;
   const mark = (key: TextKey) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -959,6 +964,11 @@ export function CompetitionForm({
       label: 'Registration URL',
     }),
     entryFee: moneyRule(text.entryFee, { label: 'Entry fee' }),
+    // `min`/`max` on a number input only stop the SPINNERS — a typed or seeded value sails past
+    // them, so the range needs stating as a rule too (server has @Min(1) and no upper bound).
+    teamSizeMin: intRule(text.teamSizeMin, { ...BOUNDS.teamSize, label: 'Minimum team size' }),
+    teamSizeMax: intRule(text.teamSizeMax, { ...BOUNDS.teamSize, label: 'Maximum team size' }),
+    teamSizeRange: rangeRule(text.teamSizeMin, text.teamSizeMax, 'team size'),
     currency: currencyRule(text.currency),
   };
 
@@ -1569,7 +1579,16 @@ export function CompetitionForm({
               onValueChange={setParticipation}
             />
           </FormField>
-          <FormField label="Team size" hintAs="icon" hint="team competitions only">
+          <FormField
+            label="Team size"
+            hintAs="icon"
+            hint="team competitions only"
+            error={
+              teamDisabled
+                ? undefined
+                : (fieldErrors.teamSizeMin ?? fieldErrors.teamSizeMax ?? fieldErrors.teamSizeRange)
+            }
+          >
             <div className="flex items-center gap-2">
               <Input
                 name="teamSizeMin"
@@ -1577,7 +1596,9 @@ export function CompetitionForm({
                 aria-label="Team size (min)"
                 placeholder="min"
                 defaultValue={c?.teamSizeMin ?? ''}
-                min={1}
+                min={BOUNDS.teamSize.min}
+                max={BOUNDS.teamSize.max}
+                onChange={mark('teamSizeMin')}
                 disabled={teamDisabled}
               />
               <span aria-hidden="true" className="text-muted">
@@ -1589,7 +1610,9 @@ export function CompetitionForm({
                 aria-label="Team size (max)"
                 placeholder="max"
                 defaultValue={c?.teamSizeMax ?? ''}
-                min={1}
+                min={BOUNDS.teamSize.min}
+                max={BOUNDS.teamSize.max}
+                onChange={mark('teamSizeMax')}
                 disabled={teamDisabled}
               />
             </div>

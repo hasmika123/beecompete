@@ -448,6 +448,36 @@ export function importSeedWarnings(
     });
   }
 
+  /**
+   * A token the payload STATED but we could not map (owner 2026-08-31). `enumOrBlank` renders an
+   * unrecognised value as blank, which is right — a wrong token is not a fact — but blank is also
+   * how "the source never said" renders, and conflating those loses the difference that matters:
+   * a curator who sees an empty Delivery cannot tell whether to go read the page or whether the
+   * extractor emitted the wrong spelling (which is a prompt bug worth reporting).
+   *
+   * The key-date path has warned like this since the start ("N had an unusable type"); this closes
+   * the same gap for the scalar enums. Advisory, like everything here: the blank field is already
+   * in the required ring, so this only explains WHY it is blank.
+   */
+  const unmapped = (
+    [
+      ['participation mode', payload.participationMode, seed.competition.participationMode],
+      ['delivery', payload.delivery, seed.competition.delivery],
+      ['entry fee type', payload.costType, seed.competition.costType],
+      ['recurrence', payload.recurrence, seed.competition.recurrence],
+      ['eligibility basis', payload.eligibilityBasis, seed.competition.eligibilityBasis ?? ''],
+      ['scope level', obj(payload.edition)?.scopeLevel, seed.edition?.scopeLevel ?? ''],
+    ] as const
+  )
+    .filter(([, raw, mapped]) => typeof raw === 'string' && raw.trim() !== '' && mapped === '')
+    .map(([label, raw]) => `${label} ("${String(raw)}")`);
+  if (unmapped.length > 0) {
+    warnings.push({
+      key: 'unmappedEnums',
+      message: `Not a value we recognise, so ${unmapped.length === 1 ? 'the field was' : 'these fields were'} left blank: ${unmapped.join(', ')}. Pick the right one below.`,
+    });
+  }
+
   const rows = Array.isArray(payload.keyDates) ? payload.keyDates : [];
   const dropped = rows.length - seed.keyDates.length;
   if (dropped > 0) {
