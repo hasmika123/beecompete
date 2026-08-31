@@ -165,6 +165,8 @@ Anything worth knowing that fits none of the above — including things you noti
                                                     //   label as the source frames it ("2026",
                                                     //   "2025-26"). If unnamed, the calendar year
                                                     //   its deadline falls in.
+    "status": "OPEN",                               // UPCOMING | OPEN | CLOSED | ONGOING |
+                                                    //   ARCHIVED — include it; see below
     "scopeLevel": "NATIONAL",                       // INTERNATIONAL | NATIONAL | STATE | REGIONAL |
                                                     //   LOCAL | VIRTUAL
     "registrationUrl": "https://…",                 // where you SIGN UP. Never null — see below
@@ -258,6 +260,28 @@ Pre-K = -1, Kindergarten = 0, grades 1–12 = 1–12, then the four undergraduat
 Convert carefully: "high school" → 9–12; "grades 6-8" → 6–8; "middle and high school" → 6–12;
 "open to college students" → 13–16; "graduate students" → 17–17. If the source states ages
 instead, use minAge/maxAge and leave the grade fields null. Never fill both from one statement unless the source states both.
+
+### EDITION STATUS — where this running is in its cycle
+Include `edition.status` whenever an `edition` is present. Same five values the bulk extractor uses:
+
+- `OPEN` — registration is open right now
+- `CLOSED` — the registration deadline has passed
+- `UPCOMING` — announced, but registration hasn't opened yet
+- `ONGOING` — the competition itself is running (entries closed, results not out)
+- `ARCHIVED` — a finished past running
+
+**When it isn't clear, use `UPCOMING` and say so in Notes §6.** It is the least committal of the
+five: it claims only that the running exists, which is already implied by extracting an edition at
+all, whereas `OPEN` invites someone to go and enter something that may have closed.
+
+Read it against the dates you extracted rather than the page's tone — a page that still says
+"Register now" months after its own deadline is common, and the deadline is the better evidence.
+
+ℹ️ **What actually happens to it.** Pasting into **New → Paste JSON** takes the CREATE path, which
+DERIVES status from your key dates server-side and ignores the value you sent (`buildFirstEdition`
+emits no status key at all). It is asked for anyway so this payload stays interchangeable with the
+pipeline's, where import-approve does apply it. So: get it right if the source says, and don't spend
+effort on it if it doesn't — your key dates are what decide it here.
 
 ### REGISTRATION URL — never leave it empty
 `edition.registrationUrl` is where a student actually signs up, and it is the link behind the
