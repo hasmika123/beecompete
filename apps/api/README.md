@@ -41,6 +41,37 @@ Wiring checks: `GET /api/v1/ping` (versioned JSON; `?name=` is Bean-Validated) a
 `db/changelog/db.changelog-master.yaml` on startup. Migrations are **additive-only** — never
 edit a shipped changeset; add a new one under `db/changelog/changes/`.
 
+### Two things that will bite you locally
+
+**`bootRun` does not read `.env`.** Nothing loads it — `build.gradle.kts` only injects a default
+`ADMIN_API_TOKEN` when the environment doesn't already set one. Every other value comes from the
+real environment, falling back to the defaults in `application.yml`.
+
+That matters most for the DB port. `infra/docker-compose.yml` honours `POSTGRES_PORT`, but the
+app's `DATABASE_URL` default is hardcoded to `5432` — so if you moved Postgres (5432 is often
+taken on Windows), moving one does not move the other, and `bootRun` dies on
+`password authentication failed` while it talks to whatever else is on 5432:
+
+```bash
+DATABASE_URL=jdbc:postgresql://localhost:15432/beecompete ./gradlew bootRun
+```
+
+**Stopping it is not the same as stopping Gradle.** `bootRun` forks the Spring JVM, and its
+lifetime is not reliably tied to the Gradle invocation you started it from — both of these have
+been observed:
+
+- `./gradlew --stop` (stopping the daemons) **took the API down with them**. Don't reach for it to
+  clear an unrelated Gradle lock while the app is running.
+- Killing the wrapper process left the **JVM alive and still holding port 8080**. The next
+  `bootRun` then fails with "port 8080 already in use" while the app keeps serving perfectly — it
+  reads as a broken restart when nothing is broken.
+
+So check the port, not the Gradle task:
+
+```bash
+netstat -ano | grep ":8080.*LISTENING"   # Windows — the last column is the PID
+```
+
 **Config:** `src/main/resources/application.yml` is committed (no secrets); it reads
 `DATABASE_URL` (pooled, app) and `DIRECT_URL` (direct, Liquibase — falls back to the main
 datasource when unset). Local overrides go in a git-ignored `application-local.yml`; secrets
