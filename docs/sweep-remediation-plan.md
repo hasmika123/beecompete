@@ -160,6 +160,43 @@ within one season, which is §13's job.
 - SEO: confirm one canonical URL per competition — prior runnings are sections, not routes, unless
   the blueprint deliberately says otherwise.
 
+### 18. Organizer contact NAME + ROLE on the curation form (owner 2026-08-31)
+
+Requested as a follow-on to the create form's contact group. Today `0019` gives every Category
+Template `contact_email` and `contact_phone`; this adds the person those reach — a name and the role
+they hold ("Dr. Jane Smith", "Tournament Director").
+
+**Why it waits.** Two display-only optional attribute keys do not justify a migration of their own.
+`0019` is the shape to copy, and the next Category-Template batch in this phase is the right ride.
+(Not §16 — that is a Phase-3 promotion, and these two never become Spine columns: nothing filters or
+sorts on them.) Nothing depends on this, and no listing is wrong without it.
+
+**Plan (additive, no Spine columns):**
+
+- Migration in the `0019` mould: `jsonb_set` two optional keys — `contact_name`, `contact_role` —
+  onto every Category Template. Idempotent, additive, display-only. Per domain-model §7 they stay in
+  the bag: nothing filters or sorts on them.
+- Form: two Inputs in the existing Administration contact group, optional like email/phone. Mirror
+  server limits the way the 2026-08-30 rules pass does — so give them `@Size` if they ever become
+  Spine, and a `LIMITS` entry either way (name ~120, role ~120 is ample).
+- Public: `contact-card.tsx` already renders the group and treats the bag as untrusted; add the two
+  fields to that same gate. `detail-display.ts` needs the two humanized labels.
+
+**⚠ The compliance line, and why this one is not merely cosmetic.** `0019` states the rule these
+fields have to live inside:
+
+> These are the ORGANIZER'S published contact points, copied from their site — never a participant's
+> or curator's personal details.
+
+An email like `info@org.org` is a role address. **A person's NAME is not** — it is personal data
+about a named individual, and publishing it is a different act from publishing an organization's
+inbox. The field is only acceptable when the organizer has *already published that person by name in
+that role* on their own site; it is never a place to record a private staff contact a curator found
+elsewhere. The form hint must say exactly that, in the `0019` style, and the seeding prompts must be
+told to extract it only from a public staff/contact listing — otherwise a bulk run will quietly turn
+"whoever signed the PDF" into published PII. Worth a look from the same review that covers the legal
+pages before it ships.
+
 ---
 
 ## Phase 3 — Host Tools, lifecycle machine & structure (don't build now)
