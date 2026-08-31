@@ -529,17 +529,39 @@ test('two REG_CLOSE rows warn — the earliest would silently become the deadlin
   );
 });
 
-test('repeated ROUND_START and CUSTOM rows are exempt', async () => {
+/**
+ * Only the REGISTRATION pair is a singleton (owner 2026-08-31). SUBMISSION_DUE and RESULTS repeat
+ * per division or per round, so warning on those was wrong.
+ */
+test('repeated SUBMISSION_DUE, RESULTS, ROUND_START and CUSTOM rows are all exempt', async () => {
   const payload = await loadGoodPayload();
   payload.keyDates = [
     { type: 'REG_CLOSE', startsAt: '2026-11-03T00:00:00Z' },
-    { type: 'ROUND_START', startsAt: '2027-03-01T00:00:00Z', label: 'Semifinal' },
-    { type: 'ROUND_START', startsAt: '2027-04-01T00:00:00Z', label: 'Final' },
+    { type: 'SUBMISSION_DUE', startsAt: '2027-01-10T00:00:00Z', label: 'Junior entries due' },
+    { type: 'SUBMISSION_DUE', startsAt: '2027-01-20T00:00:00Z', label: 'Senior entries due' },
+    { type: 'RESULTS', startsAt: '2027-02-01T00:00:00Z', label: 'Semifinal results' },
+    { type: 'RESULTS', startsAt: '2027-03-01T00:00:00Z', label: 'Final results' },
+    { type: 'ROUND_START', startsAt: '2027-03-05T00:00:00Z', label: 'Final' },
+    { type: 'ROUND_START', startsAt: '2027-04-01T00:00:00Z', label: 'Playoff' },
     { type: 'CUSTOM', startsAt: '2026-09-01T00:00:00Z', label: 'Early-bird deadline' },
     { type: 'CUSTOM', startsAt: '2026-09-15T00:00:00Z', label: 'Info session' },
   ];
   const { warnings } = validatePayload(payload);
-  assert.ok(!warnings.some((w) => w.includes('rows — only one is meaningful')));
+  assert.ok(
+    !warnings.some((w) => w.includes('only one is meaningful')),
+    `expected no singleton warning, got: ${warnings.join(' | ')}`,
+  );
+});
+
+test('two REG_OPEN rows warn as well as two REG_CLOSE', async () => {
+  const payload = await loadGoodPayload();
+  payload.keyDates = [
+    { type: 'REG_OPEN', startsAt: '2026-09-01T00:00:00Z' },
+    { type: 'REG_OPEN', startsAt: '2026-09-15T00:00:00Z' },
+    { type: 'REG_CLOSE', startsAt: '2026-11-03T00:00:00Z' },
+  ];
+  const { warnings } = validatePayload(payload);
+  assert.ok(warnings.some((w) => w.includes('2 REG_OPEN rows')));
 });
 
 test('a grade range with no eligibilityBasis warns — the form field is required', async () => {

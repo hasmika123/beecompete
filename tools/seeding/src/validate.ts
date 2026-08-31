@@ -197,14 +197,20 @@ function validateKeyDates(dates: KeyDatePayload[], errors: string[], warnings: s
 
   const typed = dates.filter((d) => d && typeof d.type === 'string');
   /**
-   * At most one of each NAMED type (owner 2026-08-31). Not tidiness: `nextDeadline` is the earliest
-   * REG_CLOSE, so a second one silently becomes the listing's deadline — an early-bird cutoff
-   * emitted as REG_CLOSE closes the listing weeks early. The curation form flags duplicates too,
-   * but only once a human is looking; this catches them at extraction.
+   * The registration pair is the ONLY singleton (owner 2026-08-31). Registration opens once and
+   * closes once; a second of either is a different milestone wearing the wrong type.
    *
-   * ROUND_START and the two custom types repeat legitimately and are exempt.
+   * Not tidiness: `nextDeadline` is the earliest REG_CLOSE, so a second one silently becomes the
+   * listing's deadline — an early-bird cutoff emitted as REG_CLOSE closes the listing weeks early.
+   * The curation form flags this too, but only once a human is looking; this catches it at
+   * extraction.
+   *
+   * ⚠ SUBMISSION_DUE and RESULTS are deliberately NOT here: they repeat per division or per round
+   * ("junior entries due" / "senior entries due"; semifinal then final results). `nextDeadline`
+   * copes — it takes the earliest FUTURE row, so several submission deadlines hand off to one
+   * another as each passes. ROUND_START and the custom types are exempt for the same reason.
    */
-  const SINGLETON_TYPES = ['REG_OPEN', 'REG_CLOSE', 'SUBMISSION_DUE', 'RESULTS'];
+  const SINGLETON_TYPES = ['REG_OPEN', 'REG_CLOSE'];
   for (const t of SINGLETON_TYPES) {
     const n = typed.filter((d) => d.type === t).length;
     if (n > 1) {

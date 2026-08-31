@@ -332,6 +332,17 @@ const IMPORT_BLOCKING_KEYS = [
  */
 const REQUIRED_KEY_DATE_TYPES = ['REG_OPEN', 'REG_CLOSE', 'SUBMISSION_DUE', 'RESULTS'] as const;
 
+/**
+ * The types a timeline may hold only ONE of (owner 2026-08-31). Registration opens once and closes
+ * once; a second of either is a different milestone wearing the wrong type.
+ *
+ * SUBMISSION_DUE and RESULTS are REQUIRED but not singletons — they repeat legitimately, per
+ * division or per round ("junior entries due", "senior entries due"; semifinal then final results).
+ * `nextDeadline` copes: it takes the earliest FUTURE row, so several submission deadlines simply
+ * hand off to one another as each passes.
+ */
+const SINGLETON_KEY_DATE_TYPES: readonly string[] = ['REG_OPEN', 'REG_CLOSE'];
+
 /** Case- and whitespace-insensitive org-name key — mirrors the server's normalize on resolve. */
 const orgNameKey = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
 
@@ -982,7 +993,11 @@ export function CompetitionForm({
   const keyDateOk = (type: string) =>
     keyDateRows.some((r) => r.type === type && (r.tbd || r.date !== ''));
   /**
-   * A SECOND row of a required key date type (owner 2026-08-30). Flagged, not blocked.
+   * A SECOND registration open/close (owner 2026-08-30, narrowed 2026-08-31). Flagged, not blocked.
+   *
+   * ⚠ Narrowed from "any required type": SUBMISSION_DUE and RESULTS repeat legitimately — per
+   * division, or per round — and flagging those was wrong. Only the registration pair is a
+   * singleton (see SINGLETON_KEY_DATE_TYPES).
    *
    * Two reasons, one live and one ahead of us. Live: `nextDeadline` is `min(starts_at)` over the
    * REG_CLOSE rows, so a duplicate silently makes the EARLIER date the listing's deadline — an
@@ -992,11 +1007,10 @@ export function CompetitionForm({
    * while there is at most one of each — true of all 52 rows today, and worth keeping true through
    * the seeding run.
    *
-   * Not a hard block: a competition with genuinely staged deadlines is imaginable, and the curator
-   * is better placed to judge that than this rule is.
+   * Not a hard block: the curator is better placed to judge an unusual timeline than this rule is.
    */
   const duplicateRequiredType = (row: KeyDateRow) =>
-    (REQUIRED_KEY_DATE_TYPES as readonly string[]).includes(row.type) &&
+    SINGLETON_KEY_DATE_TYPES.includes(row.type) &&
     keyDateRows.filter((o) => o.type === row.type).length > 1;
   /**
    * Half-filled rows gate SUBMIT but are deliberately NOT ring entries. The ring counts FIELDS a
