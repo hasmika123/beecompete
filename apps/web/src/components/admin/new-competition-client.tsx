@@ -119,7 +119,22 @@ export function NewCompetitionClient({
       setParseError('Expected a JSON object describing one competition, not a list or a value.');
       return;
     }
-    const record = payload as Record<string, unknown>;
+    /**
+     * Accept EITHER shape (owner 2026-08-31). The paste prompt returns a bare competition object;
+     * the bulk extractor returns `{ payload, modelConfidence, reviewerNotes }` — the envelope it
+     * POSTs to the queue. Pasting the second used to fill nothing: none of its three keys map, so
+     * the whole envelope became `extras` and the form opened blank with a dropped-keys warning
+     * naming `payload`, which reads as a broken paste rather than the wrong wrapper.
+     *
+     * Unwrapping is safe to detect: `payload` is not a field of a competition, so an object
+     * carrying one as an object IS the envelope.
+     */
+    const outer = payload as Record<string, unknown>;
+    const inner = outer.payload;
+    const record =
+      inner !== null && typeof inner === 'object' && !Array.isArray(inner)
+        ? (inner as Record<string, unknown>)
+        : outer;
 
     // categorySlug -> categoryId. The seeding pipeline resolves this itself before submitting
     // (tools/seeding categories.ts), but an AI asked for a payload by hand cannot know our UUIDs,
