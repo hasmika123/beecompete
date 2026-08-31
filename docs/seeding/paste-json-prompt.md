@@ -195,7 +195,7 @@ Anything worth knowing that fits none of the above — including things you noti
     {
       "type": "REG_CLOSE",                          // REG_OPEN | REG_CLOSE | ROUND_START |
                                                     //   SUBMISSION_DUE | RESULTS | CUSTOM |
-                                                    //   CUSTOM_PHASE (a span — see below)
+                                                    //   PERIOD (a span — see below)
       "startsAt": "2026-11-03T00:00:00Z",           // FULL ISO instant, or null for TBD
       "endsAt": null,                               // only for a key date spanning days
       "timezone": null,                             // null BECAUSE the source gave a day, no time
@@ -306,7 +306,7 @@ a real signup link, and a curator would have no reason to go looking for the rea
   can't read is `"startsAt": null`, never a guess. Use `ROUND_START` for a competition round proper.
 - **Exactly ONE `REG_OPEN` and ONE `REG_CLOSE` per timeline** (owner 2026-08-31). Registration
   opens once and closes once; a second of either is a DIFFERENT milestone wearing the wrong type,
-  and belongs on `CUSTOM` / `CUSTOM_PHASE` with a label.
+  and belongs on `CUSTOM` / `PERIOD` with a label.
   This is not tidiness: the listing's deadline is the **earliest** `REG_CLOSE`, so a second one
   silently becomes the deadline — an early-bird cutoff emitted as `REG_CLOSE` closes the listing
   weeks before it really does. Emit it as `CUSTOM` labelled "Early-bird deadline" instead.
@@ -316,11 +316,11 @@ a real signup link, and a curator would have no reason to go looking for the rea
 - **There are TWO custom types — pick by SHAPE, not importance** (owner 2026-08-31):
   - `CUSTOM` — a **moment**. One date, nothing spans: "Research plan due", "Awards ceremony",
     "Early-bird deadline". Leave `endsAt` null.
-  - `CUSTOM_PHASE` — a **period** running across days: "Finals week", "Judging window", "Project
+  - `PERIOD` — a **period** running across days: "Finals week", "Judging window", "Project
     build period". Give both `startsAt` and `endsAt` when the source states them; if it names only
-    one end, still use `CUSTOM_PHASE` and leave the other null.
+    one end, still use `PERIOD` and leave the other null.
 
-  Happening ON a day → `CUSTOM`. Running BETWEEN two days → `CUSTOM_PHASE`. If you genuinely can't
+  Happening ON a day → `CUSTOM`. Running BETWEEN two days → `PERIOD`. If you genuinely can't
   tell, use `CUSTOM`: an understated moment is easier for a curator to widen than a phase is to
   disprove.
 - **CUSTOM labels: use the CANONICAL spelling when the key date is one of these kinds, even when

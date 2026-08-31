@@ -63,10 +63,11 @@ export const SCOPE_LEVELS = [
  * prompted the question that plan answers. Live data agrees: of 52 key dates only 3 carry an
  * `endsAt`, all of them ROUND_START.
  *
- * CUSTOM stays here because it is the only escape hatch for a genuine multi-day key date
- * ("finals week") until the plan's generic PERIOD type exists.
+ * PERIOD is the escape hatch for a genuine multi-day key date ("finals week") — the plan's generic
+ * window type, which now exists. CUSTOM is deliberately NOT here: it is the generic MOMENT, and all
+ * six CUSTOM rows in the data are points, so it never belonged in this list.
  */
-export const SPAN_KEY_DATE_TYPES: readonly string[] = ['ROUND_START', 'CUSTOM_PHASE'];
+export const SPAN_KEY_DATE_TYPES: readonly string[] = ['ROUND_START', 'PERIOD'];
 
 export const KEY_DATE_TYPES = [
   'REG_OPEN',
@@ -75,7 +76,7 @@ export const KEY_DATE_TYPES = [
   'SUBMISSION_DUE',
   'RESULTS',
   'CUSTOM',
-  'CUSTOM_PHASE',
+  'PERIOD',
 ] as const;
 // Canonical evaluation tokens (R1-5 EvaluationTypes.TOKENS) — stored/validated LOWERCASE, unlike
 // the other UPPERCASE enums. Server validates these at the curation write boundary.

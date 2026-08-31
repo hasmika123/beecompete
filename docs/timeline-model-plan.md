@@ -140,13 +140,22 @@ One table, typed rows, arity declared by type. `key_date` keeps its name and its
 | `SUBMISSION` | **window** | `SUBMISSION_DUE` | submission opens → due |
 | `EVENT` | **window** | `ROUND_START` | the competition itself running; possibly multi-day |
 | `JUDGING` | **window** | — | judging under way (dates only — see below) |
-| `PERIOD` | **window** | — | generic window; label carries the specifics |
+| `PERIOD` | **window** | — | generic window; label carries the specifics · **✅ BUILT 2026-08-31** |
 | `RESULTS` | **point** | `RESULTS` | results announced |
 | `ANNOUNCEMENT` | **point** | — | a dated announcement |
 | `CUSTOM` | **point** | `CUSTOM` (kept) | generic dated point; label carries the specifics |
 
 Eight types, two arities, one generic of each so the vocabulary does not need to grow for every
 one-off. `label` stays on every row.
+
+**`PERIOD` shipped early** (2026-08-31). Curators needed a generic window before the remodel, so
+`PERIOD` and its "Custom period" editor label are live now, alongside `CUSTOM` as "Custom event".
+`key_date.type` is a `VARCHAR(20)` with no CHECK, so it needed no migration, and no row or queued
+payload held the old spelling.
+
+⚠ It shipped for one day as `CUSTOM_PHASE` and was renamed to match this plan — one word for one
+concept. "Phase" was independently the wrong word: the glossary already spends it on **Round**, "a
+sequential phase within a Stage". The rest of §4.1's vocabulary is still unbuilt.
 
 **`CUSTOM` stays `CUSTOM`** (revised 2026-08-30, glossary-first). This plan originally renamed it to
 `MILESTONE`. Writing the glossary entries surfaced why that is wrong: **Milestone is already a

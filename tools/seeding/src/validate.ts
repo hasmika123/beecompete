@@ -180,7 +180,7 @@ function validateKeyDates(dates: KeyDatePayload[], errors: string[], warnings: s
     // a later cleanup. A WARNING, not an error: the server accepts the row, and the curator can name
     // it during review.
     if (
-      (d.type === 'ROUND_START' || d.type === 'CUSTOM' || d.type === 'CUSTOM_PHASE') &&
+      (d.type === 'ROUND_START' || d.type === 'CUSTOM' || d.type === 'PERIOD') &&
       (typeof d.label !== 'string' || d.label.trim() === '')
     ) {
       warnings.push(`${at} is ${d.type} with no label — name the round/key date as the page does`);

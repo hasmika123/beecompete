@@ -38,7 +38,7 @@ export const KEY_DATE_TYPES = [
   'SUBMISSION_DUE',
   'RESULTS',
   'CUSTOM',
-  'CUSTOM_PHASE',
+  'PERIOD',
 ] as const;
 
 /** Canonical evaluation-type tokens — must match apps/api `EvaluationTypes.TOKENS` (lowercase). */

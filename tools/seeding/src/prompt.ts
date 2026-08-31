@@ -349,7 +349,7 @@ A listing is only useful with a running attached, so also fill these INSIDE "pay
   competition round proper.
 - **EXACTLY ONE REG_OPEN and ONE REG_CLOSE per timeline** (owner 2026-08-31). Registration opens
   once and closes once; a second of either is a DIFFERENT milestone wearing the wrong type, and it
-  belongs on CUSTOM / CUSTOM_PHASE with a label.
+  belongs on CUSTOM / PERIOD with a label.
   This matters beyond tidiness: the listing's deadline is the EARLIEST REG_CLOSE, so a second one
   silently becomes the deadline — an early-bird cutoff emitted as REG_CLOSE makes the listing close
   weeks before it really does. Emit it as CUSTOM labelled "Early-bird deadline" instead.
@@ -359,12 +359,11 @@ A listing is only useful with a running attached, so also fill these INSIDE "pay
 - **TWO custom types — pick by SHAPE, not by importance** (owner 2026-08-31):
     * CUSTOM = a MOMENT. One date, nothing spans. "Research plan due", "Awards ceremony",
       "Early-bird deadline". Leave endsAt null.
-    * CUSTOM_PHASE = a PERIOD running across days. "Finals week", "Judging window", "Project build
+    * PERIOD = a SPAN running across days. "Finals week", "Judging window", "Project build
       period". Give startsAt AND endsAt when the source states both; if it names only one end of the
-      span, still use CUSTOM_PHASE and leave the other null.
-  Happening ON a day => CUSTOM. Running BETWEEN two days => CUSTOM_PHASE. When you genuinely cannot
-  tell, use CUSTOM: an understated moment is easier for a curator to widen than a phase is to
-  disprove.
+      span, still use PERIOD and leave the other null.
+  Happening ON a day => CUSTOM. Running BETWEEN two days => PERIOD. When you genuinely cannot tell,
+  use CUSTOM: an understated moment is easier for a curator to widen than a span is to disprove.
 - **CUSTOM labels: use the CANONICAL spelling when the key date is one of these kinds, even when
   the page words it differently.** Different pages call the same thing different things, and a
   timeline that says "Early Bird Registration Discount Deadline" on one listing and "Early
