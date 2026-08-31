@@ -7,33 +7,15 @@
 3. Read the Notes — **§1 first**: if it says the competition looks dead, stop and check before
    spending any more time on it.
 4. Paste the JSON into **Admin → Competitions → New → Paste JSON**.
-5. Take the **image prompt** to ChatGPT or Gemini, generate the image, and upload it in the form's
-   **Cover image** control (5 MB max; PNG/JPEG/WebP).
-6. Swap each Amazon link from Notes §4 for its `tag=beecompete-20` version in the **Resources**
-   step, and **tick "affiliate" on each one as you do** — the tag is what triggers our disclosure
-   obligation, and the model deliberately leaves the box unticked.
+5. Add the **Cover image** yourself in the form (5 MB max; PNG/JPEG/WebP) — the prompt no longer
+   produces one, and the field is required.
+6. Swap each Amazon link from the Amazon-links note for its `tag=beecompete-20` version in the
+   **Resources** step, and **tick "affiliate" on each one as you do** — the tag is what triggers our
+   disclosure obligation, and the model deliberately leaves the box unticked.
 7. Review the filled form and save.
 
 Same payload shape as the S3 extractor — it is a hand-adapted copy of `tools/seeding/src/prompt.ts`.
 **Change the field rules there, change them here too.**
-
-The two matched again on 2026-08-28 (owner): the bulk extractor now writes descriptions and
-suggests resources too. What that took, beyond the prompt wording:
-
-- `extract.ts` no longer forces `description` to null, and sanitizes it (M4) like any other
-  free-text field the model derived from an untrusted page. Resource **titles** are sanitized;
-  their **URLs deliberately are not** — stripping characters out of a URL silently produces a
-  different, possibly working link, so a malformed one is rejected instead.
-- `validate.ts` rejects a resource row with no title, a non-http(s) URL, an unknown type, or
-  `isAffiliate: true` — the extractor may not claim an affiliate link.
-- **`ImportReviewService` creates the resources AND faqs on approve.** It could not before, which
-  is why the review form hid the step at all; the whole chain would have dropped them silently.
-  `FaqRequest` moved out of the admin controller into the curation package to make that possible —
-  the same promotion `ResourceRequest` and `CompetitionRequest` made before it.
-- Import review therefore **shows the whole extras step** now, both halves.
-
-**The copyright rule is unchanged on both paths**: original prose from facts is fine, the
-organizer's sentences are not ours to publish.
 
 ---
 
@@ -45,13 +27,15 @@ for students from elementary school through graduate school. I will give you inf
 competition — a URL, pasted page text, a flyer, an email, or just rough notes. Turn it into a single
 JSON object in the exact shape below.
 
-Return THREE things, in this order, with these exact headings:
+Return TWO things, in this order, with these exact headings:
 
 1. **## Notes** — the fixed sections below, in this order, EVERY TIME.
 2. **## JSON** — one ```json code block, no commentary inside it.
-3. **## Image prompt** — one ```text code block I can paste into an image generator.
 
-### The Notes sections — all six, always, even when empty
+Do **not** write an image prompt, suggest cover art, or return a logo URL. Imagery for a listing is
+sourced by us, outside this pipeline (owner 2026-08-31).
+
+### The Notes sections — all seven, always, even when empty
 
 Print every heading every time. A section with nothing to report gets the stated "all clear" line,
 never silence — I read these to know what was CHECKED, and a missing heading is indistinguishable
@@ -69,28 +53,50 @@ single worst thing we can publish:
 Say which signal you saw and the newest date you found. If you cannot tell, say that — do not guess
 it is fine.
 
-**### 2. Missing fields**
+**### 2. What is this page?**
+Whether the URL I gave you is actually ONE competition's own page — the most common way a row in our
+index turns out to be unusable. **Always still return the JSON**, whatever you find: I would rather
+have a payload marked untrustworthy than no payload and a paragraph. Say `- One competition, its own
+page` when it is. Otherwise say which of these it is, and what I should do about it:
+- **Several competitions on one page** (AMC 8 / 10 / 12, Division B / C): if the URL singles one
+  out, extract THAT one and say why. If it singles out none, do NOT blend them — fill name/slug
+  from what the PAGE itself is, say so here, and list every competition you can see with its own
+  URL if the page gives one.
+- **An organizer front door or an index** (a homepage, a "our programs" list, a department or news
+  page): do not build a listing out of the org's general blurb. Describe what the page is, and list
+  the competitions on it WITH their URLs — those child URLs are what should replace this row.
+- **Not a competition page** (news article, results table, aggregator, Wikipedia, a bare
+  registration portal, a PDF flyer): say what it is, and name the real official page if you can see
+  one.
+- **Divisions of ONE competition** (age or grade brackets, junior/senior tracks) are ONE listing —
+  do not split them. Separate names, rules and registration make them separate listings.
+- **A program with levels** (regional → state → national under one name): extract the PROGRAM and
+  note that levels exist. Do not turn one regional into the listing.
+- **The URL resolved somewhere else** than it named (a redirect to the homepage, a moved page). Say
+  where it landed — it usually explains everything else that is thin.
+
+**### 3. Missing fields**
 Every field left `null` or omitted that a listing would normally carry, as a plain list of names.
 This is the section I work from, so it is a LIST, not prose: `- entryFee, currency` ·
 `- edition.registrationUrl`. Write `- Nothing missing` when the payload is complete.
 
-**### 3. Conflicts**
+**### 4. Conflicts**
 Places the source contradicts itself or contradicts something else I gave you: two different
 deadlines, a fee stated twice at different amounts, grades in the rules that disagree with the FAQ,
 a registration link pointing at last year's form. Name both values and where each came from.
 Write `- No conflicts found` when there are none.
 
-**### 4. Amazon links to replace with affiliate links**
+**### 5. Amazon links to replace with affiliate links**
 Every `amazon.com` URL in the JSON, one per line, verbatim, so I can swap each for its tagged
 version. Nothing else in this section. Write `- No Amazon links` when there are none.
 
-**### 5. Assumptions & judgment calls**
+**### 6. Assumptions & judgment calls**
 Anything you decided rather than read: a date left TBD and why, a grade range converted from ages,
 a category chosen between two plausible ones, an attribute key you invented. Also say so here if I
 gave you a URL you could not actually read — and then fill only what my other details support,
 never the listing from memory. Write `- None` if you read everything straight off the source.
 
-**### 6. Other**
+**### 7. Other**
 Anything worth knowing that fits none of the above — including things you notice late. Write
 `- Nothing else` when there is nothing.
 
@@ -102,7 +108,7 @@ Anything worth knowing that fits none of the above — including things you noti
    aren't copyrightable; the organizer's prose is. So: read the source, then look away and write it
    fresh. Do not paste, translate, reorder, or thesaurus their copy — a paraphrase of their
    paragraph is still their paragraph. If the only thing you have IS their prose and you cannot
-   restate it from underlying facts, set `"description": null` and say so in Notes §5.
+   restate it from underlying facts, set `"description": null` and say so in Notes §6.
    Shape: 3-6 sentences of plain, factual English aimed at a student or parent deciding whether to
    enter — what the competition is, who enters, how it runs, what the rounds/format are, what you
    win. **The first ~300 characters become the card blurb**, so lead with what it IS, not with
@@ -123,7 +129,6 @@ Anything worth knowing that fits none of the above — including things you noti
   "categorySlug": "math",                           // REQUIRED, one of the list below
   "organizerName": "Mathematical Association of America",  // the org that RUNS it, verbatim, or null
   "officialUrl": "https://…",                       // canonical page for the competition, or null
-  "logo": null,                                     // absolute image URL only if obvious, else null
   "description": "3-6 factual sentences, YOUR words — see rule 2",  // REQUIRED unless rule 2
                                                     //   leaves you nothing to write from
   "tags": ["algebra", "olympiad"],                  // a few short factual topic tags, or null
@@ -141,6 +146,8 @@ Anything worth knowing that fits none of the above — including things you noti
   "evaluationType": ["exam"],                       // zero or more of: exam, submission,
                                                     //   live_performance, interview, portfolio
                                                     //   (lowercase), or null
+  "eligibilityBasis": "GRADE",                      // GRADE | AGE | BOTH | OPEN | null — REQUIRED
+                                                    //   whenever you fill ANY grade or age field
   "minGrade": 9,                                    // GRADE ENCODING below — integers or null
   "maxGrade": 12,
   "minAge": null,                                   // only if the source gives ages instead of grades
@@ -157,7 +164,7 @@ Anything worth knowing that fits none of the above — including things you noti
                                                     //   its deadline falls in.
     "scopeLevel": "NATIONAL",                       // INTERNATIONAL | NATIONAL | STATE | REGIONAL |
                                                     //   LOCAL | VIRTUAL
-    "registrationUrl": "https://…",                 // the page you actually sign up on, or null
+    "registrationUrl": "https://…",                 // where you SIGN UP. Never null — see below
     "entryFee": 25,                                 // number + currency REQUIRED TOGETHER; omit both
     "currency": "USD",                              //   when free or unstated
     "prizeSummary": "Medals and a $500 scholarship", // SHORT factual phrase, not their sentence
@@ -221,12 +228,49 @@ math · science-engineering · computer-science · robotics · debate-speech ·
 business-entrepreneurship · writing-essay · arts-music · academic-bowl ·
 history-geography-civics · other
 
+### ELIGIBILITY BASIS — set this whenever you set a grade or an age
+`eligibilityBasis` records **WHICH AXIS THE SOURCE ITSELF USES** to say who may enter. It is a
+required field on our form, so a payload with grades or ages but no basis arrives incomplete and
+someone has to work it out again by hand.
+
+- `GRADE` — the source states grades or school levels ("open to grades 6-8", "high school students")
+- `AGE` — the source states ages ("ages 13-18", "under 19 as of June 1")
+- `BOTH` — the source states both independently ("grades 7-12, and must be at least 13")
+- `OPEN` — the source explicitly says there is no age or grade restriction
+- `null` — the source never says who may enter. A REAL answer; use it, and leave all four range
+  fields null too.
+
+**The rule: if ANY of minGrade / maxGrade / minAge / maxAge is non-null, `eligibilityBasis` must be
+non-null.** Grades filled → `GRADE`. Ages filled → `AGE`. Both filled from two separate statements →
+`BOTH`.
+
+⚠ This is about WHOSE RULE IT IS, not which fields you could fill. A source that says only
+"ages 13-18" is `AGE` even though you could work out the usual grades — and in that case you must
+leave minGrade/maxGrade null (see below), so the two rules agree.
+
 ### GRADE ENCODING
 Pre-K = -1, Kindergarten = 0, grades 1–12 = 1–12, then the four undergraduate years
 13 = college freshman, 14 = sophomore, 15 = junior, 16 = senior, and 17 = graduate.
 Convert carefully: "high school" → 9–12; "grades 6-8" → 6–8; "middle and high school" → 6–12;
 "open to college students" → 13–16; "graduate students" → 17–17. If the source states ages
 instead, use minAge/maxAge and leave the grade fields null. Never fill both from one statement unless the source states both.
+
+### REGISTRATION URL — never leave it empty
+`edition.registrationUrl` is where a student actually signs up, and it is the link behind the
+listing's Register button. **Look hard before giving up**, in roughly this order:
+- a Register / Sign up / Apply / Enter link in the nav, or a call-to-action button
+- a "how to enter" or "registration" page
+- a registration portal on another host or subdomain (`register.x.org`, a form service, the
+  organizer's membership system)
+- a link inside the rules or an entry-info PDF's description
+
+Prefer the page a student lands on to START registration — not a confirmation, login or payment
+step, and not a generic contact form.
+
+**If the source genuinely names no such place, set `registrationUrl` to the SAME value as
+`officialUrl`** and say `- registrationUrl fell back to officialUrl` in Notes §6. A navigable page
+beats a dead field, but that fallback must be visible: without the note it is indistinguishable from
+a real signup link, and a curator would have no reason to go looking for the real one.
 
 ### DATE RULES — read these twice
 - **SWEEP FIRST, CLASSIFY SECOND.** Before picking any type, list every date the source states about
@@ -312,13 +356,13 @@ product page: `https://www.amazon.com/dp/ASIN`. Plain link, no tracking paramete
 **Every resource, without exception:**
 - **Must be real.** A plausible-looking URL you have not actually seen is a fabrication, and it will
   be published to students. If you are not confident a link exists and resolves, LEAVE IT OUT and
-  say so in Notes §5. **Five real links beat eight with two invented ones.**
+  say so in Notes §6. **Five real links beat eight with two invented ones.**
 - **Must be specific.** Deep-link to the archive/handbook/book, not to a homepage or a search page.
 - **Must be relevant to THIS competition**, not to the subject in general. A generic "best math
   books" listicle is not a prep resource for AMC 10.
 - **`"isAffiliate": false`, always.** You are giving me plain links. The tag is added by hand, and
   the flag is a claim that the link earns us money — flagging an untagged link would put a legal
-  disclosure on a listing that has nothing to disclose. Then list every Amazon URL in Notes §4 so I
+  disclosure on a listing that has nothing to disclose. Then list every Amazon URL in Notes §5 so I
   can swap them.
 - **Never emit an `imageUrl`, a thumbnail, a cover-art link, or any other image field on a
   resource.** Not for Amazon, not for anything else. Two reasons, and the second is the one that
@@ -347,7 +391,19 @@ The four that are easy to get wrong:
 - `other_eligibility_requirements` is the catch-all for eligibility rules the typed fields can't
   express ("must have qualified at a regional", "member schools only").
 - `judging_criteria` is an **array** of short criteria ("originality", "scientific method"), not a
-  paragraph. `tie_breakers` is prose. `rules_url` is the official rules/rubric page.
+  paragraph — and it is **required on our form, so never leave it empty**.
+  **Look first**: a rules or rubric PDF, a "judging" / "scoring" / "how entries are evaluated"
+  section, a scoring breakdown, the entry form's evaluation notes. Use the organizer's own criteria
+  whenever they exist.
+  **Only if the source states none, draft 3-5** that are typical for this discipline and this
+  `evaluationType`, and say `- judging_criteria drafted, not stated by the source` in Notes §6 so I
+  can verify or cut them. This is a deliberate exception to FACTS ONLY, and a narrow one: plain
+  generic criteria a judge in this field would recognise.
+  ⚠ **Never invent specifics** — no weights, no percentages, no point totals, no scoring scale, no
+  named rubric sections. "Originality" is a safe generic; "Originality (30%)" is a fabricated rubric,
+  and it publishes under a heading that reads as the organizer's own.
+  `tie_breakers` is prose and is **not** drafted — leave it null when unstated. `rules_url` is the
+  official rules/rubric page.
 - `contact_email` / `contact_phone` are the organizer's PUBLIC contact for entrants.
 
 **Category-specific keys — use only the line matching your `categorySlug`:**
@@ -397,55 +453,14 @@ settled and acts on it.
 reach five. Two solid rows beat five with one guess. Answers are 1-3 plain sentences, no marketing
 voice, no exclamation marks. Omit the key entirely if the source gave you too little.
 
-### The image prompt — the third deliverable
-
-Last, write a prompt I can paste into ChatGPT or Gemini to generate this listing's preview image.
-Output it in one ```text block, ready to paste, addressed to the image generator — not to me. It
-should be a single paragraph plus a short constraints line, 80-150 words, describing ONE specific
-scene. Do not include any explanation around it.
-
-Where the image ends up, and what that forces:
-- It is the picture on the listing CARD (about 264×144 shown, ~1.8:1) and on the detail page's
-  cover (about 320×160). Both **crop to fill from the centre**, so the two crops differ.
-- Ask for **16:9 landscape**, at least 1200×675, PNG or JPEG, **under 5 MB** (that is a hard upload
-  limit — WebP is fine too, nothing else is).
-- Because of the centre crop: **keep the subject centred and give it generous margins.** Anything
-  near an edge WILL be cut on one surface or the other. No important detail in a corner. A calm,
-  uncluttered background that survives cropping beats a busy composition.
-- It is small on screen. **One clear subject, read at a glance.** A detailed scene turns to mush at
-  264px wide.
-
-What it must and must not contain:
-- **NO TEXT ANYWHERE.** No title, no words, no numbers, no letters, no signage, no watermark, no
-  captions. Say this explicitly in the prompt — image models add text unless told not to. Text also
-  makes the image wrong the moment a date changes, and it gets cropped mid-word by the card.
-- **Brand it to THIS competition or its organizer — never to BeeCompete.** Use the organizer's own
-  colour palette (name the actual colours), and subject matter that is unmistakably this
-  competition: what entrants physically do, the objects and setting involved, the discipline's
-  visual language. A robotics competition looks nothing like a debate tournament and the image
-  should make that obvious before the title is read.
-- **Do NOT reproduce their logo, wordmark, mascot, or any trademarked character** — evoke the brand
-  with palette, materials, setting and mood instead. (Being text-free rules out most wordmarks
-  already.) We are an independent catalog and must never imply endorsement.
-- No real people's faces, no identifiable minors, no copyrighted characters, no fake awards or
-  crests. Generic figures at a distance, hands, equipment, or objects are all fine.
-- Photographic or clean illustration — whichever suits the competition. Avoid generic AI
-  stock-photo tropes: no glowing blue circuitry, no floating holograms, no lens flare, no
-  "futuristic" gradients unless the competition genuinely looks like that.
-
-Good shape to aim for: `A [style] [subject doing the competition's actual activity] in [setting],
-lit by [light]. Palette of [the organizer's actual colours]. Centred composition with wide margins,
-uncluttered [background]. 16:9 landscape. No text, letters, numbers, logos, or watermarks of any
-kind.`
-
 ### Finally
 - Output valid JSON. Use null for unknown scalars; omit attribute keys the source doesn't support.
 - Do not add TOP-LEVEL fields that aren't listed above — anything else is dropped on paste. This
   does NOT apply inside `attributes`, which is an open object: a well-named extra key there is
   welcome (see above).
 - Do not wrap the JSON in any other object.
-- All three deliverables, every time, under their exact headings: **## Notes** (all six sections,
-  in order, "all clear" lines where empty) → **## JSON** → **## Image prompt**.
+- Both deliverables, every time, under their exact headings: **## Notes** (all sections, in order,
+  "all clear" lines where empty) → **## JSON**. Nothing after the JSON.
 
 Here is what I have about the competition:
 <<<

@@ -515,6 +515,40 @@ test('an all-TBD timeline is valid but flagged for curator lookup', async () => 
   );
 });
 
+test('a grade range with no eligibilityBasis warns — the form field is required', async () => {
+  const payload = await loadGoodPayload();
+  payload.eligibilityBasis = null;
+  payload.minGrade = 9;
+  payload.maxGrade = 12;
+  const { ok, warnings } = validatePayload(payload);
+  // Not an error: a null basis is legitimate on its own, and the curator decides.
+  assert.equal(ok, true);
+  assert.ok(
+    warnings.some((w) => w.includes('eligibilityBasis is null') && w.includes('GRADE')),
+    `expected the missing-basis warning, got: ${warnings.join(' | ')}`,
+  );
+});
+
+test('an age range with no basis names AGE, and both ranges name BOTH', async () => {
+  const base = await loadGoodPayload();
+  const ages = { ...base, eligibilityBasis: null, minGrade: null, maxGrade: null, minAge: 13 };
+  assert.ok(validatePayload(ages).warnings.some((w) => w.includes('AGE')));
+  const both = { ...base, eligibilityBasis: null, minGrade: 9, minAge: 13 };
+  assert.ok(validatePayload(both).warnings.some((w) => w.includes('BOTH')));
+});
+
+test('no basis and no ranges is silent — "the source never said" is a real answer', async () => {
+  const payload = await loadGoodPayload();
+  Object.assign(payload, {
+    eligibilityBasis: null,
+    minGrade: null,
+    maxGrade: null,
+    minAge: null,
+    maxAge: null,
+  });
+  assert.ok(!validatePayload(payload).warnings.some((w) => w.includes('eligibilityBasis is null')));
+});
+
 test('an unlabelled ROUND_START warns — the timeline can only say "Round begins"', async () => {
   const payload = await loadGoodPayload();
   payload.keyDates = [

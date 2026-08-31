@@ -168,7 +168,28 @@ function judgingRows(competition: CompetitionDetail): LedgerItem[] {
   const icons: Record<string, typeof Star> = { judging_criteria: Star, tie_breakers: Scales };
   for (const [key, label] of Object.entries(JUDGING_ATTR_LABELS)) {
     const value = renderAttrValue(competition.attributes?.[key]);
-    if (value != null) rows.push({ key, icon: icons[key] ?? Star, label, value });
+    if (value != null) {
+      rows.push({
+        key,
+        icon: icons[key] ?? Star,
+        label,
+        value,
+        // Criteria are DRAFTED BY US when an organizer publishes none (owner 2026-08-31; both
+        // seeding prompts allow it, deliberately, because the field is required and a blank
+        // "What judges look for" helps nobody). Under this heading a drafted list reads as the
+        // organizer's own, so the page says otherwise — quietly, and on every listing rather than
+        // only the drafted ones: we do not record per-listing which is which, and a marker that
+        // appeared selectively would imply the unmarked ones had been verified as theirs.
+        //
+        // Only `judging_criteria`. `tie_breakers` is never drafted (a tie-break rule is a specific
+        // policy, not something typical of a format), so a hedge there would be a false one.
+        ...(key === 'judging_criteria'
+          ? {
+              note: 'Sometimes ours: where an organizer publishes no criteria, we summarise what’s typical for this format.',
+            }
+          : {}),
+      });
+    }
   }
   const url = rulesUrl(competition);
   if (url) {

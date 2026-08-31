@@ -331,6 +331,25 @@ function validateSpine(p: CompetitionPayload, errors: string[], warnings: string
   if (p.eligibilityBasis === 'BOTH' && !(hasGrade && hasAge)) {
     errors.push('eligibilityBasis BOTH needs both a grade range and an age range');
   }
+  /**
+   * The OTHER direction, which nothing else checks (owner 2026-08-31).
+   *
+   * The server's @AssertTrue only asks "does the claimed basis have its range?" — a payload with a
+   * grade range and a NULL basis passes it, and passed straight through to a curation form where
+   * "What does the organizer provide?" is required and unanswered. The paste prompt did not even
+   * ask for the field, so every hand-pasted payload landed this way.
+   *
+   * A WARNING, not an error: null basis is a legitimate state on its own (the page said nothing),
+   * and the pipeline's rule is that the curator decides. What is not legitimate is a range with no
+   * basis — a range can only have come from a statement, and that statement had an axis.
+   */
+  if (p.eligibilityBasis == null && (hasGrade || hasAge)) {
+    const axis = hasGrade && hasAge ? 'BOTH' : hasGrade ? 'GRADE' : 'AGE';
+    warnings.push(
+      `${hasGrade && hasAge ? 'grade and age ranges' : hasGrade ? 'a grade range' : 'an age range'}` +
+        ` was extracted but eligibilityBasis is null — it is required on the form, and looks like ${axis}`,
+    );
+  }
 
   // Prep resources (2026-08-28). Absent is fine — plenty of competitions have little written
   // about them, and the prompt says so explicitly. What is NOT fine is a malformed row reaching a
