@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { Chip, cn, Plus } from '@beecompete/ui';
 
@@ -24,7 +24,7 @@ const MAX_TAG_CHARS = 50;
  * Five is enough to place a competition ("algebra", "proof-based", "team") and few enough that
  * each one has to earn its slot.
  */
-const MAX_TAGS = 5;
+export const MAX_TAGS = 5;
 
 export interface TagsInputProps {
   name: string;
@@ -34,11 +34,24 @@ export interface TagsInputProps {
   'aria-describedby'?: string;
   'aria-required'?: boolean;
   'aria-invalid'?: boolean;
+  /**
+   * Live tag count, so the form can gate submit when a SEEDED list exceeds MAX_TAGS.
+   * `commit()` enforces the cap on typing and pasting, but `defaultValue` bypasses it — a JSON
+   * fill can arrive with more (the import queue holds payloads of 6, 8 and 11). Truncating them
+   * silently would be the wrong fix: the payload said eleven, and dropping six without a word is
+   * the same silent loss as a half-filled row. So they all render, the count goes over, and the
+   * curator picks which five survive.
+   */
+  onCountChange?: (count: number) => void;
 }
 
-export function TagsInput({ name, defaultValue = [], ...aria }: TagsInputProps) {
+export function TagsInput({ name, defaultValue = [], onCountChange, ...aria }: TagsInputProps) {
   const [tags, setTags] = useState<string[]>(defaultValue);
   const [draft, setDraft] = useState('');
+  useEffect(() => {
+    onCountChange?.(tags.length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tags.length]);
 
   const serialized = tags.join(', ');
 
@@ -83,6 +96,7 @@ export function TagsInput({ name, defaultValue = [], ...aria }: TagsInputProps) 
     }
   };
 
+  const overLimit = tags.length > MAX_TAGS;
   const atCapacity = tags.length >= MAX_TAGS || serialized.length >= MAX_TOTAL_CHARS;
 
   return (
@@ -137,10 +151,12 @@ export function TagsInput({ name, defaultValue = [], ...aria }: TagsInputProps) 
         </button>
       </div>
 
-      {/* Count, so the limit is visible BEFORE it is hit rather than only as a dead input. */}
+      {/* Count, so the limit is visible BEFORE it is hit rather than only as a dead input — and
+          loudly once a seeded list is over it, because that is the only way past `commit()`. */}
       {tags.length > 0 && (
-        <p className="text-xs text-muted">
+        <p className={cn('text-xs', overLimit ? 'font-medium text-danger' : 'text-muted')}>
           {tags.length} of {MAX_TAGS} tags
+          {overLimit && ` — remove ${tags.length - MAX_TAGS} to save`}
         </p>
       )}
       {tags.length > 0 && (

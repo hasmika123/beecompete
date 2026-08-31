@@ -34,7 +34,7 @@ import { AttributesFields } from '@/components/admin/attributes-fields';
 import { FormSection, SubSectionHeading } from '@/components/admin/form-section';
 import { RegionSelect } from '@/components/admin/region-select';
 import { AwardsInput, awardRowsFromSeed } from '@/components/admin/awards-input';
-import { TagsInput } from '@/components/admin/tags-input';
+import { MAX_TAGS, TagsInput } from '@/components/admin/tags-input';
 import { enumLabel, enumOptions, keyDateOptions } from '@/components/admin/enum-labels';
 import { OrganizationForm } from '@/components/admin/organization-form';
 import { OrganizationCreatedModal } from '@/components/admin/organization-created-modal';
@@ -878,6 +878,9 @@ export function CompetitionForm({
 
   // Name + slug (item 18): the slug auto-mirrors the name until the admin edits the slug field.
   // Edit mode: the slug is permanent (SEO) — never auto-change it, so treat it as already "dirty".
+  // Seeded tag lists can exceed MAX_TAGS (a JSON fill bypasses the input's own cap), so the count
+  // is tracked here to gate submit — see TagsInput.onCountChange.
+  const [tagCount, setTagCount] = useState((c?.tags ?? []).length);
   const [name, setName] = useState(c?.name ?? '');
   const [slug, setSlug] = useState(c?.slug ?? '');
   // Auto-mirror only while creating: an edit keeps its permanent slug, and an import already has
@@ -1034,6 +1037,12 @@ export function CompetitionForm({
       label: 'Finish or clear the part-filled FAQ',
       stepId: 'extras',
       ok: partialFaqRows.length === 0,
+    },
+    {
+      key: 'tagLimit',
+      label: `Keep tags to ${MAX_TAGS} — a filled payload can arrive with more`,
+      stepId: 'overview',
+      ok: tagCount <= MAX_TAGS,
     },
     {
       key: 'partialKeyDates',
@@ -1323,7 +1332,7 @@ export function CompetitionForm({
                 hintAs="icon"
                 hint="type a tag and press Enter or +. Paste a comma-separated list to add several."
               >
-                <TagsInput name="tags" defaultValue={c?.tags ?? []} />
+                <TagsInput name="tags" defaultValue={c?.tags ?? []} onCountChange={setTagCount} />
               </FormField>
             </div>
             <div className="flex h-full flex-col gap-4">
@@ -2745,10 +2754,14 @@ export function CompetitionForm({
       fieldErrors.registrationUrl || fieldErrors.entryFee || fieldErrors.currency,
     ),
     eligibility: !eligibilityValid,
-    // Half-filled rows are errors on their step, so it cannot read as done while one stands.
+    // Row issues are errors on their step too, so it cannot read as done while one stands.
     extras: rowIssues.some((r) => r.stepId === 'extras' && !r.ok),
     timeline: rowIssues.some((r) => r.stepId === 'timeline' && !r.ok),
   };
+  // Overview is built above from its field errors; fold in its row issues (the tag limit) rather
+  // than redeclaring the key.
+  stepHasError.overview =
+    stepHasError.overview === true || rowIssues.some((r) => r.stepId === 'overview' && !r.ok);
 
   const stepperSteps = steps.map((s) => {
     const stepReq = requiredFields.filter((r) => r.stepId === s.id);
