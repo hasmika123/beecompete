@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useActionState, useEffect, useState } from 'react';
-import type { ChangeEvent, ReactNode } from 'react';
+import type { ChangeEvent, MouseEvent, ReactNode } from 'react';
 import {
   Alert,
   ArrowLeft,
@@ -40,6 +40,15 @@ import { OrganizationForm } from '@/components/admin/organization-form';
 import { OrganizationCreatedModal } from '@/components/admin/organization-created-modal';
 import { GRADE_VALUES, gradeOptionLabel } from '@/lib/catalog-display';
 import { defaultKeyDateLabel } from '@/lib/detail-display';
+import {
+  currencyRule,
+  isComplete,
+  LIMITS,
+  moneyRule,
+  slugRule,
+  textRule,
+  urlRule,
+} from '@/lib/form-rules';
 import { uploadCoverImage } from '@/lib/cover-upload';
 import { createCompetition, updateCompetition } from '@/app/admin/competitions/actions';
 import { approveImportFromForm } from '@/app/admin/import-records/actions';
@@ -830,6 +839,12 @@ export function CompetitionForm({
   // Active stepper step (create mode). Declared unconditionally (Rules of Hooks) — the first
   // step is always "basics"; ignored in edit mode, which renders every section at once.
   const [activeStepId, setActiveStepId] = useState('overview');
+  /**
+   * Set by a blocked submit click (owner 2026-08-30). Red only ever appears AFTER someone has
+   * asked to publish — painting a form red while it is still being filled in would flag every step
+   * the moment the page loads, which reads as broken rather than incomplete.
+   */
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   const enterRawMode = () => {
     setRawText(Object.keys(attributes).length ? JSON.stringify(attributes, null, 2) : '');
@@ -866,18 +881,22 @@ export function CompetitionForm({
   // --- required-field tracking (drives the completion ring; server stays the real gate) ---
   // Text fields stay uncontrolled (defaultValue) with a change listener recording only whether
   // they're non-empty — enough for the ring without controlling every keystroke.
-  const [filled, setFilled] = useState({
-    description: Boolean(c?.description),
-    officialUrl: Boolean(c?.officialUrl),
-    cycleLabel: Boolean(editionSeed?.cycleLabel),
-    registrationUrl: Boolean(editionSeed?.registrationUrl),
-    entryFee: Boolean(editionSeed?.entryFee),
-    currency: Boolean(editionSeed?.currency),
-    prizeSummary: Boolean(editionSeed?.prizeSummary),
+  // These stay UNCONTROLLED inputs (defaultValue) with a change listener. What changed
+  // 2026-08-30 is that the listener records the VALUE, not a non-empty boolean, so the ring's
+  // `ok` can mean VALID rather than merely "not blank" — a 12,000-character description and a URL
+  // of `asdf` are both non-empty, and neither one should complete its step.
+  const [text, setText] = useState({
+    description: c?.description ?? '',
+    officialUrl: c?.officialUrl ?? '',
+    registrationUrl: editionSeed?.registrationUrl ?? '',
+    entryFee: editionSeed?.entryFee ?? '',
+    currency: editionSeed?.currency ?? '',
   });
-  type FilledKey = keyof typeof filled;
-  const mark = (key: FilledKey) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    setFilled((f) => ({ ...f, [key]: e.target.value.trim() !== '' }));
+  type TextKey = keyof typeof text;
+  const mark = (key: TextKey) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setText((t) => ({ ...t, [key]: e.target.value }));
+  // Derived from the awards editor rather than typed into, so it stays a flag.
+  const [hasPrizeLine, setHasPrizeLine] = useState(Boolean(editionSeed?.prizeSummary));
 
   // --- eligibility (grade + age dropdowns; min ≤ max) ---
   // The dropdowns only offer valid grades/ages, so the one thing left to guard is that a chosen
@@ -910,6 +929,28 @@ export function CompetitionForm({
     (asksFor.ages && elig.minAge === '' && elig.maxAge === '');
   const eligibilityValid = !eligErrors.minGrade && !eligErrors.minAge && !basisUnbacked;
 
+  /**
+   * Per-field messages, server-mirrored (`lib/form-rules`). Undefined = nothing to say.
+   *
+   * Required-ness is NOT expressed here for most fields: an empty required field is reported by the
+   * ring and, after a failed submit, by the step turning red — putting "X is required" under every
+   * blank control on first paint would shout at a form nobody has filled in yet. These messages are
+   * for a value that IS there and is wrong.
+   */
+  const fieldErrors = {
+    name: textRule(name, { max: LIMITS.name, label: 'Name' }),
+    slug: slugRule(slug),
+    description: textRule(text.description, { max: LIMITS.description, label: 'Description' }),
+    officialUrl: urlRule(text.officialUrl, { max: LIMITS.officialUrl, label: 'Official URL' }),
+    coverUrl: urlRule(coverUrl, { max: LIMITS.logo, label: 'Cover image' }),
+    registrationUrl: urlRule(text.registrationUrl, {
+      max: LIMITS.registrationUrl,
+      label: 'Registration URL',
+    }),
+    entryFee: moneyRule(text.entryFee, { label: 'Entry fee' }),
+    currency: currencyRule(text.currency),
+  };
+
   const orgChosen = organizerOrgId !== '' && organizerOrgId !== ADD_ORG;
   // A required key date is satisfied by a row of that type carrying either a real date or an
   // explicit TBD — "we checked and it isn't published yet" is a complete answer, an untouched
@@ -941,22 +982,37 @@ export function CompetitionForm({
   // chase — see `blockingFields` below for what actually gates the button.
   const requiredFields = editing
     ? [
-        { key: 'name', label: 'Name', stepId: 'overview', ok: name.trim() !== '' },
+        { key: 'name', label: 'Name', stepId: 'overview', ok: isComplete(name, fieldErrors.name) },
         { key: 'category', label: 'Category', stepId: 'overview', ok: categoryId !== '' },
         { key: 'organizer', label: 'Organizer', stepId: 'overview', ok: orgChosen },
       ]
     : [
-        { key: 'name', label: 'Name', stepId: 'overview', ok: name.trim() !== '' },
+        { key: 'name', label: 'Name', stepId: 'overview', ok: isComplete(name, fieldErrors.name) },
         { key: 'category', label: 'Category', stepId: 'overview', ok: categoryId !== '' },
         { key: 'organizer', label: 'Organizer', stepId: 'overview', ok: orgChosen },
-        { key: 'description', label: 'Description', stepId: 'overview', ok: filled.description },
-        { key: 'officialUrl', label: 'Official URL', stepId: 'overview', ok: filled.officialUrl },
-        { key: 'cover', label: 'Cover image', stepId: 'overview', ok: coverUrl.trim() !== '' },
+        {
+          key: 'description',
+          label: 'Description',
+          stepId: 'overview',
+          ok: isComplete(text.description, fieldErrors.description),
+        },
+        {
+          key: 'officialUrl',
+          label: 'Official URL',
+          stepId: 'overview',
+          ok: isComplete(text.officialUrl, fieldErrors.officialUrl),
+        },
+        {
+          key: 'cover',
+          label: 'Cover image',
+          stepId: 'overview',
+          ok: isComplete(coverUrl, fieldErrors.coverUrl),
+        },
         {
           key: 'registrationUrl',
           label: 'Registration URL',
           stepId: 'administration',
-          ok: filled.registrationUrl,
+          ok: isComplete(text.registrationUrl, fieldErrors.registrationUrl),
         },
         // ADMINISTRATION IS REQUIRED THROUGHOUT (owner 2026-08-28), except the two contact fields
         // and team size. These five are all @NotNull server-side, so an empty one is a 400 on
@@ -971,9 +1027,14 @@ export function CompetitionForm({
                 key: 'entryFee',
                 label: 'Entry fee amount',
                 stepId: 'administration',
-                ok: filled.entryFee,
+                ok: isComplete(text.entryFee, fieldErrors.entryFee),
               },
-              { key: 'currency', label: 'Currency', stepId: 'administration', ok: filled.currency },
+              {
+                key: 'currency',
+                label: 'Currency',
+                stepId: 'administration',
+                ok: isComplete(text.currency, fieldErrors.currency),
+              },
             ]
           : []),
         { key: 'delivery', label: 'Delivery', stepId: 'administration', ok: delivery !== '' },
@@ -1065,7 +1126,7 @@ export function CompetitionForm({
             : typeof attributes.judging_criteria === 'string' &&
               attributes.judging_criteria.trim() !== '',
         },
-        { key: 'prize', label: 'Awards', stepId: 'awards', ok: filled.prizeSummary },
+        { key: 'prize', label: 'Awards', stepId: 'awards', ok: hasPrizeLine },
         // COMPLETE rows only, counted the same way the submit path counts them (buildResources /
         // buildFaqs skip a row missing either half), so the ring can never say "done" on rows that
         // will be dropped on save. ⚠ A resource's preview image is NOT part of complete — most
@@ -1145,7 +1206,7 @@ export function CompetitionForm({
               given breakpoint — no hard-coded "left is taller" assumption to go stale. */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex h-full flex-col gap-4">
-              <FormField label="Name" required>
+              <FormField label="Name" required error={fieldErrors.name}>
                 <Input
                   name="name"
                   value={name}
@@ -1172,6 +1233,7 @@ export function CompetitionForm({
                 required={req}
                 hintAs="icon"
                 hint="Full write-up (About tab) — its first ~300 chars also become the card blurb. Write our own; never paste theirs."
+                error={fieldErrors.description}
               >
                 <Textarea
                   name="description"
@@ -1234,6 +1296,7 @@ export function CompetitionForm({
                 required={req}
                 hintAs="icon"
                 hint="the competition’s home page."
+                error={fieldErrors.officialUrl}
               >
                 <Input
                   name="officialUrl"
@@ -1313,6 +1376,7 @@ export function CompetitionForm({
               required
               hintAs="icon"
               hint="where entrants sign up."
+              error={fieldErrors.registrationUrl}
             >
               <Input
                 name="edition_registrationUrl"
@@ -1325,7 +1389,12 @@ export function CompetitionForm({
               />
             </FormField>
           )}
-          <FormField label="Entry fee" labelAsText required={req}>
+          <FormField
+            label="Entry fee"
+            labelAsText
+            required={req}
+            error={isFree ? undefined : (fieldErrors.entryFee ?? fieldErrors.currency)}
+          >
             <div className="flex items-start gap-2">
               <Select
                 name="costType"
@@ -1340,9 +1409,9 @@ export function CompetitionForm({
                 // (owner 2026-08-23): the row keeps its shape, and a price typed before someone
                 // flips to Free survives the flip back. Disabled controls are omitted from the
                 // submission, so FREE still posts no fee — same payload the unmounted version
-                // sent. `filled` needs no resetting for the same reason: the values persist, so
-                // the flags stay true to them (and entryFee/currency drop out of
-                // `requiredFields` entirely while FREE).
+                // sent. `text` needs no resetting for the same reason: the values persist, so the
+                // rules stay true to them (and entryFee/currency drop out of `requiredFields`
+                // entirely while FREE, so a stale amount can never block a free listing).
                 <>
                   <Input
                     name="edition_entryFee"
@@ -1963,7 +2032,7 @@ export function CompetitionForm({
           <AwardsInput
             name="edition_awards"
             initial={initialAwardRows}
-            onPrizeLineChange={(has) => setFilled((f) => ({ ...f, prizeSummary: has }))}
+            onPrizeLineChange={setHasPrizeLine}
           />
         </FormField>
       ),
@@ -2437,6 +2506,9 @@ export function CompetitionForm({
                       aria-label={`FAQ ${i + 1} answer`}
                       name={`faq_${i}_answer`}
                       placeholder="The answer, in our words."
+                      // Mirrors FaqRequest.MAX_ANSWER, added server-side 2026-08-30 — the column
+                      // is TEXT, so without that constraint this cap would only bind the browser.
+                      maxLength={LIMITS.faqAnswer}
                       value={row.answer}
                       onChange={(e) => patchFaqRow(row.key, { answer: e.target.value })}
                       className="h-10 min-h-10 resize-y"
@@ -2575,14 +2647,42 @@ export function CompetitionForm({
   const activeIndex = steps.indexOf(activeStepDef);
   const prevStep = steps[activeIndex - 1];
   const nextStep = steps[activeIndex + 1];
+  /**
+   * Which steps carry a VISIBLE field error right now (as opposed to an unfilled required field).
+   * A step showing an error must not read as done, even when every required field on it is filled:
+   * the owner's rule is that green means "this step is finished", and a step with a red message
+   * under a control plainly is not.
+   */
+  const stepHasError: Record<string, boolean> = {
+    overview: Boolean(
+      fieldErrors.name ||
+      fieldErrors.slug ||
+      fieldErrors.description ||
+      fieldErrors.officialUrl ||
+      fieldErrors.coverUrl,
+    ),
+    administration: Boolean(
+      fieldErrors.registrationUrl || fieldErrors.entryFee || fieldErrors.currency,
+    ),
+    eligibility: !eligibilityValid,
+  };
+
   const stepperSteps = steps.map((s) => {
     const stepReq = requiredFields.filter((r) => r.stepId === s.id);
+    const missingHere = stepReq.some((r) => !r.ok);
+    const erroredHere = stepHasError[s.id] === true;
     return {
       id: s.id,
       label: s.label,
       description: s.meta,
-      complete: stepReq.length > 0 && stepReq.every((r) => r.ok),
-      incompleteRequired: stepReq.some((r) => !r.ok),
+      // Optional fields are deliberately NOT part of this: a step is done when its REQUIRED work
+      // is done and nothing on it is wrong (owner 2026-08-30).
+      complete: stepReq.length > 0 && !missingHere && !erroredHere,
+      incompleteRequired: missingHere,
+      // Red is the state after a blocked submit, plus any live error — an error the curator can
+      // see does not need a submit to justify flagging.
+      invalid:
+        erroredHere || (submitAttempted && blockingFields.some((r) => r.stepId === s.id && !r.ok)),
     };
   });
 
@@ -2636,9 +2736,33 @@ export function CompetitionForm({
   // bottom as state → steps → the action they lead to, so the action sits where the work ends
   // instead of in a bar pinned across the viewport. Create stays gated on the whole ring; import
   // gates only on what the server actually refuses, and says so.
+  /**
+   * The submit guard (owner 2026-08-30). The three buttons used to be `disabled` while the form was
+   * incomplete, which is a dead end: nothing explains WHY, and the rail's amber dots are easy to
+   * miss. They are now live, and a blocked click paints the failing steps red and jumps to the
+   * first one — the click becomes the thing that tells you what is wrong.
+   *
+   * This is UX, not enforcement. The server's @AssertTrue set runs on every submit regardless, and
+   * remains the only real gate.
+   */
+  const guardSubmit = (e: MouseEvent<HTMLButtonElement>) => {
+    if (submittable) return;
+    e.preventDefault();
+    setSubmitAttempted(true);
+    const first = blockingRemaining[0];
+    if (first) setActiveStepId(first.stepId);
+    else if (!eligibilityValid) setActiveStepId('eligibility');
+  };
+
   const submitAction = (
     <div className="grid gap-2">
-      <Button type="submit" variant="brand" disabled={pending || !submittable} className="w-full">
+      <Button
+        type="submit"
+        variant="brand"
+        disabled={pending}
+        onClick={guardSubmit}
+        className="w-full"
+      >
         {importing
           ? pending
             ? 'Approving…'
@@ -2660,7 +2784,8 @@ export function CompetitionForm({
             name="listing_intent"
             value="review"
             variant="secondary"
-            disabled={pending || !submittable}
+            disabled={pending}
+            onClick={guardSubmit}
             className="w-full"
           >
             Submit for review
@@ -2670,7 +2795,8 @@ export function CompetitionForm({
             name="listing_intent"
             value="draft"
             variant="ghost"
-            disabled={pending || !submittable}
+            disabled={pending}
+            onClick={guardSubmit}
             className="w-full"
           >
             Save as draft
@@ -2681,7 +2807,7 @@ export function CompetitionForm({
         // Create mode says nothing here: the ring at the head of the rail already carries the
         // count, and the disabled submit carries the consequence. Import still names what the
         // server will refuse, because there the button is NOT disabled by the same rule.
-        importing ? (
+        importing || submitAttempted ? (
           <button
             type="button"
             onClick={() => {
@@ -2690,8 +2816,8 @@ export function CompetitionForm({
             }}
             className="text-left text-xs font-medium text-danger hover:underline"
           >
-            Needs {blockingRemaining.map((r) => r.label.toLowerCase()).join(', ')} before it can be
-            approved
+            Needs {blockingRemaining.map((r) => r.label.toLowerCase()).join(', ')} before it can be{' '}
+            {importing ? 'approved' : 'published'}
           </button>
         ) : null
       ) : !eligibilityValid ? (

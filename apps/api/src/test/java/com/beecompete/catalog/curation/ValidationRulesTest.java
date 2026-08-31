@@ -166,4 +166,26 @@ class ValidationRulesTest {
 		assertTrue(hasMessage(V.validate(edition(null, null, new BigDecimal("500.00"), null)),
 				"a prize value needs a prize currency"));
 	}
+
+	// --- FaqRequest ---
+
+	@Test
+	void faqAnswerAtTheLimitPasses() {
+		assertTrue(V.validate(new FaqRequest("Q?", "a".repeat(FaqRequest.MAX_ANSWER), (short) 0)).isEmpty());
+	}
+
+	/**
+	 * The column is TEXT, so nothing below this constraint stops an oversized answer (owner
+	 * 2026-08-30). Added because the curation form now mirrors server limits field-for-field, and a
+	 * cap that lived only in the browser would not survive a direct API call.
+	 */
+	@Test
+	void faqAnswerOverTheLimitFails() {
+		assertFalse(V.validate(new FaqRequest("Q?", "a".repeat(FaqRequest.MAX_ANSWER + 1), (short) 0)).isEmpty());
+	}
+
+	@Test
+	void blankFaqAnswerStillFails() {
+		assertFalse(V.validate(new FaqRequest("Q?", "   ", (short) 0)).isEmpty());
+	}
 }
