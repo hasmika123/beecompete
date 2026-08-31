@@ -194,7 +194,8 @@ Anything worth knowing that fits none of the above — including things you noti
   "keyDates": [                                     // the running's timeline, one row per key date
     {
       "type": "REG_CLOSE",                          // REG_OPEN | REG_CLOSE | ROUND_START |
-                                                    //   SUBMISSION_DUE | RESULTS | CUSTOM
+                                                    //   SUBMISSION_DUE | RESULTS | CUSTOM |
+                                                    //   CUSTOM_PHASE (a span — see below)
       "startsAt": "2026-11-03T00:00:00Z",           // FULL ISO instant, or null for TBD
       "endsAt": null,                               // only for a key date spanning days
       "timezone": null,                             // null BECAUSE the source gave a day, no time
@@ -302,8 +303,17 @@ a real signup link, and a curator would have no reason to go looking for the rea
   one: qualifying and regional rounds, awards ceremonies, mandatory info sessions, team-formation or
   intent-to-enter deadlines, project-plan approvals, mailing deadlines and finals week all belong on
   the timeline as CUSTOM rows. Every date rule above still applies: a CUSTOM row whose date you
-  can't read is `"startsAt": null`, never a guess. Use `ROUND_START` for a competition round proper, and
-  CUSTOM when nothing else fits.
+  can't read is `"startsAt": null`, never a guess. Use `ROUND_START` for a competition round proper.
+- **There are TWO custom types — pick by SHAPE, not importance** (owner 2026-08-31):
+  - `CUSTOM` — a **moment**. One date, nothing spans: "Research plan due", "Awards ceremony",
+    "Early-bird deadline". Leave `endsAt` null.
+  - `CUSTOM_PHASE` — a **period** running across days: "Finals week", "Judging window", "Project
+    build period". Give both `startsAt` and `endsAt` when the source states them; if it names only
+    one end, still use `CUSTOM_PHASE` and leave the other null.
+
+  Happening ON a day → `CUSTOM`. Running BETWEEN two days → `CUSTOM_PHASE`. If you genuinely can't
+  tell, use `CUSTOM`: an understated moment is easier for a curator to widen than a phase is to
+  disprove.
 - **CUSTOM labels: use the CANONICAL spelling when the key date is one of these kinds, even when
   the source words it differently.** Different sites call the same thing different things, and a
   timeline reading "Early Bird Registration Discount Deadline" on one listing and "Early

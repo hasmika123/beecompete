@@ -66,7 +66,7 @@ export const SCOPE_LEVELS = [
  * CUSTOM stays here because it is the only escape hatch for a genuine multi-day key date
  * ("finals week") until the plan's generic PERIOD type exists.
  */
-export const SPAN_KEY_DATE_TYPES: readonly string[] = ['ROUND_START', 'CUSTOM'];
+export const SPAN_KEY_DATE_TYPES: readonly string[] = ['ROUND_START', 'CUSTOM_PHASE'];
 
 export const KEY_DATE_TYPES = [
   'REG_OPEN',
@@ -75,6 +75,7 @@ export const KEY_DATE_TYPES = [
   'SUBMISSION_DUE',
   'RESULTS',
   'CUSTOM',
+  'CUSTOM_PHASE',
 ] as const;
 // Canonical evaluation tokens (R1-5 EvaluationTypes.TOKENS) — stored/validated LOWERCASE, unlike
 // the other UPPERCASE enums. Server validates these at the curation write boundary.
@@ -107,13 +108,21 @@ export const HERO_POSITIONS = ['MAIN', 'TOP_RIGHT', 'BOTTOM_LEFT'] as const;
  * live EST/EDT toggle would mean recomputing the label per row against that row's date, which
  * buys nothing: both spellings name the same zone.
  */
+/**
+ * Zone only — no city (owner 2026-08-31), and DST-agnostic on purpose.
+ *
+ * The labels used to read "EST (New York)". The city was noise once the value is an IANA zone, and
+ * "EST" was worse than noise: it means winter time specifically, so it was literally wrong for the
+ * two-thirds of the year those zones spend on daylight time. "ET" is correct year-round, and short
+ * enough that the control no longer needs a wide field.
+ */
 export const ADMIN_TIMEZONES = [
-  { value: 'America/New_York', label: 'EST (New York)' },
-  { value: 'America/Chicago', label: 'CST (Chicago)' },
-  { value: 'America/Denver', label: 'MST (Denver)' },
-  { value: 'America/Los_Angeles', label: 'PST (Los Angeles)' },
-  { value: 'America/Anchorage', label: 'AKST (Anchorage)' },
-  { value: 'Pacific/Honolulu', label: 'HST (Honolulu)' },
+  { value: 'America/New_York', label: 'ET' },
+  { value: 'America/Chicago', label: 'CT' },
+  { value: 'America/Denver', label: 'MT' },
+  { value: 'America/Los_Angeles', label: 'PT' },
+  { value: 'America/Anchorage', label: 'AKT' },
+  { value: 'Pacific/Honolulu', label: 'HT' },
   { value: 'UTC', label: 'UTC' },
 ];
 

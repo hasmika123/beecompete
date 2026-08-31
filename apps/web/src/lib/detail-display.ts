@@ -15,6 +15,7 @@ const KEY_DATE_LABELS: Record<string, string> = {
   submission_due: 'Submission due',
   results: 'Results announced',
   custom: 'Event',
+  custom_phase: 'Phase',
 };
 
 const DELIVERY_LABELS: Record<string, string> = {

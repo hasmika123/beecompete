@@ -41,6 +41,11 @@ export function enumOptions(tokens: readonly string[]): SelectOption[] {
 export function keyDateOptions(tokens: readonly string[]): SelectOption[] {
   return tokens.map((t) => ({
     value: t,
-    label: t === 'CUSTOM' ? 'Custom' : defaultKeyDateLabel(t),
+    label:
+      t === 'CUSTOM'
+        ? 'Custom event'
+        : t === 'CUSTOM_PHASE'
+          ? 'Custom phase'
+          : defaultKeyDateLabel(t),
   }));
 }

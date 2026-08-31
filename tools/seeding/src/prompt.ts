@@ -346,7 +346,16 @@ A listing is only useful with a running attached, so also fill these INSIDE "pay
   or intent-to-enter deadlines, project-plan approvals, shipping/mailing deadlines and finals week
   all belong on the timeline as CUSTOM rows. Every date rule above applies unchanged — a CUSTOM
   CUSTOM row whose date you cannot read is still startsAt: null, never a guess. ROUND_START exists for a
-  competition round proper; use CUSTOM when nothing else fits.
+  competition round proper.
+- **TWO custom types — pick by SHAPE, not by importance** (owner 2026-08-31):
+    * CUSTOM = a MOMENT. One date, nothing spans. "Research plan due", "Awards ceremony",
+      "Early-bird deadline". Leave endsAt null.
+    * CUSTOM_PHASE = a PERIOD running across days. "Finals week", "Judging window", "Project build
+      period". Give startsAt AND endsAt when the source states both; if it names only one end of the
+      span, still use CUSTOM_PHASE and leave the other null.
+  Happening ON a day => CUSTOM. Running BETWEEN two days => CUSTOM_PHASE. When you genuinely cannot
+  tell, use CUSTOM: an understated moment is easier for a curator to widen than a phase is to
+  disprove.
 - **CUSTOM labels: use the CANONICAL spelling when the key date is one of these kinds, even when
   the page words it differently.** Different pages call the same thing different things, and a
   timeline that says "Early Bird Registration Discount Deadline" on one listing and "Early

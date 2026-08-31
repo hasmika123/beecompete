@@ -2233,7 +2233,7 @@ export function CompetitionForm({
                             className="w-full min-w-0"
                           />
                         </FormField>
-                        <FormField label="Time zone" className="min-w-40 flex-1">
+                        <FormField label="Time zone" className="w-24 shrink-0">
                           <Select
                             name={`keydate_${i}_timezone`}
                             options={ADMIN_TIMEZONES}
