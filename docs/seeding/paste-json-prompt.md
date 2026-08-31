@@ -304,6 +304,14 @@ a real signup link, and a curator would have no reason to go looking for the rea
   intent-to-enter deadlines, project-plan approvals, mailing deadlines and finals week all belong on
   the timeline as CUSTOM rows. Every date rule above still applies: a CUSTOM row whose date you
   can't read is `"startsAt": null`, never a guess. Use `ROUND_START` for a competition round proper.
+- **At most ONE of each named type per timeline** (owner 2026-08-31): one `REG_OPEN`, one
+  `REG_CLOSE`, one `SUBMISSION_DUE`, one `RESULTS`. A second one is not a second row of that type —
+  it is a DIFFERENT milestone, and it belongs on `CUSTOM` / `CUSTOM_PHASE` with a label.
+  This is not tidiness: the listing's deadline is the **earliest** `REG_CLOSE`, so a second one
+  silently becomes the deadline, and an early-bird cutoff emitted as `REG_CLOSE` closes the listing
+  weeks before it really does. Early-bird → `CUSTOM` labelled "Early-bird deadline"; a second
+  submission round → `CUSTOM` labelled for that round; a per-division date → `CUSTOM` naming the
+  division. `ROUND_START` and the two custom types may repeat freely.
 - **There are TWO custom types — pick by SHAPE, not importance** (owner 2026-08-31):
   - `CUSTOM` — a **moment**. One date, nothing spans: "Research plan due", "Awards ceremony",
     "Early-bird deadline". Leave `endsAt` null.

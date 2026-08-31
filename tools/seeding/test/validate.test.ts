@@ -515,6 +515,33 @@ test('an all-TBD timeline is valid but flagged for curator lookup', async () => 
   );
 });
 
+test('two REG_CLOSE rows warn — the earliest would silently become the deadline', async () => {
+  const payload = await loadGoodPayload();
+  payload.keyDates = [
+    { type: 'REG_CLOSE', startsAt: '2026-10-01T00:00:00Z' },
+    { type: 'REG_CLOSE', startsAt: '2026-11-03T00:00:00Z' },
+  ];
+  const { ok, warnings } = validatePayload(payload);
+  assert.equal(ok, true);
+  assert.ok(
+    warnings.some((w) => w.includes('2 REG_CLOSE rows') && w.includes('deadline')),
+    `expected the duplicate-type warning, got: ${warnings.join(' | ')}`,
+  );
+});
+
+test('repeated ROUND_START and CUSTOM rows are exempt', async () => {
+  const payload = await loadGoodPayload();
+  payload.keyDates = [
+    { type: 'REG_CLOSE', startsAt: '2026-11-03T00:00:00Z' },
+    { type: 'ROUND_START', startsAt: '2027-03-01T00:00:00Z', label: 'Semifinal' },
+    { type: 'ROUND_START', startsAt: '2027-04-01T00:00:00Z', label: 'Final' },
+    { type: 'CUSTOM', startsAt: '2026-09-01T00:00:00Z', label: 'Early-bird deadline' },
+    { type: 'CUSTOM', startsAt: '2026-09-15T00:00:00Z', label: 'Info session' },
+  ];
+  const { warnings } = validatePayload(payload);
+  assert.ok(!warnings.some((w) => w.includes('rows — only one is meaningful')));
+});
+
 test('a grade range with no eligibilityBasis warns — the form field is required', async () => {
   const payload = await loadGoodPayload();
   payload.eligibilityBasis = null;

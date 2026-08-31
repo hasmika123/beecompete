@@ -196,6 +196,24 @@ function validateKeyDates(dates: KeyDatePayload[], errors: string[], warnings: s
   });
 
   const typed = dates.filter((d) => d && typeof d.type === 'string');
+  /**
+   * At most one of each NAMED type (owner 2026-08-31). Not tidiness: `nextDeadline` is the earliest
+   * REG_CLOSE, so a second one silently becomes the listing's deadline — an early-bird cutoff
+   * emitted as REG_CLOSE closes the listing weeks early. The curation form flags duplicates too,
+   * but only once a human is looking; this catches them at extraction.
+   *
+   * ROUND_START and the two custom types repeat legitimately and are exempt.
+   */
+  const SINGLETON_TYPES = ['REG_OPEN', 'REG_CLOSE', 'SUBMISSION_DUE', 'RESULTS'];
+  for (const t of SINGLETON_TYPES) {
+    const n = typed.filter((d) => d.type === t).length;
+    if (n > 1) {
+      warnings.push(
+        `${n} ${t} rows — only one is meaningful; the extras belong on CUSTOM with a label` +
+          (t === 'REG_CLOSE' ? ' (the EARLIEST becomes the listing deadline)' : ''),
+      );
+    }
+  }
   if (!typed.some((d) => DEADLINE_TYPES.includes(d.type))) {
     // Not fatal — plenty of pages genuinely announce nothing yet — but the public card and
     // search read their deadline from these two types, so the listing will show none.

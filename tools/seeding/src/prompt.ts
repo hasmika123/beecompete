@@ -347,6 +347,14 @@ A listing is only useful with a running attached, so also fill these INSIDE "pay
   all belong on the timeline as CUSTOM rows. Every date rule above applies unchanged — a CUSTOM
   CUSTOM row whose date you cannot read is still startsAt: null, never a guess. ROUND_START exists for a
   competition round proper.
+- **AT MOST ONE of each named type per timeline** (owner 2026-08-31): one REG_OPEN, one REG_CLOSE,
+  one SUBMISSION_DUE, one RESULTS. A second one is not a second row of that type — it is a DIFFERENT
+  milestone, and it belongs on CUSTOM / CUSTOM_PHASE with a label.
+  This matters beyond tidiness: the listing's deadline is the EARLIEST REG_CLOSE, so a second one
+  silently becomes the deadline. An early-bird cutoff emitted as REG_CLOSE makes the listing close
+  weeks before it really does. Early-bird -> CUSTOM labelled "Early-bird deadline"; a second
+  submission round -> CUSTOM labelled for that round; a per-division date -> CUSTOM naming the
+  division. ROUND_START and the two custom types may repeat freely.
 - **TWO custom types — pick by SHAPE, not by importance** (owner 2026-08-31):
     * CUSTOM = a MOMENT. One date, nothing spans. "Research plan due", "Awards ceremony",
       "Early-bird deadline". Leave endsAt null.

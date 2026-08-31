@@ -583,8 +583,13 @@ export function CompetitionForm({
     answer: string;
   }
   // Seeded from the payload when one suggested resources (the paste prompt asks for ~5 prep links
-  // plus 2-3 Amazon ones), otherwise the single blank row the editor has always opened with. A
-  // trailing blank row is appended so the editor is still ready to type after a seeded set.
+  // plus 2-3 Amazon ones), otherwise the single blank row the editor has always opened with.
+  //
+  // ⚠ The blank is ONLY for the empty case (owner 2026-08-31). It used to be appended
+  // unconditionally "so the editor stays ready to type", which meant a payload that supplied five
+  // resources rendered six rows with the last one empty — it read as a row the extraction had
+  // failed to fill, and it counted against the partial-row check below. "Add resource" already
+  // covers wanting another.
   const [resourceRows, setResourceRows] = useState<ResourceRow[]>(() => {
     const seeded = (seed?.resources ?? []).map((r, i) => ({
       key: i,
@@ -594,26 +599,18 @@ export function CompetitionForm({
       affiliate: r.isAffiliate,
       image: r.imageUrl,
     }));
-    return [
-      ...seeded,
-      {
-        key: seeded.length,
-        title: '',
-        url: '',
-        type: 'GUIDE',
-        affiliate: false,
-        image: '',
-      },
-    ];
+    if (seeded.length > 0) return seeded;
+    return [{ key: 0, title: '', url: '', type: 'GUIDE', affiliate: false, image: '' }];
   });
-  // Seeded like the resource rows, with the same trailing blank so the editor stays ready to type.
+  // Seeded like the resource rows, and blank ONLY when nothing was seeded — same reason.
   const [faqRows, setFaqRows] = useState<FaqRow[]>(() => {
     const seeded = (seed?.faqs ?? []).map((f, i) => ({
       key: i,
       question: f.question,
       answer: f.answer,
     }));
-    return [...seeded, { key: seeded.length, question: '', answer: '' }];
+    if (seeded.length > 0) return seeded;
+    return [{ key: 0, question: '', answer: '' }];
   });
   const patchResourceRow = (key: number, patch: Partial<ResourceRow>) =>
     setResourceRows((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -951,6 +948,31 @@ export function CompetitionForm({
     currency: currencyRule(text.currency),
   };
 
+  /**
+   * HALF-FILLED rows (owner 2026-08-31). A row with SOME of its required fields but not all is
+   * silently DROPPED on save — `buildResources`/`buildFaqs` skip any row missing either half — so a
+   * curator who typed a title and no URL lost the row without being told. These block submit now.
+   *
+   * An ENTIRELY empty row is not half-filled: it is the editor's "ready to type" affordance, drops
+   * out harmlessly, and must never block. The test is therefore "touched but incomplete", not
+   * "incomplete".
+   */
+  const has = (v: string) => v.trim() !== '';
+  const partialResourceRows = resourceRows.filter(
+    (r) => (has(r.title) || has(r.url) || has(r.image)) && !(has(r.title) && has(r.url)),
+  );
+  const partialFaqRows = faqRows.filter(
+    (f) => (has(f.question) || has(f.answer)) && !(has(f.question) && has(f.answer)),
+  );
+  /**
+   * A key date row always has a type, so "touched" means it carries a date, an end date or a
+   * label. Such a row must resolve to a real date or an explicit TBD — the R1-18 encoding — or it
+   * posts nothing and the milestone vanishes.
+   */
+  const partialKeyDateRows = keyDateRows.filter(
+    (r) => (has(r.date) || has(r.endDate) || has(r.label)) && !r.tbd && !has(r.date),
+  );
+
   const orgChosen = organizerOrgId !== '' && organizerOrgId !== ADD_ORG;
   // A required key date is satisfied by a row of that type carrying either a real date or an
   // explicit TBD — "we checked and it isn't published yet" is a complete answer, an untouched
@@ -976,6 +998,36 @@ export function CompetitionForm({
   const duplicateRequiredType = (row: KeyDateRow) =>
     (REQUIRED_KEY_DATE_TYPES as readonly string[]).includes(row.type) &&
     keyDateRows.filter((o) => o.type === row.type).length > 1;
+  /**
+   * Half-filled rows gate SUBMIT but are deliberately NOT ring entries. The ring counts FIELDS a
+   * curator has to fill; these are conditions satisfied by doing nothing, so counting them inflated
+   * the denominator ("27 required" became "30") with rows that are already fine on a blank form.
+   * They behave like `eligibilityValid`: they can block, and they redden their step, without
+   * pretending to be work items.
+   *
+   * Phrased "finish or clear" because both are valid fixes — the point is that the curator chooses,
+   * rather than the save choosing for them by silently dropping the row.
+   */
+  const rowIssues = [
+    {
+      key: 'partialResources',
+      label: 'Finish or clear the part-filled prep resource',
+      stepId: 'extras',
+      ok: partialResourceRows.length === 0,
+    },
+    {
+      key: 'partialFaqs',
+      label: 'Finish or clear the part-filled FAQ',
+      stepId: 'extras',
+      ok: partialFaqRows.length === 0,
+    },
+    {
+      key: 'partialKeyDates',
+      label: 'Give every dated milestone a date or mark it TBD',
+      stepId: 'timeline',
+      ok: partialKeyDateRows.length === 0,
+    },
+  ];
   // Create front-loads everything the public card/detail shows (item 5/9): the listing is
   // complete-by-default. Edit keeps only the base spine required, so legacy listings still save.
   // Import uses the SAME full checklist as create, but only to SHOW what a curator would have to
@@ -1166,7 +1218,8 @@ export function CompetitionForm({
   const blockingFields = importing
     ? requiredFields.filter((r) => IMPORT_BLOCKING_KEYS.includes(r.key))
     : requiredFields;
-  const blockingRemaining = blockingFields.filter((r) => !r.ok);
+  const rowIssuesRemaining = rowIssues.filter((r) => !r.ok);
+  const blockingRemaining = [...blockingFields.filter((r) => !r.ok), ...rowIssuesRemaining];
   const submittable = blockingRemaining.length === 0 && eligibilityValid;
   // On create every listed field carries a visible asterisk; on edit only the spine fields
   // (name/slug/category/organizer) do — organizer is now mandatory in edit mode too. Import shows
@@ -2388,6 +2441,13 @@ export function CompetitionForm({
                         <Trash aria-hidden="true" className="size-3.5" />
                       </button>
                     </div>
+                    {/* Named on the row, not just in the ring: an incomplete row is DROPPED on
+                        save, so the curator has to see which one. */}
+                    {partialResourceRows.some((r) => r.key === row.key) && (
+                      <p className="mt-1.5 pl-8 text-xs font-medium text-danger">
+                        Needs both a title and a URL — finish it, or clear the row.
+                      </p>
+                    )}
                     <div className="flex items-center gap-3">
                       <Input
                         aria-label={`Resource ${i + 1} URL`}
@@ -2513,6 +2573,12 @@ export function CompetitionForm({
                       onChange={(e) => patchFaqRow(row.key, { answer: e.target.value })}
                       className="h-10 min-h-10 resize-y"
                     />
+                    {/* Same reason as the resource rows: a half-filled FAQ is dropped on save. */}
+                    {partialFaqRows.some((f) => f.key === row.key) && (
+                      <p className="mt-1.5 text-xs font-medium text-danger">
+                        Needs both a question and an answer — finish it, or clear the row.
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -2665,6 +2731,9 @@ export function CompetitionForm({
       fieldErrors.registrationUrl || fieldErrors.entryFee || fieldErrors.currency,
     ),
     eligibility: !eligibilityValid,
+    // Half-filled rows are errors on their step, so it cannot read as done while one stands.
+    extras: rowIssues.some((r) => r.stepId === 'extras' && !r.ok),
+    timeline: rowIssues.some((r) => r.stepId === 'timeline' && !r.ok),
   };
 
   const stepperSteps = steps.map((s) => {
