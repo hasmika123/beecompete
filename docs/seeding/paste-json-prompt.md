@@ -165,8 +165,8 @@ Anything worth knowing that fits none of the above — including things you noti
                                                     //   label as the source frames it ("2026",
                                                     //   "2025-26"). If unnamed, the calendar year
                                                     //   its deadline falls in.
-    "status": "OPEN",                               // UPCOMING | OPEN | CLOSED | ONGOING |
-                                                    //   ARCHIVED — include it; see below
+    "status": "OPEN",                               // REQUIRED if edition present: UPCOMING |
+                                                    //   OPEN | CLOSED | ONGOING | ARCHIVED
     "scopeLevel": "NATIONAL",                       // INTERNATIONAL | NATIONAL | STATE | REGIONAL |
                                                     //   LOCAL | VIRTUAL
     "registrationUrl": "https://…",                 // where you SIGN UP. Never null — see below
@@ -262,7 +262,8 @@ Convert carefully: "high school" → 9–12; "grades 6-8" → 6–8; "middle and
 instead, use minAge/maxAge and leave the grade fields null. Never fill both from one statement unless the source states both.
 
 ### EDITION STATUS — where this running is in its cycle
-Include `edition.status` whenever an `edition` is present. Same five values the bulk extractor uses:
+`edition.status` is REQUIRED whenever an `edition` is present. Same five values the bulk extractor
+uses, and the paste path now honours what you send:
 
 - `OPEN` — registration is open right now
 - `CLOSED` — the registration deadline has passed
@@ -277,11 +278,9 @@ all, whereas `OPEN` invites someone to go and enter something that may have clos
 Read it against the dates you extracted rather than the page's tone — a page that still says
 "Register now" months after its own deadline is common, and the deadline is the better evidence.
 
-ℹ️ **What actually happens to it.** Pasting into **New → Paste JSON** takes the CREATE path, which
-DERIVES status from your key dates server-side and ignores the value you sent (`buildFirstEdition`
-emits no status key at all). It is asked for anyway so this payload stays interchangeable with the
-pipeline's, where import-approve does apply it. So: get it right if the source says, and don't spend
-effort on it if it doesn't — your key dates are what decide it here.
+ℹ️ **If you omit it**, the server derives one from your key dates rather than failing — so a payload
+without it still works, it just answers the question itself. That is also what a manual create does.
+Send one when the source supports it; don't guess one it doesn't.
 
 ### REGISTRATION URL — never leave it empty
 `edition.registrationUrl` is where a student actually signs up, and it is the link behind the

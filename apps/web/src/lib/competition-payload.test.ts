@@ -18,6 +18,22 @@ function form(entries: Record<string, string>): FormData {
 
 const BASE = { edition_cycleLabel: '2027', edition_scopeLevel: 'NATIONAL' };
 
+describe('buildFirstEdition — edition status', () => {
+  /**
+   * Absent must mean ABSENT, not null. Create derives status from the key dates server-side, and
+   * on import-approve this object is spread OVER extras.edition — a null would clobber an
+   * extracted value instead of deferring to it.
+   */
+  it('omits the key entirely when nothing was supplied', () => {
+    expect('status' in buildFirstEdition(form({ ...BASE, edition_status: '' }))).toBe(false);
+    expect('status' in buildFirstEdition(form(BASE))).toBe(false);
+  });
+
+  it('posts a supplied status, so a pasted or extracted one is honoured', () => {
+    expect(buildFirstEdition(form({ ...BASE, edition_status: 'OPEN' })).status).toBe('OPEN');
+  });
+});
+
 describe('buildFirstEdition — awards derivation', () => {
   it('derives summary from titles in display order and value from the LARGEST money award', () => {
     const awards = JSON.stringify([

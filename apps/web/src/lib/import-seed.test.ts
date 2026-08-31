@@ -140,9 +140,12 @@ describe('splitImportPayload', () => {
       }),
     );
     expect(seed.extras.competition).toEqual({ reviewerNotes: 'fee unclear' });
-    // `status` left the form 2026-08-22 (derived on create) — an extracted one is an extra now;
-    // prizeValue gained a control the same day, so it is MAPPED, not an extra.
-    expect(seed.extras.edition).toEqual({ status: 'OPEN' });
+    // Nothing on the edition is an extra any more. `status` was the last one — it rode through as
+    // an extra from 2026-08-22, which is what let the create path discard it while import-approve
+    // applied it; mapping it (2026-08-31) is what made the two paths agree. prizeValue has been
+    // mapped since it gained a control.
+    expect(seed.extras.edition).toEqual({});
+    expect(seed.edition?.status).toBe('OPEN');
     expect(seed.edition?.prizeValue).toBe('500');
   });
 });
@@ -153,6 +156,14 @@ describe('importSeedWarnings', () => {
    * Without a warning a curator can't tell which happened, so can't tell whether to read the page
    * or report an extractor bug. The key-date path has always warned; these did not.
    */
+  it('seeds edition.status as a mapped field, not an extra', () => {
+    const p = payload({ edition: { cycleLabel: '2026', scopeLevel: 'NATIONAL', status: 'OPEN' } });
+    const seed = splitImportPayload(p);
+    expect(seed.edition?.status).toBe('OPEN');
+    // Mapped now, so it must NOT also ride through as an extra — that was the old two-paths bug.
+    expect('status' in seed.extras.edition).toBe(false);
+  });
+
   it('names an unrecognised enum token rather than blanking it silently', () => {
     const p = payload({ delivery: 'ONLINE', costType: 'GRATIS' });
     const warnings = importSeedWarnings(p, splitImportPayload(p));

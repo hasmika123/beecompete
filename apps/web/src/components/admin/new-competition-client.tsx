@@ -67,15 +67,17 @@ function createModeWarnings(
     });
   }
 
-  // Keys with no form control. Statuses are excluded like import mode excludes them: create
-  // derives status from the key dates server-side, so dropping a pasted one changes nothing.
+  // Keys with no form control, so the curator knows what a paste is about to lose.
+  //
+  // `edition.status` used to be filtered out here because create discarded it anyway. Since
+  // 2026-08-31 it is a MAPPED field carried on a hidden input and posted when supplied, so it is
+  // no longer an extra at all and needs no exemption. A COMPETITION-level `status` is still
+  // exempt: that one is the listing's own status, which the create flow owns.
   const droppedKeys = [
     // `categorySlug` is resolved to a categoryId before this runs (see `apply`), so it is never a
     // dropped field even though the payload reader has no control for it.
     ...Object.keys(seed.extras.competition).filter((k) => k !== 'status' && k !== 'categorySlug'),
-    ...Object.keys(seed.extras.edition)
-      .filter((k) => k !== 'status')
-      .map((k) => `edition.${k}`),
+    ...Object.keys(seed.extras.edition).map((k) => `edition.${k}`),
   ];
   if (droppedKeys.length > 0) {
     warnings.push({

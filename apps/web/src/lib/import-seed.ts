@@ -19,6 +19,7 @@
 import { DEFAULT_TIMEZONE, instantToZonedWallClock } from '@/lib/dates';
 import {
   COST_TYPES,
+  EDITION_STATUSES,
   ELIGIBILITY_BASES,
   type EligibilityBasis,
   DELIVERIES,
@@ -68,6 +69,14 @@ export interface CompetitionSeed {
 /** The first-edition block, as the form's `edition_*` fields want it. */
 export interface EditionSeed {
   cycleLabel: string;
+  /**
+   * Mapped since 2026-08-31 (owner). It used to ride through as an EXTRA, which meant the create
+   * path silently discarded a supplied status while import-approve applied it — the same payload
+   * behaving two ways. Now it is a normal seeded field on both, and `buildFirstEdition` posts it
+   * when present. Blank still means "derive from the key dates", which is what a manual create and
+   * an extraction that never said always do.
+   */
+  status: string;
   scopeLevel: string;
   registrationUrl: string;
   entryFee: string;
@@ -230,6 +239,7 @@ const MAPPED_COMPETITION_KEYS = new Set([
 /** Edition keys the first-edition step renders. `prizeValue`/`ageCutoffDate`/… ride along as extras. */
 const MAPPED_EDITION_KEYS = new Set([
   'cycleLabel',
+  'status',
   'scopeLevel',
   'registrationUrl',
   'entryFee',
@@ -284,6 +294,7 @@ export function splitImportPayload(payload: Record<string, unknown>): ImportSeed
     },
     edition: edition && {
       cycleLabel: text(edition.cycleLabel) ?? '',
+      status: enumOrBlank(edition.status, EDITION_STATUSES),
       scopeLevel: enumOrBlank(edition.scopeLevel, SCOPE_LEVELS),
       registrationUrl: text(edition.registrationUrl) ?? '',
       entryFee: decimalText(edition.entryFee),
@@ -466,6 +477,7 @@ export function importSeedWarnings(
       ['entry fee type', payload.costType, seed.competition.costType],
       ['recurrence', payload.recurrence, seed.competition.recurrence],
       ['eligibility basis', payload.eligibilityBasis, seed.competition.eligibilityBasis ?? ''],
+      ['edition status', obj(payload.edition)?.status, seed.edition?.status ?? ''],
       ['scope level', obj(payload.edition)?.scopeLevel, seed.edition?.scopeLevel ?? ''],
     ] as const
   )

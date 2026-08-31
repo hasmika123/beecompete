@@ -249,13 +249,26 @@ function prizeFromAwards(form: FormData): Record<string, unknown> {
       };
 }
 
+/**
+ * `{ status }` when the form carried one, `{}` when it did not — so the key is absent rather than
+ * null in the second case. Spreading an empty object is how you express "say nothing about this
+ * field" in an object literal; `status: undefined` would still create the key for JSON.stringify
+ * to drop, which reads as intentional to anyone merging the object.
+ */
+function editionStatus(form: FormData): Record<string, unknown> {
+  const status = str(form, 'edition_status');
+  return status ? { status } : {};
+}
+
 /** The first-edition block of the combined create form — the year's running. */
 export function buildFirstEdition(form: FormData): Record<string, unknown> {
   return {
     cycleLabel: str(form, 'edition_cycleLabel'),
-    // No status key AT ALL (not even null): create derives it from the key dates server-side,
-    // and on import-approve this object is spread OVER extras.edition — an extracted status
-    // must survive that spread, which a null here would clobber.
+    // Status only when one was SUPPLIED (owner 2026-08-31). The key is omitted entirely
+    // otherwise — not set to null — for two reasons that both still hold: create derives status
+    // from the key dates server-side, and on import-approve this object is spread OVER
+    // extras.edition, where a null would clobber rather than defer.
+    ...editionStatus(form),
     scopeLevel: str(form, 'edition_scopeLevel') ?? 'NATIONAL',
     registrationUrl: str(form, 'edition_registrationUrl') ?? null,
     entryFee: num(form, 'edition_entryFee') ?? null,

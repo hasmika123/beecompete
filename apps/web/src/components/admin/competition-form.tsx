@@ -2157,6 +2157,10 @@ export function CompetitionForm({
           {/* Cycle label is ASSIGNED, not asked (owner 2026-08-23): the year for a manual
               create; the extracted label on import — left empty there so an extraction with no
               running still approves edition-less (the warning above). */}
+          {/* Status is ASSIGNED, not asked — the create form dropped its control on 2026-08-22 and
+              the server derives it from the key dates. It rides as a hidden field only so a
+              SUPPLIED one is honoured (owner 2026-08-31); blank keeps the derive. */}
+          <input type="hidden" name="edition_status" value={editionSeed?.status ?? ''} />
           <input
             type="hidden"
             name="edition_cycleLabel"
