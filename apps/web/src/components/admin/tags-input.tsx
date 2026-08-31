@@ -156,7 +156,7 @@ export function TagsInput({ name, defaultValue = [], onCountChange, ...aria }: T
       {tags.length > 0 && (
         <p className={cn('text-xs', overLimit ? 'font-medium text-danger' : 'text-muted')}>
           {tags.length} of {MAX_TAGS} tags
-          {overLimit && ` — remove ${tags.length - MAX_TAGS} to save`}
+          {overLimit && ` — ${tags.length - MAX_TAGS} over the limit`}
         </p>
       )}
       {tags.length > 0 && (

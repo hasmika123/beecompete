@@ -1052,7 +1052,15 @@ export function CompetitionForm({
       key: 'tagLimit',
       label: `Keep tags to ${MAX_TAGS} — a filled payload can arrive with more`,
       stepId: 'overview',
-      ok: tagCount <= MAX_TAGS,
+      /**
+       * NOT enforced on EDIT (owner principle, two lines below `requiredFields`: "legacy listings
+       * still save"). The input caps typing at MAX_TAGS, so an edit can never ADD past it — the
+       * only way to be over here is stored data that predates the cap, and refusing to save an
+       * unrelated description fix until someone prunes tags they didn't touch is the exact
+       * hostage-taking that rule exists to prevent. Create and import DO block: there the list is
+       * being chosen, not inherited.
+       */
+      ok: editing || tagCount <= MAX_TAGS,
     },
     {
       key: 'partialKeyDates',
