@@ -131,7 +131,7 @@ Anything worth knowing that fits none of the above — including things you noti
   "officialUrl": "https://…",                       // canonical page for the competition, or null
   "description": "3-6 factual sentences, YOUR words — see rule 2",  // REQUIRED unless rule 2
                                                     //   leaves you nothing to write from
-  "tags": ["algebra", "olympiad"],                  // a few short factual topic tags, or null
+  "tags": ["algebra", "olympiad"],                  // AT MOST 5 — the form caps them at 5
   "participationMode": "INDIVIDUAL",                // INDIVIDUAL | TEAM | BOTH
   "teamSizeMin": null,                              // integers, only if TEAM/BOTH and stated
   "teamSizeMax": null,
@@ -143,9 +143,12 @@ Anything worth knowing that fits none of the above — including things you noti
                                                     //   NOT SCHOOL_OR_CHAPTER / OPEN / EITHER:
                                                     //   those were the old single-value
                                                     //   spellings of these combinations.
-  "evaluationType": ["exam"],                       // zero or more of: exam, submission,
-                                                    //   live_performance, interview, portfolio
-                                                    //   (lowercase), or null
+  "evaluationType": ["exam"],                       // REQUIRED, at least one (lowercase): exam,
+                                                    //   submission, live_performance, interview,
+                                                    //   portfolio. Read it off HOW the competition
+                                                    //   runs — a timed test is exam, a submitted
+                                                    //   project is submission. null only if the
+                                                    //   source truly never says.
   "eligibilityBasis": "GRADE",                      // GRADE | AGE | BOTH | OPEN | null — REQUIRED
                                                     //   whenever you fill ANY grade or age field
   "minGrade": 9,                                    // GRADE ENCODING below — integers or null
@@ -305,7 +308,7 @@ a real signup link, and a curator would have no reason to go looking for the rea
   the timeline as CUSTOM rows. Every date rule above still applies: a CUSTOM row whose date you
   can't read is `"startsAt": null`, never a guess. Use `ROUND_START` for a competition round proper.
 - **Exactly ONE `REG_OPEN` and ONE `REG_CLOSE` per timeline** (owner 2026-08-31). Registration
-  opens once and closes once; a second of either is a DIFFERENT milestone wearing the wrong type,
+  opens once and closes once; a second of either is a DIFFERENT key date wearing the wrong type,
   and belongs on `CUSTOM` / `PERIOD` with a label.
   This is not tidiness: the listing's deadline is the **earliest** `REG_CLOSE`, so a second one
   silently becomes the deadline — an early-bird cutoff emitted as `REG_CLOSE` closes the listing
@@ -449,14 +452,19 @@ it. These land in the **Custom fields** step of the admin form and, once saved, 
 
 ### faqs — the questions a parent actually asks
 
-3-5 question/answer rows for the listing's FAQ tab.
+4-6 question/answer rows for the listing's FAQ tab. Question <= 500 characters, answer <= 2000.
+The curation form asks for **4** before a listing can be published, so 4 is the number to aim at.
+
+⚠ **Aim, not quota.** Every rule below still wins: a question you cannot answer FROM THE SOURCE is
+left out, and three honest rows beat four with one invented. Falling short is a fine outcome — I top
+it up — but inventing a policy to reach four is the worst thing in this payload.
 
 **Look on the page first.** An FAQ page, a "common questions" block, a Q&A section in the rules —
 if one exists, use ITS questions. They are the ones entrants actually ask about this competition.
 ⚠ Use their QUESTIONS, write your OWN ANSWERS. Same rule as the description: facts are ours to
 restate, their sentences are not. Never paste an answer.
 
-**If the page has no FAQ, write 3-5 from the facts you extracted** — what a parent or student
+**If the page has no FAQ, write 4-6 from the facts you extracted** — what a parent or student
 actually asks before entering: who may enter, what it costs, when it closes, whether you enter
 through a school or on your own, individual or team, in person or online, what you win, how it is
 judged.

@@ -174,7 +174,9 @@ Return ONLY a JSON object with this exact top-level shape (no markdown, no comme
 - categoryId: OMIT this — you output categorySlug instead (see below); the tool resolves the id.
 - categorySlug (string, REQUIRED): the single best-fit category, one of:
   ${CATEGORY_SLUGS.join(', ')}.
-- tags (string[]|null): a few short factual topic tags if obvious (e.g. ["algebra","olympiad"]).
+- tags (string[]|null): AT MOST 5 short factual topic tags (e.g. ["algebra","olympiad"]). The
+  curation form caps them at 5 and will not save more, so a longer list just makes a curator delete
+  the extras. Prefer the 5 that place the competition; drop the rest.
 - participationMode (REQUIRED): one of ${PARTICIPATION_MODES.join(', ')} — how participants compete.
 - teamSizeMin / teamSizeMax (integer|null): only if TEAM/BOTH and stated.
 - delivery (REQUIRED): one of ${DELIVERIES.join(', ')}.
@@ -187,7 +189,12 @@ Return ONLY a JSON object with this exact top-level shape (no markdown, no comme
   school or your local chapter" is ["SCHOOL", "CHAPTER"], and one that says anyone may enter by any
   route is all three. Do NOT emit SCHOOL_OR_CHAPTER, OPEN, or EITHER — those were the old
   single-value spellings of exactly these combinations and are rejected.
-- evaluationType (string[]|null): how work is judged — zero or more of ${EVALUATION_TOKENS.join(', ')}.
+- evaluationType (string[], REQUIRED — at least one): how work is judged, from
+  ${EVALUATION_TOKENS.join(', ')}. Almost always readable from how the competition RUNS even when
+  the page never uses the word: a timed test is exam, a submitted project is submission, a stage
+  round is live_performance. The form requires it, so null means a curator has to pick.
+  Same rule as everywhere else though — if the page genuinely does not say how entries are
+  assessed, null is the honest answer and better than a guess.
 - eligibilityBasis (REQUIRED unless the page states no eligibility at all): one of
   ${ELIGIBILITY_BASES.join(', ')} — WHICH AXIS THE PAGE ITSELF USES to say who may enter.
     * GRADE — the page states grades or school levels ("open to grades 6-8", "high school students").
@@ -247,14 +254,18 @@ ${renderAttributeGuidance(templates)}
 
 ## faqs — the questions a parent actually asks
 
-- faqs (array|null): 3-5 question/answer rows for the listing's FAQ tab. Each row is an object:
-  {"question": "…", "answer": "…"}. Question <= 500 characters; both halves required.
+- faqs (array|null): 4-6 question/answer rows for the listing's FAQ tab. Each row is an object:
+  {"question": "…", "answer": "…"}. Question <= 500 characters, answer <= 2000; both required.
+  The form asks for 4 before a listing can be published, so 4 is the number to aim at.
+  ⚠ AIM, NOT QUOTA. Every rule below still wins: a question you cannot answer FROM THE SOURCE is
+  left out, and three honest rows beat four with one invented. Falling short is a fine outcome —
+  the curator tops it up — but inventing a policy to reach four is the worst thing in this payload.
   FIRST, look for a real FAQ on the page — an FAQ page, a "common questions" block, a rules
   document's Q&A section. If one exists, use ITS questions: they are the ones entrants actually
   ask about this competition.
   ⚠ Use their QUESTIONS, write your OWN ANSWERS. Same rule as description: the facts are ours to
   restate, their sentences are not. Never paste an answer.
-  If the page has no FAQ, WRITE 3-5 from the facts you extracted — the things a parent or student
+  If the page has no FAQ, WRITE 4-6 from the facts you extracted — the things a parent or student
   would actually ask before entering: who may enter, what it costs, when it closes, whether you
   enter through a school or on your own, individual or team, in person or online, what you win,
   how it is judged.
@@ -348,7 +359,7 @@ A listing is only useful with a running attached, so also fill these INSIDE "pay
   CUSTOM row whose date you cannot read is still startsAt: null, never a guess. ROUND_START exists for a
   competition round proper.
 - **EXACTLY ONE REG_OPEN and ONE REG_CLOSE per timeline** (owner 2026-08-31). Registration opens
-  once and closes once; a second of either is a DIFFERENT milestone wearing the wrong type, and it
+  once and closes once; a second of either is a DIFFERENT key date wearing the wrong type, and it
   belongs on CUSTOM / PERIOD with a label.
   This matters beyond tidiness: the listing's deadline is the EARLIEST REG_CLOSE, so a second one
   silently becomes the deadline — an early-bird cutoff emitted as REG_CLOSE makes the listing close
