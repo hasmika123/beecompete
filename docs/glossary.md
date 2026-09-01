@@ -15,8 +15,9 @@ the **canonical** term is bolded and the synonyms-to-avoid are listed so we stay
 
 | Term | Definition | Notes |
 |---|---|---|
-| **Competition** | The *evergreen* entity — the competition as an ongoing thing (e.g., "AMC 10", "Congressional App Challenge"). Owns identity, description, category, resources, reviews, history. | Does **not** own dates — those live on the Edition. |
-| **Edition** | One *annual cycle* of a Competition (e.g., "AMC 10 — 2026") — **one per year**. Owns the cycle's default/representative info (typical cost, deadline window) + overall structure. | Avoid "instance"/"event"/"season". **Phase-3 target:** the per-place level-instances participants register for are **Stages** under the Edition, *not* more Editions (domain-model §8b). *R1 interim:* a simple competition = one Edition record. |
+| **Competition** | The *evergreen* entity — the competition as an ongoing thing (e.g., "AMC 10", "Congressional App Challenge"). Owns **permanent identity only**: name, slug, category, organizer, logo/cover, tags, recurrence, listing lifecycle (revised 2026-09-01, domain-model §8c). | One competition = one slug/listing/page, always. Everything a visitor reads about a given year — description, eligibility, fees, FAQ, resources, dates — lives on the **Season**. |
+| **Edition** | The *storage/entity name* for one **Season** — one annual cycle of a Competition (e.g., "AMC 10 — 2026"), **one per year**. Since §8c (2026-09-01) it owns the season's **full listing content**; a new season starts as a copy of the last. | **Phase-3 target:** the per-place level-instances participants register for are **Stages** under the Edition, *not* more Editions (domain-model §8b). *R1 interim:* a simple competition = one Edition record. |
+| **Season** | The **UX word for an Edition** — the only term users, hosts, and admin UI ever see ("2026 season", "Open next season", the Seasons tab). Canonical in all UI copy since 2026-09-01 (§8c; direction set 2026-08-22). | In code and schema the entity stays `Edition`; never surface that word in UI. Avoid "instance"/"event"/"cycle" in UI too. |
 | **Category** | Where a Competition sits in our taxonomy (e.g., Math, Robotics, Debate, Science Fair). | Drives browse/filter and which Category Template applies. |
 | **Category Template** | The category-specific set of fields layered on top of the universal Spine (e.g., Science Fair adds ISEF-form fields). | The mechanism that makes the schema "standardized yet flexible". |
 | **Spine** | The universal set of fields every Competition shares regardless of type (identity, format, eligibility, timeline, cost, rewards). | See `feature-registry.md` X9. |
@@ -139,7 +140,8 @@ the **canonical** term is bolded and the synonyms-to-avoid are listed so we stay
 
 ## Naming — locked (2026-07-06)
 Canonical terms confirmed:
-- **Edition** (not "instance"/"event") for a specific running of a Competition.
+- **Edition** (not "instance"/"event") for a specific running of a Competition — *storage/entity
+  name only since 2026-09-01; every UI surface says **Season** (domain-model §8c).*
 - **Group** (not "Roster"/"Cohort") for an Educator-managed set of participants.
 - **Host** (not "Organizer") for the party running a competition.
 - **Participant²** as the working name for the premium prep tier.

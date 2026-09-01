@@ -32,6 +32,9 @@ competition type) is solved with a hybrid:
 
 **D2 — Two-level Competition ↔ Edition.** Evergreen `Competition` owns identity/resources/reputation;
 `Edition` owns dates/registration/results. Never merge them.
+*(Field allocation revised 2026-09-01 — §8c: the Competition now keeps permanent identity ONLY;
+all yearly listing content — incl. description, eligibility, judging display, FAQ, resources —
+lives on the Season/`Edition`. The two-level split itself is unchanged.)*
 
 **D3 — Timeline as data, not columns.** An Edition's dates are rows in `KeyDate` (typed events),
 not fixed columns — so any timeline shape works.
@@ -112,7 +115,9 @@ only through a school/chapter — filterable, shown in the Details at-a-glance s
 > declared on every template) that absorbs what the closed lists can't say — including what a
 > curator meant by "Other". It is deliberately NOT promotion-bound; nothing filters on prose.
 
-**`Edition`** [P1] — one running of a Competition.
+**`Edition`** [P1] — one running of a Competition. *(UX word: **Season**. §8c (2026-09-01) makes it
+the owner of ALL yearly listing content — the R2 rebuild in `sweep-remediation-plan.md` §19 adds
+the migrated columns; the shape below is the as-built R1 schema.)*
 `id, competition_id, cycle_label ("2026"), status (upcoming|open|closed|ongoing|archived),
 registration_url, entry_fee?, currency?, age_cutoff_date?, prize_summary?, prize_value?,
 prize_currency?, scope_level, advances_to_edition_id?, attributes (JSONB), provenance{...},
@@ -154,7 +159,8 @@ level}`, DTO-only, no migration): **`sweep-remediation-plan.md` §12**, batched 
 `prizeKind`/`prizeValue` summary fields in §15 so the projection is touched once.
 **`EditionRegion`** [P1] — join: which regions an **Edition** covers *(locked 2026-07-07; renamed from `CompetitionRegion` — the join is Edition-level, never Competition-level)*. One registration = one Edition (Q3); the Competition's region filter is derived from its Editions.
 
-**`Resource`** [P1] — curated prep/reference link on a Competition.
+**`Resource`** [P1] — curated prep/reference link on a Competition. *(Re-homed to the Season at
+§8c/R2 — gains `edition_id`; year-stamped guides made per-season honest. As-built R1 shape below.)*
 `id, competition_id, title, url, type (book|past_paper|guide|video|other), is_affiliate, affiliate_meta (JSONB), display_order, created_at`
 *(`display_order` added at R1-1 build — the details Resources row is a curated, ordered strip.)*
 *(Affiliate convention, 2026-08-25: the only network so far is **Amazon Associates** — tag
@@ -163,7 +169,8 @@ level}`, DTO-only, no migration): **`sweep-remediation-plan.md` §12**, batched 
 "beecompete-20"}` so the tag can be re-pointed in bulk if the Associate ID ever changes.)*
 
 **`CompetitionFaq`** [P1] — curated per-competition FAQ entry (glossary: **FAQ Entry**; details
-FAQ tab + FAQPage structured data → R1-7; shape decided at R1-1 build, 2026-07-12).
+FAQ tab + FAQPage structured data → R1-7; shape decided at R1-1 build, 2026-07-12). *(Re-homed to
+the Season at §8c/R2 — gains `edition_id`; answers like "when is registration?" change yearly.)*
 `id, competition_id, question, answer, display_order, created_at`
 — ordered child rows (not a JSONB array on Competition) so the admin tool (R1-3) CRUDs entries
 individually and FAQPage markup iterates them in order.
@@ -666,6 +673,9 @@ for the Phase-3 deep-dives (Gate A/B still design the judging/advancement intern
   and multiplies content upkeep (a description fix must land in N copies). The pain it targets
   ("rebuild from scratch each year") does not exist: everything reusable — description, cover,
   resources, practice sets, FAQs — lives on the evergreen Competition and never moves at rollover.
+  *(⚠ That last clause is superseded by §8c (2026-09-01): yearly content now lives on the Season
+  and rollover COPIES it forward. The rejection itself stands — it was about duplicating
+  *listings*, and there is still exactly one listing/slug per competition.)*
   (b) *Scope carried on timeline events (KeyDates)* — rejected: a timeline is *sequence* (when);
   scopes within a season are *parallel instances* (where). Ten regionals are ten simultaneous
   instances of ONE phase, each with its own registration/fee/results/owner — a scope tag on a
@@ -741,3 +751,75 @@ for the Phase-3 deep-dives (Gate A/B still design the judging/advancement intern
 
 Cross-ref: Q3 (region granularity) · §8a (lifecycle) · registry H24 (stages/rounds) / HC5
 (advancement) · H36 (eligibility pre-screen) · glossary (Edition / Stage / Round / Advancement).
+
+## 8c. Season owns the listing content *(owner decision 2026-09-01 — field re-allocation)*
+
+**The change in one sentence:** the Competition keeps only *permanent identity*; **everything a
+visitor reads about a given year lives on the Season** (storage name: today's `Edition`), and a
+new season starts as a copy of the last one.
+
+**Why the evergreen/seasonal binary failed.** Most catalog fields are "stable until they aren't":
+team size, delivery mode, eligibility bands, judging info, rules URLs — and FAQ/Resources in
+practice ("When is registration?" has a new answer every year; half of real resources are
+year-stamped guides). The old model's answer — edit the Competition in place — (1) silently
+falsifies past seasons the moment results history (M33) and tracker pages make them worth
+revisiting, (2) lets an edit mutate what an already-open season displays, and (3) forces the admin
+UI to scatter one concept across two owners by a rule nobody can remember (the R1 form's
+`hideOnEdit` / `edition_`-prefix seam — fee inline on create, a separate page on edit).
+Cross-level smells were already in the code: `cost_type` (competition) validated against
+`entry_fee` (edition); `age_cutoff_date` (edition) split from the grade/age bands (competition);
+`rules_url` competition-level though rules PDFs are year-stamped.
+
+**What is NOT reopened.** D2's two-level split stands — never merge the tables. §8b's
+Edition → Stage → Round target stands untouched, Gate A/B included. ONE competition = one
+slug / listing / page: the 2026-08-22 rejection of yearly *listing duplication* targeted
+SEO/continuity fragmentation across many listings, which per-season snapshots under one listing do
+not cause. Admins still model a single running for external competitions. **"Season" is the UX
+word everywhere; `Edition` stays the storage/entity name** (glossary updated 2026-09-01).
+
+**Field allocation** *(supersedes D2's wording "identity/resources/reputation" — allocation only,
+not the split)*:
+
+- **Competition — permanent identity only:** name, slug, category, organizer org, logo/cover,
+  tags, recurrence, `official_url` (the program's homepage), listing lifecycle (§8a), provenance.
+  Plus **mirror columns**: `summary`/`description` are kept as *write-through copies of the
+  current season* because the generated `search_vector` (migration `0007`) and card projections
+  read them — mirrors are cache, never the source of truth.
+- **Season (`Edition`) — everything else:** summary, description, delivery, participation mode,
+  team size min/max, entry pathways, ALL eligibility (basis, grade/age bands, `age_cutoff_date`,
+  the JSONB eligibility keys), evaluation type + judging display info (`judging_criteria` /
+  `tie_breakers` / `rules_url` — until they drop to Stage at Phase 3 per §8b), `cost_type` + fees,
+  awards/prize, registration URL, timeline (`KeyDate`), regions, scope, **FAQ entries and
+  Resources**, and the category-template `attributes` bag (templates validate the *season's* bag).
+- Reserved entities keep their sketched homes and are re-tiered at their own build time
+  (e.g. Division stays per-Competition per Q4 until its build revisits it).
+
+**Current-season pointer.** `competition.current_edition_id`, resolved **server-side** with the
+same precedence the web's `currentEdition()` uses today (open → ongoing → upcoming → latest-dated),
+maintained on edition/key-date writes and status changes. Public payloads serve the current
+season's values pre-merged, so the web never learns about mirrors. This also fixes the live
+inconsistency where the card deadline scans all editions while the page renders one.
+
+**Rollover.** "Open next season" (already §8b) copies the prior season's FULL content — prose,
+eligibility, format, fees, FAQ, resources, timeline skeleton with dates → TBD — then the
+curator/host edits what changed; the copy step doubles as the yearly "is this still true?" review.
+Only the current season is normally edited; past seasons freeze as accurate history (feeds M33 and
+the "seasons over time" display, `sweep-remediation-plan.md` §12a). "Duplicate competition"
+remains the separate new-program gesture, never the yearly mechanism.
+
+**Admin/host UI direction — one workspace.** One page per competition: an identity block on top
+("applies to all seasons") and **season tabs** (`2025 · 2026 · + Open next season`) scoping
+everything below, every field in one fixed place. Create, edit, and import review all render this
+same page; the create/edit field-location split and the import empty-cycle-label trap (approve
+with no running → published-but-invisible) are retired by construction. Hosts later get the same
+workspace plus the §8b structure-first step; the org-axis locked/defaulted/local governance chips
+render in the same visual language (grey = inherited, editable = yours).
+
+**Build plan:** R2-sized; task scoping lives in `sweep-remediation-plan.md` §19. Migrations stay
+additive-only: new `edition` columns + a backfill that copies competition values onto existing
+non-archived editions — identical by construction, so each read-path cutover returns the same data
+and deploys as a visible no-op until the workspace UI ships.
+
+Cross-ref: D2 (split stands, allocation revised) · §8a (lifecycle + readiness gate unchanged) ·
+§8b (Stage target unchanged) · glossary (**Season**) · `sweep-remediation-plan.md` §19 (tasks),
+§12a (past-season display rides this) · §16 there (JSONB→Spine promotion now lands on `edition`).

@@ -159,6 +159,8 @@ within one season, which is §13's job.
 - Decide the archive rule: does an archived edition appear? (Public payload already excludes them.)
 - SEO: confirm one canonical URL per competition — prior runnings are sections, not routes, unless
   the blueprint deliberately says otherwise.
+- *2026-09-01: this now **rides §19** (season-owns-the-listing) — past seasons become accurate
+  full snapshots there, which is exactly what this display needs. Blueprint gate still applies.*
 
 ### 18. Organizer contact NAME + ROLE on the curation form (owner 2026-08-31)
 
@@ -196,6 +198,66 @@ elsewhere. The form hint must say exactly that, in the `0019` style, and the see
 told to extract it only from a public staff/contact listing — otherwise a bulk run will quietly turn
 "whoever signed the PDF" into published PII. Worth a look from the same review that covers the legal
 pages before it ships.
+
+### 19. Season-owns-the-listing rebuild — SE-1…SE-7 (owner decision 2026-09-01)
+
+**The decision is recorded in `domain-model.md` §8c** — the Competition keeps permanent identity
+only; everything yearly (prose, eligibility, format, judging display info, fees, FAQ, resources,
+attributes) lives on the **Season** (`edition`), and "Open next season" copies content forward.
+This section is the build scoping. **R2 work**, the largest item in this phase — schema touch means
+the **full loop** (plan → 🧑 approve per slice). Order: SE-1 → (SE-2 ∥ SE-3) → (SE-4 ∥ SE-5 ∥
+SE-6) → SE-7. Additive-only throughout; because SE-1's backfill copies competition values onto the
+existing editions (identical by construction), every read-path cutover returns the same data —
+each slice deploys as a visible no-op until the workspace UI (SE-4) ships.
+
+- **SE-1 · Schema + backfill (M).** One Liquibase batch (next free number): `edition` gains
+  `summary, description, delivery, participation_mode, team_size_min, team_size_max,
+  entry_pathways, eligibility_basis, min_grade, max_grade, min_age, max_age, evaluation_type,
+  cost_type` (all nullable; `age_cutoff_date` already there — eligibility reunified); the JSONB
+  keys (`judging_criteria`, `tie_breakers`, `rules_url`, eligibility + contact keys) start being
+  written to `edition.attributes`; `competition_faq` + `resource` gain nullable `edition_id`
+  (backfilled to the current edition, `competition_id` retained for the identity join);
+  `competition` gains `current_edition_id` (nullable FK). Backfill copies each competition's
+  values onto its non-archived editions. Old competition columns STAY (additive-only):
+  `summary`/`description` become **write-through mirrors of the current season** — the generated
+  `search_vector` (`0007`) reads them, so never drop them without rebuilding FTS; the rest are
+  vestigial, commented as such (same pattern as `verification_state`).
+- **SE-2 · API read paths (M).** Server-side current-season resolution maintained on
+  edition/key-date/status writes (same precedence as web `currentEdition()`: open → ongoing →
+  upcoming → latest-dated); public detail serves season-scoped values **pre-merged** (web never
+  learns about mirrors); search predicates (grade / cost / delivery / participation / pathway /
+  evaluation) re-point at the current edition via a join, facet counts likewise; fixes the
+  card-deadline vs displayed-season mismatch by scoping `nextDeadline` to the current season
+  (cross-season fallback only when it has no future date).
+- **SE-3 · Curation API (M).** `EditionRequest` grows the moved fields (+ mirrored `LIMITS`);
+  `CompetitionRequest` shrinks to identity (transition: old fields accepted and redirected to the
+  current season, then removed); curation writes to the current season refresh the competition
+  mirrors; FAQ/resource endpoints become edition-scoped; new **"Open next season"** clone endpoint
+  (full content + regions copied, key dates → TBD, status `upcoming`); `CorrectionFields` + the
+  listing-health checks re-mapped.
+- **SE-4 · Admin workspace UI (L).** The unified page: identity block + **season tabs**; create,
+  edit, AND import review all render it; retire `hideOnEdit` + the `edition_` FormData prefix
+  convention (`competition-payload.ts` contract); rename Editions → **Seasons** everywhere;
+  guardrails — editing an open season warns, the readiness gate ("no season = invisible")
+  surfaces as a banner instead of a silent search exclusion. Admin pages are not hero pages — no
+  blueprint gate — but this replaces the create-form stepper, so screenshot the flows for the
+  owner before merge.
+- **SE-5 · Import pipeline (S–M).** `import-seed.ts` split + `buildImportApprovalPayload` re-map
+  to the season; the empty-cycle-label published-but-invisible trap is retired by construction (a
+  season always exists in the workspace); `tools/seeding` extraction schema + prompts re-tiered.
+  Read `docs/seeding/README.md` before touching any bulk-run behavior.
+- **SE-6 · Public web (S).** Consume the pre-merged season payload (mostly transparent); verify
+  JSON-LD / OG / structured-data field sources still resolve; §12a's past-seasons display becomes
+  *possible* here but stays blueprint-gated (Page 3 first).
+- **SE-7 · Docs sync (S).** After build: `architecture.md` §13a as-built, domain-model §3
+  entity shapes, Category Template validation target (= the season's `attributes`), retire the
+  stale form comments; glossary check that no UI surface says "Edition".
+
+**Watch:** §13 (Edition → Stage → Round, Phase 3) is unaffected — season content stays at Edition;
+Stage still takes dates/fees/per-level judging when it arrives, and the workspace grows the
+structure-first step then. §16's JSONB→Spine promotion now promotes onto `edition`, not
+`competition`. §18's contact keys ride whichever Category-Template batch comes first and land in
+the season's bag either way.
 
 ---
 

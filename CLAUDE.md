@@ -38,8 +38,11 @@ Start context: `docs/README.md` → `docs/vision-prd.md`, `docs/glossary.md`.
 ## Data model rules (`docs/domain-model.md`)
 - Typed **Spine** columns for anything you filter/sort/join on; validated **JSONB `attributes`** (per
   Category Template JSON Schema) for category-specific fields.
-- **Competition ↔ Edition** are separate (evergreen vs. one running). **Region join is Edition-level**
-  (`EditionRegion`); one registration = one Edition.
+- **Competition ↔ Edition** are separate — never merge. **2026-09-01 (§8c): the Season (storage:
+  `Edition`; "Season" is the only UI word) owns ALL yearly listing content — description,
+  eligibility, format, judging display, fees, FAQ, resources; the Competition keeps permanent
+  identity only.** Built at R2 per `sweep-remediation-plan.md` §19; until then the R1 shape stands.
+  **Region join is Edition-level** (`EditionRegion`); one registration = one Edition.
 - Progress is **derived from the `ActivityEvent` log** — never add bespoke progress columns.
 - `ParticipantProfile` stores **`grad_year`** (grade is derived). Grade encoding: Pre-K −1, K 0,
   1–12, then **13–16 = the four college years, 17 = graduate** — the ladder runs elementary through
@@ -139,5 +142,6 @@ fixes + the `/api/healthz/db` monitoring probe are in `setup-runbook.md` (as-bui
 3. **Flip indexing** — set `SEARCH_INDEXING=on` in `~/beecompete-prod/.env` + recreate web, verify
    `robots.txt` / a page's `index,follow`, and submit `sitemap.xml` to Google + Bing.
 
-**Deferred backlog:** `docs/sweep-remediation-plan.md` (R2 + Phase-3 items) · PR C (hero-card image
+**Deferred backlog:** `docs/sweep-remediation-plan.md` (R2 + Phase-3 items — headline: **§19
+season-owns-the-listing rebuild**, owner 2026-09-01, `domain-model.md` §8c) · PR C (hero-card image
 upload + inline FAQ/Resource row-edit) · reserved/gated items per the Hard-stops rule above.
