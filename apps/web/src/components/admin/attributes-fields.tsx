@@ -22,6 +22,10 @@ import { SubSectionHeading } from '@/components/admin/form-section';
  * textarea FOR THAT KEY ONLY — as do bag keys the schema doesn't declare (additionalProperties
  * is permissive at R1; never hide or drop data).
  *
+ * A declared key whose STORED VALUE disagrees with its declared type renders by the value's own
+ * shape instead — see {@link effectiveProp}. The schema describes what the category wants; the bag
+ * holds what a curator or an extraction actually put there, and the editor shows the latter.
+ *
  * uiHints contract (authoritative shape — template editor documents it):
  *   { "order":        ["topics", "rounds"],
  *     "labels":       { "topics": "Covered topics" },
@@ -86,6 +90,45 @@ function inferProp(v: unknown): SchemaProperty | null {
     return { type: 'array', items: { type: 'string' } };
   }
   return null;
+}
+
+/** Can the control this schema type implies actually HOLD this value? */
+function matchesProp(prop: SchemaProperty, v: unknown): boolean {
+  const declared = Array.isArray(prop.type) ? prop.type : prop.type ? [prop.type] : [];
+  if (declared.length === 0) return false; // untyped → let the value pick its own control
+  return declared.some((t) => {
+    if (t === 'string') {
+      if (typeof v !== 'string') return false;
+      // An out-of-vocabulary string would select nothing in the enum's Select and read as blank.
+      return Array.isArray(prop.enum) && prop.enum.length > 0 ? prop.enum.includes(v) : true;
+    }
+    if (t === 'boolean') return typeof v === 'boolean';
+    if (t === 'number') return typeof v === 'number';
+    if (t === 'integer') return typeof v === 'number' && Number.isInteger(v);
+    // Only the all-strings case; anything else falls through to the raw-JSON editor either way.
+    if (t === 'array') return Array.isArray(v) && v.every((item) => typeof item === 'string');
+    return false;
+  });
+}
+
+/**
+ * The control a key should render with. The TEMPLATE's declared type wins whenever the value agrees
+ * with it — and when the key is absent, so an empty listing still gets the control the category
+ * asks for. A value of a different shape gets the control its OWN shape implies instead.
+ *
+ * Why (owner 2026-09-01): the declared pass used to trust the schema blindly, so an extraction
+ * whose shape drifted from the template rendered a control that could not hold its value — and said
+ * nothing. Observed on one pasted academic-bowl payload: a string where `subjects_covered` declares
+ * string[], an array where `quiz_format` declares string, and a number in `syllabus` ALL drew empty
+ * boxes over a populated bag, while `topics` (declared string[], given objects) drew the literal
+ * text "[object Object], [object Object]" — which the CSV editor would then write back into the bag
+ * as those very strings the moment anyone touched it. Blank is a lie about saved data; the
+ * "[object Object]" case is data loss. Shape drift is normal for extracted payloads, so the editor
+ * has to survive it rather than assume the schema won.
+ */
+function effectiveProp(prop: SchemaProperty, v: unknown): SchemaProperty {
+  if (v === undefined || matchesProp(prop, v)) return prop;
+  return inferProp(v) ?? {};
 }
 
 /** Comma-separated editor for array<string> — local text so typing ", " isn't re-normalized. */
@@ -391,7 +434,7 @@ export function AttributesFields({
                 <label htmlFor={`attr-${key}`} className="text-sm font-medium text-foreground">
                   {hintString(hints, 'labels', key) ?? enumLabel(key)}
                 </label>
-                {field(key, properties[key] ?? {})}
+                {field(key, effectiveProp(properties[key] ?? {}, value[key]))}
               </div>
             ))}
           </div>

@@ -8,6 +8,7 @@ import com.beecompete.catalog.domain.Delivery;
 import com.beecompete.catalog.domain.EditionStatus;
 import com.beecompete.catalog.domain.EligibilityBasis;
 import com.beecompete.catalog.domain.EntryPathways;
+import com.beecompete.catalog.domain.KeyDateType;
 import com.beecompete.catalog.domain.ParticipationMode;
 import com.beecompete.catalog.domain.Recurrence;
 import com.beecompete.catalog.domain.ScopeLevel;
@@ -165,6 +166,53 @@ class ValidationRulesTest {
 	void prizeValueWithoutPrizeCurrencyFails() {
 		assertTrue(hasMessage(V.validate(edition(null, null, new BigDecimal("500.00"), null)),
 				"a prize value needs a prize currency"));
+	}
+
+	// --- CompetitionWithEditionRequest (the admin-form completeness wrapper) ---
+
+	/** A wrapper that satisfies every other admin-form rule, so only the cost/fee axis is under test. */
+	private CompetitionWithEditionRequest wrapper(CostType cost, BigDecimal fee, String currency) {
+		CompetitionRequest comp = new CompetitionRequest("amc-10", "AMC 10", UUID.randomUUID(), null, null,
+				"https://example.org", null, "A description", UUID.randomUUID(), null,
+				ParticipationMode.INDIVIDUAL, null, null, Delivery.IN_PERSON,
+				List.of(EntryPathways.INDIVIDUAL), null, EligibilityBasis.GRADE, (short) 9, (short) 12, null,
+				null, cost, Recurrence.ANNUAL, null);
+		EditionRequest ed = new EditionRequest("2026", EditionStatus.OPEN, "https://example.org/register", fee,
+				currency, null, "Trophies", null, null, ScopeLevel.NATIONAL, null, null);
+		return new CompetitionWithEditionRequest(comp, ed,
+				List.of(new CompetitionWithEditionRequest.FirstEditionKeyDate(KeyDateType.REG_CLOSE, null, null,
+						null, null)),
+				List.of(UUID.randomUUID()), null);
+	}
+
+	/**
+	 * The cost TYPE is the whole requirement (owner 2026-09-01) — a PAID listing may say a fee exists
+	 * without naming the amount, which is all a page that never publishes its price gives us. This is
+	 * the regression the admin form hit: it stopped asking for the amount while the server still
+	 * demanded one, so "Publish" failed with a rule the form never showed.
+	 */
+	@Test
+	void paidWithoutAnEntryFeePasses() {
+		assertTrue(V.validate(wrapper(CostType.PAID, null, null)).isEmpty());
+	}
+
+	@Test
+	void paidWithAnEntryFeePasses() {
+		assertTrue(V.validate(wrapper(CostType.PAID, new BigDecimal("25.00"), "USD")).isEmpty());
+	}
+
+	/** A stated fee still needs a currency — EditionRequest's own rule, which every path shares. */
+	@Test
+	void feeWithoutCurrencyStillFailsThroughTheWrapper() {
+		assertTrue(hasMessage(V.validate(wrapper(CostType.PAID, new BigDecimal("25.00"), null)),
+				"an entry fee needs a currency"));
+	}
+
+	/** The one rule that has to live on the wrapper: it alone sees costType and the fee together. */
+	@Test
+	void freeCompetitionChargingAFeeFails() {
+		assertTrue(hasMessage(V.validate(wrapper(CostType.FREE, new BigDecimal("25.00"), "USD")),
+				"free competition can’t charge an entry fee"));
 	}
 
 	// --- FaqRequest ---

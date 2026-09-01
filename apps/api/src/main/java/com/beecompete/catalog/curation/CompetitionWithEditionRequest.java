@@ -19,10 +19,11 @@ import java.util.UUID;
  * normal per-edition create. See {@link ListingCurationService}.
  *
  * <p><b>Admin-form completeness policy.</b> The {@code @AssertTrue} checks below front-load every
- * fact the public card/detail shows (organizer, copy, links, fee, prize, region), so a
+ * fact the public card/detail shows (organizer, copy, links, cost type, prize, region), so a
  * manually-created listing is complete-by-default. They live HERE, not on the shared {@link
  * CompetitionRequest}/{@link EditionRequest}, so the import queue and correction-approve paths stay
- * lenient (imports start unattributed, etc.).
+ * lenient (imports start unattributed, etc.). The fee AMOUNT is deliberately not among them since
+ * 2026-09-01 — see the cost-aware block below.
  */
 public record CompetitionWithEditionRequest(@NotNull @Valid CompetitionRequest competition,
 		@NotNull @Valid EditionRequest edition, List<@Valid FirstEditionKeyDate> keyDates,
@@ -60,19 +61,20 @@ public record CompetitionWithEditionRequest(@NotNull @Valid CompetitionRequest c
 	}
 
 	// Cost-aware fee rules (item 17). costType is a competition-spine field; the fee lives on the
-	// edition. A PAID competition must state a positive fee + currency; a FREE one must not charge.
+	// edition.
+	//
+	// ANSWERING THE COST TYPE IS THE WHOLE REQUIREMENT (owner 2026-09-01). A PAID listing no longer
+	// has to state an amount: plenty of competition pages say there is a fee without publishing the
+	// number (or it varies by region), and demanding one made those listings unpublishable. The
+	// admin form dropped fee/currency from its required-ring on the same decision — these two
+	// @AssertTrue rules were what still refused the submit, which is the bug that surfaced it.
+	//
+	// Nothing is lost by removing them: a STATED fee still needs a currency (EditionRequest's own
+	// isEntryFeeCurrencyValid, which applies on every path, not just this one) and still cannot be
+	// negative (@PositiveOrZero). The one rule that has to live HERE is the cross-level one below —
+	// it is the only check that can see the competition's costType and the edition's fee together.
 	private boolean isPaid() {
 		return competition != null && competition.costType() == CostType.PAID;
-	}
-
-	@AssertTrue(message = "a paid competition needs an entry fee greater than 0")
-	public boolean isPaidEntryFeeValid() {
-		return edition == null || !isPaid() || (edition.entryFee() != null && edition.entryFee().signum() > 0);
-	}
-
-	@AssertTrue(message = "a paid competition needs a currency")
-	public boolean isPaidCurrencyValid() {
-		return edition == null || !isPaid() || hasText(edition.currency());
 	}
 
 	@AssertTrue(message = "a free competition can’t charge an entry fee")

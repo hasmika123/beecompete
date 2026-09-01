@@ -428,6 +428,12 @@ export function CompetitionForm({
   // seed is a Partial by construction — an extraction states what the page stated, nothing more.
   const c: Partial<Competition> | undefined = competition ?? seed?.competition;
   const editionSeed = seed?.edition ?? null;
+  // The seeded currency, with '' treated as ABSENT. `import-seed` normalizes a missing currency to
+  // an empty string, not undefined, so the `?? 'USD'` this used to be never fired: every pasted
+  // payload that named no currency arrived with a BLANK box wearing a "USD" placeholder — which
+  // reads as filled, and then failed the server's "an entry fee needs a currency" rule with no
+  // visible cause. `||` is the point here, not a style choice; don't "simplify" it back to `??`.
+  const seededCurrency = editionSeed?.currency?.trim() || 'USD';
 
   // Resolve-or-create, decided here rather than left to the server: when an org already carries the
   // extracted name the server REUSES it, so offering "create it" would be a lie about what approve
@@ -908,7 +914,7 @@ export function CompetitionForm({
     // USD unless the payload said otherwise (owner 2026-09-01): the catalog is US-facing, and the
     // server rejects a fee whose currency is missing, so a blank box was a trap rather than a
     // question. Prefilled, not locked — it is still an editable 3-letter box.
-    currency: editionSeed?.currency ?? 'USD',
+    currency: seededCurrency,
     teamSizeMin: c?.teamSizeMin != null ? String(c.teamSizeMin) : '',
     teamSizeMax: c?.teamSizeMax != null ? String(c.teamSizeMax) : '',
   });
@@ -1515,7 +1521,7 @@ export function CompetitionForm({
                   />
                   <Input
                     name="edition_currency"
-                    defaultValue={editionSeed?.currency ?? 'USD'}
+                    defaultValue={seededCurrency}
                     maxLength={3}
                     pattern="[A-Za-z]{3}"
                     placeholder="USD"
