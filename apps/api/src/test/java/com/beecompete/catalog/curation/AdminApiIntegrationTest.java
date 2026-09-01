@@ -91,7 +91,7 @@ class AdminApiIntegrationTest {
 		// Competition — attributes bag must satisfy the math template.
 		String badAttributes = """
 				{"slug": "amc-10", "name": "AMC 10", "categoryId": "%s", "organizerOrgId": "%s",
-				 "participationMode": "INDIVIDUAL", "delivery": "IN_PERSON", "entryPathway": "SCHOOL_OR_CHAPTER",
+				 "participationMode": "INDIVIDUAL", "delivery": "IN_PERSON", "entryPathways": ["SCHOOL", "CHAPTER"],
 				 "costType": "PAID", "recurrence": "ANNUAL", "attributes": {"topics": "not-an-array"}}
 				""".formatted(mathId, orgId);
 		mvc.perform(withToken(post("/api/v1/admin/competitions")).contentType("application/json")
@@ -101,7 +101,7 @@ class AdminApiIntegrationTest {
 		String goodCompetition = """
 				{"slug": "amc-10", "name": "AMC 10", "categoryId": "%s", "organizerOrgId": "%s",
 				 "description": "The classic 25-question contest.", "minGrade": 9, "maxGrade": 10,
-				 "participationMode": "INDIVIDUAL", "delivery": "IN_PERSON", "entryPathway": "SCHOOL_OR_CHAPTER",
+				 "participationMode": "INDIVIDUAL", "delivery": "IN_PERSON", "entryPathways": ["SCHOOL", "CHAPTER"],
 				 "costType": "PAID", "recurrence": "ANNUAL",
 				 "attributes": {"topics": ["algebra"], "calculator_allowed": false}}
 				""".formatted(mathId, orgId);
@@ -235,7 +235,7 @@ class AdminApiIntegrationTest {
 				{"payload": {"slug": "mathcounts", "name": "MATHCOUNTS", "categoryId": "%s",
 				             "organizerName": "MATHCOUNTS Foundation",
 				             "participationMode": "BOTH", "delivery": "IN_PERSON",
-				             "entryPathway": "SCHOOL_OR_CHAPTER", "costType": "PAID", "recurrence": "ANNUAL",
+				             "entryPathways": ["SCHOOL", "CHAPTER"], "costType": "PAID", "recurrence": "ANNUAL",
 				             "attributes": {"topics": ["arithmetic", "algebra"]}},
 				 "sourceUrl": "https://mathcounts.org", "confidence": 0.85}
 				""".formatted(mathId);
@@ -367,7 +367,7 @@ class AdminApiIntegrationTest {
 				  "categoryId": "%s", "organizerOrgId": "%s", "description": "One-call create.",
 				  "description": "A complete-by-default listing created in one call.",
 				  "officialUrl": "https://combined.example.org", "participationMode": "INDIVIDUAL",
-				  "delivery": "VIRTUAL", "entryPathway": "INDIVIDUAL", "costType": "FREE",
+				  "delivery": "VIRTUAL", "entryPathways": ["INDIVIDUAL"], "costType": "FREE",
 				  "recurrence": "ANNUAL"},
 				 "edition": {"cycleLabel": "2026", "status": "OPEN", "scopeLevel": "NATIONAL",
 				  "registrationUrl": "https://combined.example.org/register", "prizeSummary": "Medals"},
@@ -428,7 +428,7 @@ class AdminApiIntegrationTest {
 				  "categoryId": "%s", "organizerOrgId": "%s", "description": "Rollback probe.",
 				  "description": "Must not survive the failed edition write.",
 				  "officialUrl": "https://combined.example.org", "participationMode": "INDIVIDUAL",
-				  "delivery": "VIRTUAL", "entryPathway": "INDIVIDUAL", "costType": "FREE",
+				  "delivery": "VIRTUAL", "entryPathways": ["INDIVIDUAL"], "costType": "FREE",
 				  "recurrence": "ANNUAL"},
 				 "edition": {"cycleLabel": "2026", "status": "OPEN", "scopeLevel": "NATIONAL",
 				  "registrationUrl": "https://combined.example.org/register", "prizeSummary": "Medals",
@@ -507,7 +507,7 @@ class AdminApiIntegrationTest {
 						.content("""
 								{"slug": "no-org", "name": "No Org", "categoryId": "%s",
 								 "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL",
-								 "entryPathway": "INDIVIDUAL", "costType": "FREE", "recurrence": "ANNUAL"}
+								 "entryPathways": ["INDIVIDUAL"], "costType": "FREE", "recurrence": "ANNUAL"}
 								""".formatted(mathId)))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.message", containsString("organizer is required")));
@@ -517,7 +517,7 @@ class AdminApiIntegrationTest {
 						.contentType("application/json").content("""
 								{"payload": {"slug": "import-no-org", "name": "Import No Org", "categoryId": "%s",
 								 "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL",
-								 "entryPathway": "INDIVIDUAL", "costType": "FREE", "recurrence": "ANNUAL"},
+								 "entryPathways": ["INDIVIDUAL"], "costType": "FREE", "recurrence": "ANNUAL"},
 								 "confidence": 0.50}
 								""".formatted(mathId)))
 				.andReturn().getResponse().getContentAsString();
@@ -550,7 +550,7 @@ class AdminApiIntegrationTest {
 				{"payload": {"slug": "import-edition-probe", "name": "Import Edition Probe", "categoryId": "%s",
 				             "organizerName": "Probe Org",
 				             "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL",
-				             "entryPathway": "INDIVIDUAL", "costType": "FREE", "recurrence": "ANNUAL",
+				             "entryPathways": ["INDIVIDUAL"], "costType": "FREE", "recurrence": "ANNUAL",
 				             "edition": {"cycleLabel": "2026", "status": "OPEN", "scopeLevel": "NATIONAL"},
 				             "keyDates": [
 				               {"type": "REG_CLOSE", "startsAt": "2026-11-01T04:59:00Z"},
@@ -599,7 +599,7 @@ class AdminApiIntegrationTest {
 				{"payload": {"slug": "orphan-dates", "name": "Orphan Dates", "categoryId": "%s",
 				             "organizerName": "Probe Org",
 				             "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL",
-				             "entryPathway": "INDIVIDUAL", "costType": "FREE", "recurrence": "ANNUAL",
+				             "entryPathways": ["INDIVIDUAL"], "costType": "FREE", "recurrence": "ANNUAL",
 				             "keyDates": [{"type": "REG_CLOSE"}]},
 				 "confidence": 0.40}
 				""".formatted(mathId);
@@ -619,7 +619,7 @@ class AdminApiIntegrationTest {
 				{"payload": {"slug": "bad-edition", "name": "Bad Edition", "categoryId": "%s",
 				             "organizerName": "Probe Org",
 				             "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL",
-				             "entryPathway": "INDIVIDUAL", "costType": "FREE", "recurrence": "ANNUAL",
+				             "entryPathways": ["INDIVIDUAL"], "costType": "FREE", "recurrence": "ANNUAL",
 				             "edition": {"cycleLabel": "2026", "status": "OPEN", "scopeLevel": "NATIONAL",
 				                         "entryFee": 25.00}},
 				 "confidence": 0.40}
@@ -726,7 +726,7 @@ class AdminApiIntegrationTest {
 			throws Exception {
 		String body = ("{\"payload\": {\"slug\": \"%s\", \"name\": \"%s\", \"categoryId\": \"%s\","
 				+ " \"organizerName\": \"Queue Org\", \"participationMode\": \"INDIVIDUAL\","
-				+ " \"delivery\": \"VIRTUAL\", \"entryPathway\": \"INDIVIDUAL\", \"costType\": \"FREE\","
+				+ " \"delivery\": \"VIRTUAL\", \"entryPathways\": [\"INDIVIDUAL\"], \"costType\": \"FREE\","
 				+ " \"recurrence\": \"ANNUAL\"%s}, \"confidence\": %s}")
 						.formatted(slug, name, categoryId, extraPayload, confidence);
 		String json = mvc.perform(withToken(post("/api/v1/admin/import-records"))
@@ -766,7 +766,7 @@ class AdminApiIntegrationTest {
 				  "categoryId": "%s", "organizerOrgId": "%s",
 				  "description": "A listing created for review, not direct publish.",
 				  "officialUrl": "https://lifecycle.example.org", "participationMode": "INDIVIDUAL",
-				  "delivery": "VIRTUAL", "entryPathway": "INDIVIDUAL", "costType": "FREE",
+				  "delivery": "VIRTUAL", "entryPathways": ["INDIVIDUAL"], "costType": "FREE",
 				  "recurrence": "ANNUAL"},
 				 "edition": {"cycleLabel": "2026", "scopeLevel": "NATIONAL",
 				  "registrationUrl": "https://lifecycle.example.org/register", "prizeSummary": "Medals"},
@@ -837,7 +837,7 @@ class AdminApiIntegrationTest {
 			sb.append(", \"confirmNewOrganizer\": ").append(confirmNewOrganizer);
 		}
 		sb.append(", \"participationMode\": \"INDIVIDUAL\", \"delivery\": \"VIRTUAL\","
-				+ " \"entryPathway\": \"INDIVIDUAL\", \"costType\": \"FREE\", \"recurrence\": \"ANNUAL\"}");
+				+ " \"entryPathways\": [\"INDIVIDUAL\"], \"costType\": \"FREE\", \"recurrence\": \"ANNUAL\"}");
 		return sb.toString();
 	}
 

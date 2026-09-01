@@ -58,7 +58,15 @@ export function ScrollRow({
         role="list"
         aria-label={label}
         onScroll={update}
-        className="flex snap-x snap-mandatory gap-4 overflow-x-auto pr-10 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        // `relative` MAKES THE TRACK THE CONTAINING BLOCK, and it is load-bearing (2026-09-01).
+        // `overflow` only clips descendants whose containing block is this element or inside it.
+        // Without `relative` the nearest one was the OUTER wrapper below, which sits outside the
+        // scroller — so any absolutely-positioned descendant escaped the clip and was laid out at
+        // its card's x-offset in the UNSCROLLED flow, pushing the document's scrollWidth out to the
+        // full track width. Tailwind's `sr-only` is `position: absolute`, so one screen-reader-only
+        // span in a card was enough: the detail page scrolled 341px sideways at 390px wide, into
+        // blank space, with nothing visible out there to explain it.
+        className="relative flex snap-x snap-mandatory gap-4 overflow-x-auto pr-10 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {children}
       </div>

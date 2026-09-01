@@ -46,10 +46,10 @@ const FIELD_OPTIONS: Record<string, FieldOption[]> = {
     { key: 'maxGrade', label: 'Maximum grade', hint: 'K = 0, Pre-K = -1, grades 1–12' },
     { key: 'minAge', label: 'Minimum age' },
     { key: 'maxAge', label: 'Maximum age' },
-    { key: 'costType', label: 'Cost', values: COST_TYPES },
+    { key: 'costType', label: 'Entry fee', values: COST_TYPES },
     { key: 'participationMode', label: 'Individual or team', values: PARTICIPATION_MODES },
     { key: 'delivery', label: 'In person or online', values: DELIVERIES },
-    { key: 'entryPathway', label: 'How you enter', values: ENTRY_PATHWAYS },
+    { key: 'entryPathways', label: 'How you enter', values: ENTRY_PATHWAYS },
     { key: 'recurrence', label: 'How often it runs', values: RECURRENCES },
   ],
   EDITION: [

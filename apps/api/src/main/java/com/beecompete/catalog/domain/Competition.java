@@ -98,17 +98,35 @@ public class Competition {
 	@Column(nullable = false, length = 20)
 	private Delivery delivery;
 
-	@NotNull
-	@Enumerated(EnumType.STRING)
-	@Column(name = "entry_pathway", nullable = false, length = 20)
-	private EntryPathway entryPathway;
+	/**
+	 * HOW you enter, as a SET (0024, domain-model §7a.1). Tokens validated at the curation write
+	 * boundary, exactly like {@link #evaluationType}.
+	 *
+	 * ⚠ The old single-value {@code entry_pathway} column still EXISTS and is deliberately
+	 * UNMAPPED here — dormant, like the retired {@code summary}. Reading it would give pre-0024
+	 * data: right for old rows, silently stale for everything written since.
+	 */
+	@JdbcTypeCode(SqlTypes.ARRAY)
+	@Column(name = "entry_pathways", columnDefinition = "text[]")
+	private List<String> entryPathways;
 
 	/** Allowed tokens validated against evaluation types at the service boundary (R1-4/R1-5). */
 	@JdbcTypeCode(SqlTypes.ARRAY)
 	@Column(name = "evaluation_type", columnDefinition = "text[]")
 	private List<String> evaluationType;
 
-	/** Grade encoding (Q2): Pre-K −1, K 0, grades 1–12; 13 College, 14 Graduate (2026-08-23). */
+	/**
+	 * Which axis the organizer STATES (0023). Governs display; the other axis, when populated, is a
+	 * derived search range and is never rendered as a rule. Null = not stated, NOT "all grades".
+	 */
+	@Enumerated(EnumType.STRING)
+	@Column(name = "eligibility_basis", length = 20)
+	private EligibilityBasis eligibilityBasis;
+
+	/**
+	 * Grade encoding (Q2): Pre-K −1, K 0, grades 1–12; 13–16 the four college years, 17 Graduate
+	 * (2026-08-23, split into named years 2026-08-24).
+	 */
 	@Column(name = "min_grade")
 	private Short minGrade;
 
@@ -182,13 +200,13 @@ public class Competition {
 	protected Competition() {}
 
 	public Competition(String slug, String name, Category category, ParticipationMode participationMode,
-			Delivery delivery, EntryPathway entryPathway, CostType costType, Recurrence recurrence) {
+			Delivery delivery, List<String> entryPathways, CostType costType, Recurrence recurrence) {
 		this.slug = slug;
 		this.name = name;
 		this.category = category;
 		this.participationMode = participationMode;
 		this.delivery = delivery;
-		this.entryPathway = entryPathway;
+		this.entryPathways = entryPathways;
 		this.costType = costType;
 		this.recurrence = recurrence;
 	}
@@ -293,12 +311,12 @@ public class Competition {
 		this.delivery = delivery;
 	}
 
-	public EntryPathway getEntryPathway() {
-		return entryPathway;
+	public List<String> getEntryPathways() {
+		return entryPathways;
 	}
 
-	public void setEntryPathway(EntryPathway entryPathway) {
-		this.entryPathway = entryPathway;
+	public void setEntryPathways(List<String> entryPathways) {
+		this.entryPathways = entryPathways;
 	}
 
 	public List<String> getEvaluationType() {
@@ -307,6 +325,14 @@ public class Competition {
 
 	public void setEvaluationType(List<String> evaluationType) {
 		this.evaluationType = evaluationType;
+	}
+
+	public EligibilityBasis getEligibilityBasis() {
+		return eligibilityBasis;
+	}
+
+	public void setEligibilityBasis(EligibilityBasis eligibilityBasis) {
+		this.eligibilityBasis = eligibilityBasis;
 	}
 
 	public Short getMinGrade() {

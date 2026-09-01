@@ -19,11 +19,15 @@
 import { DEFAULT_TIMEZONE, instantToZonedWallClock } from '@/lib/dates';
 import {
   COST_TYPES,
+  EDITION_STATUSES,
+  ELIGIBILITY_BASES,
+  type EligibilityBasis,
   DELIVERIES,
   ENTRY_PATHWAYS,
   KEY_DATE_TYPES,
   PARTICIPATION_MODES,
   RECURRENCES,
+  RESOURCE_TYPES,
   SCOPE_LEVELS,
 } from '@/lib/admin-types';
 
@@ -47,10 +51,12 @@ export interface CompetitionSeed {
   tags: string[] | null;
   participationMode: string;
   delivery: string;
-  entryPathway: string;
+  entryPathways: string[];
   costType: string;
   recurrence: string;
   evaluationType: string[] | null;
+  /** Which axis the organizer states; null when the extraction didn't say (pre-0023 payloads). */
+  eligibilityBasis: EligibilityBasis | null;
   teamSizeMin: number | null;
   teamSizeMax: number | null;
   minGrade: number | null;
@@ -63,6 +69,14 @@ export interface CompetitionSeed {
 /** The first-edition block, as the form's `edition_*` fields want it. */
 export interface EditionSeed {
   cycleLabel: string;
+  /**
+   * Mapped since 2026-08-31 (owner). It used to ride through as an EXTRA, which meant the create
+   * path silently discarded a supplied status while import-approve applied it — the same payload
+   * behaving two ways. Now it is a normal seeded field on both, and `buildFirstEdition` posts it
+   * when present. Blank still means "derive from the key dates", which is what a manual create and
+   * an extraction that never said always do.
+   */
+  status: string;
   scopeLevel: string;
   registrationUrl: string;
   entryFee: string;
@@ -77,7 +91,7 @@ export interface EditionSeed {
 export interface KeyDateSeed {
   type: string;
   date: string;
-  /** Calendar day the milestone ends on, for a multi-day row; '' when it is a single day. */
+  /** Calendar day the key date ends on, for a multi-day row; '' when it is a single day. */
   endDate: string;
   time: string;
   timezone: string;
@@ -85,11 +99,43 @@ export interface KeyDateSeed {
   label: string;
 }
 
+/**
+ * A prep-resource row (books, past papers, guides, videos) the payload suggested. Optional
+ * everywhere: an extraction routinely has none, and the form starts with one blank row when so.
+ *
+ * ⚠ `isAffiliate` is a CLAIM ABOUT THE LINK, not a wish. It is true only when the URL already
+ * carries our Amazon Associates tag — a bare amazon.com link earns nothing and must not render the
+ * disclosure, and an unflagged tagged link is an FTC problem (compliance.md, DQ10). The paste
+ * prompt therefore emits plain links with `isAffiliate: false` and tells the curator to tick the
+ * box at the same moment they swap the tagged URL in.
+ */
+export interface ResourceSeed {
+  title: string;
+  url: string;
+  type: string;
+  isAffiliate: boolean;
+  imageUrl: string;
+}
+
+/**
+ * A suggested FAQ entry. The ANSWER is prose we publish under our own name and it renders with
+ * FAQPage structured data, so it carries the same rule as the description: our words, grounded in
+ * stated facts. A curator reads every one before approval.
+ */
+export interface FaqSeed {
+  question: string;
+  answer: string;
+}
+
 export interface ImportSeed {
   competition: CompetitionSeed;
   /** null when the payload described no running — the form then offers to add one. */
   edition: EditionSeed | null;
   keyDates: KeyDateSeed[];
+  /** Prep resources from the payload; empty when it suggested none. */
+  resources: ResourceSeed[];
+  /** Suggested FAQ entries; empty when the payload had none. */
+  faqs: FaqSeed[];
   regionIds: string[];
   /** The organizer as extracted, when it hasn't already been resolved to an org id. */
   organizerName: string | null;
@@ -132,13 +178,25 @@ function strings(value: unknown): string[] | null {
 }
 
 /**
- * An enum token the form's dropdown can actually show. An unrecognised token falls back to
- * `fallback` — the select would otherwise render blank and silently post the fallback anyway, and
- * the mismatch is reported separately by {@link importSeedWarnings}.
+ * An enum token the form's dropdown can actually show; an absent or unrecognized value becomes
+ * `''`, which the form renders as an unanswered dropdown (owner 2026-08-28).
+ *
+ * This replaced a `token(value, allowed, fallback)` helper that substituted a default. Why the
+ * defaults went: a payload that never mentioned recurrence used to
+ * arrive at the form showing "Annual", indistinguishable from a payload that said so. The curator
+ * reviewing it has no way to tell our guess from the source's fact, and publishes the guess. Blank
+ * is the honest rendering of "the source didn't say", and the form's required-ring turns it into a
+ * question instead of a silent default.
  */
-function token(value: unknown, allowed: readonly string[], fallback: string): string {
+function enumOrBlank(value: unknown, allowed: readonly string[]): string {
   const s = text(value);
-  return s !== null && allowed.includes(s) ? s : fallback;
+  return s !== null && allowed.includes(s) ? s : '';
+}
+
+/** Like {@link enumOrBlank} but null rather than '' — for a field the form treats as absent. */
+function optionalToken<T extends string>(value: unknown, allowed: readonly T[]): T | null {
+  const s = text(value)?.toUpperCase();
+  return s != null && (allowed as readonly string[]).includes(s) ? (s as T) : null;
 }
 
 // --- the mapping ------------------------------------------------------------------------------
@@ -160,7 +218,9 @@ const MAPPED_COMPETITION_KEYS = new Set([
   'teamSizeMax',
   'delivery',
   'entryPathway',
+  'entryPathways',
   'evaluationType',
+  'eligibilityBasis',
   'minGrade',
   'maxGrade',
   'minAge',
@@ -169,6 +229,8 @@ const MAPPED_COMPETITION_KEYS = new Set([
   'recurrence',
   'attributes',
   // Seeding extras the form renders in their own sections.
+  'resources',
+  'faqs',
   'edition',
   'keyDates',
   'regionIds',
@@ -177,6 +239,7 @@ const MAPPED_COMPETITION_KEYS = new Set([
 /** Edition keys the first-edition step renders. `prizeValue`/`ageCutoffDate`/… ride along as extras. */
 const MAPPED_EDITION_KEYS = new Set([
   'cycleLabel',
+  'status',
   'scopeLevel',
   'registrationUrl',
   'entryFee',
@@ -210,12 +273,17 @@ export function splitImportPayload(payload: Record<string, unknown>): ImportSeed
       logo: text(payload.logo),
       description: text(payload.description),
       tags: strings(payload.tags),
-      participationMode: token(payload.participationMode, PARTICIPATION_MODES, 'INDIVIDUAL'),
-      delivery: token(payload.delivery, DELIVERIES, 'IN_PERSON'),
-      entryPathway: token(payload.entryPathway, ENTRY_PATHWAYS, 'INDIVIDUAL'),
-      costType: token(payload.costType, COST_TYPES, 'FREE'),
-      recurrence: token(payload.recurrence, RECURRENCES, 'ANNUAL'),
+      participationMode: enumOrBlank(payload.participationMode, PARTICIPATION_MODES),
+      delivery: enumOrBlank(payload.delivery, DELIVERIES),
+      entryPathways: entryPathwaySeeds(payload),
+      costType: enumOrBlank(payload.costType, COST_TYPES),
+      recurrence: enumOrBlank(payload.recurrence, RECURRENCES),
       evaluationType: strings(payload.evaluationType),
+      // Read-either-shape, same approach as the retired `summary` and the singular `entryPathway`:
+      // the ~56 payloads extracted before 0023 carry no basis at all, and a missing one is NULL
+      // ("not stated"), never a default to GRADE — defaulting is exactly how a derived grade range
+      // would go on publishing itself as the organizer's rule.
+      eligibilityBasis: optionalToken(payload.eligibilityBasis, ELIGIBILITY_BASES),
       teamSizeMin: int(payload.teamSizeMin),
       teamSizeMax: int(payload.teamSizeMax),
       minGrade: int(payload.minGrade),
@@ -226,7 +294,8 @@ export function splitImportPayload(payload: Record<string, unknown>): ImportSeed
     },
     edition: edition && {
       cycleLabel: text(edition.cycleLabel) ?? '',
-      scopeLevel: token(edition.scopeLevel, SCOPE_LEVELS, 'NATIONAL'),
+      status: enumOrBlank(edition.status, EDITION_STATUSES),
+      scopeLevel: enumOrBlank(edition.scopeLevel, SCOPE_LEVELS),
       registrationUrl: text(edition.registrationUrl) ?? '',
       entryFee: decimalText(edition.entryFee),
       currency: (text(edition.currency) ?? '').toUpperCase(),
@@ -237,6 +306,8 @@ export function splitImportPayload(payload: Record<string, unknown>): ImportSeed
       ageCutoffDate: text(edition.ageCutoffDate) ?? '',
     },
     keyDates: keyDateSeeds(payload.keyDates),
+    resources: resourceSeeds(payload.resources),
+    faqs: faqSeeds(payload.faqs),
     regionIds: strings(payload.regionIds) ?? [],
     organizerName: text(payload.organizerOrgId) ? null : text(payload.organizerName),
     extras: {
@@ -255,13 +326,72 @@ export function splitImportPayload(payload: Record<string, unknown>): ImportSeed
  * PREVIOUS calendar day — turning "Nov. 3" on the page into "Nov 2" in the form on most date-only
  * extractions. (Same reasoning as the raw-JSON edition panel.)
  */
+/**
+ * Entry pathways, reading EITHER shape (`0024`, domain-model §7a.1).
+ *
+ * The ~46 queued extractions predate the change and carry a singular `entryPathway` string,
+ * including the composite tokens the set model retired. Mapping them here rather than rewriting
+ * stored payloads is what the plan calls for — the same treatment the retired `summary` got — so a
+ * queued row still reviews correctly without a data migration. The expansion matches `0024`'s
+ * backfill exactly: SCHOOL_OR_CHAPTER is both school routes, OPEN/EITHER is all three.
+ */
+function entryPathwaySeeds(payload: Record<string, unknown>): string[] {
+  const many = strings(payload.entryPathways);
+  if (many)
+    return many.map((t) => t.toUpperCase()).filter((t) => ENTRY_PATHWAYS.includes(t as never));
+  const single = text(payload.entryPathway)?.toUpperCase();
+  if (single == null) return [];
+  if (single === 'SCHOOL_OR_CHAPTER') return ['SCHOOL', 'CHAPTER'];
+  if (single === 'OPEN' || single === 'EITHER') return ['INDIVIDUAL', 'SCHOOL', 'CHAPTER'];
+  return ENTRY_PATHWAYS.includes(single as never) ? [single] : [];
+}
+
+function resourceSeeds(value: unknown): ResourceSeed[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((raw): ResourceSeed[] => {
+    const row = obj(raw);
+    if (!row) return [];
+    // Title AND url or nothing: the submit path skips incomplete rows anyway, so a half row would
+    // only look like data the curator has to clear by hand.
+    const title = text(row.title);
+    const url = text(row.url);
+    if (title === null || url === null) return [];
+    const type = text(row.type)?.toUpperCase() ?? '';
+    return [
+      {
+        title,
+        url,
+        // An unrecognized type falls back to OTHER rather than dropping the row — the link is the
+        // valuable part and the curator can retype a dropdown in one click.
+        type: (RESOURCE_TYPES as readonly string[]).includes(type) ? type : 'OTHER',
+        isAffiliate: row.isAffiliate === true,
+        imageUrl: text(row.imageUrl) ?? '',
+      },
+    ];
+  });
+}
+
+function faqSeeds(value: unknown): FaqSeed[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((raw): FaqSeed[] => {
+    const row = obj(raw);
+    if (!row) return [];
+    // Both halves or neither: a question with no answer is worse than no row — it would publish an
+    // unanswered question on the listing's FAQ tab.
+    const question = text(row.question);
+    const answer = text(row.answer);
+    if (question === null || answer === null) return [];
+    return [{ question, answer }];
+  });
+}
+
 function keyDateSeeds(value: unknown): KeyDateSeed[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((raw): KeyDateSeed[] => {
     const row = obj(raw);
     if (!row) return [];
     const type = text(row.type);
-    // A row whose type isn't a real milestone can't be posted back; the warnings surface it.
+    // A row whose type isn't a real key date can't be posted back; the warnings surface it.
     if (type === null || !(KEY_DATE_TYPES as readonly string[]).includes(type)) return [];
     const timezone = text(row.timezone) ?? 'UTC';
     const wall = instantToZonedWallClock(text(row.startsAt), timezone);
@@ -329,12 +459,43 @@ export function importSeedWarnings(
     });
   }
 
+  /**
+   * A token the payload STATED but we could not map (owner 2026-08-31). `enumOrBlank` renders an
+   * unrecognised value as blank, which is right — a wrong token is not a fact — but blank is also
+   * how "the source never said" renders, and conflating those loses the difference that matters:
+   * a curator who sees an empty Delivery cannot tell whether to go read the page or whether the
+   * extractor emitted the wrong spelling (which is a prompt bug worth reporting).
+   *
+   * The key-date path has warned like this since the start ("N had an unusable type"); this closes
+   * the same gap for the scalar enums. Advisory, like everything here: the blank field is already
+   * in the required ring, so this only explains WHY it is blank.
+   */
+  const unmapped = (
+    [
+      ['participation mode', payload.participationMode, seed.competition.participationMode],
+      ['delivery', payload.delivery, seed.competition.delivery],
+      ['entry fee type', payload.costType, seed.competition.costType],
+      ['recurrence', payload.recurrence, seed.competition.recurrence],
+      ['eligibility basis', payload.eligibilityBasis, seed.competition.eligibilityBasis ?? ''],
+      ['edition status', obj(payload.edition)?.status, seed.edition?.status ?? ''],
+      ['scope level', obj(payload.edition)?.scopeLevel, seed.edition?.scopeLevel ?? ''],
+    ] as const
+  )
+    .filter(([, raw, mapped]) => typeof raw === 'string' && raw.trim() !== '' && mapped === '')
+    .map(([label, raw]) => `${label} ("${String(raw)}")`);
+  if (unmapped.length > 0) {
+    warnings.push({
+      key: 'unmappedEnums',
+      message: `Not a value we recognise, so ${unmapped.length === 1 ? 'the field was' : 'these fields were'} left blank: ${unmapped.join(', ')}. Pick the right one below.`,
+    });
+  }
+
   const rows = Array.isArray(payload.keyDates) ? payload.keyDates : [];
   const dropped = rows.length - seed.keyDates.length;
   if (dropped > 0) {
     warnings.push({
       key: 'keyDates',
-      message: `${dropped} extracted key date${dropped === 1 ? '' : 's'} had an unusable milestone type and ${dropped === 1 ? 'was' : 'were'} left out. Check the raw payload.`,
+      message: `${dropped} extracted key date${dropped === 1 ? '' : 's'} had an unusable type and ${dropped === 1 ? 'was' : 'were'} left out. Check the raw payload.`,
     });
   }
   if (
@@ -351,7 +512,7 @@ export function importSeedWarnings(
     warnings.push({
       key: 'allTbd',
       message:
-        'Every extracted date is TBD. That is the correct extraction for a page that never dated its milestones — it just means someone has to look them up.',
+        'Every extracted date is TBD. That is the correct extraction for a page that never dated its key dates — it just means someone has to look them up.',
     });
   }
 

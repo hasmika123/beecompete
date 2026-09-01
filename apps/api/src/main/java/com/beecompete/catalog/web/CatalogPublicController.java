@@ -5,8 +5,8 @@ import com.beecompete.catalog.domain.ListingStatus;
 import com.beecompete.catalog.domain.CompetitionFaq;
 import com.beecompete.catalog.domain.CostType;
 import com.beecompete.catalog.domain.Delivery;
+import com.beecompete.catalog.domain.EntryPathways;
 import com.beecompete.catalog.domain.Edition;
-import com.beecompete.catalog.domain.EntryPathway;
 import com.beecompete.catalog.domain.EvaluationTypes;
 import com.beecompete.catalog.domain.KeyDate;
 import com.beecompete.catalog.domain.Organization;
@@ -111,7 +111,7 @@ public class CatalogPublicController {
 				parseToken("delivery", delivery, Delivery.class),
 				parseEligibility("participation", participation, ParticipationMode.class,
 						ParticipationMode.BOTH),
-				parseEligibility("pathway", pathway, EntryPathway.class, EntryPathway.EITHER),
+				parsePathway(pathway),
 				evaluation,
 				deadlineWithinDays,
 				sort != null ? parseToken("sort", sort, CompetitionSearchService.SortOption.class)
@@ -159,6 +159,23 @@ public class CatalogPublicController {
 	}
 
 	/** participation/pathway: the catch-all value (BOTH/EITHER) is not a filter choice — reject it. */
+	/**
+	 * The pathway filter is ONE token matched against a row's SET (0024). No enum and no catch-all
+	 * to exclude: the composite tokens that needed excluding are gone, so "school" simply means
+	 * "SCHOOL is one of this listing's routes".
+	 */
+	private static String parsePathway(String value) {
+		if (value == null || value.isBlank()) {
+			return null;
+		}
+		String token = value.trim().toUpperCase(Locale.ROOT);
+		if (!EntryPathways.TOKENS.contains(token)) {
+			throw badToken("pathway", value,
+				EntryPathways.TOKENS.stream().sorted().map(t -> t.toLowerCase(Locale.ROOT)).toList());
+		}
+		return token;
+	}
+
 	private static <E extends Enum<E>> E parseEligibility(String param, String value, Class<E> type,
 			E catchAll) {
 		E parsed = parseToken(param, value, type);
@@ -200,6 +217,16 @@ public class CatalogPublicController {
 		return CompetitionDetail.from(competition, editionViews,
 				resources.findByCompetitionIdOrderByDisplayOrder(competition.getId()),
 				faqs.findByCompetitionIdOrderByDisplayOrder(competition.getId()));
+	}
+
+	/**
+	 * Entry pathways in the PUBLIC lowercase token form, like every other enum on these DTOs.
+	 * They are stored uppercase (0024 kept the casing its backfill inherited from the old enum
+	 * column), so this is the one place the two conventions meet — without it the web would receive
+	 * "SCHOOL" where it receives "in_person" for delivery, and its label lookup would miss.
+	 */
+	private static List<String> publicPathways(List<String> stored) {
+		return stored == null ? null : stored.stream().map(t -> t.toLowerCase(Locale.ROOT)).toList();
 	}
 
 	/** Lowercase public token for an enum (R1-1 as-built rule). */
@@ -256,8 +283,9 @@ public class CatalogPublicController {
 
 	public record CompetitionSummary(UUID id, String slug, String name, String blurb, String logo,
 			CategoryView category, OrganizerView organizer, List<String> tags, String participationMode,
-			Short teamSizeMin, Short teamSizeMax, String delivery, String entryPathway,
-			List<String> evaluationType, Short minGrade, Short maxGrade, Short minAge, Short maxAge,
+			Short teamSizeMin, Short teamSizeMax, String delivery, List<String> entryPathways,
+			List<String> evaluationType, String eligibilityBasis, Short minGrade, Short maxGrade,
+			Short minAge, Short maxAge,
 			String costType, String recurrence, String verificationState, ProvenanceView provenance,
 			Instant nextDeadline, String prizeSummary, List<String> regions) {
 
@@ -267,8 +295,9 @@ public class CatalogPublicController {
 					c.getLogo(),
 					new CategoryView(c.getCategory().getSlug(), c.getCategory().getName()),
 					OrganizerView.from(c.getOrganizer()), c.getTags(), token(c.getParticipationMode()),
-					c.getTeamSizeMin(), c.getTeamSizeMax(), token(c.getDelivery()), token(c.getEntryPathway()),
-					c.getEvaluationType(), c.getMinGrade(), c.getMaxGrade(), c.getMinAge(), c.getMaxAge(),
+					c.getTeamSizeMin(), c.getTeamSizeMax(), token(c.getDelivery()), publicPathways(c.getEntryPathways()),
+					c.getEvaluationType(), token(c.getEligibilityBasis()), c.getMinGrade(), c.getMaxGrade(),
+					c.getMinAge(), c.getMaxAge(),
 					token(c.getCostType()), token(c.getRecurrence()), token(c.getVerificationState()),
 					ProvenanceView.from(c.getProvenance()), item.nextDeadline(), item.prizeSummary(),
 					item.regions());
@@ -350,7 +379,8 @@ public class CatalogPublicController {
 	public record CompetitionDetail(UUID id, String slug, String name, String description,
 			String officialUrl, String logo, CategoryView category, OrganizerView organizer, List<String> tags,
 			String participationMode, Short teamSizeMin, Short teamSizeMax, String delivery,
-			String entryPathway, List<String> evaluationType, Short minGrade, Short maxGrade, Short minAge,
+			List<String> entryPathways, List<String> evaluationType, String eligibilityBasis, Short minGrade,
+			Short maxGrade, Short minAge,
 			Short maxAge, String costType, String recurrence, Map<String, Object> attributes,
 			String verificationState, ProvenanceView provenance, List<EditionView> editions,
 			List<ResourceView> resources, List<FaqView> faqs) {
@@ -361,8 +391,9 @@ public class CatalogPublicController {
 					c.getDescription(), c.getOfficialUrl(), c.getLogo(),
 					new CategoryView(c.getCategory().getSlug(), c.getCategory().getName()),
 					OrganizerView.from(c.getOrganizer()), c.getTags(), token(c.getParticipationMode()),
-					c.getTeamSizeMin(), c.getTeamSizeMax(), token(c.getDelivery()), token(c.getEntryPathway()),
-					c.getEvaluationType(), c.getMinGrade(), c.getMaxGrade(), c.getMinAge(), c.getMaxAge(),
+					c.getTeamSizeMin(), c.getTeamSizeMax(), token(c.getDelivery()), publicPathways(c.getEntryPathways()),
+					c.getEvaluationType(), token(c.getEligibilityBasis()), c.getMinGrade(), c.getMaxGrade(),
+					c.getMinAge(), c.getMaxAge(),
 					token(c.getCostType()), token(c.getRecurrence()), c.getAttributes(),
 					token(c.getVerificationState()), ProvenanceView.from(c.getProvenance()), editions,
 					resources.stream().map(ResourceView::from).toList(),

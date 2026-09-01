@@ -1,7 +1,7 @@
 import { Check, cn } from '@beecompete/ui';
 import { AddToCalendar } from '@/components/detail/add-to-calendar';
 import { timelineDates } from '@/lib/detail-display';
-import { formatDate, sameCalendarDay } from '@/lib/dates';
+import { formatDate, keyDateZone, sameCalendarDay } from '@/lib/dates';
 import type { EditionView } from '@/lib/catalog-types';
 
 // The edition's key-date timeline (blueprints Page 3.4b): reg opens → closes → rounds →
@@ -30,10 +30,10 @@ export function KeyDatesTimeline({
           !isTbd &&
           date.startsAt &&
           date.endsAt &&
-          !sameCalendarDay(date.startsAt, date.endsAt, date.timezone);
+          !sameCalendarDay(date.startsAt, date.endsAt, keyDateZone(date.timezone));
         return (
           <li key={`${date.type}-${date.startsAt}-${i}`} className="ml-4 pb-5 last:pb-0">
-            {/* Past milestones get a CHECK in the marker (#84) — "done", not just dimmed.
+            {/* Past key dates get a CHECK in the marker (#84) — "done", not just dimmed.
                 Future/next keep the plain dot; markers stay aria-hidden with the sr-only
                 "(completed)" on the label carrying the semantics. */}
             {past ? (
@@ -65,15 +65,16 @@ export function KeyDatesTimeline({
             </div>
             {/* Full-strength muted (not /70) — the dimmed variant fell below AA (2.97:1 light,
                 3.94:1 dark). #84 dropped the line-through: strikethrough reads as CANCELLED, and a
-                passed milestone is completed, not cancelled — the check marker + sr-only
+                passed key date is completed, not cancelled — the check marker + sr-only
                 "(completed)" carry that now. TBD renders as text (R1-18). */}
             <p className="text-sm text-muted">
               {isTbd || !date.startsAt ? (
                 'Date TBD'
               ) : (
                 <>
-                  {formatDate(date.startsAt, date.timezone)}
-                  {multiDay && ` – ${formatDate(date.endsAt as string, date.timezone)}`}
+                  {formatDate(date.startsAt, keyDateZone(date.timezone))}
+                  {multiDay &&
+                    ` – ${formatDate(date.endsAt as string, keyDateZone(date.timezone))}`}
                 </>
               )}
             </p>

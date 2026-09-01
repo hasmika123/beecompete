@@ -1,6 +1,7 @@
 package com.beecompete.catalog.curation.web;
 
 import com.beecompete.catalog.curation.CurationStamps;
+import com.beecompete.catalog.curation.WebDomains;
 import com.beecompete.catalog.domain.Organization;
 import com.beecompete.catalog.domain.OrganizationType;
 import com.beecompete.catalog.domain.VerificationState;
@@ -61,7 +62,11 @@ public class OrganizationAdminController {
 	@ResponseStatus(HttpStatus.CREATED)
 	public OrganizationResponse create(@Valid @RequestBody OrganizationRequest request) {
 		Organization organization = new Organization(request.name(), request.type());
-		organization.setDomain(request.domain());
+		// Normalized, not stored raw: the admin form asks for the "official website", so a curator
+		// may reasonably paste https://www.maa.org/amc. Host verification (DQ11) compares DOMAINS,
+		// and the resolve-or-create path already stores the registrable host — both write paths have
+		// to agree or that comparison silently fails on whichever rows came in through this one.
+		organization.setDomain(WebDomains.registrableHost(request.domain()));
 		organization.setProvenance(CurationStamps.curated());
 		return OrganizationResponse.from(organizations.save(organization));
 	}
@@ -71,7 +76,7 @@ public class OrganizationAdminController {
 		Organization organization = require(id);
 		organization.setName(request.name());
 		organization.setType(request.type());
-		organization.setDomain(request.domain());
+		organization.setDomain(WebDomains.registrableHost(request.domain()));
 		organization.setProvenance(CurationStamps.curated());
 		return OrganizationResponse.from(organization);
 	}

@@ -35,7 +35,7 @@ const COMPETITION_REQUEST_FIELDS = new Set([
   'teamSizeMin',
   'teamSizeMax',
   'delivery',
-  'entryPathway',
+  'entryPathways',
   'evaluationType',
   'minGrade',
   'maxGrade',
@@ -51,7 +51,7 @@ const COMPETITION_REQUEST_FIELDS = new Set([
  * splits these back out before mapping the competition half, so they are contract too — if the
  * server ever renames them, this test is the tripwire.
  */
-const SEED_PAYLOAD_EXTRAS = new Set(['edition', 'keyDates']);
+const SEED_PAYLOAD_EXTRAS = new Set(['edition', 'keyDates', 'resources', 'faqs']);
 
 /** apps/api `EditionRequest` — the fields the pipeline may emit (advancesToEditionId is curator-only). */
 const EDITION_REQUEST_FIELDS = new Set([
@@ -148,6 +148,8 @@ test('submitToImportQueue POSTs the exact ImportSubmission contract shape', asyn
       );
     }
     assert.equal(payload.categorySlug, undefined);
+    // The fixture states no description, so it is a stated null. When the model DOES write one it
+    // rides through (2026-08-28) — see the normalize test in validate.test.ts.
     assert.equal(payload.description, null);
     assert.equal(typeof payload.slug, 'string');
     assert.equal(typeof payload.name, 'string');
@@ -155,17 +157,18 @@ test('submitToImportQueue POSTs the exact ImportSubmission contract shape', asyn
 
     // Enum casing: spine enums are the server enum CONSTANT names (Jackson binds case-
     // sensitively on approve); evaluationType is the canonical LOWERCASE token set.
-    for (const field of [
-      'participationMode',
-      'delivery',
-      'entryPathway',
-      'costType',
-      'recurrence',
-    ]) {
+    for (const field of ['participationMode', 'delivery', 'costType', 'recurrence']) {
       assert.ok(
         typeof payload[field] === 'string' && UPPER.test(payload[field] as string),
         `${field} must be an UPPERCASE enum constant (got ${String(payload[field])})`,
       );
+    }
+    // entryPathways is an ARRAY since `0024`, and its tokens are UPPERCASE like the spine enums
+    // they came from — the one multi-valued facet that is not the lowercase evaluationType set.
+    const entryPathways = (payload.entryPathways ?? []) as string[];
+    assert.ok(entryPathways.length > 0, 'entryPathways must list at least one route');
+    for (const token of entryPathways) {
+      assert.ok(UPPER.test(token), `entryPathways tokens are UPPERCASE (got ${token})`);
     }
     const evaluationType = (payload.evaluationType ?? []) as string[];
     for (const token of evaluationType) {

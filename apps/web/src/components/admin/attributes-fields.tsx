@@ -63,6 +63,31 @@ function isStringArrayProp(prop: SchemaProperty): boolean {
   return prop.type === 'array' && (prop.items?.type ?? 'string') === 'string';
 }
 
+/**
+ * The shape an UNDECLARED key's value implies, so "Other fields" can render the same controls the
+ * template-declared ones get (owner 2026-08-31).
+ *
+ * Undeclared keys used to fall straight to a raw-JSON box unless the value happened to be a
+ * string. That made a JSON fill look broken: arrays are by far the commonest extracted shape (72
+ * of 115 attribute values in the queued payloads), and the seeding prompts explicitly allow
+ * inventing keys — so `topics: ["algebra","geometry"]` rendered as an editable JSON blob while the
+ * identical key rendered as a comma-separated input on a category that happened to declare it.
+ * 11 of the 17 undeclared keys currently queued were arrays or numbers.
+ *
+ * Returns null only for shapes the typed controls genuinely cannot express — nested objects, mixed
+ * or non-string arrays — which still get RawJsonField. Inference is per-render off the value, never
+ * stored: this changes how a key is EDITED, never what is saved.
+ */
+function inferProp(v: unknown): SchemaProperty | null {
+  if (typeof v === 'string') return { type: 'string' };
+  if (typeof v === 'boolean') return { type: 'boolean' };
+  if (typeof v === 'number') return { type: Number.isInteger(v) ? 'integer' : 'number' };
+  if (Array.isArray(v) && v.every((item) => typeof item === 'string')) {
+    return { type: 'array', items: { type: 'string' } };
+  }
+  return null;
+}
+
 /** Comma-separated editor for array<string> — local text so typing ", " isn't re-normalized. */
 function CsvField({
   id,
@@ -192,6 +217,7 @@ export function AttributesFields({
     if (prop.type === 'boolean') {
       return (
         <Checkbox
+          id={id}
           checked={v === true}
           onChange={(e) => set(key, e.target.checked)}
           label={<span className="text-sm">Yes</span>}
@@ -382,19 +408,16 @@ export function AttributesFields({
           {extraKeys.map((key) => (
             <div key={key} className="grid grid-cols-[180px_1fr_32px] items-start gap-2">
               <Input value={key} readOnly aria-label={`Field ${key} name`} className="bg-surface" />
-              {typeof value[key] === 'string' ? (
-                <Input
-                  aria-label={`Field ${key} value`}
-                  value={value[key] as string}
-                  onChange={(e) => set(key, e.target.value)}
-                />
-              ) : (
-                <RawJsonField
-                  id={`attr-${key}`}
-                  value={value[key]}
-                  onChange={(parsed) => set(key, parsed)}
-                />
-              )}
+              {/* Same widget the template-declared pass would give this shape — see inferProp.
+                  `field()` owns the choice, so the two sections can never drift apart. The key
+                  sits in a readOnly Input here rather than a <label>, so the value control needs
+                  its own name: this is the sr-only twin of the visible label above. */}
+              <div className="grid gap-1">
+                <label htmlFor={`attr-${key}`} className="sr-only">
+                  {key} value
+                </label>
+                {field(key, inferProp(value[key]) ?? {})}
+              </div>
               <button
                 type="button"
                 aria-label={`Remove field ${key}`}

@@ -126,12 +126,17 @@ export default async function CompetitionDetailPage({
   // click Register is exactly when "you need a school/chapter" matters. Rendered as its own panel
   // directly under the cover/Register card (owner 2026-08-18), so it is still at the point of
   // action. Deliberate 2nd/3rd appearance alongside the Eligibility group; removed from At-a-glance.
+  // Derived from the SET since `0024`: the note used to key off composite tokens that no longer
+  // exist. "Can they sign up alone?" is now simply whether INDIVIDUAL is one of the routes.
+  const pathways = competition.entryPathways ?? [];
   const pathwayNote =
-    {
-      individual: 'Register directly. No school or chapter needed.',
-      school_or_chapter: 'Entry is through a participating school or chapter.',
-      either: 'Enter directly, or through your school or chapter.',
-    }[competition.entryPathway] ?? null;
+    pathways.length === 0
+      ? null
+      : pathways.includes('individual')
+        ? pathways.length > 1
+          ? 'Enter directly, or through your school or chapter.'
+          : 'Register directly. No school or chapter needed.'
+        : 'Entry is through a participating school or chapter.';
 
   const event = eventJsonLd(competition);
   const breadcrumb = breadcrumbJsonLd(competition);

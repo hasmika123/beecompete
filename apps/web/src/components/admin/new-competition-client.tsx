@@ -59,20 +59,25 @@ function createModeWarnings(
   ) {
     warnings.push({
       key: 'organizerUnmatched',
-      message: `No organization is named “${seed.organizerName}” — pick the right one below, or add it first.`,
+      // Still blocking — the server rejects a listing with no organizer, and the dialog can be
+      // dismissed. It reads as a reminder rather than an errand now that the form opens with the
+      // reuse-or-create choice already on screen (owner 2026-08-28).
+      message: `No organization is named “${seed.organizerName}” yet — resolve it in the prompt that just opened, or pick one in the Organizer field.`,
       blocking: true,
     });
   }
 
-  // Keys with no form control. Statuses are excluded like import mode excludes them: create
-  // derives status from the key dates server-side, so dropping a pasted one changes nothing.
+  // Keys with no form control, so the curator knows what a paste is about to lose.
+  //
+  // `edition.status` used to be filtered out here because create discarded it anyway. Since
+  // 2026-08-31 it is a MAPPED field carried on a hidden input and posted when supplied, so it is
+  // no longer an extra at all and needs no exemption. A COMPETITION-level `status` is still
+  // exempt: that one is the listing's own status, which the create flow owns.
   const droppedKeys = [
     // `categorySlug` is resolved to a categoryId before this runs (see `apply`), so it is never a
     // dropped field even though the payload reader has no control for it.
     ...Object.keys(seed.extras.competition).filter((k) => k !== 'status' && k !== 'categorySlug'),
-    ...Object.keys(seed.extras.edition)
-      .filter((k) => k !== 'status')
-      .map((k) => `edition.${k}`),
+    ...Object.keys(seed.extras.edition).map((k) => `edition.${k}`),
   ];
   if (droppedKeys.length > 0) {
     warnings.push({
@@ -114,7 +119,22 @@ export function NewCompetitionClient({
       setParseError('Expected a JSON object describing one competition, not a list or a value.');
       return;
     }
-    const record = payload as Record<string, unknown>;
+    /**
+     * Accept EITHER shape (owner 2026-08-31). The paste prompt returns a bare competition object;
+     * the bulk extractor returns `{ payload, modelConfidence, reviewerNotes }` — the envelope it
+     * POSTs to the queue. Pasting the second used to fill nothing: none of its three keys map, so
+     * the whole envelope became `extras` and the form opened blank with a dropped-keys warning
+     * naming `payload`, which reads as a broken paste rather than the wrong wrapper.
+     *
+     * Unwrapping is safe to detect: `payload` is not a field of a competition, so an object
+     * carrying one as an object IS the envelope.
+     */
+    const outer = payload as Record<string, unknown>;
+    const inner = outer.payload;
+    const record =
+      inner !== null && typeof inner === 'object' && !Array.isArray(inner)
+        ? (inner as Record<string, unknown>)
+        : outer;
 
     // categorySlug -> categoryId. The seeding pipeline resolves this itself before submitting
     // (tools/seeding categories.ts), but an AI asked for a payload by hand cannot know our UUIDs,

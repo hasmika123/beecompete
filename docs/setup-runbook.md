@@ -343,6 +343,11 @@ bucket — NOT the private user-files bucket. Upload is a pre-signed PUT; the br
    (`https://<bucket>.s3.<region>.amazonaws.com`, or a CDN origin). The API's `env_file: [.env]` picks
    them up (§2); the deploy workflow does NOT inject app env from GitHub secrets. Blank bucket =
    feature off (endpoint 503s, paste-a-URL fallback stays).
+   ⚠ **Locally, writing the file is not enough — `bootRun` never reads it.** The API has no dotenv
+   support, so start it with `pwsh scripts/dev-api.ps1` (or `scripts/dev-api.sh`), which loads
+   `.env.s3.local` then `.env.local` into the environment first. Bare `./gradlew bootRun` leaves the
+   bucket blank and every cover upload 503s — the failure this exact step caused on 2026-09-01. Use
+   `-CheckOnly` to see what loaded without booting.
 - **Verified E2E 2026-07-16:** presign → PUT 200 → public GET 200; CORS preflight 200 for the app
   origin. A CDN in front of the bucket is a later optimization, not required.
 

@@ -20,8 +20,9 @@ public final class CorrectionFields {
 	private static final Map<CorrectionSubjectType, Set<String>> ALLOWED = Map.of(
 			CorrectionSubjectType.COMPETITION,
 			Set.of("name", "officialUrl", "description", "tags", "participationMode",
-					"teamSizeMin", "teamSizeMax", "delivery", "entryPathway", "evaluationType",
-					"minGrade", "maxGrade", "minAge", "maxAge", "costType", "recurrence"),
+					"teamSizeMin", "teamSizeMax", "delivery", "entryPathways", "evaluationType",
+					"eligibilityBasis", "minGrade", "maxGrade", "minAge", "maxAge", "costType",
+					"recurrence"),
 			CorrectionSubjectType.EDITION,
 			Set.of("cycleLabel", "status", "registrationUrl", "entryFee", "currency", "ageCutoffDate",
 					"prizeSummary", "prizeValue", "prizeCurrency", "scopeLevel"),

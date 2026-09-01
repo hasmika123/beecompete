@@ -23,7 +23,7 @@ import {
  *
  * SCOPE: dates are editable (that is the expensive part); the edition's scalars are read-only and
  * still edited in the JSON below, or on the real edition after approve. Rows can be marked TBD or
- * removed, but not added — a milestone the page never mentioned is a curator judgement that belongs
+ * removed, but not added — a key date the page never mentioned is a curator judgement that belongs
  * on the created edition, where the full KeyDateManager already lives.
  */
 
@@ -157,9 +157,9 @@ export function ImportEditionPanel({
           )}
           {allTbd && (
             <Alert tone="info">
-              Every date is <b>TBD</b>. That is the correct extraction for a page that announces
-              milestones without dating them — the extractor never guesses — but it means these
-              dates need looking up.
+              Every date is <b>TBD</b>. That is the correct extraction for a page that announces key
+              dates without dating them — the extractor never guesses — but it means these dates
+              need looking up.
             </Alert>
           )}
 
@@ -197,7 +197,7 @@ export function ImportEditionPanel({
                     <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto] sm:items-end">
                       <Input
                         type="datetime-local"
-                        aria-label={`Date for ${type ? enumLabel(type) : 'this milestone'}`}
+                        aria-label={`Date for ${type ? enumLabel(type) : 'this key date'}`}
                         value={toLocalInput(iso)}
                         onChange={(e) => setDate(i, e.currentTarget.value)}
                       />

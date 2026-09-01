@@ -12,10 +12,15 @@ import {
   useConfirm,
   useToast,
 } from '@beecompete/ui';
-import { enumLabel, enumOptions } from '@/components/admin/enum-labels';
+import { enumLabel, keyDateOptions } from '@/components/admin/enum-labels';
 import { addKeyDate, deleteKeyDate } from '@/app/admin/competitions/[id]/editions/actions';
-import { formatInZone } from '@/lib/dates';
-import { ADMIN_TIMEZONES, KEY_DATE_TYPES, type KeyDate } from '@/lib/admin-types';
+import { formatInZone, keyDateZone } from '@/lib/dates';
+import {
+  ADMIN_TIMEZONES,
+  KEY_DATE_TYPES,
+  SPAN_KEY_DATE_TYPES,
+  type KeyDate,
+} from '@/lib/admin-types';
 
 export function KeyDateManager({
   competitionId,
@@ -28,6 +33,10 @@ export function KeyDateManager({
 }) {
   const [pending, startTransition] = useTransition();
   const [tbd, setTbd] = useState(false);
+  // Controlled (it was uncontrolled) so "Ends" can follow the chosen type — see
+  // SPAN_KEY_DATE_TYPES. `form.reset()` cannot restore React state, so the submit handler resets
+  // this alongside `tbd`.
+  const [type, setType] = useState<string>('REG_CLOSE');
   const formRef = useRef<HTMLFormElement>(null);
   const { confirm, dialog } = useConfirm();
   const { toast } = useToast();
@@ -45,10 +54,12 @@ export function KeyDateManager({
               <span className="font-medium text-foreground">{enumLabel(k.type)}</span>
               {k.label && <span className="ml-2 text-foreground">· {k.label}</span>}
               <span className="ml-2 text-muted">
-                {k.startsAt ? formatInZone(k.startsAt, k.timezone) : 'Date TBD'}
+                {k.startsAt ? formatInZone(k.startsAt, keyDateZone(k.timezone)) : 'Date TBD'}
               </span>
               {k.endsAt && (
-                <span className="ml-1 text-muted">→ {formatInZone(k.endsAt, k.timezone)}</span>
+                <span className="ml-1 text-muted">
+                  → {formatInZone(k.endsAt, keyDateZone(k.timezone))}
+                </span>
               )}
             </span>
             <Button
@@ -93,6 +104,7 @@ export function KeyDateManager({
               await addKeyDate(competitionId, editionId, form);
               formRef.current?.reset();
               setTbd(false);
+              setType('REG_CLOSE');
               toast({ title: 'Key date added', tone: 'success' });
             } catch (err) {
               toast({ title: err instanceof Error ? err.message : 'Add failed', tone: 'error' });
@@ -102,7 +114,12 @@ export function KeyDateManager({
         className="grid gap-3 rounded-[var(--radius-panel)] border border-dashed border-border p-4 sm:grid-cols-3"
       >
         <FormField label="Type">
-          <Select name="type" options={enumOptions(KEY_DATE_TYPES)} defaultValue="REG_CLOSE" />
+          <Select
+            name="type"
+            options={keyDateOptions(KEY_DATE_TYPES)}
+            value={type}
+            onValueChange={setType}
+          />
         </FormField>
         <FormField label="Starts">
           <Input name="startsAt" type="datetime-local" required={!tbd} disabled={tbd} />
@@ -110,13 +127,18 @@ export function KeyDateManager({
         <FormField label="Timezone">
           <Select name="timezone" options={ADMIN_TIMEZONES} defaultValue="America/New_York" />
         </FormField>
-        <FormField label="Ends" hint="optional, for windows">
-          <Input name="endsAt" type="datetime-local" disabled={tbd} />
-        </FormField>
+        {/* Only the types that can actually span days (SPAN_KEY_DATE_TYPES). "Registration
+            closes" is an instant; offering it an end date invited a value that means nothing.
+            Unmounting rather than disabling means nothing stale can post. */}
+        {SPAN_KEY_DATE_TYPES.includes(type) && (
+          <FormField label="Ends" hint="optional, for a key date spanning days">
+            <Input name="endsAt" type="datetime-local" disabled={tbd} />
+          </FormField>
+        )}
         <FormField label="Label" hint="optional, shown for Custom dates">
           <Input name="label" maxLength={200} />
         </FormField>
-        {/* TBD (R1-18): the milestone exists but its date is unknown — submit without a date.
+        {/* TBD (R1-18): the key date exists but its date is unknown — submit without a date.
             mt-[26px] + h-10 centers the checkbox on the neighbors' control band (label 20px +
             gap 6px above a 40px control). */}
         <div className="mt-[26px] flex h-10 items-center">

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useActionState, useEffect, useState } from 'react';
-import type { ChangeEvent, ReactNode } from 'react';
+import type { ChangeEvent, MouseEvent, ReactNode } from 'react';
 import {
   Alert,
   ArrowLeft,
@@ -18,8 +18,11 @@ import {
   ImageUpload,
   Info,
   Input,
+  Modal,
   Plus,
   ProgressRing,
+  Radio,
+  RadioGroup,
   Select,
   Stepper,
   Textarea,
@@ -31,10 +34,24 @@ import { AttributesFields } from '@/components/admin/attributes-fields';
 import { FormSection, SubSectionHeading } from '@/components/admin/form-section';
 import { RegionSelect } from '@/components/admin/region-select';
 import { AwardsInput, awardRowsFromSeed } from '@/components/admin/awards-input';
-import { TagsInput } from '@/components/admin/tags-input';
-import { enumLabel, enumOptions } from '@/components/admin/enum-labels';
+import { MAX_TAGS, TagsInput } from '@/components/admin/tags-input';
+import { enumLabel, enumOptions, keyDateOptions } from '@/components/admin/enum-labels';
+import { OrganizationForm } from '@/components/admin/organization-form';
+import { OrganizationCreatedModal } from '@/components/admin/organization-created-modal';
 import { GRADE_VALUES, gradeOptionLabel } from '@/lib/catalog-display';
 import { defaultKeyDateLabel } from '@/lib/detail-display';
+import {
+  BOUNDS,
+  currencyRule,
+  intRule,
+  isComplete,
+  LIMITS,
+  moneyRule,
+  rangeRule,
+  slugRule,
+  textRule,
+  urlRule,
+} from '@/lib/form-rules';
 import { uploadCoverImage } from '@/lib/cover-upload';
 import { createCompetition, updateCompetition } from '@/app/admin/competitions/actions';
 import { approveImportFromForm } from '@/app/admin/import-records/actions';
@@ -43,10 +60,11 @@ import { DEFAULT_TIMEZONE } from '@/lib/dates';
 import {
   ADMIN_TIMEZONES,
   COST_TYPES,
+  ELIGIBILITY_BASES,
   DELIVERIES,
-  ENTRY_PATHWAYS,
   EVALUATION_TYPES,
   KEY_DATE_TYPES,
+  SPAN_KEY_DATE_TYPES,
   PARTICIPATION_MODES,
   RECURRENCES,
   RESOURCE_TYPES,
@@ -76,6 +94,96 @@ function slugify(s: string): string {
 
 // Eligibility dropdown options. "" = "Any" (open on that side, posts null). Grade uses the SAME
 // ladder as the marketplace grade filter (GRADE_VALUES); age runs 0…99 with 99 shown as "99+".
+/**
+ * Eligibility-basis choices, spelled out rather than run through `enumOptions` — twice over. The
+ * shared humanizer maps BOTH → "Individual or team" and OPEN → "Open to all" (participation and
+ * entry-pathway wording), which would be actively wrong here; and this is the one control whose
+ * whole job is to make a curator think about WHOSE rule they are recording, so each option says it.
+ *
+ * '' is a real, savable value: not stated. It leads, because it is where an un-curated listing
+ * honestly sits until someone checks the official page.
+ */
+/**
+ * No "Not provided" box (owner 2026-08-28): the field is REQUIRED, and an option meaning "I didn't
+ * answer" would satisfy it while answering nothing. A curator who genuinely cannot find the rule
+ * leaves the row untouched — the readiness ring then names it as outstanding, which is the honest
+ * place for "still unknown" to live.
+ *
+ * ⚠ null REMAINS a valid STORED value — legacy rows carry it, migration 0023's backfill leaves it
+ * where no range existed, and the API accepts it. What changed is only that a curator can no
+ * longer newly CHOOSE it. Those listings still render "Not stated" (blueprints decision 99), and
+ * import review still approves them: this is a create-form rule, not a server rule.
+ */
+const ELIGIBILITY_BASIS_OPTIONS = [
+  { value: 'GRADE', label: 'Grades' },
+  { value: 'AGE', label: 'Ages' },
+  { value: 'BOTH', label: 'Grades & Ages' },
+  { value: 'OPEN', label: 'Open to all' },
+];
+
+/**
+ * Which range inputs the chosen basis actually asks for. Everything else is DISABLED rather than
+ * unmounted — the house pattern the entry-fee row already uses: the layout keeps its shape, and a
+ * range typed before someone changed their mind survives the change back. Disabled controls are
+ * omitted from submission, so basis GRADE posts no ages, which is exactly what the server's
+ * `isEligibilityBasisBacked` guard expects.
+ *
+ * '' is the UNANSWERED state — no box is selected until a curator picks one, so both ranges start
+ * disabled and the choice above is what unlocks them. OPEN asks for neither too, but means
+ * something different: the organizer stated there IS no restriction. Disabling both is safe for
+ * existing rows because migration 0023's backfill only left the basis null where BOTH ranges were
+ * already empty — there is nothing for a save to clear.
+ */
+/**
+ * Student status: a tri-state, stored as the `0022` boolean. '' removes the key — "nobody has
+ * recorded this" is a real answer and must not render as "Not required" on the public tab.
+ */
+/**
+ * NOT_PROVIDED is a form-only sentinel, never stored: picking it REMOVES the attribute key, which
+ * is the same storage as before. What it buys is the distinction the field could not previously
+ * make — between "a curator read the page and it says nothing about countries" and "nobody has
+ * looked yet". Both were an absent key and both rendered as a blank the form let you sail past.
+ *
+ * ⚠ It replaces the old "Any / worldwide" option, which was an INFERENCE: a US contest that never
+ * mentions countries is unstated, not open to the world, and saying so on a listing invents a rule
+ * the organizer never wrote. Same reasoning as the eligibility-basis work (blueprints decision 99).
+ */
+const NOT_PROVIDED = 'NOT_PROVIDED';
+/**
+ * Unlike {@link NOT_PROVIDED}, this IS stored — it is a fact the organizer stated ("anyone may
+ * enter, from anywhere"), and the listing prints it. Absent would have collapsed it back into
+ * silence, which is the distinction these fields exist to keep (owner 2026-08-28).
+ */
+const OPEN_TO_ALL = 'Open to all';
+
+const STUDENT_STATUS_OPTIONS = [
+  { value: NOT_PROVIDED, label: 'Not provided' },
+  { value: 'true', label: 'Required' },
+  { value: 'false', label: 'Not required' },
+];
+
+const BASIS_ASKS_FOR: Record<string, { grades: boolean; ages: boolean }> = {
+  '': { grades: false, ages: false },
+  GRADE: { grades: true, ages: false },
+  AGE: { grades: false, ages: true },
+  BOTH: { grades: true, ages: true },
+  OPEN: { grades: false, ages: false },
+};
+
+/**
+ * The token alone doesn't say where the line falls, and picking wrong tells a student they cannot
+ * enter without their school — so the distinction rides in the option label itself. Written short
+ * because the trigger joins the CHOSEN labels: "Individual, Through a school" has to stay readable
+ * in one truncating line.
+ */
+const ENTRY_PATHWAY_OPTIONS = [
+  // `label` explains inside the list; `shortLabel` is what the trigger shows as a tag, because
+  // three full labels ("Through a chapter or club" × 3) would clip long before they all fit.
+  { value: 'INDIVIDUAL', label: 'Individual — signs up on their own', shortLabel: 'Individual' },
+  { value: 'SCHOOL', label: 'Through a school', shortLabel: 'School' },
+  { value: 'CHAPTER', label: 'Through a chapter or club', shortLabel: 'Chapter or club' },
+];
+
 const GRADE_OPTIONS = [
   { value: '', label: 'Any' },
   ...GRADE_VALUES.map((g) => ({ value: String(g), label: gradeOptionLabel(g) })),
@@ -87,34 +195,48 @@ const GRADE_OPTIONS = [
  * list can't say is "Other", explained in `other_eligibility_requirements`. Stored as a
  * one-element array so the shape matches the template schema and the public renderer.
  */
+
 const ELIGIBLE_COUNTRY_OPTIONS = [
-  { value: '', label: 'Any / worldwide' },
+  { value: NOT_PROVIDED, label: 'Not provided' },
+  { value: OPEN_TO_ALL, label: 'Open to all' },
   { value: 'United States', label: 'United States' },
   { value: 'Canada', label: 'Canada' },
-  { value: 'Other', label: 'Other' },
 ];
 /**
- * The Judging step's right column is sized AGAINST the evaluation list beside it (owner
- * 2026-08-25): the rules/rubric box reads as two checkbox rows, and the two text boxes are equal
- * to each other and together read as three — a 2:3 split of the five.
+ * The Judging step's right column, sized AGAINST the evaluation list beside it (owner 2026-08-25):
+ * three boxes that together end level with the checkbox stack.
  *
- * Done with fractional grid rows rather than pixel heights, because the two goals ("that ratio"
- * and "both columns end level") are otherwise over-constrained: the right column spends extra
- * height on two more labels and larger gaps than the left, so three boxes literally equal to five
- * checkbox rows would overshoot every time. Proportional rows divide whatever height the left
- * column actually claims, so the ratio holds AND the columns end level at every width, with no
- * measured constant to go stale when a checkbox hint gains a line.
+ * `auto auto minmax(0,1fr)` — the two textareas size to THEMSELVES, the rubric absorbs the rest.
  *
- * Each field also needs `grid-rows-[auto_1fr]` so it is the CONTROL that absorbs its row, not the
+ * It was a strict `1.5fr 1.5fr 2fr` ratio (the rules box reading as two checkbox rows, the text
+ * boxes as three). Two things retired it:
+ *  1. A bare `fr` track is `minmax(AUTO, …fr)`, so its floor is content — ANY field growing
+ *     re-split the ratio across all three. Opening the rubric's URL row grew both textareas by
+ *     25px. Blueprints #117 documents the identical trap on the At-a-glance strip.
+ *  2. The textareas became drag-expandable (owner 2026-08-29), and under a proportional track
+ *     dragging ONE resizes the OTHER — not what a resize handle promises.
+ *
+ * `auto` gives each textarea its own height and keeps a drag local. The rubric keeps a FLOORED
+ * `1fr`, so it still takes whatever is left and the column still ends level with the stack beside
+ * it — which was the ratio's actual purpose. The pixel-ratio half is given up deliberately.
+ *
+ * ⚠ That floor is `9rem`, not `0`. At `0` a curator dragging a textarea tall ate the remainder and
+ * collapsed the rubric drop zone to 26px — a target too small to hit. 9rem is sized for the WORST
+ * case, not the resting one: the track also carries the label and, when the URL row is open, that
+ * row too, so a smaller floor still starved the zone the moment both happened at once. A FIXED
+ * floor cannot be inflated by content the way a bare `fr` can, so it stops the collapse without
+ * reopening (1).
+ *
+ * Each field still needs `grid-rows-[auto_1fr]` so it is the CONTROL that absorbs its row, not the
  * label; `min-h-0` lets the boxes shrink rather than overflow if the left column is ever short.
  */
-const JUDGING_ROWS = 'grid h-full grid-rows-[1.5fr_1.5fr_2fr] gap-4';
+const JUDGING_ROWS = 'grid h-full min-h-0 grid-rows-[auto_auto_minmax(9rem,1fr)] gap-4';
 const JUDGING_FIELD = 'min-h-0 grid-rows-[auto_1fr]';
-const JUDGING_BOX = 'h-full min-h-0';
 
 /** Citizenship has one real answer at R1 — the US-citizens-only rule (e.g. USAMO). */
 const CITIZENSHIP_OPTIONS = [
-  { value: '', label: 'Any / none' },
+  { value: NOT_PROVIDED, label: 'Not provided' },
+  { value: OPEN_TO_ALL, label: 'Open to all' },
   { value: 'United States', label: 'United States' },
 ];
 
@@ -169,10 +291,37 @@ interface StepDef {
 export type CompetitionFormMode = 'create' | 'edit' | 'import';
 
 /** The server-required minimum on the import path — everything else is advice, not a gate. */
-const IMPORT_BLOCKING_KEYS = ['name', 'slug', 'category', 'organizer'];
+/**
+ * How many complete prep resources and FAQ entries a NEW listing must carry (owner 2026-08-29).
+ * Both seeding prompts already ask for more than this (~8 resources, 3-5 FAQs), so a pasted or
+ * extracted listing usually arrives satisfied; the floor is for hand-entered ones.
+ *
+ * ⚠ Not enforced on import approve — it is not in IMPORT_BLOCKING_KEYS. The server does not demand
+ * these, and a queued extraction that found only two good links must stay approvable rather than
+ * stalling the seeding queue. The ring still names them, so the gap is visible either way.
+ */
+const MIN_EXTRAS = 4;
+
+const IMPORT_BLOCKING_KEYS = [
+  'name',
+  'slug',
+  'category',
+  'organizer',
+  // Added 2026-08-28 with the enum defaults' removal. These are @NotNull server-side, so an empty
+  // one is refused on approve either way — this is the rule the list already states ("only what
+  // the server itself refuses"), surfaced as a labelled row instead of a 400 after the click.
+  // It bites 5 queued extractions that never stated a scope level and had been quietly approving
+  // as NATIONAL; they now ask a curator, which is the point.
+  'costType',
+  'delivery',
+  'participation',
+  'scopeLevel',
+  'recurrence',
+  'entryPathway',
+];
 
 /**
- * The milestones a CREATE-form listing must account for (owner 2026-08-24) — each needs a date
+ * The key dates a CREATE-form listing must account for (owner 2026-08-24) — each needs a date
  * or an explicit TBD before the form will submit. Blank rows for all four are seeded, so the ask
  * is "fill these in", not "know which ones to add".
  *
@@ -186,8 +335,38 @@ const IMPORT_BLOCKING_KEYS = ['name', 'slug', 'category', 'organizer'];
  */
 const REQUIRED_KEY_DATE_TYPES = ['REG_OPEN', 'REG_CLOSE', 'SUBMISSION_DUE', 'RESULTS'] as const;
 
+/**
+ * The types a timeline may hold only ONE of (owner 2026-08-31). Registration opens once and closes
+ * once; a second of either is a different milestone wearing the wrong type.
+ *
+ * SUBMISSION_DUE and RESULTS are REQUIRED but not singletons — they repeat legitimately, per
+ * division or per round ("junior entries due", "senior entries due"; semifinal then final results).
+ * `nextDeadline` copes: it takes the earliest FUTURE row, so several submission deadlines simply
+ * hand off to one another as each passes.
+ */
+const SINGLETON_KEY_DATE_TYPES: readonly string[] = ['REG_OPEN', 'REG_CLOSE'];
+
 /** Case- and whitespace-insensitive org-name key — mirrors the server's normalize on resolve. */
 const orgNameKey = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
+
+/**
+ * Registrable host of a URL, for PREFILLING the new-organization form's Official website field.
+ *
+ * A convenience copy of the server's `WebDomains.registrableHost` — not a second source of truth:
+ * whatever is submitted is normalized again server-side, so the worst a disagreement here can do is
+ * show a curator a slightly different default before they save. Kept local for that reason; if a
+ * third caller ever appears, promote it to a lib module rather than copying it again.
+ */
+function registrableHost(url: string | undefined): string | undefined {
+  if (!url || url.trim() === '') return undefined;
+  try {
+    const host = new URL(url.trim()).hostname.toLowerCase();
+    const bare = host.startsWith('www.') ? host.slice(4) : host;
+    return bare === '' ? undefined : bare;
+  } catch {
+    return undefined;
+  }
+}
 
 export function CompetitionForm({
   competition,
@@ -260,8 +439,49 @@ export function CompetitionForm({
     : [];
   const exactOrganizer = organizerNameMatches.find((o) => !o.archivedAt);
   const archivedOrganizer = exactOrganizer ? undefined : organizerNameMatches[0];
+  // Organizations created WITHOUT leaving this form (owner 2026-08-28). `organizations` is a
+  // server prop, so a new row could not appear in the dropdown until the page re-rendered — which
+  // is why creating one used to mean a new tab and a refresh, and why curators saw the new
+  // organization missing until they reloaded. Merging locally is what makes it appear instantly,
+  // and it is also what PROTECTS the half-filled listing: a router.refresh() would re-render this
+  // form from the server and take every unsaved field with it.
+  const [createdOrgs, setCreatedOrgs] = useState<Organization[]>([]);
+  // Two phases, deliberately separate: the form, then its confirmation. `justCreatedOrg` outlives
+  // `addingOrg` so the success message sits over the LISTING form, not over the org form.
+  const [addingOrg, setAddingOrg] = useState(false);
+  const [justCreatedOrg, setJustCreatedOrg] = useState<Organization | null>(null);
+
+  // ORGANIZER RESOLUTION FOR A PASTED LISTING (owner 2026-08-28). A payload names its organizer as
+  // TEXT, and the form needs an id — so an unmatched name used to surface only as a blocking
+  // warning telling the curator to go sort it out themselves. It now opens as the first thing they
+  // see, with the decision already laid out: reuse one of these, or create it.
+  //
+  // SIMILAR = containment either way, case-insensitive. That mirrors the server's resolve-or-create
+  // guard (CompetitionCurationService: `findByNameContainingIgnoreCase`, "no fuzzy/acronym matching,
+  // no auto-merge — a wrong merge is worse than a duplicate") and widens it by ONE step, matching
+  // the reverse direction too so "Mathematical Association of America (MAA)" surfaces the plain
+  // "Mathematical Association of America". Deliberately not fuzzier: these are candidates a human
+  // picks from, and a tempting-but-wrong suggestion is how two organizations become one by accident.
+  const similarOrganizers = extractedOrganizer
+    ? [...organizations, ...createdOrgs].filter((o) => {
+        if (o.archivedAt) return false;
+        const a = orgNameKey(o.name);
+        const b = orgNameKey(extractedOrganizer);
+        return a !== b && (a.includes(b) || b.includes(a));
+      })
+    : [];
+  // Opens on MOUNT, via a state initializer rather than an effect: the form is remounted per paste
+  // (`key={pasteCount}`), so "is this a fresh paste with an unresolved organizer" is knowable at
+  // first render and needs no post-render correction.
+  const [resolvingOrg, setResolvingOrg] = useState(
+    () => importing === false && extractedOrganizer !== null && exactOrganizer === undefined,
+  );
+
   const categoryOptions = categories.map((cat) => ({ value: cat.id, label: cat.name }));
-  const orgOptions = organizations.map((o) => ({ value: o.id, label: o.name }));
+  const orgOptions = [...organizations, ...createdOrgs].map((o) => ({
+    value: o.id,
+    label: o.name,
+  }));
   // Organizer is mandatory now (create, edit and import alike) — no "— none —" escape hatch. The
   // server rejects an empty organizer, and every listing carries one after migration 0012.
   //
@@ -287,26 +507,45 @@ export function CompetitionForm({
 
   // Team size only applies to team/both participation — gate the inputs (disabled fields aren't
   // submitted, so INDIVIDUAL never posts a stray team size).
-  const [participation, setParticipation] = useState(c?.participationMode ?? 'INDIVIDUAL');
+  // Cover image is REQUIRED on create (owner 2026-08-28): every card and detail header shows one,
+  // and the generated category art was meant as a graceful fallback for legacy rows, not as the
+  // normal outcome of adding a listing. Tracked in state because the required-ring reads it.
+  const [coverUrl, setCoverUrl] = useState(c?.logo ?? '');
+  const [participation, setParticipation] = useState(c?.participationMode ?? '');
   const teamDisabled = participation === 'INDIVIDUAL';
 
   // Cost drives the fee fields (item 17): a FREE competition has no entry fee, so the fee +
-  // currency inputs are hidden and dropped from the required-ring. Controlled so the toggle is live.
-  const [costType, setCostType] = useState(c?.costType ?? 'FREE');
+  // currency inputs go disabled. Controlled so the toggle is live. Neither input is in the
+  // required-ring any more — answering this dropdown is the whole requirement (owner 2026-09-01).
+  // NO PRE-CHOSEN VALUE on any of these (owner 2026-08-28). A dropdown that opens on "Free" or
+  // "Annual" looks like an answer, and after a paste it looks like the payload's answer — so a
+  // curator scrolls past a guess we made and publishes it as fact. Empty + a placeholder makes the
+  // unanswered state visible, and the required-ring below makes it unmissable.
+  const [costType, setCostType] = useState(c?.costType ?? '');
+  // Which axis the ORGANIZER states (0023). '' = not stated, and it is a legitimate saved value:
+  // a curator who cannot find the rule must be able to leave it unanswered rather than pick one.
+  const [eligibilityBasis, setEligibilityBasis] = useState<string>(c?.eligibilityBasis ?? '');
   const isFree = costType === 'FREE';
 
   // Delivery + scope feed the region picker's soft assist (item 22) — controlled for that only.
-  const [delivery, setDelivery] = useState(c?.delivery ?? 'IN_PERSON');
-  const [scopeLevel, setScopeLevel] = useState(editionSeed?.scopeLevel ?? 'NATIONAL');
+  const [delivery, setDelivery] = useState(c?.delivery ?? '');
+  const [recurrence, setRecurrence] = useState(c?.recurrence ?? '');
+  // A SET since `0024` (domain-model §7a.1) — a competition may accept more than one route, and
+  // the composites that used to fake that (SCHOOL_OR_CHAPTER, OPEN) are gone. Empty = unanswered,
+  // which the required-ring asks for: a pre-chosen "Individual" after a paste looks like the
+  // payload's answer, and this field decides whether a student can enter without their school.
+  const [entryPathways, setEntryPathways] = useState<string[]>(c?.entryPathways ?? []);
+
+  const [scopeLevel, setScopeLevel] = useState(editionSeed?.scopeLevel ?? '');
 
   // First-edition typed key dates (item 21, create only): repeatable rows posted as indexed
-  // fields (keydate_0_type…). Per row, "Date TBD" records the milestone without a date (R1-18) —
+  // fields (keydate_0_type…). Per row, "Date TBD" records the key date without a date (R1-18) —
   // the date/time inputs are then disabled (and not posted). First row defaults to REG_CLOSE.
   interface KeyDateRow {
     key: number;
     type: string;
     date: string;
-    /** Optional — set only for a milestone that spans days; posts as end-of-day in `timezone`. */
+    /** Optional — set only for a key date that spans days; posts as end-of-day in `timezone`. */
     endDate: string;
     time: string;
     timezone: string;
@@ -324,7 +563,7 @@ export function CompetitionForm({
     label: '',
   });
   // Import starts from the extracted timeline (already read into wall-clock rows in their own
-  // zones); create starts empty. EITHER WAY the four required milestones are topped up with blank
+  // zones); create starts empty. EITHER WAY the four required key dates are topped up with blank
   // rows, so a curator is never asked for a date whose row they'd have to add first.
   const [keyDateRows, setKeyDateRows] = useState<KeyDateRow[]>(() => {
     const seeded = seed?.keyDates.map((row, i) => ({ key: i, ...row })) ?? [];
@@ -358,10 +597,36 @@ export function CompetitionForm({
     question: string;
     answer: string;
   }
-  const [resourceRows, setResourceRows] = useState<ResourceRow[]>([
-    { key: 0, title: '', url: '', type: 'GUIDE', affiliate: false, image: '' },
-  ]);
-  const [faqRows, setFaqRows] = useState<FaqRow[]>([{ key: 0, question: '', answer: '' }]);
+  // Seeded from the payload when one suggested resources (the paste prompt asks for ~5 prep links
+  // plus 2-3 Amazon ones), otherwise the single blank row the editor has always opened with.
+  //
+  // ⚠ The blank is ONLY for the empty case (owner 2026-08-31). It used to be appended
+  // unconditionally "so the editor stays ready to type", which meant a payload that supplied five
+  // resources rendered six rows with the last one empty — it read as a row the extraction had
+  // failed to fill, and it counted against the partial-row check below. "Add resource" already
+  // covers wanting another.
+  const [resourceRows, setResourceRows] = useState<ResourceRow[]>(() => {
+    const seeded = (seed?.resources ?? []).map((r, i) => ({
+      key: i,
+      title: r.title,
+      url: r.url,
+      type: r.type,
+      affiliate: r.isAffiliate,
+      image: r.imageUrl,
+    }));
+    if (seeded.length > 0) return seeded;
+    return [{ key: 0, title: '', url: '', type: 'GUIDE', affiliate: false, image: '' }];
+  });
+  // Seeded like the resource rows, and blank ONLY when nothing was seeded — same reason.
+  const [faqRows, setFaqRows] = useState<FaqRow[]>(() => {
+    const seeded = (seed?.faqs ?? []).map((f, i) => ({
+      key: i,
+      question: f.question,
+      answer: f.answer,
+    }));
+    if (seeded.length > 0) return seeded;
+    return [{ key: 0, question: '', answer: '' }];
+  });
   const patchResourceRow = (key: number, patch: Partial<ResourceRow>) =>
     setResourceRows((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
   const patchFaqRow = (key: number, patch: Partial<FaqRow>) =>
@@ -425,7 +690,7 @@ export function CompetitionForm({
    */
   const isUndatedRow = (r: KeyDateRow) => r.tbd || r.date === '';
 
-  /** True when this row is the sole carrier of a required milestone type — removing it would
+  /** True when this row is the sole carrier of a required key date type — removing it would
    *  strand the form on an unsatisfiable requirement. */
   const isOnlyRequiredRow = (r: KeyDateRow) =>
     (REQUIRED_KEY_DATE_TYPES as readonly string[]).includes(r.type) &&
@@ -546,14 +811,26 @@ export function CompetitionForm({
     const v = ((c?.attributes as Record<string, unknown>) ?? {})[key];
     const first = Array.isArray(v) ? v[0] : undefined;
     if (typeof first !== 'string' || first === '') return '';
-    return allowed.includes(first) ? first : 'Other';
+    // "Other" was retired as an option (owner 2026-08-28) and no row stored it. An unrecognized
+    // value is therefore surfaced as UNANSWERED rather than silently bucketed — better the ring
+    // asks a curator than the field quietly claims something the data does not say.
+    return allowed.includes(first) ? first : '';
   };
+  // '' = UNANSWERED (no option selected, placeholder showing) — distinct from NOT_PROVIDED, which
+  // is a curator saying the page is silent. A stored value selects itself; an absent key leaves the
+  // field unanswered so the required-ring asks for it rather than letting a blank pass as a fact.
   const [eligibleCountry, setEligibleCountry] = useState(() =>
-    attrFirst('eligible_countries', ['United States', 'Canada']),
+    attrFirst('eligible_countries', [OPEN_TO_ALL, 'United States', 'Canada']),
   );
   const [citizenship, setCitizenship] = useState(() =>
-    attrFirst('citizenship_countries', ['United States']),
+    attrFirst('citizenship_countries', [OPEN_TO_ALL, 'United States']),
   );
+  const [studentStatus, setStudentStatus] = useState(() => {
+    const v = ((c?.attributes as Record<string, unknown>) ?? {}).student_status_required;
+    return typeof v === 'boolean' ? String(v) : '';
+  });
+  /** NOT_PROVIDED and '' both store nothing; only a real choice writes the key. */
+  const answeredAttr = (v: string) => v !== '' && v !== NOT_PROVIDED;
   const setAttrKey = (key: string, value: unknown) =>
     setAttributes((prev) => {
       const next = { ...prev };
@@ -574,6 +851,12 @@ export function CompetitionForm({
   // Active stepper step (create mode). Declared unconditionally (Rules of Hooks) — the first
   // step is always "basics"; ignored in edit mode, which renders every section at once.
   const [activeStepId, setActiveStepId] = useState('overview');
+  /**
+   * Set by a blocked submit click (owner 2026-08-30). Red only ever appears AFTER someone has
+   * asked to publish — painting a form red while it is still being filled in would flag every step
+   * the moment the page loads, which reads as broken rather than incomplete.
+   */
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   const enterRawMode = () => {
     setRawText(Object.keys(attributes).length ? JSON.stringify(attributes, null, 2) : '');
@@ -599,6 +882,9 @@ export function CompetitionForm({
 
   // Name + slug (item 18): the slug auto-mirrors the name until the admin edits the slug field.
   // Edit mode: the slug is permanent (SEO) — never auto-change it, so treat it as already "dirty".
+  // Seeded tag lists can exceed MAX_TAGS (a JSON fill bypasses the input's own cap), so the count
+  // is tracked here to gate submit — see TagsInput.onCountChange.
+  const [tagCount, setTagCount] = useState((c?.tags ?? []).length);
   const [name, setName] = useState(c?.name ?? '');
   const [slug, setSlug] = useState(c?.slug ?? '');
   // Auto-mirror only while creating: an edit keeps its permanent slug, and an import already has
@@ -610,18 +896,27 @@ export function CompetitionForm({
   // --- required-field tracking (drives the completion ring; server stays the real gate) ---
   // Text fields stay uncontrolled (defaultValue) with a change listener recording only whether
   // they're non-empty — enough for the ring without controlling every keystroke.
-  const [filled, setFilled] = useState({
-    description: Boolean(c?.description),
-    officialUrl: Boolean(c?.officialUrl),
-    cycleLabel: Boolean(editionSeed?.cycleLabel),
-    registrationUrl: Boolean(editionSeed?.registrationUrl),
-    entryFee: Boolean(editionSeed?.entryFee),
-    currency: Boolean(editionSeed?.currency),
-    prizeSummary: Boolean(editionSeed?.prizeSummary),
+  // These stay UNCONTROLLED inputs (defaultValue) with a change listener. What changed
+  // 2026-08-30 is that the listener records the VALUE, not a non-empty boolean, so the ring's
+  // `ok` can mean VALID rather than merely "not blank" — a 12,000-character description and a URL
+  // of `asdf` are both non-empty, and neither one should complete its step.
+  const [text, setText] = useState({
+    description: c?.description ?? '',
+    officialUrl: c?.officialUrl ?? '',
+    registrationUrl: editionSeed?.registrationUrl ?? '',
+    entryFee: editionSeed?.entryFee ?? '',
+    // USD unless the payload said otherwise (owner 2026-09-01): the catalog is US-facing, and the
+    // server rejects a fee whose currency is missing, so a blank box was a trap rather than a
+    // question. Prefilled, not locked — it is still an editable 3-letter box.
+    currency: editionSeed?.currency ?? 'USD',
+    teamSizeMin: c?.teamSizeMin != null ? String(c.teamSizeMin) : '',
+    teamSizeMax: c?.teamSizeMax != null ? String(c.teamSizeMax) : '',
   });
-  type FilledKey = keyof typeof filled;
-  const mark = (key: FilledKey) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    setFilled((f) => ({ ...f, [key]: e.target.value.trim() !== '' }));
+  type TextKey = keyof typeof text;
+  const mark = (key: TextKey) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setText((t) => ({ ...t, [key]: e.target.value }));
+  // Derived from the awards editor rather than typed into, so it stays a flag.
+  const [hasPrizeLine, setHasPrizeLine] = useState(Boolean(editionSeed?.prizeSummary));
 
   // --- eligibility (grade + age dropdowns; min ≤ max) ---
   // The dropdowns only offer valid grades/ages, so the one thing left to guard is that a chosen
@@ -644,50 +939,300 @@ export function CompetitionForm({
     minGrade: orderErr('minGrade', 'maxGrade', 'Min grade can’t be above max grade.'),
     minAge: orderErr('minAge', 'maxAge', 'Min age can’t be above max age.'),
   };
-  const eligibilityValid = !eligErrors.minGrade && !eligErrors.minAge;
+  // Which ranges the chosen basis asks for; the rest go disabled (see BASIS_ASKS_FOR).
+  const asksFor = BASIS_ASKS_FOR[eligibilityBasis] ?? { grades: true, ages: true };
+  // Mirrors the server's `isEligibilityBasisBacked`: claiming an axis with no range on it would be
+  // a 400 on submit, and — worse — a listing asserting an eligibility it cannot show. Caught here
+  // so it reads as a field error rather than a failed save.
+  const basisUnbacked =
+    (asksFor.grades && elig.minGrade === '' && elig.maxGrade === '') ||
+    (asksFor.ages && elig.minAge === '' && elig.maxAge === '');
+  const eligibilityValid = !eligErrors.minGrade && !eligErrors.minAge && !basisUnbacked;
+
+  /**
+   * Per-field messages, server-mirrored (`lib/form-rules`). Undefined = nothing to say.
+   *
+   * Required-ness is NOT expressed here for most fields: an empty required field is reported by the
+   * ring and, after a failed submit, by the step turning red — putting "X is required" under every
+   * blank control on first paint would shout at a form nobody has filled in yet. These messages are
+   * for a value that IS there and is wrong.
+   */
+  const fieldErrors = {
+    name: textRule(name, { max: LIMITS.name, label: 'Name' }),
+    slug: slugRule(slug),
+    description: textRule(text.description, { max: LIMITS.description, label: 'Description' }),
+    officialUrl: urlRule(text.officialUrl, { max: LIMITS.officialUrl, label: 'Official URL' }),
+    coverUrl: urlRule(coverUrl, { max: LIMITS.logo, label: 'Cover image' }),
+    registrationUrl: urlRule(text.registrationUrl, {
+      max: LIMITS.registrationUrl,
+      label: 'Registration URL',
+    }),
+    entryFee: moneyRule(text.entryFee, { label: 'Entry fee' }),
+    // `min`/`max` on a number input only stop the SPINNERS — a typed or seeded value sails past
+    // them, so the range needs stating as a rule too (server has @Min(1) and no upper bound).
+    teamSizeMin: intRule(text.teamSizeMin, { ...BOUNDS.teamSize, label: 'Minimum team size' }),
+    teamSizeMax: intRule(text.teamSizeMax, { ...BOUNDS.teamSize, label: 'Maximum team size' }),
+    teamSizeRange: rangeRule(text.teamSizeMin, text.teamSizeMax, 'team size'),
+    currency: currencyRule(text.currency),
+  };
+
+  /**
+   * HALF-FILLED rows (owner 2026-08-31). A row with SOME of its required fields but not all is
+   * silently DROPPED on save — `buildResources`/`buildFaqs` skip any row missing either half — so a
+   * curator who typed a title and no URL lost the row without being told. These block submit now.
+   *
+   * An ENTIRELY empty row is not half-filled: it is the editor's "ready to type" affordance, drops
+   * out harmlessly, and must never block. The test is therefore "touched but incomplete", not
+   * "incomplete".
+   */
+  const has = (v: string) => v.trim() !== '';
+  const partialResourceRows = resourceRows.filter(
+    (r) => (has(r.title) || has(r.url) || has(r.image)) && !(has(r.title) && has(r.url)),
+  );
+  const partialFaqRows = faqRows.filter(
+    (f) => (has(f.question) || has(f.answer)) && !(has(f.question) && has(f.answer)),
+  );
+  /**
+   * A key date row always has a type, so "touched" means it carries a date, an end date or a
+   * label. Such a row must resolve to a real date or an explicit TBD — the R1-18 encoding — or it
+   * posts nothing and the milestone vanishes.
+   */
+  const partialKeyDateRows = keyDateRows.filter(
+    (r) => (has(r.date) || has(r.endDate) || has(r.label)) && !r.tbd && !has(r.date),
+  );
 
   const orgChosen = organizerOrgId !== '' && organizerOrgId !== ADD_ORG;
-  // A required milestone is satisfied by a row of that type carrying either a real date or an
+  // A required key date is satisfied by a row of that type carrying either a real date or an
   // explicit TBD — "we checked and it isn't published yet" is a complete answer, an untouched
   // blank row is not. This supersedes the old single "Deadline" check: REG_CLOSE and
   // SUBMISSION_DUE are now each required outright, so the server's either/or gate is met by
   // construction.
   const keyDateOk = (type: string) =>
     keyDateRows.some((r) => r.type === type && (r.tbd || r.date !== ''));
+  /**
+   * A SECOND registration open/close (owner 2026-08-30, narrowed 2026-08-31). Flagged, not blocked.
+   *
+   * ⚠ Narrowed from "any required type": SUBMISSION_DUE and RESULTS repeat legitimately — per
+   * division, or per round — and flagging those was wrong. Only the registration pair is a
+   * singleton (see SINGLETON_KEY_DATE_TYPES).
+   *
+   * Two reasons, one live and one ahead of us. Live: `nextDeadline` is `min(starts_at)` over the
+   * REG_CLOSE rows, so a duplicate silently makes the EARLIER date the listing's deadline — an
+   * early-bird cutoff would masquerade as the real one. (Early-bird belongs on a CUSTOM row, which
+   * is how the seeded data already does it.) Ahead: `docs/timeline-model-plan.md` merges REG_OPEN +
+   * REG_CLOSE into one REGISTRATION row by pairing them per edition, which is only unambiguous
+   * while there is at most one of each — true of all 52 rows today, and worth keeping true through
+   * the seeding run.
+   *
+   * Not a hard block: the curator is better placed to judge an unusual timeline than this rule is.
+   */
+  const duplicateRequiredType = (row: KeyDateRow) =>
+    SINGLETON_KEY_DATE_TYPES.includes(row.type) &&
+    keyDateRows.filter((o) => o.type === row.type).length > 1;
+  /**
+   * Half-filled rows gate SUBMIT but are deliberately NOT ring entries. The ring counts FIELDS a
+   * curator has to fill; these are conditions satisfied by doing nothing, so counting them inflated
+   * the denominator ("27 required" became "30") with rows that are already fine on a blank form.
+   * They behave like `eligibilityValid`: they can block, and they redden their step, without
+   * pretending to be work items.
+   *
+   * Phrased "finish or clear" because both are valid fixes — the point is that the curator chooses,
+   * rather than the save choosing for them by silently dropping the row.
+   */
+  const rowIssues = [
+    {
+      key: 'partialResources',
+      label: 'Finish or clear the part-filled prep resource',
+      stepId: 'extras',
+      ok: partialResourceRows.length === 0,
+    },
+    {
+      key: 'partialFaqs',
+      label: 'Finish or clear the part-filled FAQ',
+      stepId: 'extras',
+      ok: partialFaqRows.length === 0,
+    },
+    {
+      key: 'tagLimit',
+      label: `Keep tags to ${MAX_TAGS} — a filled payload can arrive with more`,
+      stepId: 'overview',
+      /**
+       * NOT enforced on EDIT (owner principle, two lines below `requiredFields`: "legacy listings
+       * still save"). The input caps typing at MAX_TAGS, so an edit can never ADD past it — the
+       * only way to be over here is stored data that predates the cap, and refusing to save an
+       * unrelated description fix until someone prunes tags they didn't touch is the exact
+       * hostage-taking that rule exists to prevent. Create and import DO block: there the list is
+       * being chosen, not inherited.
+       */
+      ok: editing || tagCount <= MAX_TAGS,
+    },
+    {
+      key: 'partialKeyDates',
+      label: 'Give every dated milestone a date or mark it TBD',
+      stepId: 'timeline',
+      ok: partialKeyDateRows.length === 0,
+    },
+  ];
   // Create front-loads everything the public card/detail shows (item 5/9): the listing is
   // complete-by-default. Edit keeps only the base spine required, so legacy listings still save.
   // Import uses the SAME full checklist as create, but only to SHOW what a curator would have to
   // chase — see `blockingFields` below for what actually gates the button.
   const requiredFields = editing
     ? [
-        { key: 'name', label: 'Name', stepId: 'overview', ok: name.trim() !== '' },
+        { key: 'name', label: 'Name', stepId: 'overview', ok: isComplete(name, fieldErrors.name) },
         { key: 'category', label: 'Category', stepId: 'overview', ok: categoryId !== '' },
         { key: 'organizer', label: 'Organizer', stepId: 'overview', ok: orgChosen },
       ]
     : [
-        { key: 'name', label: 'Name', stepId: 'overview', ok: name.trim() !== '' },
+        { key: 'name', label: 'Name', stepId: 'overview', ok: isComplete(name, fieldErrors.name) },
         { key: 'category', label: 'Category', stepId: 'overview', ok: categoryId !== '' },
         { key: 'organizer', label: 'Organizer', stepId: 'overview', ok: orgChosen },
-        { key: 'description', label: 'Description', stepId: 'overview', ok: filled.description },
-        { key: 'officialUrl', label: 'Official URL', stepId: 'overview', ok: filled.officialUrl },
+        {
+          key: 'description',
+          label: 'Description',
+          stepId: 'overview',
+          ok: isComplete(text.description, fieldErrors.description),
+        },
+        {
+          key: 'officialUrl',
+          label: 'Official URL',
+          stepId: 'overview',
+          ok: isComplete(text.officialUrl, fieldErrors.officialUrl),
+        },
+        {
+          key: 'cover',
+          label: 'Cover image',
+          stepId: 'overview',
+          ok: isComplete(coverUrl, fieldErrors.coverUrl),
+        },
         {
           key: 'registrationUrl',
           label: 'Registration URL',
           stepId: 'administration',
-          ok: filled.registrationUrl,
+          ok: isComplete(text.registrationUrl, fieldErrors.registrationUrl),
         },
-        ...(isFree
-          ? []
-          : [
+        // ADMINISTRATION IS REQUIRED THROUGHOUT (owner 2026-08-28), except the two contact fields
+        // and team size. These five are all @NotNull server-side, so an empty one is a 400 on
+        // submit either way — listing them turns that into a labelled row in the ring instead of a
+        // failure after the fact, which is the whole reason the enum defaults could be dropped.
+        // ANSWERING THE DROPDOWN IS THE WHOLE REQUIREMENT (owner 2026-09-01). Free or Paid both
+        // complete this row; the AMOUNT and CURRENCY are never required. PAID used to add two more
+        // required rows, which blocked the ring on a fee a competition page routinely does not
+        // publish — and the honest answer there is "paid, amount not stated", not a made-up number.
+        // Both fields still VALIDATE what is typed (see fieldErrors on the FormField below), and
+        // the server's own rule is only that a fee needs a currency — which the USD prefill
+        // guarantees. A curator who knows the fee still types it; one who doesn't is not stuck.
+        { key: 'costType', label: 'Entry fee', stepId: 'administration', ok: costType !== '' },
+        { key: 'delivery', label: 'Delivery', stepId: 'administration', ok: delivery !== '' },
+        {
+          key: 'participation',
+          label: 'Participation',
+          stepId: 'administration',
+          ok: participation !== '',
+        },
+        {
+          key: 'scopeLevel',
+          label: 'Scope level',
+          stepId: 'administration',
+          ok: scopeLevel !== '',
+        },
+        { key: 'recurrence', label: 'Recurrence', stepId: 'administration', ok: recurrence !== '' },
+        {
+          key: 'eligibilityBasis',
+          label: 'What the organizer provides',
+          stepId: 'eligibility',
+          ok: eligibilityBasis !== '',
+        },
+        // The three bag-backed eligibility gates. "Not provided" SATISFIES them — it is an answer
+        // ("I read the page and it is silent"), and the listing shows it as one. What does not
+        // satisfy them is '': nobody has looked. That distinction is the entire point of the
+        // option, and it is why these read off form state rather than the stored bag, which
+        // cannot tell the two apart.
+        {
+          key: 'studentStatus',
+          label: 'Student status',
+          stepId: 'eligibility',
+          ok: studentStatus !== '',
+        },
+        {
+          key: 'eligibleCountries',
+          label: 'Eligible countries',
+          stepId: 'eligibility',
+          ok: eligibleCountry !== '',
+        },
+        {
+          key: 'citizenship',
+          label: 'Citizenship',
+          stepId: 'eligibility',
+          ok: citizenship !== '',
+        },
+        {
+          key: 'entryPathway',
+          label: 'Entry pathway',
+          stepId: 'eligibility',
+          ok: entryPathways.length > 0,
+        },
+        // Only the axis the curator said the organizer provides. The ring is where "still missing"
+        // lives on this form, so the range requirement reads there instead of reddening a field
+        // nobody has reached yet.
+        ...(asksFor.grades
+          ? [
               {
-                key: 'entryFee',
-                label: 'Entry fee',
-                stepId: 'administration',
-                ok: filled.entryFee,
+                key: 'gradeRange',
+                label: 'Grade range',
+                stepId: 'eligibility',
+                ok: elig.minGrade !== '' || elig.maxGrade !== '',
               },
-              { key: 'currency', label: 'Currency', stepId: 'administration', ok: filled.currency },
-            ]),
-        { key: 'prize', label: 'Awards', stepId: 'awards', ok: filled.prizeSummary },
+            ]
+          : []),
+        ...(asksFor.ages
+          ? [
+              {
+                key: 'ageRange',
+                label: 'Age range',
+                stepId: 'eligibility',
+                ok: elig.minAge !== '' || elig.maxAge !== '',
+              },
+            ]
+          : []),
+        {
+          key: 'evaluationType',
+          label: 'Evaluation types',
+          stepId: 'judging',
+          ok: evaluationTypes.length > 0,
+        },
+        {
+          key: 'judgingCriteria',
+          label: 'What judges look for',
+          stepId: 'judging',
+          // Bag-backed, so it is read from the stored value rather than the control — equally
+          // satisfiable in raw-JSON mode, where the textarea is not rendered.
+          ok: Array.isArray(attributes.judging_criteria)
+            ? attributes.judging_criteria.length > 0
+            : typeof attributes.judging_criteria === 'string' &&
+              attributes.judging_criteria.trim() !== '',
+        },
+        { key: 'prize', label: 'Awards', stepId: 'awards', ok: hasPrizeLine },
+        // COMPLETE rows only, counted the same way the submit path counts them (buildResources /
+        // buildFaqs skip a row missing either half), so the ring can never say "done" on rows that
+        // will be dropped on save. ⚠ A resource's preview image is NOT part of complete — most
+        // resources never get one, and the card falls back to per-type art by design.
+        {
+          key: 'resources',
+          label: `Prep resources (${MIN_EXTRAS})`,
+          stepId: 'extras',
+          ok:
+            resourceRows.filter((r) => r.title.trim() !== '' && r.url.trim() !== '').length >=
+            MIN_EXTRAS,
+        },
+        {
+          key: 'faqs',
+          label: `FAQ entries (${MIN_EXTRAS})`,
+          stepId: 'extras',
+          ok:
+            faqRows.filter((f) => f.question.trim() !== '' && f.answer.trim() !== '').length >=
+            MIN_EXTRAS,
+        },
         { key: 'region', label: 'Region', stepId: 'administration', ok: regionIds.length > 0 },
         ...REQUIRED_KEY_DATE_TYPES.map((type) => ({
           key: `keydate_${type}`,
@@ -707,7 +1252,8 @@ export function CompetitionForm({
   const blockingFields = importing
     ? requiredFields.filter((r) => IMPORT_BLOCKING_KEYS.includes(r.key))
     : requiredFields;
-  const blockingRemaining = blockingFields.filter((r) => !r.ok);
+  const rowIssuesRemaining = rowIssues.filter((r) => !r.ok);
+  const blockingRemaining = [...blockingFields.filter((r) => !r.ok), ...rowIssuesRemaining];
   const submittable = blockingRemaining.length === 0 && eligibilityValid;
   // On create every listed field carries a visible asterisk; on edit only the spine fields
   // (name/slug/category/organizer) do — organizer is now mandatory in edit mode too. Import shows
@@ -747,7 +1293,7 @@ export function CompetitionForm({
               given breakpoint — no hard-coded "left is taller" assumption to go stale. */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex h-full flex-col gap-4">
-              <FormField label="Name" required>
+              <FormField label="Name" required error={fieldErrors.name}>
                 <Input
                   name="name"
                   value={name}
@@ -774,13 +1320,16 @@ export function CompetitionForm({
                 required={req}
                 hintAs="icon"
                 hint="Full write-up (About tab) — its first ~300 chars also become the card blurb. Write our own; never paste theirs."
+                error={fieldErrors.description}
               >
                 <Textarea
                   name="description"
                   defaultValue={c?.description ?? ''}
                   minLength={20}
                   maxLength={10000}
-                  rows={3}
+                  // 3 → 2 (owner 2026-08-28, "decrease the height a bit"). Still multi-line and
+                  // still drag-resizable for the long write-up this field takes.
+                  rows={2}
                   // Textarea's shared min-h-24 floor was overriding `rows`, so the box couldn't get
                   // shorter. Released here — it now sizes to its rows, and still scrolls/resizes for
                   // the long prose this field takes.
@@ -794,7 +1343,7 @@ export function CompetitionForm({
                 hintAs="icon"
                 hint="type a tag and press Enter or +. Paste a comma-separated list to add several."
               >
-                <TagsInput name="tags" defaultValue={c?.tags ?? []} />
+                <TagsInput name="tags" defaultValue={c?.tags ?? []} onCountChange={setTagCount} />
               </FormField>
             </div>
             <div className="flex h-full flex-col gap-4">
@@ -817,9 +1366,11 @@ export function CompetitionForm({
                   value={organizerOrgId}
                   onValueChange={(v) => {
                     if (v === ADD_ORG) {
-                      // Open the add-organization form in a new tab so the in-progress listing isn't
-                      // lost; refresh this page afterward to pick the new org from the list.
-                      window.open('/admin/organizations/new', '_blank', 'noopener,noreferrer');
+                      // Opens OVER this form rather than in a new tab (owner 2026-08-28). The tab
+                      // kept the listing safe only by leaving it behind: the curator then had to
+                      // come back and reload, which lost the listing anyway. A modal never unmounts
+                      // this form, so every field typed so far is still here afterward.
+                      setAddingOrg(true);
                       return;
                     }
                     setOrganizerOrgId(v);
@@ -832,6 +1383,7 @@ export function CompetitionForm({
                 required={req}
                 hintAs="icon"
                 hint="the competition’s home page."
+                error={fieldErrors.officialUrl}
               >
                 <Input
                   name="officialUrl"
@@ -843,16 +1395,24 @@ export function CompetitionForm({
                   onChange={mark('officialUrl')}
                 />
               </FormField>
+              {/* ALIGNED TO THE LEFT COLUMN'S THIRD FIELD (owner 2026-08-28). `mt-auto` pinned only
+                  the BOTTOM: the right column is naturally shorter, so the slack collected above
+                  the box and its top sat ~19px below the Description it sits beside. Absorbing the
+                  leftover row instead (`flex-1` + the JUDGING_FIELD trick, so the CONTROL takes the
+                  space rather than the label) pins BOTH ends — the box now starts level with the
+                  Description textarea and still finishes level with the Tags input, at any height
+                  either column happens to take. */}
               <FormField
-                className="mt-auto"
+                className={cn('flex-1', JUDGING_FIELD)}
                 label="Cover image"
                 labelAsText
+                required={req}
                 hintAs="icon"
-                hint="Shown on the listing card and the detail header. Falls back to generated category art when empty."
+                hint="Shown on the listing card and the detail header."
               >
                 {/* w-full min-w-0: a grid item defaults to min-width:auto, which let the drop
                   zone size itself from its content height and overflow the column. */}
-                <div className="w-full min-w-0">
+                <div className="h-full min-h-0 w-full min-w-0">
                   <ImageUpload
                     compact
                     // A FIXED height (h-36 = 144px, the listing card cover's real pixel height),
@@ -861,11 +1421,17 @@ export function CompetitionForm({
                     // every breakpoint and the two columns only happened to line up at some of
                     // them. Width still fills like every other control; only the exact card
                     // PROPORTION is given up, and the height kept is the one the card uses.
-                    dropZoneClassName="h-36 w-full"
+                    // The field takes whatever height the row gives it and the drop zone absorbs
+                    // the slack (`flex-1`), which is what keeps the URL row and upload notes from
+                    // changing the column's height: they appear INSIDE the field's box and the
+                    // zone shrinks to make room, so Tags opposite never moves (owner 2026-08-28).
+                    className="flex h-full min-h-0 flex-col"
+                    dropZoneClassName="min-h-0 w-full flex-1"
                     name="logo"
                     defaultValue={c?.logo}
                     uploadEnabled
                     onSelectFile={uploadCoverImage}
+                    onChange={setCoverUrl}
                   />
                 </div>
               </FormField>
@@ -880,7 +1446,7 @@ export function CompetitionForm({
     {
       id: 'administration',
       label: 'Administration',
-      meta: 'Sign-up · cost · delivery',
+      meta: 'Sign-up · entry fee · delivery',
       // NOT hideOnEdit: delivery/cost/recurrence are competition-level and must stay editable.
       // The seasonal fields inside (location, fee, sign-up link, scope) carry their own !editing
       // guards — those are edited per-edition on the Editions tab.
@@ -897,6 +1463,7 @@ export function CompetitionForm({
               required
               hintAs="icon"
               hint="where entrants sign up."
+              error={fieldErrors.registrationUrl}
             >
               <Input
                 name="edition_registrationUrl"
@@ -909,11 +1476,17 @@ export function CompetitionForm({
               />
             </FormField>
           )}
-          <FormField label="Cost" labelAsText>
+          <FormField
+            label="Entry fee"
+            labelAsText
+            required={req}
+            error={isFree ? undefined : (fieldErrors.entryFee ?? fieldErrors.currency)}
+          >
             <div className="flex items-start gap-2">
               <Select
                 name="costType"
                 options={enumOptions(COST_TYPES)}
+                placeholder="Free or paid…"
                 value={costType}
                 onValueChange={setCostType}
                 className="w-32 shrink-0"
@@ -923,9 +1496,9 @@ export function CompetitionForm({
                 // (owner 2026-08-23): the row keeps its shape, and a price typed before someone
                 // flips to Free survives the flip back. Disabled controls are omitted from the
                 // submission, so FREE still posts no fee — same payload the unmounted version
-                // sent. `filled` needs no resetting for the same reason: the values persist, so
-                // the flags stay true to them (and entryFee/currency drop out of
-                // `requiredFields` entirely while FREE).
+                // sent. `text` needs no resetting for the same reason: the values persist, so the
+                // rules stay true to them (and entryFee/currency drop out of `requiredFields`
+                // entirely while FREE, so a stale amount can never block a free listing).
                 <>
                   <Input
                     name="edition_entryFee"
@@ -942,7 +1515,7 @@ export function CompetitionForm({
                   />
                   <Input
                     name="edition_currency"
-                    defaultValue={editionSeed?.currency ?? ''}
+                    defaultValue={editionSeed?.currency ?? 'USD'}
                     maxLength={3}
                     pattern="[A-Za-z]{3}"
                     placeholder="USD"
@@ -955,10 +1528,11 @@ export function CompetitionForm({
               )}
             </div>
           </FormField>
-          <FormField label="Delivery">
+          <FormField label="Delivery" required={req}>
             <Select
               name="delivery"
               options={enumOptions(DELIVERIES)}
+              placeholder="Select…"
               value={delivery}
               onValueChange={(v) => {
                 setDelivery(v);
@@ -997,15 +1571,25 @@ export function CompetitionForm({
               qualifies, and they belong beside delivery. Team size only applies to team/both, so
               the inputs stay disabled otherwise — disabled fields aren't submitted, so
               INDIVIDUAL never posts a stray size. */}
-          <FormField label="Participation">
+          <FormField label="Participation" required={req}>
             <Select
               name="participationMode"
               options={enumOptions(PARTICIPATION_MODES)}
+              placeholder="Select…"
               value={participation}
               onValueChange={setParticipation}
             />
           </FormField>
-          <FormField label="Team size" hintAs="icon" hint="team competitions only">
+          <FormField
+            label="Team size"
+            hintAs="icon"
+            hint="team competitions only"
+            error={
+              teamDisabled
+                ? undefined
+                : (fieldErrors.teamSizeMin ?? fieldErrors.teamSizeMax ?? fieldErrors.teamSizeRange)
+            }
+          >
             <div className="flex items-center gap-2">
               <Input
                 name="teamSizeMin"
@@ -1013,7 +1597,9 @@ export function CompetitionForm({
                 aria-label="Team size (min)"
                 placeholder="min"
                 defaultValue={c?.teamSizeMin ?? ''}
-                min={1}
+                min={BOUNDS.teamSize.min}
+                max={BOUNDS.teamSize.max}
+                onChange={mark('teamSizeMin')}
                 disabled={teamDisabled}
               />
               <span aria-hidden="true" className="text-muted">
@@ -1025,7 +1611,9 @@ export function CompetitionForm({
                 aria-label="Team size (max)"
                 placeholder="max"
                 defaultValue={c?.teamSizeMax ?? ''}
-                min={1}
+                min={BOUNDS.teamSize.min}
+                max={BOUNDS.teamSize.max}
+                onChange={mark('teamSizeMax')}
                 disabled={teamDisabled}
               />
             </div>
@@ -1034,22 +1622,26 @@ export function CompetitionForm({
           {!editing && (
             <FormField
               label="Scope level"
+              required={req}
               hintAs="icon"
               hint="the season's overall reach — a regionals→nationals program is National."
             >
               <Select
                 name="edition_scopeLevel"
                 options={enumOptions(SCOPE_LEVELS)}
+                placeholder="Select…"
                 value={scopeLevel}
                 onValueChange={setScopeLevel}
               />
             </FormField>
           )}
-          <FormField label="Recurrence">
+          <FormField label="Recurrence" required={req}>
             <Select
               name="recurrence"
               options={enumOptions(RECURRENCES)}
-              defaultValue={c?.recurrence ?? 'ANNUAL'}
+              placeholder="Select…"
+              value={recurrence}
+              onValueChange={setRecurrence}
             />
           </FormField>
           {/* Row 5 — the organizer's published contact points (owner 2026-08-25). Bag keys
@@ -1110,9 +1702,63 @@ export function CompetitionForm({
         // other requirements) carry the structured-mode gate; in raw-JSON mode they drop out and
         // the rest repacks, so the table above holds for the create/import form specifically.
         <div className="grid gap-4 sm:grid-cols-2">
+          {/* Row 0 — WHICH AXIS IS THE RULE (0023, blueprints decision 99). Full width and first,
+              because it governs the two ranges under it: whichever axis is not stated becomes a
+              derived search range and is never published as a rule. Leaving it unanswered is
+              allowed and honest — the listing then reads "Not stated" rather than "All grades". */}
+          <FormField
+            label="What does the organizer provide?"
+            labelAsText
+            required={req}
+            className="sm:col-span-2"
+            hintAs="icon"
+            hint="the axis the official page actually gives, and it decides which range you fill in below. Pick Ages when the page says “ages 13–18” even if you could work out the grades — a range we derived is used for filtering and is never shown as the rule. Leave it unanswered if the page states no eligibility at all; the ring will keep naming it."
+          >
+            {/* Five equal BOXES on one line (owner 2026-08-28) — a dropdown hid the choice behind a
+                click on the field that governs the two below it, and loose radios did not read as
+                part of the form. Each option wears the field wardrobe (h-10, --radius-field,
+                border-border, bg-background) so the row sits in the grid like an Input or a Select
+                would; the selected one inverts to the primary fill.
+                `grid-cols-4` not flex: "all boxes same size" is the ask, and equal TRACKS give
+                that regardless of label length, where flex would size each box to its own text.
+                Still a real radiogroup underneath — arrow keys, one tab stop, and it posts under
+                `eligibilityBasis` exactly as before. */}
+            <RadioGroup
+              name="eligibilityBasis"
+              value={eligibilityBasis}
+              onValueChange={setEligibilityBasis}
+              aria-label="What does the organizer provide?"
+              className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+            >
+              {ELIGIBILITY_BASIS_OPTIONS.map((o) => (
+                <Radio
+                  key={o.value}
+                  value={o.value}
+                  label={o.label}
+                  hideControl
+                  className={cn(
+                    'h-10 items-center justify-center rounded-[var(--radius-field)] border px-2 text-center text-sm transition-colors',
+                    eligibilityBasis === o.value
+                      ? 'border-primary bg-primary font-medium text-primary-foreground'
+                      : 'border-border bg-background text-foreground hover:border-muted/50',
+                  )}
+                />
+              ))}
+            </RadioGroup>
+          </FormField>
           {/* Row 1 — the two ranges. Min+max share a cell so the row reads as two bands, not
               four loose selects; the range error hangs off the cell that owns both ends. */}
-          <FormField label="Grades" labelAsText error={eligErrors.minGrade}>
+          {/* Error = a RANGE ORDER mistake only (min above max). "Not filled in yet" is NOT an
+              error and no longer renders as one (owner 2026-08-28): the field would open red on a
+              form the curator has not started. What is missing belongs in the readiness ring,
+              which already lists it by name, and what is always true belongs in the ⓘ. */}
+          <FormField
+            label="Grades"
+            labelAsText
+            error={eligErrors.minGrade}
+            hintAs="icon"
+            hint="required when the organizer provides grades — leave the row alone otherwise; it is disabled unless the choice above asks for it."
+          >
             <div className="flex items-center gap-2">
               <Select
                 name="minGrade"
@@ -1120,6 +1766,7 @@ export function CompetitionForm({
                 value={elig.minGrade}
                 onValueChange={setEligValue('minGrade')}
                 aria-label="Min grade"
+                disabled={!asksFor.grades}
                 className="min-w-0 flex-1"
               />
               <span aria-hidden="true" className="text-muted">
@@ -1131,11 +1778,18 @@ export function CompetitionForm({
                 value={elig.maxGrade}
                 onValueChange={setEligValue('maxGrade')}
                 aria-label="Max grade"
+                disabled={!asksFor.grades}
                 className="min-w-0 flex-1"
               />
             </div>
           </FormField>
-          <FormField label="Ages" labelAsText error={eligErrors.minAge}>
+          <FormField
+            label="Ages"
+            labelAsText
+            error={eligErrors.minAge}
+            hintAs="icon"
+            hint="required when the organizer provides ages — leave the row alone otherwise; it is disabled unless the choice above asks for it."
+          >
             <div className="flex items-center gap-2">
               <Select
                 name="minAge"
@@ -1143,6 +1797,7 @@ export function CompetitionForm({
                 value={elig.minAge}
                 onValueChange={setEligValue('minAge')}
                 aria-label="Min age"
+                disabled={!asksFor.ages}
                 className="min-w-0 flex-1"
               />
               <span aria-hidden="true" className="text-muted">
@@ -1154,6 +1809,7 @@ export function CompetitionForm({
                 value={elig.maxAge}
                 onValueChange={setEligValue('maxAge')}
                 aria-label="Max age"
+                disabled={!asksFor.ages}
                 className="min-w-0 flex-1"
               />
             </div>
@@ -1164,14 +1820,29 @@ export function CompetitionForm({
               yes/no question. Sentences belong in Other eligibility requirements (0017). */}
           {structured && (
             <FormField
-              label="Student status required"
+              label="Student status"
+              required={req}
               hintAs="icon"
-              hint="tick when entrants must be enrolled students. The exact wording of the rule goes in Other eligibility requirements below."
+              hint="whether entrants must be enrolled students. The exact wording of the rule goes in Other eligibility requirements below."
             >
-              <Checkbox
-                checked={attributes.student_status_required === true}
-                onChange={(e) => setAttrKey('student_status_required', e.target.checked)}
-                label={<span className="text-sm">Must be an enrolled student</span>}
+              {/* A dropdown, not a checkbox (owner 2026-08-28). A checkbox has two states and the
+                  field has three: required, NOT required, and nobody has checked — and an unticked
+                  box silently claimed the middle one. The stored value is still the `0022` BOOLEAN;
+                  the empty option removes the key entirely, which is how the Eligibility tab knows
+                  to omit the row rather than print "Not required" on a listing nobody read. */}
+              {/* No `name`: the value's home is the attributes bag (setAttrKey), which is
+                  serialized on submit. A named control would post a second, ignored copy — the
+                  other bag-backed fields in attributes-fields.tsx are nameless for the same
+                  reason. */}
+              <Select
+                options={STUDENT_STATUS_OPTIONS}
+                placeholder="Select…"
+                value={studentStatus}
+                onValueChange={(v) => {
+                  setStudentStatus(v);
+                  setAttrKey('student_status_required', answeredAttr(v) ? v === 'true' : undefined);
+                }}
+                aria-label="Student status"
               />
             </FormField>
           )}
@@ -1189,11 +1860,25 @@ export function CompetitionForm({
             </FormField>
           )}
           {/* Row 3 — how they enter, then the citizenship gate. */}
-          <FormField label="Entry pathway">
+          <FormField
+            label="Entry pathway"
+            required={req}
+            hintAs="icon"
+            hint="how an entrant signs up. Tick every route the competition accepts — a listing open to both school and chapter entry is both boxes, and all three is open to all."
+          >
+            {/* A DROPDOWN that still selects many (owner 2026-08-28) — `Select multiple`, not a
+                second component: options toggle, the popover stays open, and the trigger reads the
+                chosen routes joined. It posts through a native `<select multiple>` under one name,
+                so `multi(form, 'entryPathways')` reads it unchanged. The checkbox-card group this
+                replaced cost three rows of height on a step that already has eight fields. */}
             <Select
-              name="entryPathway"
-              options={enumOptions(ENTRY_PATHWAYS)}
-              defaultValue={c?.entryPathway ?? 'INDIVIDUAL'}
+              name="entryPathways"
+              multiple
+              options={ENTRY_PATHWAY_OPTIONS}
+              values={entryPathways}
+              onValuesChange={setEntryPathways}
+              placeholder="Select…"
+              aria-label="Entry pathway"
             />
           </FormField>
           {/* The two country gates are CLOSED dropdowns rather than the old comma-separated text
@@ -1207,16 +1892,17 @@ export function CompetitionForm({
           {structured && (
             <>
               <FormField
-                label="Citizenship requirement"
+                label="Citizenship"
+                required={req}
                 hintAs="icon"
-                hint="citizenship / permanent-residency requirement, independent of where they live (e.g. USAMO). Leave Any when there is none."
+                hint="citizenship / permanent-residency requirement, independent of where they live (e.g. USAMO). Pick Not provided when the page never raises it — that is an answer, and the listing shows it as one."
               >
                 <Select
                   options={CITIZENSHIP_OPTIONS}
                   value={citizenship}
                   onValueChange={(v) => {
                     setCitizenship(v);
-                    setAttrKey('citizenship_countries', v ? [v] : []);
+                    setAttrKey('citizenship_countries', answeredAttr(v) ? [v] : []);
                   }}
                 />
               </FormField>
@@ -1249,15 +1935,16 @@ export function CompetitionForm({
               </FormField>
               <FormField
                 label="Eligible countries"
+                required={req}
                 hintAs="icon"
-                hint="where entrants must live or study. Leave Any for open-worldwide; pick Other and spell the rule out under Other requirements."
+                hint="where entrants must live or study. Pick Not provided when the page never says; pick Other and spell the rule out under Other requirements."
               >
                 <Select
                   options={ELIGIBLE_COUNTRY_OPTIONS}
                   value={eligibleCountry}
                   onValueChange={(v) => {
                     setEligibleCountry(v);
-                    setAttrKey('eligible_countries', v ? [v] : []);
+                    setAttrKey('eligible_countries', answeredAttr(v) ? [v] : []);
                   }}
                 />
               </FormField>
@@ -1285,6 +1972,7 @@ export function CompetitionForm({
         <div className="grid gap-4 lg:grid-cols-2">
           <FormField
             label="Evaluation types"
+            required={req}
             hintAs="icon"
             hint="how entries are judged; pick any that apply."
             labelAsText
@@ -1333,12 +2021,22 @@ export function CompetitionForm({
               <FormField
                 className={JUDGING_FIELD}
                 label="What judges look for"
+                required={req}
                 hintAs="icon"
                 hint="short criteria, comma-separated — e.g. Originality 40%, Method 30%, Presentation 30%."
               >
                 {/* Textarea, not the one-line Input it was: real criteria run past a single line,
                     and it is what makes this box match its two neighbours. Still CSV — the value
                     is a string[] in the bag, so the parsing is unchanged. */}
+                {/* Drag-expandable, like Description (owner 2026-08-29): `rows` sets the opening
+                    height and the handle takes it from there. No `h-full` — a stretched box cannot
+                    be dragged, since the track would keep overriding the height — and no
+                    `resize-none`, which is what pinned it before.
+                    ⚠ `rows={2}`, not 3: at 3 the two boxes plus the rubric's floor made this column
+                    TALLER than the checkbox stack beside it, so the right column drove the row and
+                    the rubric ran 14px past where the left column ended. At 2 the left column is
+                    the taller one again, and the rubric's `1fr` absorbs the slack — which is what
+                    makes both columns start AND end level. Re-measure both if you change it. */}
                 <Textarea
                   value={judgingCriteriaText}
                   onChange={(e) => {
@@ -1346,7 +2044,8 @@ export function CompetitionForm({
                     setAttrKey('judging_criteria', csvToList(e.target.value));
                   }}
                   maxLength={500}
-                  className={cn(JUDGING_BOX, 'resize-none')}
+                  rows={2}
+                  className="min-h-0"
                 />
               </FormField>
               <FormField
@@ -1359,12 +2058,13 @@ export function CompetitionForm({
                   value={typeof attributes.tie_breakers === 'string' ? attributes.tie_breakers : ''}
                   onChange={(e) => setAttrKey('tie_breakers', e.target.value)}
                   maxLength={2000}
-                  className={cn(JUDGING_BOX, 'resize-none')}
+                  rows={2}
+                  className="min-h-0"
                 />
               </FormField>
               <FormField
                 className={JUDGING_FIELD}
-                label="Official rules / rubric"
+                label="Official Rubric"
                 hintAs="icon"
                 hint="the organizer’s current rules or rubric. A LINK is preferred — participants then always read the season’s live version; attach a PDF when the organizer publishes no stable page."
               >
@@ -1375,14 +2075,23 @@ export function CompetitionForm({
                 {/* h-full on the WRAPPER too: the drop zone's own `h-full` resolves against this
                     div, so without it the zone fell back to its content height (~102px) and left
                     a gap at the bottom of its row. */}
-                <div className="h-full w-full min-w-0">
+                {/* RELATIVE + the field absolutely filling it: the field's CONTENT then contributes
+                    nothing to layout height, so opening the URL row cannot grow this column — which
+                    is what re-split the proportional tracks and resized the two textareas beside
+                    it. Flooring the tracks alone was not enough: the OUTER two-column row is sized
+                    by its tallest item's CONTENT, so the growth arrived from above the ratio. */}
+                <div className="relative h-full min-h-0 w-full min-w-0">
                   <FileUpload
                     compact
-                    // h-full has to be threaded the whole way down — wrapper, FileUpload's own
-                    // root, then the drop zone — or the zone resolves it against a content-sized
-                    // ancestor and stops ~10px short of its row.
-                    className="h-full"
-                    dropZoneClassName={cn(JUDGING_BOX, 'w-full')}
+                    // FIXED FIELD, FLEXING ZONE (owner 2026-08-28) — the same shape the cover image
+                    // uses. These three boxes are PROPORTIONAL to each other (JUDGING_ROWS), so
+                    // anything that made this field taller re-split the ratio and grew the two
+                    // textareas beside it: opening the URL row added 25px to each. Pinning the
+                    // field to its track and letting the zone absorb the slack means the row's
+                    // height never changes, so its neighbours never move or resize — the URL entry
+                    // appears at the end of THIS box instead.
+                    className="absolute inset-0 flex min-h-0 flex-col"
+                    dropZoneClassName="w-full min-h-0 flex-1"
                     noun="rubric"
                     article="a"
                     accept="application/pdf"
@@ -1416,13 +2125,14 @@ export function CompetitionForm({
         <FormField
           label="Awards"
           labelAsText
+          required={req}
           hintAs="icon"
-          hint="listed in display order — the first money award leads the card (“$10,000 · …”); the card line and the public Awards tab derive from these rows."
+          hint="one complete award at least — a title plus its value (or its detail, for a non-money award). Listed in display order; the first money award leads the card (“$10,000 · …”). If the competition awards nothing but the placing, say so with “No award provided?” — that answers this too."
         >
           <AwardsInput
             name="edition_awards"
             initial={initialAwardRows}
-            onPrizeLineChange={(has) => setFilled((f) => ({ ...f, prizeSummary: has }))}
+            onPrizeLineChange={setHasPrizeLine}
           />
         </FormField>
       ),
@@ -1448,6 +2158,10 @@ export function CompetitionForm({
           {/* Cycle label is ASSIGNED, not asked (owner 2026-08-23): the year for a manual
               create; the extracted label on import — left empty there so an extraction with no
               running still approves edition-less (the warning above). */}
+          {/* Status is ASSIGNED, not asked — the create form dropped its control on 2026-08-22 and
+              the server derives it from the key dates. It rides as a hidden field only so a
+              SUPPLIED one is honoured (owner 2026-08-31); blank keeps the derive. */}
+          <input type="hidden" name="edition_status" value={editionSeed?.status ?? ''} />
           <input
             type="hidden"
             name="edition_cycleLabel"
@@ -1457,11 +2171,11 @@ export function CompetitionForm({
             label="Key dates"
             labelAsText
             hintAs="icon"
-            hint="needs a Reg close or Submission due (dated or TBD); add the rest as you have them."
+            hint="needs a Registration closes or Submission due row (dated or TBD); add the rest as you have them."
           >
             {/* ONE panel of hairline-divided rows with "Add date" as its last row — the same
                 shape the Awards editor settled on (owner 2026-08-24).
-                TWO LINES per row, not one strip of six controls: line 1 is what the milestone IS
+                TWO LINES per row, not one strip of six controls: line 1 is what the key date IS
                 (type + label), line 2 is WHEN it happens (date + TBD + time + zone). The main
                 column is ~650px, so a single line gave every control ~90px and the date input was
                 clipping its own placeholder; splitting by meaning gives each field room without
@@ -1487,9 +2201,14 @@ export function CompetitionForm({
                       keyDateDragKey === row.key && 'bg-brand-gold-soft/50 opacity-80',
                     )}
                   >
-                    <div className="mt-7 flex shrink-0 items-center gap-1">
+                    {/* Top-left of the row, not centred on the first control band (owner
+                        2026-08-30). The grip and the position number are row-level chrome — they
+                        belong to the whole key date, not to the Key date field they used to sit
+                        beside — and anchoring them to the top keeps them in one place as the row
+                        grows or shrinks (an "Ends" field appearing, an error wrapping). */}
+                    <div className="flex shrink-0 items-center gap-1 self-start pt-0.5">
                       {/* The grip appears ONLY on rows with no date to sort them by (owner
-                          2026-08-24): once a milestone has a date the calendar owns its position,
+                          2026-08-24): once a key date has a date the calendar owns its position,
                           so offering a handle there would promise a reorder that snaps back. TBD
                           rows are exactly the case where order is still the curator's call. */}
                       {isUndatedRow(row) ? (
@@ -1506,7 +2225,7 @@ export function CompetitionForm({
                       ) : (
                         <span aria-hidden="true" className="hidden size-4 sm:block" />
                       )}
-                      {/* Position, not identity: the number tracks where this milestone falls in
+                      {/* Position, not identity: the number tracks where this key date falls in
                           the CHRONOLOGY the rows are sorted into, so it renumbers as dates change
                           and as undated rows are dragged. */}
                       <span
@@ -1518,22 +2237,37 @@ export function CompetitionForm({
                     </div>
                     <div className="grid min-w-0 flex-1 gap-3">
                       <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
-                        <FormField label="Milestone" className="min-w-0">
+                        <FormField
+                          label="Type"
+                          className="min-w-0"
+                          error={
+                            duplicateRequiredType(row)
+                              ? 'Already on the timeline — a second one would become the listing’s deadline. Use Custom for an extra cutoff.'
+                              : undefined
+                          }
+                        >
                           <Select
                             name={`keydate_${i}_type`}
-                            options={enumOptions(KEY_DATE_TYPES)}
+                            options={keyDateOptions(KEY_DATE_TYPES)}
                             value={row.type}
-                            onValueChange={(v) => patchKeyDateRow(row.key, { type: v })}
+                            onValueChange={(v) =>
+                              // Drop any end date when moving to a type that cannot span, so a
+                              // value typed under the old type can't post from a hidden field.
+                              patchKeyDateRow(row.key, {
+                                type: v,
+                                ...(SPAN_KEY_DATE_TYPES.includes(v) ? {} : { endDate: '' }),
+                              })
+                            }
                           />
                         </FormField>
                         <FormField
                           label="Label"
                           hintAs="icon"
-                          hint="optional — leave empty and the public timeline uses the milestone's own wording (shown greyed here). Type only to override it, or to name a Custom date."
+                          hint="optional — leave empty and the public timeline uses the key date's own wording (shown greyed here). Type only to override it, or to name a Custom date."
                           className="min-w-0"
                         >
                           {/* Placeholder, never a pre-filled VALUE: it shows the exact wording
-                              visitors will read for the chosen milestone, so an empty field is
+                              visitors will read for the chosen key date, so an empty field is
                               visibly a deliberate "use the standard name", not an unfinished one. */}
                           <Input
                             name={`keydate_${i}_label`}
@@ -1565,27 +2299,56 @@ export function CompetitionForm({
                             className="w-full min-w-0"
                           />
                         </FormField>
-                        <FormField
-                          label="Ends"
-                          hintAs="icon"
-                          hint="optional — only for a milestone that runs over more than one day (a two-day finals). Leave empty for a single day; it ends at end-of-day in the zone below."
-                          className="min-w-36 flex-1"
-                          error={
-                            row.endDate !== '' && row.date !== '' && row.endDate <= row.date
-                              ? 'Must be after the start date.'
-                              : undefined
-                          }
-                        >
+                        {/* Only for the types that can actually span days — see
+                            SPAN_KEY_DATE_TYPES. "Registration closes" is an instant, and offering
+                            it an end date invited a value that means nothing. */}
+                        {SPAN_KEY_DATE_TYPES.includes(row.type) && (
+                          <FormField
+                            label="Ends"
+                            hintAs="icon"
+                            hint="optional — only for a key date that runs over more than one day (a two-day finals). Leave empty for a single day; it ends at end-of-day in the zone below."
+                            className="min-w-36 flex-1"
+                            error={
+                              row.endDate !== '' && row.date !== '' && row.endDate <= row.date
+                                ? 'Must be after the start date.'
+                                : undefined
+                            }
+                          >
+                            <Input
+                              name={`keydate_${i}_enddate`}
+                              type="date"
+                              disabled={row.tbd}
+                              min={row.date || undefined}
+                              value={row.endDate}
+                              onChange={(e) =>
+                                patchKeyDateRow(row.key, { endDate: e.target.value })
+                              }
+                              className="w-full min-w-0"
+                            />
+                          </FormField>
+                        )}
+                        <FormField label="Time" className="w-28 shrink-0">
                           <Input
-                            name={`keydate_${i}_enddate`}
-                            type="date"
+                            name={`keydate_${i}_time`}
+                            type="time"
                             disabled={row.tbd}
-                            min={row.date || undefined}
-                            value={row.endDate}
-                            onChange={(e) => patchKeyDateRow(row.key, { endDate: e.target.value })}
+                            value={row.time}
+                            onChange={(e) => patchKeyDateRow(row.key, { time: e.target.value })}
                             className="w-full min-w-0"
                           />
                         </FormField>
+                        <FormField label="Time zone" className="w-24 shrink-0">
+                          <Select
+                            name={`keydate_${i}_timezone`}
+                            options={ADMIN_TIMEZONES}
+                            disabled={row.tbd}
+                            value={row.timezone}
+                            onValueChange={(v) => patchKeyDateRow(row.key, { timezone: v })}
+                          />
+                        </FormField>
+                        {/* Last on the line (owner 2026-08-30): TBD is a verdict on the three
+                            fields to its left — "we checked, none of this is published yet" — so it
+                            reads after them rather than interrupting date → time → zone. */}
                         {row.tbd && <input type="hidden" name={`keydate_${i}_tbd`} value="on" />}
                         <button
                           type="button"
@@ -1601,30 +2364,11 @@ export function CompetitionForm({
                         >
                           TBD
                         </button>
-                        <FormField label="Time" className="w-28 shrink-0">
-                          <Input
-                            name={`keydate_${i}_time`}
-                            type="time"
-                            disabled={row.tbd}
-                            value={row.time}
-                            onChange={(e) => patchKeyDateRow(row.key, { time: e.target.value })}
-                            className="w-full min-w-0"
-                          />
-                        </FormField>
-                        <FormField label="Time zone" className="min-w-40 flex-1">
-                          <Select
-                            name={`keydate_${i}_timezone`}
-                            options={ADMIN_TIMEZONES}
-                            disabled={row.tbd}
-                            value={row.timezone}
-                            onValueChange={(v) => patchKeyDateRow(row.key, { timezone: v })}
-                          />
-                        </FormField>
                       </div>
                     </div>
                     {/* Dimmed until hover/focus — present for touch and keyboard, quiet otherwise
                         (the Awards editor's row-control grammar). */}
-                    {/* A required milestone's LAST remaining row can't be removed — deleting it
+                    {/* A required key date's LAST remaining row can't be removed — deleting it
                         would make the form unsubmittable with no hint as to what vanished.
                         Duplicates of a required type, and any optional row, still go. */}
                     {keyDateRows.length > 1 && !isOnlyRequiredRow(row) ? (
@@ -1632,7 +2376,7 @@ export function CompetitionForm({
                         type="button"
                         aria-label={`Remove key date ${i + 1}`}
                         onClick={() => removeKeyDateRow(row.key)}
-                        className="mt-7 grid size-7 shrink-0 place-items-center self-start rounded text-muted opacity-50 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 hover:bg-background hover:text-danger"
+                        className="mt-0.5 grid size-7 shrink-0 place-items-center self-start rounded text-muted opacity-50 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 hover:bg-background hover:text-danger"
                       >
                         <Trash aria-hidden="true" className="size-3.5" />
                       </button>
@@ -1656,23 +2400,27 @@ export function CompetitionForm({
     },
     // Resources + FAQ (owner 2026-08-25): the two curated extras the create flow never collected
     // — both previously reachable only via the edit page's managers AFTER a save, which meant a
-    // second trip for data the curator had on screen during the first. Create-only: the edit page
-    // keeps its managers (they edit rows in place), and import review hides this step outright
-    // because the approve response carries no competition id to hang the sub-posts off
-    // (hideOnImport — no controls beats controls that silently discard).
+    // second trip for data the curator had on screen during the first. The edit page keeps its
+    // managers (they edit rows in place), so this step stays create/import-only.
+    //
+    // IMPORT REVIEW SHOWS THIS STEP (2026-08-28). It used to be hidden outright because approve
+    // could not persist a sub-resource; ImportReviewService now creates the payload's `resources`
+    // AND `faqs` rows after the competition exists, and the S3 extractor suggests both — so hiding
+    // them would mean approving links and published answers a curator never saw. The rule the step
+    // was built on is unchanged, it just points the other way now: controls that persist, or none.
     {
       id: 'extras',
       label: 'Resources & FAQ',
       meta: 'Prep links · questions',
       hideOnEdit: true,
-      hideOnImport: true,
       content: (
         <div className="grid gap-6">
           <FormField
             label="Prep resources"
             labelAsText
+            required={req}
             hintAs="icon"
-            hint="curated links that help someone prepare — books, past papers, guides, videos. Shown in the Prep resources row on the listing; mark paid placements as affiliate so the disclosure renders."
+            hint={`at least ${MIN_EXTRAS} — curated links that help someone prepare: books, past papers, guides, videos. A row counts once it has a title and a URL; the preview image is optional. Shown in the Prep resources row on the listing; mark paid placements as affiliate so the disclosure renders.`}
           >
             <div className="rounded-[var(--radius-field)] border border-border">
               <div className="divide-y divide-border">
@@ -1744,6 +2492,13 @@ export function CompetitionForm({
                         <Trash aria-hidden="true" className="size-3.5" />
                       </button>
                     </div>
+                    {/* Named on the row, not just in the ring: an incomplete row is DROPPED on
+                        save, so the curator has to see which one. */}
+                    {partialResourceRows.some((r) => r.key === row.key) && (
+                      <p className="mt-1.5 pl-8 text-xs font-medium text-danger">
+                        Needs both a title and a URL — finish it, or clear the row.
+                      </p>
+                    )}
                     <div className="flex items-center gap-3">
                       <Input
                         aria-label={`Resource ${i + 1} URL`}
@@ -1794,8 +2549,9 @@ export function CompetitionForm({
           <FormField
             label="FAQ"
             labelAsText
+            required={req}
             hintAs="icon"
-            hint="questions parents and students actually ask — shown as the listing's FAQ tab. Write our own answers; never paste the organizer's."
+            hint={`at least ${MIN_EXTRAS} — questions parents and students actually ask, shown as the listing's FAQ tab. A row counts once it has both a question and an answer. Write our own answers; never paste the organizer's.`}
           >
             <div className="rounded-[var(--radius-field)] border border-border">
               <div className="divide-y divide-border">
@@ -1861,10 +2617,19 @@ export function CompetitionForm({
                       aria-label={`FAQ ${i + 1} answer`}
                       name={`faq_${i}_answer`}
                       placeholder="The answer, in our words."
+                      // Mirrors FaqRequest.MAX_ANSWER, added server-side 2026-08-30 — the column
+                      // is TEXT, so without that constraint this cap would only bind the browser.
+                      maxLength={LIMITS.faqAnswer}
                       value={row.answer}
                       onChange={(e) => patchFaqRow(row.key, { answer: e.target.value })}
                       className="h-10 min-h-10 resize-y"
                     />
+                    {/* Same reason as the resource rows: a half-filled FAQ is dropped on save. */}
+                    {partialFaqRows.some((f) => f.key === row.key) && (
+                      <p className="mt-1.5 text-xs font-medium text-danger">
+                        Needs both a question and an answer — finish it, or clear the row.
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1999,14 +2764,49 @@ export function CompetitionForm({
   const activeIndex = steps.indexOf(activeStepDef);
   const prevStep = steps[activeIndex - 1];
   const nextStep = steps[activeIndex + 1];
+  /**
+   * Which steps carry a VISIBLE field error right now (as opposed to an unfilled required field).
+   * A step showing an error must not read as done, even when every required field on it is filled:
+   * the owner's rule is that green means "this step is finished", and a step with a red message
+   * under a control plainly is not.
+   */
+  const stepHasError: Record<string, boolean> = {
+    overview: Boolean(
+      fieldErrors.name ||
+      fieldErrors.slug ||
+      fieldErrors.description ||
+      fieldErrors.officialUrl ||
+      fieldErrors.coverUrl,
+    ),
+    administration: Boolean(
+      fieldErrors.registrationUrl || fieldErrors.entryFee || fieldErrors.currency,
+    ),
+    eligibility: !eligibilityValid,
+    // Row issues are errors on their step too, so it cannot read as done while one stands.
+    extras: rowIssues.some((r) => r.stepId === 'extras' && !r.ok),
+    timeline: rowIssues.some((r) => r.stepId === 'timeline' && !r.ok),
+  };
+  // Overview is built above from its field errors; fold in its row issues (the tag limit) rather
+  // than redeclaring the key.
+  stepHasError.overview =
+    stepHasError.overview === true || rowIssues.some((r) => r.stepId === 'overview' && !r.ok);
+
   const stepperSteps = steps.map((s) => {
     const stepReq = requiredFields.filter((r) => r.stepId === s.id);
+    const missingHere = stepReq.some((r) => !r.ok);
+    const erroredHere = stepHasError[s.id] === true;
     return {
       id: s.id,
       label: s.label,
       description: s.meta,
-      complete: stepReq.length > 0 && stepReq.every((r) => r.ok),
-      incompleteRequired: stepReq.some((r) => !r.ok),
+      // Optional fields are deliberately NOT part of this: a step is done when its REQUIRED work
+      // is done and nothing on it is wrong (owner 2026-08-30).
+      complete: stepReq.length > 0 && !missingHere && !erroredHere,
+      incompleteRequired: missingHere,
+      // Red is the state after a blocked submit, plus any live error — an error the curator can
+      // see does not need a submit to justify flagging.
+      invalid:
+        erroredHere || (submitAttempted && blockingFields.some((r) => r.stepId === s.id && !r.ok)),
     };
   });
 
@@ -2060,9 +2860,33 @@ export function CompetitionForm({
   // bottom as state → steps → the action they lead to, so the action sits where the work ends
   // instead of in a bar pinned across the viewport. Create stays gated on the whole ring; import
   // gates only on what the server actually refuses, and says so.
+  /**
+   * The submit guard (owner 2026-08-30). The three buttons used to be `disabled` while the form was
+   * incomplete, which is a dead end: nothing explains WHY, and the rail's amber dots are easy to
+   * miss. They are now live, and a blocked click paints the failing steps red and jumps to the
+   * first one — the click becomes the thing that tells you what is wrong.
+   *
+   * This is UX, not enforcement. The server's @AssertTrue set runs on every submit regardless, and
+   * remains the only real gate.
+   */
+  const guardSubmit = (e: MouseEvent<HTMLButtonElement>) => {
+    if (submittable) return;
+    e.preventDefault();
+    setSubmitAttempted(true);
+    const first = blockingRemaining[0];
+    if (first) setActiveStepId(first.stepId);
+    else if (!eligibilityValid) setActiveStepId('eligibility');
+  };
+
   const submitAction = (
     <div className="grid gap-2">
-      <Button type="submit" variant="brand" disabled={pending || !submittable} className="w-full">
+      <Button
+        type="submit"
+        variant="brand"
+        disabled={pending}
+        onClick={guardSubmit}
+        className="w-full"
+      >
         {importing
           ? pending
             ? 'Approving…'
@@ -2084,7 +2908,8 @@ export function CompetitionForm({
             name="listing_intent"
             value="review"
             variant="secondary"
-            disabled={pending || !submittable}
+            disabled={pending}
+            onClick={guardSubmit}
             className="w-full"
           >
             Submit for review
@@ -2094,7 +2919,8 @@ export function CompetitionForm({
             name="listing_intent"
             value="draft"
             variant="ghost"
-            disabled={pending || !submittable}
+            disabled={pending}
+            onClick={guardSubmit}
             className="w-full"
           >
             Save as draft
@@ -2105,7 +2931,7 @@ export function CompetitionForm({
         // Create mode says nothing here: the ring at the head of the rail already carries the
         // count, and the disabled submit carries the consequence. Import still names what the
         // server will refuse, because there the button is NOT disabled by the same rule.
-        importing ? (
+        importing || submitAttempted ? (
           <button
             type="button"
             onClick={() => {
@@ -2114,8 +2940,8 @@ export function CompetitionForm({
             }}
             className="text-left text-xs font-medium text-danger hover:underline"
           >
-            Needs {blockingRemaining.map((r) => r.label.toLowerCase()).join(', ')} before it can be
-            approved
+            Needs {blockingRemaining.map((r) => r.label.toLowerCase()).join(', ')} before it can be{' '}
+            {importing ? 'approved' : 'published'}
           </button>
         ) : null
       ) : !eligibilityValid ? (
@@ -2237,6 +3063,96 @@ export function CompetitionForm({
           </Alert>
         )}
       </form>
+
+      {/* ADD AN ORGANIZATION WITHOUT LEAVING THIS LISTING (owner 2026-08-28).
+          Both modals render OUTSIDE the <form> above — Modal portals to document.body anyway, but
+          keeping them out of the element tree also keeps the nested form's fields out of this
+          form's submission. Nothing here unmounts the listing form, which is the whole point: a
+          curator four steps into a listing can create the organizer and carry on where they were. */}
+      {/* STEP 1 — the pasted payload named an organizer we have no id for. Reuse or create, decided
+          before anything else, because every other field is reviewable without it and this one is
+          not. Dismissing (✕/Escape) is allowed and lands on the form with the Organizer field
+          empty: the required-ring already says it is missing, and forcing a choice here would trap
+          a curator who wants to look at the rest of the listing first. */}
+      <Modal
+        open={resolvingOrg}
+        onClose={() => setResolvingOrg(false)}
+        title="Which organization runs this?"
+        description={
+          similarOrganizers.length > 0
+            ? `The JSON names “${extractedOrganizer}”. Nothing matches it exactly, but these are close — reuse one, or create it as new.`
+            : `The JSON names “${extractedOrganizer}”, and no organization matches. Create it, or pick a different one on the form.`
+        }
+        className="max-w-lg"
+      >
+        <div className="grid gap-2">
+          {similarOrganizers.map((org) => (
+            <button
+              key={org.id}
+              type="button"
+              onClick={() => {
+                setOrganizerOrgId(org.id);
+                setResolvingOrg(false);
+              }}
+              className="flex flex-col items-start gap-0.5 rounded-[var(--radius-field)] border border-border p-3 text-left transition-colors hover:border-muted/50 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              <span className="text-sm font-medium text-foreground">{org.name}</span>
+              <span className="text-xs text-muted">
+                {enumLabel(org.type)}
+                {org.domain ? ` · ${org.domain}` : ''}
+              </span>
+            </button>
+          ))}
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Button
+              variant={similarOrganizers.length > 0 ? 'secondary' : 'primary'}
+              onClick={() => {
+                setResolvingOrg(false);
+                setAddingOrg(true);
+              }}
+            >
+              <Plus aria-hidden="true" className="size-4" />
+              Add “{extractedOrganizer}” as new
+            </Button>
+            <Button variant="ghost" onClick={() => setResolvingOrg(false)}>
+              I’ll choose on the form
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={addingOrg}
+        onClose={() => setAddingOrg(false)}
+        title="New organization"
+        description="It’s selected as this listing’s organizer as soon as it’s created."
+        className="max-w-lg"
+      >
+        <OrganizationForm
+          prefill={{
+            // Prefilled from the payload so a curator confirms rather than retypes. The domain
+            // mirrors what the SERVER would infer for an auto-created org (registrable host of the
+            // official URL), so both routes to a new organization land on the same value.
+            name: extractedOrganizer ?? undefined,
+            domain: registrableHost(c?.officialUrl ?? undefined),
+          }}
+          onCreated={(org) => {
+            // Order matters: merge into the options BEFORE selecting, or the Select is handed a
+            // value that isn't in its list yet and renders blank.
+            setCreatedOrgs((prev) => [...prev, org]);
+            // No `mark()` here: organizer readiness is DERIVED (`orgChosen`), not a `filled` flag,
+            // so selecting the row is all the required-ring needs.
+            setOrganizerOrgId(org.id);
+            setAddingOrg(false);
+            setJustCreatedOrg(org);
+          }}
+        />
+      </Modal>
+      <OrganizationCreatedModal
+        organization={justCreatedOrg}
+        onClose={() => setJustCreatedOrg(null)}
+        returnLabel="Back to the listing"
+      />
     </div>
   );
 }

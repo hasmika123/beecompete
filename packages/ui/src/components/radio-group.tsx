@@ -48,9 +48,16 @@ export interface RadioProps extends Omit<
 > {
   value: string;
   label?: ReactNode;
+  /**
+   * Hides the radio DOT, leaving the label as the whole control — for a card/box row where the
+   * selected state is carried by the box's own fill instead of a bullet beside it. The input stays
+   * in the DOM (visually hidden), so this is still a real radio group: arrow keys, one tab stop,
+   * a form value, and the same announcement to a screen reader. Purely visual.
+   */
+  hideControl?: boolean;
 }
 
-export function Radio({ value, label, className, disabled, ...props }: RadioProps) {
+export function Radio({ value, label, className, disabled, hideControl, ...props }: RadioProps) {
   const ctx = useContext(RadioGroupContext);
   const checked = ctx?.value !== undefined ? ctx.value === value : undefined;
 
@@ -62,10 +69,14 @@ export function Radio({ value, label, className, disabled, ...props }: RadioProp
         // panel were spilling and giving the panel its own horizontal scrollbar.
         'flex items-start gap-2 text-sm text-foreground select-none',
         disabled ? 'opacity-45' : 'cursor-pointer',
+        // The focus ring moves to the LABEL when the dot is hidden: the input is the thing being
+        // focused, but it is invisible, so without this a keyboard user sees nothing move.
+        hideControl &&
+          'gap-0 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-1 has-[:focus-visible]:outline-ring',
         className,
       )}
     >
-      <span className="relative inline-flex shrink-0">
+      <span className={cn('relative inline-flex shrink-0', hideControl && 'sr-only')}>
         <input
           type="radio"
           name={ctx?.name}

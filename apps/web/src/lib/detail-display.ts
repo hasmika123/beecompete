@@ -1,6 +1,6 @@
 import type { CompetitionDetail, EditionView, KeyDateView } from '@/lib/catalog-types';
 import { deadlineDisplay } from '@/lib/catalog-display';
-import { formatDate } from '@/lib/dates';
+import { formatDate, keyDateZone } from '@/lib/dates';
 
 // Display derivation for the competition-detail page (R1-7, page-blueprints Page 3). Pure,
 // server+client safe: no side-effecting imports. Wording rules live here (the components stay
@@ -15,6 +15,7 @@ const KEY_DATE_LABELS: Record<string, string> = {
   submission_due: 'Submission due',
   results: 'Results announced',
   custom: 'Event',
+  period: 'Period',
 };
 
 const DELIVERY_LABELS: Record<string, string> = {
@@ -31,14 +32,12 @@ const PARTICIPATION_LABELS: Record<string, string> = {
   both: 'Individual or Team',
 };
 
+// Three tokens since `0024` — the composites (school_or_chapter, open, the pre-0016 either) were
+// the single-value column faking a set and were expanded by its backfill, so nothing stores them.
 const PATHWAY_LABELS: Record<string, string> = {
   individual: 'Enter as an individual',
   school: 'Through a school',
   chapter: 'Through a chapter',
-  school_or_chapter: 'Through a school or chapter',
-  open: 'Open to all',
-  // Pre-0016 spelling of `open` — kept so a stale row never renders a raw token.
-  either: 'Open to all',
 };
 
 const RECURRENCE_LABELS: Record<string, string> = {
@@ -71,7 +70,7 @@ const EVALUATION_LABELS: Record<string, string> = {
 };
 
 /**
- * The wording the PUBLIC timeline uses for a milestone type when no curated label overrides it.
+ * The wording the PUBLIC timeline uses for a key date type when no curated label overrides it.
  * Case-insensitive because the admin enums are UPPERCASE and the stored/public tokens are not.
  *
  * Exported so the admin's Label field can show it as a PLACEHOLDER (2026-08-24): the curator sees
@@ -95,8 +94,20 @@ export function deliveryLabel(token: string): string {
 export function participationLabel(token: string): string {
   return PARTICIPATION_LABELS[token] ?? token;
 }
-export function pathwayLabel(token: string): string {
-  return PATHWAY_LABELS[token] ?? token;
+/**
+ * The routes a listing accepts, as one phrase. All three is "Open to all" — the wildcard token
+ * `0024` retired, restated from the data rather than stored.
+ */
+export function pathwayLabel(tokens: string[] | null | undefined): string | undefined {
+  const known = (tokens ?? []).filter((t) => t in PATHWAY_LABELS);
+  if (known.length === 0) return undefined;
+  if (known.length === Object.keys(PATHWAY_LABELS).length) return 'Open to all';
+  // Ordered by the canonical list, not by however the array came back, so two listings with the
+  // same routes always read identically.
+  return Object.keys(PATHWAY_LABELS)
+    .filter((t) => known.includes(t))
+    .map((t) => PATHWAY_LABELS[t]!)
+    .join(' · ');
 }
 export function recurrenceLabel(token: string): string {
   return RECURRENCE_LABELS[token] ?? token;
@@ -355,7 +366,7 @@ export interface DeadlineFact {
  * print it twice.
  */
 export function deadlineFact(deadline: NextDeadline, now?: Date): DeadlineFact {
-  const absolute = formatDate(deadline.iso, deadline.timezone);
+  const absolute = formatDate(deadline.iso, keyDateZone(deadline.timezone));
   const view = deadlineDisplay(deadline.iso, now, deadline.timezone);
   const value = view?.label ?? `Closes ${absolute}`;
   return {
@@ -515,4 +526,59 @@ export function ageLabel(
   return Number.isNaN(anchored.getTime())
     ? range
     : `${range} (as of ${anchored.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })})`;
+}
+
+/**
+ * A YouTube video's thumbnail, DERIVED from the id already sitting in the resource's own URL
+ * (owner 2026-08-28). No fetch, no API key, and — the point — nothing to guess: unlike an Amazon
+ * image id or an `og:image`, this URL is a pure function of the link we were given, so it is
+ * computed in code rather than asked of a model that could only hallucinate it.
+ *
+ * Rendered, never STORED: `imageUrl` stays whatever a curator set, and this fills the gap at
+ * display time. That keeps a value we never verified out of the database and means the day
+ * YouTube changes the pattern, one function changes rather than every stored row going stale.
+ *
+ * `hqdefault` on purpose — `maxresdefault` is higher-resolution but only exists for some uploads,
+ * and a 404 there would drop the card to generic art for no reason. hqdefault exists for every
+ * video, and the art box contains rather than crops it, so its 4:3 frame renders whole.
+ *
+ * ⚠ The id pattern is the security boundary. This builds a URL from caller-supplied text, so only
+ * an exact 11-character YouTube id may reach the output — never an arbitrary substring of a URL a
+ * curator or a model pasted.
+ */
+const YOUTUBE_HOSTS = new Set([
+  'youtube.com',
+  'www.youtube.com',
+  'm.youtube.com',
+  'youtu.be',
+  'www.youtu.be',
+  'youtube-nocookie.com',
+  'www.youtube-nocookie.com',
+]);
+const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
+
+export function youtubeThumbnail(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return undefined;
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return undefined;
+  if (!YOUTUBE_HOSTS.has(parsed.hostname.toLowerCase())) return undefined;
+
+  const segments = parsed.pathname.split('/').filter(Boolean);
+  // youtu.be/<id> puts the id in the path; every youtube.com form either uses ?v= or a
+  // /<kind>/<id> path (shorts, embed, live, v).
+  const candidate = parsed.hostname.toLowerCase().endsWith('youtu.be')
+    ? segments[0]
+    : (parsed.searchParams.get('v') ??
+      (segments.length >= 2 && ['shorts', 'embed', 'live', 'v'].includes(segments[0]!)
+        ? segments[1]
+        : undefined));
+
+  return candidate && YOUTUBE_ID.test(candidate)
+    ? `https://i.ytimg.com/vi/${candidate}/hqdefault.jpg`
+    : undefined;
 }

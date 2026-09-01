@@ -261,3 +261,72 @@ model attaches regions at the Edition level (`EditionRegion`).
   Film Festival, Lexus Eco Challenge, and the Carnegie-rental vanity music circuit (excluded by
   policy). Note: some fall-cycle rows (CSPA Aug 31, Greenhill/VAMUN/BosMUN Aug-Sep, JEA Oct) have
   imminent deadlines — curators should prioritize them in S4.
+
+## Descriptions, prep resources + FAQs now come out of S3 (2026-08-28)
+
+The extractor used to emit `"description": null` on purpose — curator prose was S4 work — which in
+practice meant every seeded listing reached the queue blank. It now writes **original prose from the
+facts** (never a paraphrase of the organizer's copy; that rule is unchanged) and suggests about
+**eight prep resources** (~5 non-Amazon spread across types, plus 2-3 Amazon books) and **3-5 FAQ
+entries** — taken from the page's own FAQ where there is one, written from the extracted facts
+where there is not.
+
+**What this changes for a curator at S4:**
+
+- **Read the description.** It is model-written prose about a minors-facing listing, and its first
+  ~300 characters become the card blurb. It is the thing on the review screen most worth a second
+  read.
+- **Check the links.** The prompt forbids inventing URLs and says five real links beat eight with
+  two invented ones — but verify before approving. A dead or wrong link ships to students.
+- **Resource preview images are never in the payload.** Both prompts forbid `imageUrl` and the
+  extractor strips it, because an Amazon image id can't be derived from an ASIN and an `og:image`
+  can't be known without fetching — so any value would be a guess, and a guessed URL fails
+  *invisibly* behind the card's onError fallback. YouTube links get a real thumbnail derived from
+  their video id; Amazon book covers wait on PA-API (sweep plan §17); everything else uses the
+  per-type art, which is what that art is for.
+- **Amazon links arrive UNTAGGED and unflagged, deliberately.** `isAffiliate: true` from an
+  extraction is a validation error. Swap in the `tag=beecompete-20` URL and tick the affiliate box
+  **at the same moment** — the tag is what creates the disclosure obligation (compliance DQ10).
+- **Read the FAQ answers hardest of all.** They publish under our name with **FAQPage structured
+  data** on them, so a wrong answer is both a misled student and a schema-marked false claim. The
+  prompt forbids inventing a policy and tells the model to omit any question it cannot answer from
+  stated facts — but an answer that merely sounds plausible is exactly what this needs a human for.
+  If a row states a rule you cannot find on the official page, delete it.
+- Import review now shows the whole **Resources & FAQ** step, both halves — approve persists both
+  since 2026-08-28.
+
+The hand-paste path (`paste-json-prompt.md`) does the same two things, plus an image prompt.
+
+## Eligibility basis — rows needing a curator pass
+
+Migration `0023` added `competition.eligibility_basis` (glossary "Eligibility basis") and backfilled
+it from which ranges each row happens to hold. That inference is right for a row carrying one range
+and **wrong for a particular shape**: a row holding both, where the age range is the organizer's and
+the grade range is one the extractor derived from it. Those rows backfill to `BOTH` and are really
+`AGE`. SQL cannot tell them apart — only the official page says which axis is real — so this is a
+curator pass, not a changeset.
+
+Every row in the import queue that carries an age range at migration time is listed below. Each one
+also carries grades, because the pre-`0023` extraction prompt converted age statements into grades.
+**Open the official page, decide which axis it actually states, and set the basis on the listing's
+Eligibility step.** Where the page gives only ages, also clear the grade range: a derived range is
+regenerated for filtering later (see `eligibility-basis-plan.md` §4, PR 3) and should not sit in the
+stated columns pretending to be curated.
+
+| Listing | stored grades | stored ages | likely basis |
+|---|---|---|---|
+| Breakthrough Junior Challenge | 7–12 | 13–18 | **AGE** — the rules state ages only |
+| Diamond Challenge | 9–12 | 14–18 | **AGE** |
+| FIRST LEGO League Challenge | 4–8 | 8–16 | **AGE** (varies by region — check the page) |
+| FIRST Robotics Competition | 9–12 | 14–18 | **AGE** |
+| FIRST Tech Challenge | 7–12 | 12–18 | **AGE** |
+| National Arts Competition | 10–12 | 15–18 | check — may be BOTH |
+| Scholastic Art & Writing Awards | 7–12 | 13+ | **BOTH** — the page states grades 7–12 *and* age 13+ |
+
+"Likely basis" is a reading of the source pages at the time of writing, not a verified curation
+decision — confirm each against the live page before setting it. Until a row is reviewed it shows
+both ranges, which is already better than publishing the derived grades alone, but it is not right.
+
+⚠ **The extractor no longer creates this problem** (`tools/seeding/src/prompt.ts`): it records the
+axis the page uses and is explicitly forbidden from converting between the two. Rows extracted from
+here on carry a real `eligibilityBasis`; only the pre-2026-08-28 backlog above needs hand review.

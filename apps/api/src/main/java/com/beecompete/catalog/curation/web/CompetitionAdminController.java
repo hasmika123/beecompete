@@ -4,6 +4,7 @@ import com.beecompete.catalog.curation.CompetitionCurationService;
 import com.beecompete.catalog.curation.CompetitionRequest;
 import com.beecompete.catalog.curation.CompetitionWithEditionRequest;
 import com.beecompete.catalog.curation.CurationStamps;
+import com.beecompete.catalog.curation.FaqRequest;
 import com.beecompete.catalog.curation.ListingCurationService;
 import com.beecompete.catalog.curation.ResourceCurationService;
 import com.beecompete.catalog.curation.ResourceRequest;
@@ -244,9 +245,6 @@ public class CompetitionAdminController {
 
 	public record VerificationRequest(@NotNull VerificationState state) {}
 
-	public record FaqRequest(@NotBlank @Size(max = 500) String question, @NotBlank String answer,
-			short displayOrder) {}
-
 	public record FaqResponse(UUID id, String question, String answer, short displayOrder) {
 		static FaqResponse from(CompetitionFaq faq) {
 			return new FaqResponse(faq.getId(), faq.getQuestion(), faq.getAnswer(), faq.getDisplayOrder());
@@ -264,8 +262,9 @@ public class CompetitionAdminController {
 
 	public record CompetitionResponse(UUID id, String slug, String name, UUID organizerOrgId, String officialUrl,
 			String logo, String description, UUID categoryId, List<String> tags,
-			String participationMode, Short teamSizeMin, Short teamSizeMax, String delivery, String entryPathway,
-			List<String> evaluationType, Short minGrade, Short maxGrade, Short minAge, Short maxAge,
+			String participationMode, Short teamSizeMin, Short teamSizeMax, String delivery, List<String> entryPathways,
+			List<String> evaluationType, String eligibilityBasis, Short minGrade, Short maxGrade,
+			Short minAge, Short maxAge,
 			String costType, String recurrence, Map<String, Object> attributes, String provenanceSource,
 			Instant provenanceLastVerifiedAt, BigDecimal provenanceConfidence, String verificationState,
 			String listingStatus, Instant approvedAt,
@@ -287,7 +286,8 @@ public class CompetitionAdminController {
 					c.getOrganizer() != null ? c.getOrganizer().getId() : null, c.getOfficialUrl(), c.getLogo(),
 					c.getDescription(), c.getCategory().getId(), c.getTags(),
 					c.getParticipationMode().name(), c.getTeamSizeMin(), c.getTeamSizeMax(),
-					c.getDelivery().name(), c.getEntryPathway().name(), c.getEvaluationType(), c.getMinGrade(),
+					c.getDelivery().name(), c.getEntryPathways(), c.getEvaluationType(),
+					c.getEligibilityBasis() != null ? c.getEligibilityBasis().name() : null, c.getMinGrade(),
 					c.getMaxGrade(), c.getMinAge(), c.getMaxAge(), c.getCostType().name(),
 					c.getRecurrence().name(), c.getAttributes(),
 					p != null && p.getSource() != null ? p.getSource().name() : null,

@@ -97,36 +97,66 @@ export function RegionSelect({
     inputRef.current?.focus();
   };
 
+  const chipLabel = (r: Region) => [r.name, parentName(r)].filter(Boolean).join(', ');
+
   return (
     <div className="grid gap-2">
       <div className="relative">
-        <input
-          ref={inputRef}
-          type="text"
-          role="combobox"
-          aria-expanded={open && matches.length > 0}
-          aria-controls="region-select-listbox"
-          aria-label={ariaLabel}
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setOpen(true);
-          }}
-          onKeyDown={(e) => {
-            // Enter picks the top match; never submits the form from this field.
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              if (matches[0]) pick(matches[0].id);
-            }
-            if (e.key === 'Escape') setOpen(false);
-          }}
-          onBlur={() => setTimeout(() => setOpen(false), 150)}
-          placeholder={placeholder}
+        {/* Selections live INSIDE the field (owner 2026-08-31), not on a chip row beneath it. The
+            shell carries the input chrome — border, radius, focus ring via focus-within — and the
+            bare input sits after the chips, the same construction TagsInput uses. A separate row
+            below read as a second control and pushed everything under it down as regions were
+            added; in-field, the selection IS the field's value, which is what it always was. */}
+        <div
           className={cn(
-            'h-10 w-full rounded-[var(--radius-field)] border border-border bg-background px-3.5 text-sm text-foreground',
-            'placeholder:text-muted focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring',
+            'flex min-h-10 w-full flex-wrap items-center gap-1.5 rounded-[var(--radius-field)] border border-border bg-background px-2 py-1.5',
+            'focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-ring',
           )}
-        />
+        >
+          {selectedIds.map((id) => {
+            const r = byId.get(id);
+            // The chip carries the parent too — "Springfield" alone doesn't say which one.
+            const label = r ? chipLabel(r) : id;
+            return (
+              <Chip
+                key={id}
+                selected
+                onRemove={() => onToggle(id)}
+                removeLabel={`Remove ${label}`}
+                className="px-2.5 py-0.5 text-xs"
+              >
+                {label}
+              </Chip>
+            );
+          })}
+          <input
+            ref={inputRef}
+            type="text"
+            role="combobox"
+            aria-expanded={open && matches.length > 0}
+            aria-controls="region-select-listbox"
+            aria-label={ariaLabel}
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setOpen(true);
+            }}
+            onKeyDown={(e) => {
+              // Enter picks the top match; never submits the form from this field.
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                if (matches[0]) pick(matches[0].id);
+              }
+              if (e.key === 'Escape') setOpen(false);
+            }}
+            onBlur={() => setTimeout(() => setOpen(false), 150)}
+            placeholder={selectedIds.length > 0 ? 'Add another…' : placeholder}
+            className={cn(
+              'h-7 min-w-32 flex-1 bg-transparent px-1.5 text-sm text-foreground',
+              'placeholder:text-muted focus:outline-none',
+            )}
+          />
+        </div>
         {open && matches.length > 0 && (
           <ul
             id="region-select-listbox"
@@ -169,21 +199,6 @@ export function RegionSelect({
           </ul>
         )}
       </div>
-      {selectedIds.length > 0 && (
-        <div className="flex flex-wrap gap-1.5" aria-live="polite">
-          {selectedIds.map((id) => {
-            const r = byId.get(id);
-            // The chip carries the parent too — the selection has to stay readable after the
-            // dropdown closes, and "Springfield" alone doesn't say which one was tagged.
-            const label = r ? [r.name, parentName(r)].filter(Boolean).join(', ') : id;
-            return (
-              <Chip key={id} onRemove={() => onToggle(id)} removeLabel={`Remove ${label}`}>
-                {label}
-              </Chip>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }

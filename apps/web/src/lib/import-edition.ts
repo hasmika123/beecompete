@@ -2,7 +2,7 @@
  * Pure helpers behind the import-review Edition & timeline panel (S3 v1, phase 3).
  *
  * They live here rather than inside the component so the rules that actually matter — which
- * milestones count as a deadline, and what "TBD" means — are unit-testable without a DOM, matching
+ * key dates count as a deadline, and what "TBD" means — are unit-testable without a DOM, matching
  * how the rest of apps/web is tested.
  */
 
@@ -53,7 +53,7 @@ export interface TimelineFlags {
   missingDeadline: boolean;
   /**
    * Every row is undated. NOT a defect: it is the correct extraction for a page that announces
-   * milestones without dating them, since the pipeline emits TBD rather than guessing. It does mean
+   * key dates without dating them, since the pipeline emits TBD rather than guessing. It does mean
    * a human has to go find the dates.
    */
   allTbd: boolean;

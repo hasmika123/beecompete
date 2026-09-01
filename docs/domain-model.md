@@ -60,7 +60,7 @@ no separate versioning/history tables. User-submitted corrections (DQ6) are rows
 | # | Question | Decision |
 |---|---|---|
 | Q1 | **Category set** for launch | A two-level taxonomy (Category → Subcategory), seeded with ~10 top academic-competition categories: Math · Science & Engineering · Computer Science/Coding · Robotics · Debate & Speech · Business/Entrepreneurship (CTSO) · Writing & Essay · Arts & Music · Academic Bowl/Quiz · History/Geography/Civics · (+ "Other"). This is **seed config, not schema** — the taxonomy table grows freely. |
-| Q2 | **Grade/age** representation | Store **both**: a normalized **grade range** (`min_grade`/`max_grade`) as the *primary* eligibility/filter axis, and an optional **age range** (`min_age`/`max_age`) for age-gated or international competitions. A Participant has a grade + DOB (→ age). **Encoding locked (2026-07-07):** `smallint` — **Pre-K = −1, K = 0, grades 1–12 = 1–12; 13–16 = the four undergraduate years (College freshman → College senior), 17 = Graduate** *(post-HS rungs activated 2026-08-23, split into named college years 2026-08-24 by owner — a single “College” rung couldn’t say whether a competition was freshman-only or open to all four; “grade” stays the canonical term, the post-HS rungs are named levels on the same ladder — UI renders them without the “grade” prefix: “Grades 9–College freshman”, “College freshman+”. The 13/14 = College/Graduate encoding held for one day and no row ever used it, so the renumber needed no migration)*. Homeschool/ungraded map to the age-equivalent grade. Age-gated comps filter on age (from DOB); grade-gated on grade. **Profile storage (locked 2026-07-07):** participants store **`grad_year`** as canonical; grade is *derived* (UI asks grade, converts on save) — so profiles never go stale at school-year rollover. |
+| Q2 | **Grade/age** representation | Store **both**: a normalized **grade range** (`min_grade`/`max_grade`) as the *primary* eligibility/filter axis, and an optional **age range** (`min_age`/`max_age`) for age-gated or international competitions. A Participant has a grade + DOB (→ age). **Encoding locked (2026-07-07):** `smallint` — **Pre-K = −1, K = 0, grades 1–12 = 1–12; 13–16 = the four undergraduate years (College freshman → College senior), 17 = Graduate** *(post-HS rungs activated 2026-08-23, split into named college years 2026-08-24 by owner — a single “College” rung couldn’t say whether a competition was freshman-only or open to all four; “grade” stays the canonical term, the post-HS rungs are named levels on the same ladder — UI renders them without the “grade” prefix: “Grades 9–College freshman”, “College freshman+”. The 13/14 = College/Graduate encoding held for one day and no row ever used it, so the renumber needed no migration)*. Homeschool/ungraded map to the age-equivalent grade. Age-gated comps filter on age (from DOB); grade-gated on grade. **Refined 2026-08-28 (owner) — `eligibility_basis`:** storing both ranges never said WHICH one the organizer stated, so every summary surface rendered grade as fact — including grade ranges the seeding extractor had DERIVED from an age rule (Breakthrough Junior Challenge: states ages 13–18, we published "Grades 7–12"). The new Spine column `eligibility_basis` (`GRADE|AGE|BOTH|OPEN`, null = not stated) splits the two jobs the grade range was doing at once: the **stated** axis drives DISPLAY (card badge, At-a-glance strip, Eligibility tab), and BOTH normalized ranges drive SEARCH, derived where absent. Q2's locks all hold — both ranges are still stored and grade is still the primary filter axis; what changes is that a derived range may never be shown as a rule, and a null range means **"not stated"**, never "all grades". Derivation is `grade = age − 5`, clamped to the ladder, server-side only, and is deliberately lossy (age 18 → grade 12 or 13) — which is exactly why it cannot carry a stated rule's authority. Plan + build order: `eligibility-basis-plan.md`. **Profile storage (locked 2026-07-07):** participants store **`grad_year`** as canonical; grade is *derived* (UI asks grade, converts on save) — so profiles never go stale at school-year rollover. |
 | Q3 | **Region** granularity | Structured geo, not free text: **Country → State → County/District → City**, plus a special **"Virtual/Online"**. Each Edition has a `scope_level` (international/national/state/regional/local/virtual) + associated region(s). **`INTERNATIONAL` added 2026-08-20** — the S3 seeding sweep hit ISEF and FIRST Robotics, both genuinely multi-country, and without the token the extractor stored `NATIONAL` for them; it means the *running draws entrants from multiple countries*, not that a US event accepts foreign entrants. No migration: `scope_level` is a `VARCHAR(20)` with no CHECK constraint. US-first ⇒ **State** is the primary filter granularity; District enables chapter scoping. **Multi-region rule locked (2026-07-07):** the region join is **Edition-level** (`EditionRegion`). Test: **one registration = one Edition** — same dates + same registration + same results ⇒ **one** Edition tagged with many regions (e.g., AMC 10 2026 nationwide); operationally distinct regional runnings (own dates/registration/results) ⇒ **separate** Editions (e.g., Dallas vs. Houston regional fairs), linked upward via `advances_to_edition_id` — exactly the advancement chain. A Competition's region facet in search is *derived* from its Editions. **Phase-3 target (§8b):** these per-place runnings are renamed **Stages** under a single annual Edition (not separate Editions); R1 keeps this interim separate-record form. |
 | Q4 | **Division** representation | A generic `Division` per Competition with a name + flexible criteria (grade range and/or skill label). Not hard-coded — each Competition defines its own (Junior/Senior, Novice/Varsity, etc.). A participant maps to a Division at registration. **Placement locked (2026-07-07): `Division` lives on `Competition`** (stable identity across years — needed for history/analytics) with an **`active` flag**; restructures add new rows + deactivate old ones, never edit existing rows. `Registration` **snapshots the resolved division** at registration time, so later definition changes never rewrite past records. No per-Edition division copies. |
 | Q5 | **Round / advancement** | Two mechanisms: **`Round`** = a sequential phase *within* an Edition; **Edition linkage** (`advances_to_edition_id`) = multi-level advancement *across* Editions (school→regional→state→national). `AdvancementRule` (top-N / threshold / judge-selected) attaches to a Round or linkage. Structure is represented at launch; *enforcement* lands with the Phase-3 host tools (H25/HC5 — moved 4→3 by registry Rev 5; designed at Gates A/B). Rules are data, not code. |
@@ -100,7 +100,15 @@ only through a school/chapter — filterable, shown in the Details at-a-glance s
 > United States / Canada / Other, `citizenship_countries` is United States or nothing (owner:
 > free-typed spellings can never be filtered on, so the promotion would have inherited dirty
 > data). Each still stores a one-element array, so the shape is unchanged. The closure is what
-> `other_eligibility_requirements` exists for: the prose catch-all (added 2026-08-24, `0017`,
+> ⚠ **Vocabularies revised 2026-08-28 (owner).** `eligible_countries` is now **Open to all /
+> United States / Canada**; `citizenship_countries` is **Open to all / United States**.
+> **"Other" is retired** — no row ever stored it, and anything the list cannot say belongs in
+> `other_eligibility_requirements` anyway. **"Open to all" is new and IS stored**, because "the
+> organizer says anyone may enter" and "the page never mentions countries" are different facts and
+> an absent key could only ever express the second. The admin form's third option, *Not provided*,
+> is that absent key; both fields are required there, and the public Eligibility tab now renders
+> all three gates unconditionally so a missing row can no longer be read as "no such rule".
+> > `other_eligibility_requirements` exists for: the prose catch-all (added 2026-08-24, `0017`,
 > declared on every template) that absorbs what the closed lists can't say — including what a
 > curator meant by "Other". It is deliberately NOT promotion-bound; nothing filters on prose.
 
@@ -384,7 +392,7 @@ re-deriving the design.
 
 ---
 
-### 7a.1 `entry_pathway` → multi-select `entry_pathways` *(decided 2026-08-23, not built)*
+### 7a.1 `entry_pathway` → multi-select `entry_pathways` — ✅ **BUILT 2026-08-28** (migration `0024`)
 
 **Why.** Entry pathway is genuinely a SET — a competition may accept individual entry *and* school
 entry. The single-value column forced composite tokens (`SCHOOL_OR_CHAPTER`) and a wildcard
@@ -397,7 +405,16 @@ multi-valued facet: `TEXT[]` column (`0002`), GIN index (`0007`), `&&` overlap i
 `CompetitionSearchService`, `@JdbcTypeCode(SqlTypes.ARRAY) List<String>` on the entity, checkbox
 group in the admin form, token validation at the service boundary.
 
-**Migration (next free number, additive-only):**
+**As built.** Executed exactly as planned below, with two notes worth carrying:
+`EntryPathway` (the enum) was **retired in favour of a token set**, `EntryPathways`, mirroring
+`EvaluationTypes` — the alternative the plan offered, chosen because the composites were the only
+reason an enum bought anything. And tokens stay **UPPERCASE** in storage (the backfill inherited
+the old enum column's casing rather than rewriting every row for cosmetics), so the public DTOs
+lowercase them on the way out, as they already did for every other enum. The old `entry_pathway`
+column is dormant and unmapped; the singular key is still READ from queued import payloads
+(`import-seed.ts`), which is why the ~46 PENDING records needed no data migration.
+
+**Migration (as executed, additive-only):**
 1. `addColumn competition.entry_pathways TEXT[]`.
 2. Backfill from `entry_pathway`: `INDIVIDUAL→{INDIVIDUAL}` · `SCHOOL→{SCHOOL}` ·
    `CHAPTER→{CHAPTER}` · `SCHOOL_OR_CHAPTER→{SCHOOL,CHAPTER}` · `OPEN`/`EITHER`→

@@ -7,6 +7,28 @@
 
 export const DEFAULT_TIMEZONE = 'America/New_York';
 
+/**
+ * The zone a KEY DATE must be read in — NOT `DEFAULT_TIMEZONE` (owner 2026-08-30).
+ *
+ * A null `timezone` on a key date does not mean "use our default": it means the source page stated
+ * no zone, and in that case the extractor encodes the day as a UTC-midnight sentinel (see the DATE
+ * RULES in both seeding prompts). Reading `2026-11-03T00:00:00Z` in Eastern yields **Nov 2** — the
+ * public timeline, the card deadline, the At-a-glance cell and the schema.org dates were all a
+ * calendar day early on every date-only extraction, and "closes Jan 1 2026" rendered as
+ * "Dec 31 2025". Only rows with a stored zone are real wall-clock deadlines ("11:59 PM ET"); those
+ * keep their own zone and are unaffected.
+ *
+ * `import-seed.ts` and `import-edition-panel.tsx` already resolved null to UTC for exactly this
+ * reason — this makes the same rule apply on the public side, which is where it was missing.
+ *
+ * Audit timestamps (`createdAt`, `reviewedAt`, `lastVerifiedAt`) are genuine instants with no zone
+ * of their own and keep `DEFAULT_TIMEZONE`: they pass no timezone argument at all, so they never
+ * reach this helper.
+ */
+export function keyDateZone(timezone?: string | null): string {
+  return timezone ?? 'UTC';
+}
+
 interface Ymd {
   y: number;
   m: number;
@@ -127,7 +149,7 @@ export function zonedWallClockToInstant(local: string, timeZone: string): string
  * The inverse of {@link zonedWallClockToInstant}: a stored UTC instant → the wall clock a form
  * should show for it in the given zone, as "YYYY-MM-DDTHH:mm". Used to seed the admin key-date
  * rows from an extracted import payload, so what the curator edits round-trips back to the same
- * instant. Returns null for a missing or unparseable instant (a TBD milestone).
+ * instant. Returns null for a missing or unparseable instant (a TBD key date).
  */
 export function instantToZonedWallClock(
   iso: string | null | undefined,

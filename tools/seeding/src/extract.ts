@@ -225,10 +225,9 @@ async function stubExtract(input: ExtractInput): Promise<Extraction> {
 
 /**
  * Normalizes raw model/fixture JSON into an Extraction: resolves `categorySlug` -> `categoryId`,
- * forces `description` to null (curator-authored later), coerces the confidence range, and
- * SANITIZES free-text fields (M4): `<`, `>`, and control characters are stripped from name,
- * tags, and every string inside the `attributes` bag — page-injected markup never
- * reaches the queue. Wrong-TYPED fields are passed through untouched so `validatePayload` can
+ * coerces the confidence range, and SANITIZES free-text fields (M4): `<`, `>`, and control
+ * characters are stripped from name, description, tags, resource titles, and every string inside
+ * the `attributes` bag — page-injected markup never reaches the queue. Wrong-TYPED fields are passed through untouched so `validatePayload` can
  * report them as validation errors instead of this module throwing (L3).
  */
 export function normalize(raw: unknown, sourceUrl: string): Extraction {
@@ -262,13 +261,21 @@ export function normalize(raw: unknown, sourceUrl: string): Extraction {
     tags: Array.isArray(rest.tags) ? rest.tags.map((t) => sanitizeIfString(t)) : rest.tags,
     attributes: pruneNullProps(sanitizeDeep(rest.attributes)),
     categoryId,
-    description: null, // never carry model prose — S4 writes our own
+    // Carried since 2026-08-28 (owner): the model writes ORIGINAL prose from the facts and S4
+    // reviews it, matching the hand-paste path. It used to be forced to null, which in practice
+    // meant every seeded listing arrived blank. Sanitized like every other free-text field — it is
+    // model output derived from an untrusted page, so M4 applies to it exactly as it does to name.
+    // `?? null` keeps the KEY present when the model wrote nothing: the submit contract asserts a
+    // fixed field set, and an absent description is a stated null, not a missing field.
+    description: sanitizeIfString(rest.description) ?? null,
     officialUrl: (payloadRaw.officialUrl as string | undefined) ?? sourceUrl,
     // The edition/key-date free text is model output from an untrusted page like everything
     // else, so it gets the same M4 treatment. Spreading `rest` would otherwise smuggle
     // unsanitized prose in through the newest fields.
     ...(rest.edition != null ? { edition: sanitizeEdition(rest.edition) } : {}),
     ...(Array.isArray(rest.keyDates) ? { keyDates: sanitizeKeyDates(rest.keyDates) } : {}),
+    ...(Array.isArray(rest.resources) ? { resources: sanitizeResources(rest.resources) } : {}),
+    ...(Array.isArray(rest.faqs) ? { faqs: sanitizeFaqs(rest.faqs) } : {}),
   } as Extraction['payload'];
 
   const modelConfidence = clampUnit(obj.modelConfidence);
@@ -291,6 +298,37 @@ function sanitizeEdition(edition: unknown): unknown {
 }
 
 /** Same for each key date's label — the only free text on a timeline row. */
+/**
+ * Resource rows carry a model-written `title` from an untrusted page, so it gets the same M4
+ * treatment as every other free-text field. `url` is deliberately NOT sanitized — stripping
+ * characters out of a URL would quietly produce a different, possibly working, link; a malformed
+ * one is rejected outright by validatePayload instead.
+ *
+ * `imageUrl` is DROPPED outright (2026-08-28). Both prompts forbid it, but a model that emits one
+ * anyway must not have it published: an Amazon image id cannot be derived from an ASIN and an
+ * og:image cannot be known without fetching, so any value here is a guess — and a guess fails
+ * INVISIBLY, because ResourceArt swaps a broken image for the per-type art. The page would look
+ * correct while every cover 404s. Dropped rather than rejected: it is a decorative field, and
+ * failing a whole extraction over it would cost more than it saves. Real preview images are
+ * fetched from the live page or licensed through the merchant's API — never inferred.
+ */
+function sanitizeResources(rows: unknown[]): unknown[] {
+  return rows.map((row) => {
+    if (typeof row !== 'object' || row === null) return row;
+    const { imageUrl: _dropGuessedArt, ...r } = row as Record<string, unknown>;
+    return { ...r, title: sanitizeIfString(r.title) };
+  });
+}
+
+/** Both halves of an FAQ row are model prose derived from an untrusted page — M4 applies to both. */
+function sanitizeFaqs(rows: unknown[]): unknown[] {
+  return rows.map((row) => {
+    if (typeof row !== 'object' || row === null) return row;
+    const r = row as Record<string, unknown>;
+    return { ...r, question: sanitizeIfString(r.question), answer: sanitizeIfString(r.answer) };
+  });
+}
+
 function sanitizeKeyDates(rows: unknown[]): unknown[] {
   return rows.map((row) => {
     if (typeof row !== 'object' || row === null) return row;

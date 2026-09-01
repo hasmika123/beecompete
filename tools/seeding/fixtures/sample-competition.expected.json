@@ -9,7 +9,7 @@
     "tags": ["algebra", "number-theory", "geometry", "combinatorics", "olympiad"],
     "participationMode": "INDIVIDUAL",
     "delivery": "VIRTUAL",
-    "entryPathway": "INDIVIDUAL",
+    "entryPathways": ["INDIVIDUAL"],
     "evaluationType": ["exam"],
     "minGrade": 6,
     "maxGrade": 8,

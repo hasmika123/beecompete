@@ -1,0 +1,70 @@
+# `competition.eligibility_basis` — WHICH axis the organizer actually states as the entry rule
+# (owner 2026-08-28; glossary "Eligibility basis", domain-model Q2 refinement).
+#
+# Why: we have stored a grade range AND an age range since 0002, but nothing said which one was
+# real. Every summary surface therefore rendered grade as fact — including grade ranges the seeding
+# extractor had DERIVED from an age rule. Breakthrough Junior Challenge states "ages 13–18" and no
+# grades; we published "Grades 7–12", which tells a 12-year-old in grade 7 that they qualify when
+# they do not, and a 19-year-old senior the same. Eligibility is the one claim on a listing a parent
+# acts on directly, so it has to say what the organizer said.
+#
+# VARCHAR(20), no CHECK constraint — house style, matching `scope_level` (Q3) and `listing_status`
+# (0021). The enum lives in the app (`EligibilityBasis`), so adding a token later needs no migration.
+#
+# NULLABLE ON PURPOSE, and null is NOT a default-to-GRADE: null means "nobody has recorded what the
+# rule is". The display layer says "Not stated" for it and never "All grades" — the fallback this
+# whole changeset exists to retire.
+databaseChangeLog:
+  - changeSet:
+      id: 0023-eligibility-basis-column
+      author: beecompete
+      comment: Add competition.eligibility_basis (GRADE|AGE|BOTH|OPEN, null = not stated).
+      changes:
+        - addColumn:
+            tableName: competition
+            columns:
+              - column:
+                  name: eligibility_basis
+                  type: VARCHAR(20)
+                  remarks: >-
+                    Which axis the organizer STATES: GRADE|AGE|BOTH|OPEN. Null = not stated. The
+                    other axis, when populated, is a derived search range and is never displayed as
+                    a rule.
+      rollback:
+        - dropColumn:
+            tableName: competition
+            columnName: eligibility_basis
+  - changeSet:
+      id: 0023-eligibility-basis-backfill
+      author: beecompete
+      comment: Infer the basis for existing rows from which ranges are populated.
+      changes:
+        - sql:
+            comment: >-
+              Archived rows included — an archived listing still has to render correctly if it is
+              ever restored. Rows with NEITHER range are left NULL: that is the honest value, and
+              it is what makes them read "Not stated" instead of "All grades".
+            sql: >-
+              UPDATE competition
+              SET eligibility_basis = CASE
+                    WHEN (min_grade IS NOT NULL OR max_grade IS NOT NULL)
+                     AND (min_age   IS NOT NULL OR max_age   IS NOT NULL) THEN 'BOTH'
+                    WHEN (min_grade IS NOT NULL OR max_grade IS NOT NULL) THEN 'GRADE'
+                    WHEN (min_age   IS NOT NULL OR max_age   IS NOT NULL) THEN 'AGE'
+                  END
+              WHERE eligibility_basis IS NULL
+      rollback:
+        - empty
+# ⚠ THE BACKFILL IS A BEST GUESS, AND IT IS KNOWN-WRONG FOR ONE SHAPE. A row holding both ranges
+# gets 'BOTH', but some of those rows hold a STATED age range beside a DERIVED grade range — the
+# extractor wrote both, so the data cannot tell them apart. Every such row is genuinely AGE.
+#
+# SQL cannot fix this: only the organizer's page says which axis is real, so it is a curator pass,
+# not a changeset. The listings known to need it at migration time are recorded in
+# `docs/seeding/README.md` ("Eligibility basis — rows needing a curator pass"), and the admin form's
+# Eligibility step now carries the selector to correct them.
+#
+# Until a curator reaches them, a mislabeled row shows BOTH ranges rather than the age range alone.
+# That is strictly better than today (it stops presenting the derived grades as the only rule) and
+# strictly worse than correct — which is why the list ships with the migration instead of quietly
+# waiting to be noticed.

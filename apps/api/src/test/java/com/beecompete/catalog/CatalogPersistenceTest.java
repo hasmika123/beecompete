@@ -15,7 +15,7 @@ import com.beecompete.catalog.domain.Delivery;
 import com.beecompete.catalog.domain.Edition;
 import com.beecompete.catalog.domain.EditionRegion;
 import com.beecompete.catalog.domain.EditionStatus;
-import com.beecompete.catalog.domain.EntryPathway;
+import com.beecompete.catalog.domain.EntryPathways;
 import com.beecompete.catalog.domain.FeaturedSlot;
 import com.beecompete.catalog.domain.HeroCard;
 import com.beecompete.catalog.domain.HeroCardPosition;
@@ -129,7 +129,7 @@ class CatalogPersistenceTest {
 		maa = organizations.save(maa);
 
 		Competition amc = new Competition("amc-10", "AMC 10", math, ParticipationMode.INDIVIDUAL,
-				Delivery.IN_PERSON, EntryPathway.SCHOOL_OR_CHAPTER, CostType.PAID, Recurrence.ANNUAL);
+				Delivery.IN_PERSON, List.of(EntryPathways.SCHOOL, EntryPathways.CHAPTER), CostType.PAID, Recurrence.ANNUAL);
 		amc.setOrganizer(maa);
 		amc.setDescription("The classic 25-question contest for students in grade 10 and below.");
 		amc.setMinGrade((short) 9);
@@ -188,7 +188,7 @@ class CatalogPersistenceTest {
 				.get()
 				.satisfies(t -> assertThat(t.getJsonSchema()).containsEntry("type", "object")); // jsonb
 		assertThat(reloaded.getParticipationMode()).isEqualTo(ParticipationMode.INDIVIDUAL);
-		assertThat(reloaded.getEntryPathway()).isEqualTo(EntryPathway.SCHOOL_OR_CHAPTER);
+		assertThat(reloaded.getEntryPathways()).isEqualTo(List.of(EntryPathways.SCHOOL, EntryPathways.CHAPTER));
 		assertThat(reloaded.getVerificationState()).isEqualTo(VerificationState.CURATED); // default (R1-19: UNVERIFIED retired)
 		assertThat(reloaded.getMinGrade()).isEqualTo((short) 9);
 		assertThat(reloaded.getTags()).containsExactly("math", "olympiad"); // text[]

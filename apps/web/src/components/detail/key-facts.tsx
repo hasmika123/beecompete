@@ -47,37 +47,65 @@ import type { CompetitionDetail } from '@/lib/catalog-types';
 // The prose catch-all stays full width, as does everything on Judging: every one of its values is
 // prose or an unbounded list.
 
+/**
+ * Which axis, if either, is OURS rather than the organizer's. `BOTH` and `OPEN` are stated in full,
+ * and a null basis (legacy rows, or nothing recorded yet) claims nothing either way — in all three
+ * cases nothing is marked approximate, because we cannot honestly say which one we derived.
+ */
+function derivedAxis(basis: string | null): 'grade' | 'age' | null {
+  if (basis === 'age') return 'grade';
+  if (basis === 'grade') return 'age';
+  return null;
+}
+
 function eligibilityRows(competition: CompetitionDetail): LedgerItem[] {
   const edition = currentEdition(competition.editions);
   const rows: LedgerItem[] = [];
+  // BOTH axes render here — this tab is where the full picture belongs, and it is the one place
+  // a reader can see how the two relate. Since blueprints decision 99, the axis the organizer did
+  // NOT state is marked as ours: a grade range derived from an age rule is a search aid, and
+  // labeling it "Approx." is what keeps this tab from repeating the claim the strip stopped making.
+  const derived = derivedAxis(competition.eligibilityBasis);
   const grades = gradeLabel(competition.minGrade, competition.maxGrade);
   if (grades)
     rows.push({
       key: 'grades',
       icon: GraduationCap,
-      label: 'Grades',
-      value: grades,
+      label: derived === 'grade' ? 'Grades (approx.)' : 'Grades',
+      value: derived === 'grade' ? `${grades} — the organizer states ages` : grades,
       compact: true,
     });
   const age = ageLabel(competition, edition);
-  if (age) rows.push({ key: 'age', icon: Calendar, label: 'Age', value: age, compact: true });
+  if (age)
+    rows.push({
+      key: 'age',
+      icon: Calendar,
+      label: derived === 'age' ? 'Age (approx.)' : 'Age',
+      value: derived === 'age' ? `${age} — the organizer states grades` : age,
+      compact: true,
+    });
   rows.push({
     key: 'pathway',
     icon: Ticket,
     label: 'How to enter',
-    value: pathwayLabel(competition.entryPathway),
+    value: pathwayLabel(competition.entryPathways) ?? 'Not provided',
     compact: true,
   });
+  // ALWAYS RENDERED, even with nothing on record (owner 2026-08-28). These three are the questions
+  // a parent checks before entering, and an omitted row is indistinguishable from a rule that does
+  // not exist — a reader cannot tell "no citizenship requirement" from "we never looked". The
+  // curator now answers each one explicitly (including "Not provided"), so the row can state the
+  // answer either way. NOT extended to the prose catch-all or the age cutoff, which are genuinely
+  // optional extras rather than gates.
+  const NOT_STATED = 'Not provided';
   const studentStatus = studentStatusLabel(competition.attributes?.student_status_required);
-  if (studentStatus != null) {
-    rows.push({
-      key: 'student_status_required',
-      icon: User,
-      label: ELIGIBILITY_ATTR_LABELS.student_status_required!,
-      value: studentStatus,
-      compact: true,
-    });
-  }
+  rows.push({
+    key: 'student_status_required',
+    icon: User,
+    label: ELIGIBILITY_ATTR_LABELS.student_status_required!,
+    value: studentStatus ?? NOT_STATED,
+    compact: true,
+  });
   // The two country fields pair with each other (owner 2026-08-27, #113) — they are the same
   // kind of fact and read best compared side by side. They are the one COMPACT exception to the
   // bounded-value rule: a country list is technically unbounded, so a long one wraps to more
@@ -89,9 +117,13 @@ function eligibilityRows(competition: CompetitionDetail): LedgerItem[] {
   ];
   for (const [key, icon] of countryKeys) {
     const value = renderAttrValue(competition.attributes?.[key]);
-    if (value != null) {
-      rows.push({ key, icon, label: ELIGIBILITY_ATTR_LABELS[key]!, value, compact: true });
-    }
+    rows.push({
+      key,
+      icon,
+      label: ELIGIBILITY_ATTR_LABELS[key]!,
+      value: value ?? NOT_STATED,
+      compact: true,
+    });
   }
   // The prose catch-all always takes the full width.
   const other = renderAttrValue(competition.attributes?.other_eligibility_requirements);
@@ -136,7 +168,28 @@ function judgingRows(competition: CompetitionDetail): LedgerItem[] {
   const icons: Record<string, typeof Star> = { judging_criteria: Star, tie_breakers: Scales };
   for (const [key, label] of Object.entries(JUDGING_ATTR_LABELS)) {
     const value = renderAttrValue(competition.attributes?.[key]);
-    if (value != null) rows.push({ key, icon: icons[key] ?? Star, label, value });
+    if (value != null) {
+      rows.push({
+        key,
+        icon: icons[key] ?? Star,
+        label,
+        value,
+        // Criteria are DRAFTED BY US when an organizer publishes none (owner 2026-08-31; both
+        // seeding prompts allow it, deliberately, because the field is required and a blank
+        // "What judges look for" helps nobody). Under this heading a drafted list reads as the
+        // organizer's own, so the page says otherwise — quietly, and on every listing rather than
+        // only the drafted ones: we do not record per-listing which is which, and a marker that
+        // appeared selectively would imply the unmarked ones had been verified as theirs.
+        //
+        // Only `judging_criteria`. `tie_breakers` is never drafted (a tie-break rule is a specific
+        // policy, not something typical of a format), so a hedge there would be a false one.
+        ...(key === 'judging_criteria'
+          ? {
+              note: 'Sometimes ours: where an organizer publishes no criteria, we summarise what’s typical for this format.',
+            }
+          : {}),
+      });
+    }
   }
   const url = rulesUrl(competition);
   if (url) {

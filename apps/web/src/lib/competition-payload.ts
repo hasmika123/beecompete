@@ -67,8 +67,11 @@ export function buildCompetitionBody(form: FormData): Record<string, unknown> {
     teamSizeMin: num(form, 'teamSizeMin') ?? null,
     teamSizeMax: num(form, 'teamSizeMax') ?? null,
     delivery: str(form, 'delivery'),
-    entryPathway: str(form, 'entryPathway'),
+    entryPathways: multi(form, 'entryPathways') ?? [],
     evaluationType: multi(form, 'evaluationType') ?? null,
+    // '' (the "not stated" option) posts as null, not as an empty string: the server's enum
+    // binding rejects '', and null IS the value we mean — nobody has recorded the rule.
+    eligibilityBasis: str(form, 'eligibilityBasis') ?? null,
     minGrade: num(form, 'minGrade') ?? null,
     maxGrade: num(form, 'maxGrade') ?? null,
     minAge: num(form, 'minAge') ?? null,
@@ -246,13 +249,26 @@ function prizeFromAwards(form: FormData): Record<string, unknown> {
       };
 }
 
+/**
+ * `{ status }` when the form carried one, `{}` when it did not — so the key is absent rather than
+ * null in the second case. Spreading an empty object is how you express "say nothing about this
+ * field" in an object literal; `status: undefined` would still create the key for JSON.stringify
+ * to drop, which reads as intentional to anyone merging the object.
+ */
+function editionStatus(form: FormData): Record<string, unknown> {
+  const status = str(form, 'edition_status');
+  return status ? { status } : {};
+}
+
 /** The first-edition block of the combined create form — the year's running. */
 export function buildFirstEdition(form: FormData): Record<string, unknown> {
   return {
     cycleLabel: str(form, 'edition_cycleLabel'),
-    // No status key AT ALL (not even null): create derives it from the key dates server-side,
-    // and on import-approve this object is spread OVER extras.edition — an extracted status
-    // must survive that spread, which a null here would clobber.
+    // Status only when one was SUPPLIED (owner 2026-08-31). The key is omitted entirely
+    // otherwise — not set to null — for two reasons that both still hold: create derives status
+    // from the key dates server-side, and on import-approve this object is spread OVER
+    // extras.edition, where a null would clobber rather than defer.
+    ...editionStatus(form),
     scopeLevel: str(form, 'edition_scopeLevel') ?? 'NATIONAL',
     registrationUrl: str(form, 'edition_registrationUrl') ?? null,
     entryFee: num(form, 'edition_entryFee') ?? null,
@@ -330,13 +346,13 @@ function endsAtFor(
 
 /**
  * The first edition's typed key dates from the form's indexed row fields (`keydate_0_type`,
- * `keydate_0_date`, …) — item 21. Per row: TBD (checkbox) records the milestone with no date; a
+ * `keydate_0_date`, …) — item 21. Per row: TBD (checkbox) records the key date with no date; a
  * typed wall-clock is converted in the admin's chosen zone (never the server's — same rule as
  * addKeyDate), with the time defaulting to end-of-day when only a date is given. Rows with neither
  * a date nor TBD are skipped (an empty "Add date" row posts nothing). The server re-validates the
  * list (including the REG_CLOSE/SUBMISSION_DUE requirement on the admin create path).
  *
- * A row may also carry an END date, for a milestone spanning days (a two-day finals). It posts as
+ * A row may also carry an END date, for a key date spanning days (a two-day finals). It posts as
  * end-of-day in the same zone, and ONLY when it is strictly after `startsAt` — the server's
  * {@code endsAt must be after startsAt} assertion. The form shows an inline error for an earlier
  * end rather than relying on that 400; this used to be hardcoded null, so a range entered at
@@ -392,6 +408,16 @@ export function buildImportApprovalPayload(form: FormData): Record<string, unkno
   }
 
   const payload: Record<string, unknown> = { ...extras.competition, ...competition };
+
+  // Prep resources ride the approve payload since 2026-08-28 — the API creates them as
+  // sub-resources once the competition exists. They are a MAPPED key now, so they no longer arrive
+  // via `extras`: the form's rows are the only source, which is the point — a curator approves the
+  // links they actually reviewed. Omitted entirely when there are none, so an approval that
+  // touched no links sends no key rather than an empty list.
+  const resources = buildResources(form);
+  if (resources.length > 0) payload.resources = resources;
+  const faqs = buildFaqs(form);
+  if (faqs.length > 0) payload.faqs = faqs;
 
   if (str(form, 'edition_cycleLabel') !== undefined) {
     const edition: Record<string, unknown> = { ...extras.edition, ...buildFirstEdition(form) };

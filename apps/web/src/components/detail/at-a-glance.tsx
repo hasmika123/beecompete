@@ -13,8 +13,8 @@ import {
   categoryArt,
   cn,
 } from '@beecompete/ui';
-import { gradeLabel } from '@/lib/catalog-display';
-import { formatDate } from '@/lib/dates';
+import { eligibilityLabel } from '@/lib/catalog-display';
+import { formatDate, keyDateZone } from '@/lib/dates';
 import {
   costLabel,
   currentEdition,
@@ -34,9 +34,9 @@ import type { CompetitionDetail } from '@/lib/catalog-types';
 // question a parent actually works through:
 //
 //   1. WHAT IS IT   Category                       — is this our subject?
-//   2. WHO          Grades · Format                — can my kid enter, alone or on a team?
+//   2. WHO          Eligibility · Format           — can my kid enter, alone or on a team?
 //   3. WHEN         Status · Next deadline         — can we still enter, and by when?
-//   4. WHAT IT COSTS  Cost
+//   4. WHAT IT COSTS  Entry fee
 //   5. HOW / WHERE  Delivery · Location            — do we travel, and how far?
 //   6. PAYOFF       Prize
 //
@@ -66,6 +66,22 @@ interface Item {
   urgent?: boolean;
 }
 
+/**
+ * The strip tile's LABEL follows the stated axis, so an age-gated listing reads "AGES 13–18" rather
+ * than filing an age range under a "Grades" heading. "Eligibility" covers the mixed and
+ * unrecorded cases, where no single axis name would be honest.
+ */
+function eligibilityStripLabel(competition: CompetitionDetail): string {
+  switch (competition.eligibilityBasis) {
+    case 'grade':
+      return 'Grades';
+    case 'age':
+      return 'Ages';
+    default:
+      return 'Eligibility';
+  }
+}
+
 export function AtAGlance({ competition }: { competition: CompetitionDetail }) {
   const edition = currentEdition(competition.editions);
   const opens = regOpensAt(competition.editions);
@@ -87,12 +103,20 @@ export function AtAGlance({ competition }: { competition: CompetitionDetail }) {
       href: `/competitions/${competition.category.slug}`,
       tileTone: art.tag,
     },
-    // 2. WHO CAN ENTER — the eligibility pair.
+    // 2. WHO CAN ENTER — the eligibility pair. The slot renders the axis the ORGANIZER states
+    // (blueprints decision 99): "Grades 9–12" for a grade rule, "Ages 13–18" for an age rule, both when both are
+    // stated. It does NOT render a grade range we derived from ages — that range exists to make
+    // the grade filter work, and it is lossy enough that presenting it as the rule misinforms
+    // exactly the readers who need it most. The Eligibility tab carries both, labeled.
+    //
+    // ⚠ The old `?? 'All grades'` fallback is GONE. It asserted a verified fact about who may
+    // enter on every listing where nobody had recorded one; "Not stated" is the truth and it is
+    // also what tells a curator there is work to do.
     {
       key: 'grades',
       icon: GraduationCap,
-      label: 'Grades',
-      value: gradeLabel(competition.minGrade, competition.maxGrade) ?? 'All grades',
+      label: eligibilityStripLabel(competition),
+      value: eligibilityLabel(competition) ?? 'Not stated',
     },
     {
       key: 'format',
@@ -111,7 +135,7 @@ export function AtAGlance({ competition }: { competition: CompetitionDetail }) {
       key: 'deadline',
       icon: Clock,
       label: 'Registration',
-      value: `Opens ${formatDate(opens.iso, opens.timezone ?? undefined)}`,
+      value: `Opens ${formatDate(opens.iso, keyDateZone(opens.timezone))}`,
     });
   } else if (deadline) {
     // Relative value + absolute date underneath — see deadlineFact (pinned by detail-display.test).
@@ -125,7 +149,7 @@ export function AtAGlance({ competition }: { competition: CompetitionDetail }) {
       urgent: fact.urgent,
     });
   } else {
-    // No usable date: either a deadline milestone exists with a TBD date (R1-18) or the
+    // No usable date: either a deadline key date exists with a TBD date (R1-18) or the
     // competition has no future reg_close/submission_due at all. The slot still renders
     // (owner 2026-08-23) — an absent row read as "no deadline to worry about"; "TBD" says the
     // truth, that we don't know it yet, and keeps the strip's fixed shape across competitions.
@@ -134,7 +158,7 @@ export function AtAGlance({ competition }: { competition: CompetitionDetail }) {
 
   items.push(
     // 4. WHAT IT COSTS
-    { key: 'cost', icon: Ticket, label: 'Cost', value: costLabel(competition, edition) },
+    { key: 'cost', icon: Ticket, label: 'Entry fee', value: costLabel(competition, edition) },
     // 5. HOW / WHERE — Delivery answers "do we travel at all?", so it leads Location; the two
     // were split by Format before.
     {

@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Check } from '../icons';
+import { Check, Warning } from '../icons';
 import { cn } from '../lib/cn';
 
 /**
@@ -25,6 +25,12 @@ export interface StepperStep {
   description?: string;
   /** Marks the step visited/valid — shows a check when it isn't the active step. */
   complete?: boolean;
+  /**
+   * The step is WRONG, not merely unfinished — a field on it fails validation, or a submit was
+   * blocked by it. Outranks `complete` and `incompleteRequired` in the node styling: a curator
+   * chasing a failed publish needs the broken steps to be the loudest thing in the rail.
+   */
+  invalid?: boolean;
   /** The step still holds an unfilled required field — shows a "required" flag. */
   incompleteRequired?: boolean;
 }
@@ -64,7 +70,10 @@ export function Stepper({
       )}
       {steps.map((step, i) => {
         const current = step.id === activeId;
-        const showCheck = step.complete && !current;
+        // `invalid` wins over `complete`: a step cannot be both finished and broken, and after a
+        // blocked submit the failure is the more useful of the two to show.
+        const showCheck = step.complete && !step.invalid;
+        const showAlert = step.invalid === true;
         const isFirst = i === 0;
         const isLast = i === steps.length - 1;
         return (
@@ -101,14 +110,25 @@ export function Stepper({
               aria-hidden="true"
               className={cn(
                 'relative z-10 flex size-[26px] items-center justify-center rounded-full border-[1.5px] text-xs font-semibold transition-colors',
-                showCheck
-                  ? 'border-success bg-success text-white'
-                  : current
-                    ? 'border-brand-gold bg-surface-raised text-foreground ring-4 ring-brand-gold/15'
-                    : 'border-border bg-surface-raised text-muted group-hover:border-border-strong',
+                showAlert
+                  ? 'border-danger bg-danger text-white'
+                  : showCheck
+                    ? 'border-success bg-success text-white'
+                    : current
+                      ? 'border-brand-gold bg-surface-raised text-foreground ring-4 ring-brand-gold/15'
+                      : 'border-border bg-surface-raised text-muted group-hover:border-border-strong',
+                // The active step keeps its gold ring even once green/red, so "where I am" and
+                // "how this step is doing" stay separate signals.
+                current && (showAlert || showCheck) && 'ring-4 ring-brand-gold/25',
               )}
             >
-              {showCheck ? <Check weight="bold" className="size-3.5" /> : i + 1}
+              {showAlert ? (
+                <Warning weight="bold" className="size-3.5" />
+              ) : showCheck ? (
+                <Check weight="bold" className="size-3.5" />
+              ) : (
+                i + 1
+              )}
             </span>
             <span className="min-w-0">
               <span className="flex items-center gap-1.5">
@@ -120,7 +140,14 @@ export function Stepper({
                 >
                   {step.label}
                 </span>
-                {step.incompleteRequired && (
+                {showAlert ? (
+                  <span
+                    role="img"
+                    aria-label="has a problem"
+                    className="size-1.5 shrink-0 rounded-full bg-danger"
+                  />
+                ) : null}
+                {!showAlert && step.incompleteRequired && (
                   // role="img" so the aria-label is exposed (AT ignores aria-label on a bare,
                   // role-less span) — gives the amber dot a text alternative so the state isn't
                   // conveyed by color alone (WCAG 1.1.1 / 1.4.1).

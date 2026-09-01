@@ -82,7 +82,7 @@ describe('splitImportPayload', () => {
     expect(seed.keyDates[0]).toMatchObject({ date: '2026-11-03', timezone: 'UTC' });
   });
 
-  it('keeps a TBD milestone undated rather than inventing one', () => {
+  it('keeps a TBD key date undated rather than inventing one', () => {
     const seed = splitImportPayload(payload({ keyDates: [{ type: 'REG_CLOSE', startsAt: null }] }));
     expect(seed.keyDates[0]).toMatchObject({ tbd: true, date: '', time: '' });
   });
@@ -104,10 +104,26 @@ describe('splitImportPayload', () => {
     expect(seed.keyDates.map((r) => r.type)).toEqual(['RESULTS']);
   });
 
-  it('falls back to a renderable token for an enum the dropdown does not know', () => {
+  // Owner 2026-08-28: these enums no longer get a substituted default. A payload that never said
+  // "annual" used to reach the form showing Annual, indistinguishable from one that did — so a
+  // curator could not tell our guess from the source's fact, and published the guess.
+  it('leaves an absent or unknown enum UNANSWERED rather than substituting a default', () => {
     const seed = splitImportPayload(payload({ costType: 'FREEMIUM', delivery: null }));
-    expect(seed.competition.costType).toBe('FREE');
-    expect(seed.competition.delivery).toBe('IN_PERSON');
+    expect(seed.competition.costType).toBe('');
+    expect(seed.competition.delivery).toBe('');
+  });
+
+  it('still reads a stated enum straight through', () => {
+    const seed = splitImportPayload(payload({ costType: 'PAID', recurrence: 'ROLLING' }));
+    expect(seed.competition.costType).toBe('PAID');
+    expect(seed.competition.recurrence).toBe('ROLLING');
+  });
+
+  it('leaves an unstated edition scope level unanswered', () => {
+    // 5 queued extractions have no scopeLevel and had been approving as NATIONAL. It is @NotNull
+    // server-side, so the form now blocks on it instead of inventing one.
+    const seed = splitImportPayload(payload({ edition: { cycleLabel: '2026' } }));
+    expect(seed.edition?.scopeLevel).toBe('');
   });
 
   it('prefers an already-resolved organizer id over the extracted name', () => {
@@ -124,14 +140,52 @@ describe('splitImportPayload', () => {
       }),
     );
     expect(seed.extras.competition).toEqual({ reviewerNotes: 'fee unclear' });
-    // `status` left the form 2026-08-22 (derived on create) — an extracted one is an extra now;
-    // prizeValue gained a control the same day, so it is MAPPED, not an extra.
-    expect(seed.extras.edition).toEqual({ status: 'OPEN' });
+    // Nothing on the edition is an extra any more. `status` was the last one — it rode through as
+    // an extra from 2026-08-22, which is what let the create path discard it while import-approve
+    // applied it; mapping it (2026-08-31) is what made the two paths agree. prizeValue has been
+    // mapped since it gained a control.
+    expect(seed.extras.edition).toEqual({});
+    expect(seed.edition?.status).toBe('OPEN');
     expect(seed.edition?.prizeValue).toBe('500');
   });
 });
 
 describe('importSeedWarnings', () => {
+  /**
+   * A token the payload STATED but we can't map renders blank — same as "the source never said".
+   * Without a warning a curator can't tell which happened, so can't tell whether to read the page
+   * or report an extractor bug. The key-date path has always warned; these did not.
+   */
+  it('seeds edition.status as a mapped field, not an extra', () => {
+    const p = payload({ edition: { cycleLabel: '2026', scopeLevel: 'NATIONAL', status: 'OPEN' } });
+    const seed = splitImportPayload(p);
+    expect(seed.edition?.status).toBe('OPEN');
+    // Mapped now, so it must NOT also ride through as an extra — that was the old two-paths bug.
+    expect('status' in seed.extras.edition).toBe(false);
+  });
+
+  it('names an unrecognised enum token rather than blanking it silently', () => {
+    const p = payload({ delivery: 'ONLINE', costType: 'GRATIS' });
+    const warnings = importSeedWarnings(p, splitImportPayload(p));
+    const w = warnings.find((x) => x.key === 'unmappedEnums');
+    expect(w).toBeDefined();
+    expect(w!.message).toContain('delivery ("ONLINE")');
+    expect(w!.message).toContain('entry fee type ("GRATIS")');
+  });
+
+  it('stays quiet when a field is simply absent — that is a different answer', () => {
+    const p = payload();
+    delete (p as Record<string, unknown>).delivery;
+    const keys = importSeedWarnings(p, splitImportPayload(p)).map((x) => x.key);
+    expect(keys).not.toContain('unmappedEnums');
+  });
+
+  it('names an unrecognised scope level from inside the edition', () => {
+    const p = payload({ edition: { cycleLabel: '2026', scopeLevel: 'GALACTIC' } });
+    const w = importSeedWarnings(p, splitImportPayload(p)).find((x) => x.key === 'unmappedEnums');
+    expect(w?.message).toContain('scope level ("GALACTIC")');
+  });
+
   it('says nothing about a complete extraction beyond what is genuinely missing', () => {
     const p = payload();
     expect(importSeedWarnings(p, splitImportPayload(p)).map((w) => w.key)).toEqual([]);
@@ -145,9 +199,128 @@ describe('importSeedWarnings', () => {
     expect(keys).toContain('edition');
   });
 
-  it('flags a timeline with no deadline milestone', () => {
+  it('flags a timeline with no deadline key date', () => {
     const p = payload({ keyDates: [{ type: 'RESULTS', startsAt: '2026-12-01T00:00:00Z' }] });
     expect(importSeedWarnings(p, splitImportPayload(p)).map((w) => w.key)).toContain('deadline');
+  });
+
+  // Prep resources ride the payload since 2026-08-28 (the paste prompt asks for ~5 links plus 2-3
+  // Amazon ones). Before that they had no reader at all and were reported as a dropped field.
+  it('reads prep resources into form rows', () => {
+    const seed = splitImportPayload(
+      payload({
+        resources: [
+          { title: 'Official past papers', url: 'https://example.org/past', type: 'PAST_PAPER' },
+          { title: 'Prep book', url: 'https://www.amazon.com/dp/123', type: 'book' },
+        ],
+      }),
+    );
+    expect(seed.resources).toHaveLength(2);
+    expect(seed.resources[0]).toMatchObject({ title: 'Official past papers', type: 'PAST_PAPER' });
+    // Lowercase from a model is accepted — the form's dropdown is uppercase-only.
+    expect(seed.resources[1]!.type).toBe('BOOK');
+  });
+
+  it('never flags a suggested resource as affiliate on its own', () => {
+    // The prompt emits PLAIN Amazon links for a curator to swap for tagged ones. A link that earns
+    // nothing must not render the affiliate disclosure (compliance DQ10), so the flag stays false
+    // unless the payload says otherwise outright.
+    const seed = splitImportPayload(
+      payload({
+        resources: [{ title: 'Prep book', url: 'https://www.amazon.com/dp/123', type: 'BOOK' }],
+      }),
+    );
+    expect(seed.resources[0]!.isAffiliate).toBe(false);
+  });
+
+  it('drops half-written and unusable resource rows instead of coercing them', () => {
+    const seed = splitImportPayload(
+      payload({
+        resources: [
+          { title: 'No link here' },
+          { url: 'https://example.org/no-title' },
+          'not an object',
+          { title: 'Odd type', url: 'https://example.org/x', type: 'PODCAST' },
+        ],
+      }),
+    );
+    expect(seed.resources).toHaveLength(1);
+    // The link is the valuable part, so an unknown type falls back rather than losing the row.
+    expect(seed.resources[0]).toMatchObject({ title: 'Odd type', type: 'OTHER' });
+  });
+
+  // `0024`: the ~46 queued extractions predate the set and carry a singular `entryPathway`,
+  // including the composite tokens it retired. They must still review correctly without a data
+  // migration, so the reader takes either shape and expands exactly like the migration's backfill.
+  it('expands a legacy singular entryPathway, composites included', () => {
+    const cases: [string, string[]][] = [
+      ['INDIVIDUAL', ['INDIVIDUAL']],
+      ['SCHOOL', ['SCHOOL']],
+      ['SCHOOL_OR_CHAPTER', ['SCHOOL', 'CHAPTER']],
+      ['OPEN', ['INDIVIDUAL', 'SCHOOL', 'CHAPTER']],
+      ['EITHER', ['INDIVIDUAL', 'SCHOOL', 'CHAPTER']],
+    ];
+    for (const [stored, expected] of cases) {
+      const seed = splitImportPayload(payload({ entryPathway: stored }));
+      expect(seed.competition.entryPathways, stored).toEqual(expected);
+    }
+  });
+
+  it('prefers the array shape and drops tokens it does not know', () => {
+    expect(
+      splitImportPayload(payload({ entryPathways: ['SCHOOL', 'CHAPTER'] })).competition
+        .entryPathways,
+    ).toEqual(['SCHOOL', 'CHAPTER']);
+    expect(
+      splitImportPayload(payload({ entryPathways: ['SCHOOL', 'NONSENSE'] })).competition
+        .entryPathways,
+    ).toEqual(['SCHOOL']);
+    expect(
+      splitImportPayload(payload({ entryPathway: 'NONSENSE' })).competition.entryPathways,
+    ).toEqual([]);
+  });
+
+  it('reads FAQ rows into form rows', () => {
+    const seed = splitImportPayload(
+      payload({
+        faqs: [
+          { question: 'Who can enter?', answer: 'Students in grades 6-8.' },
+          { question: 'What does it cost?', answer: 'There is a $30 entry fee.' },
+        ],
+      }),
+    );
+    expect(seed.faqs).toEqual([
+      { question: 'Who can enter?', answer: 'Students in grades 6-8.' },
+      { question: 'What does it cost?', answer: 'There is a $30 entry fee.' },
+    ]);
+  });
+
+  it('drops an FAQ row missing either half', () => {
+    // A question with no answer would publish as an unanswered question on the FAQ tab, with
+    // FAQPage markup on it.
+    const seed = splitImportPayload(
+      payload({
+        faqs: [
+          { question: 'Unanswered?' },
+          { answer: 'Orphan answer' },
+          { question: 'Real?', answer: 'Yes.' },
+        ],
+      }),
+    );
+    expect(seed.faqs).toEqual([{ question: 'Real?', answer: 'Yes.' }]);
+  });
+
+  it('does not report resources as a dropped field', () => {
+    // It is a mapped key now; before that the curator was told their links "WON'T be saved".
+    const p = payload({ resources: [{ title: 'A', url: 'https://example.org/a', type: 'GUIDE' }] });
+    const extras = importSeedWarnings(p, splitImportPayload(p)).find((w) => w.key === 'extras');
+    expect(extras?.message ?? '').not.toContain('resources');
+  });
+
+  it('does not report faqs as a dropped field', () => {
+    const p = payload({ faqs: [{ question: 'Q?', answer: 'A.' }] });
+    const extras = importSeedWarnings(p, splitImportPayload(p)).find((w) => w.key === 'extras');
+    expect(extras?.message ?? '').not.toContain('faqs');
   });
 
   it('flags rows it had to leave out and keys it is carrying through untouched', () => {

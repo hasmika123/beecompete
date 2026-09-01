@@ -7,11 +7,13 @@ import {
   COST_TYPES,
   DELIVERIES,
   EDITION_STATUSES,
+  ELIGIBILITY_BASES,
   ENTRY_PATHWAYS,
   EVALUATION_TOKENS,
   KEY_DATE_TYPES,
   PARTICIPATION_MODES,
   RECURRENCES,
+  RESOURCE_TYPES,
   SCOPE_LEVELS,
   type CompetitionPayload,
   type EditionPayload,
@@ -60,7 +62,10 @@ const idToSlug = new Map<string, CategorySlug>(
 );
 
 const MIN_GRADE = -1; // Pre-K
-const MAX_GRADE = 12;
+// 12 = grade 12, then 13..16 = the four undergraduate years and 17 = graduate student. Mirrors the
+// server's @Min(-1) @Max(17) on CompetitionRequest: the catalog runs elementary -> graduate school,
+// so capping at 12 here silently rejected every college and graduate competition the extractor found.
+const MAX_GRADE = 17;
 /** Server-side @Size cap on officialUrl / logo (CompetitionRequest) — mirrored here (M2). */
 const MAX_URL_LENGTH = 1000;
 /** Server @Size caps on the edition + key-date fields (EditionRequest / FirstEditionKeyDate). */
@@ -171,6 +176,18 @@ function validateKeyDates(dates: KeyDatePayload[], errors: string[], warnings: s
     if (typeof d.timezone === 'string' && d.timezone.length > MAX_TIMEZONE) {
       errors.push(`${at}.timezone exceeds ${MAX_TIMEZONE} chars`);
     }
+    // A ROUND_START or CUSTOM row carries no meaning without the page's own name for it (owner
+    // 2026-08-30): unlabelled, the public timeline can only render the type — "Round begins" — which
+    // says nothing about WHICH round. Unlike every other extraction gap this one is unrecoverable
+    // without re-reading the source page, so it is surfaced at extraction time rather than left for
+    // a later cleanup. A WARNING, not an error: the server accepts the row, and the curator can name
+    // it during review.
+    if (
+      (d.type === 'ROUND_START' || d.type === 'CUSTOM' || d.type === 'PERIOD') &&
+      (typeof d.label !== 'string' || d.label.trim() === '')
+    ) {
+      warnings.push(`${at} is ${d.type} with no label — name the round/key date as the page does`);
+    }
     const start = checkInstant(errors, `${at}.startsAt`, d.startsAt);
     const end = checkInstant(errors, `${at}.endsAt`, d.endsAt);
     // Server @AssertTrue: an endsAt without a startsAt, or before it, is rejected.
@@ -182,13 +199,37 @@ function validateKeyDates(dates: KeyDatePayload[], errors: string[], warnings: s
   });
 
   const typed = dates.filter((d) => d && typeof d.type === 'string');
+  /**
+   * The registration pair is the ONLY singleton (owner 2026-08-31). Registration opens once and
+   * closes once; a second of either is a different milestone wearing the wrong type.
+   *
+   * Not tidiness: `nextDeadline` is the earliest REG_CLOSE, so a second one silently becomes the
+   * listing's deadline — an early-bird cutoff emitted as REG_CLOSE closes the listing weeks early.
+   * The curation form flags this too, but only once a human is looking; this catches it at
+   * extraction.
+   *
+   * ⚠ SUBMISSION_DUE and RESULTS are deliberately NOT here: they repeat per division or per round
+   * ("junior entries due" / "senior entries due"; semifinal then final results). `nextDeadline`
+   * copes — it takes the earliest FUTURE row, so several submission deadlines hand off to one
+   * another as each passes. ROUND_START and the custom types are exempt for the same reason.
+   */
+  const SINGLETON_TYPES = ['REG_OPEN', 'REG_CLOSE'];
+  for (const t of SINGLETON_TYPES) {
+    const n = typed.filter((d) => d.type === t).length;
+    if (n > 1) {
+      warnings.push(
+        `${n} ${t} rows — only one is meaningful; the extras belong on CUSTOM with a label` +
+          (t === 'REG_CLOSE' ? ' (the EARLIEST becomes the listing deadline)' : ''),
+      );
+    }
+  }
   if (!typed.some((d) => DEADLINE_TYPES.includes(d.type))) {
     // Not fatal — plenty of pages genuinely announce nothing yet — but the public card and
     // search read their deadline from these two types, so the listing will show none.
     warnings.push('no REG_CLOSE or SUBMISSION_DUE key date — the listing will show no deadline');
   }
   if (typed.length > 0 && typed.every((d) => d.startsAt == null)) {
-    // Expected and CORRECT for a page that announces milestones without dates (TBD beats a
+    // Expected and CORRECT for a page that announces key dates without dates (TBD beats a
     // guess), but it is exactly the row a curator should chase, so surface it.
     warnings.push('every key date is TBD (no dates on the page) — curator lookup needed');
   }
@@ -268,7 +309,19 @@ function validateSpine(p: CompetitionPayload, errors: string[], warnings: string
 
   requireEnum(errors, 'participationMode', p.participationMode, PARTICIPATION_MODES);
   requireEnum(errors, 'delivery', p.delivery, DELIVERIES);
-  requireEnum(errors, 'entryPathway', p.entryPathway, ENTRY_PATHWAYS);
+  // A SET now (`0024`): required, non-empty, and every token known. The composites it replaced
+  // (SCHOOL_OR_CHAPTER / EITHER) are rejected by the token check, which is the point — a payload
+  // still emitting them was written against the old shape.
+  if (!Array.isArray(p.entryPathways) || p.entryPathways.length === 0) {
+    errors.push('entryPathways is required and must list at least one route');
+  } else {
+    const bad = p.entryPathways.filter((t) => !ENTRY_PATHWAYS.includes(t as never));
+    if (bad.length) {
+      errors.push(
+        `unknown entryPathways token(s): ${bad.join(', ')} — allowed: ${ENTRY_PATHWAYS.join(', ')}`,
+      );
+    }
+  }
   requireEnum(errors, 'costType', p.costType, COST_TYPES);
   requireEnum(errors, 'recurrence', p.recurrence, RECURRENCES);
 
@@ -282,6 +335,101 @@ function validateSpine(p: CompetitionPayload, errors: string[], warnings: string
           `unknown evaluationType token(s): ${bad.join(', ')} — allowed: ${EVALUATION_TOKENS.join(', ')}`,
         );
       }
+    }
+  }
+
+  // Eligibility basis: which axis the page states. Absent is VALID and means "the page doesn't
+  // say" — the one thing that is not allowed is an unrecognized token silently sailing through.
+  if (p.eligibilityBasis != null && !ELIGIBILITY_BASES.includes(p.eligibilityBasis as never)) {
+    errors.push(
+      `unknown eligibilityBasis: ${String(p.eligibilityBasis)} — allowed: ${ELIGIBILITY_BASES.join(', ')}`,
+    );
+  }
+  // The stated axis has to be backed by the range it claims, mirroring the server's @AssertTrue:
+  // a payload claiming AGE with no age range publishes a rule it cannot show.
+  const hasGrade = isNum(p.minGrade) || isNum(p.maxGrade);
+  const hasAge = isNum(p.minAge) || isNum(p.maxAge);
+  if (p.eligibilityBasis === 'GRADE' && !hasGrade) {
+    errors.push('eligibilityBasis GRADE needs a grade range');
+  }
+  if (p.eligibilityBasis === 'AGE' && !hasAge) {
+    errors.push('eligibilityBasis AGE needs an age range');
+  }
+  if (p.eligibilityBasis === 'BOTH' && !(hasGrade && hasAge)) {
+    errors.push('eligibilityBasis BOTH needs both a grade range and an age range');
+  }
+  /**
+   * The OTHER direction, which nothing else checks (owner 2026-08-31).
+   *
+   * The server's @AssertTrue only asks "does the claimed basis have its range?" — a payload with a
+   * grade range and a NULL basis passes it, and passed straight through to a curation form where
+   * "What does the organizer provide?" is required and unanswered. The paste prompt did not even
+   * ask for the field, so every hand-pasted payload landed this way.
+   *
+   * A WARNING, not an error: null basis is a legitimate state on its own (the page said nothing),
+   * and the pipeline's rule is that the curator decides. What is not legitimate is a range with no
+   * basis — a range can only have come from a statement, and that statement had an axis.
+   */
+  if (p.eligibilityBasis == null && (hasGrade || hasAge)) {
+    const axis = hasGrade && hasAge ? 'BOTH' : hasGrade ? 'GRADE' : 'AGE';
+    warnings.push(
+      `${hasGrade && hasAge ? 'grade and age ranges' : hasGrade ? 'a grade range' : 'an age range'}` +
+        ` was extracted but eligibilityBasis is null — it is required on the form, and looks like ${axis}`,
+    );
+  }
+
+  // Prep resources (2026-08-28). Absent is fine — plenty of competitions have little written
+  // about them, and the prompt says so explicitly. What is NOT fine is a malformed row reaching a
+  // curator's review screen looking like a real link.
+  if (p.resources != null) {
+    if (!Array.isArray(p.resources)) {
+      errors.push('resources must be an array');
+    } else {
+      p.resources.forEach((r, i) => {
+        const at = `resources[${i}]`;
+        if (r === null || typeof r !== 'object' || Array.isArray(r)) {
+          errors.push(`${at} must be an object`);
+          return;
+        }
+        if (typeof r.title !== 'string' || r.title.trim() === '') {
+          errors.push(`${at}.title is required`);
+        }
+        if (typeof r.url !== 'string' || !/^https?:\/\/\S+$/i.test(r.url.trim())) {
+          errors.push(`${at}.url must be an absolute http(s) URL`);
+        }
+        if (!RESOURCE_TYPES.includes(r.type as never)) {
+          errors.push(`${at}.type must be one of: ${RESOURCE_TYPES.join(', ')}`);
+        }
+        // A tagged link is a legal disclosure obligation (compliance DQ10). The extractor has no
+        // business claiming one: tags are added by a curator, who ticks the box at the same time.
+        if (r.isAffiliate === true) {
+          errors.push(`${at}.isAffiliate must be false — affiliate tagging is a curator step`);
+        }
+      });
+    }
+  }
+
+  // FAQ entries (2026-08-28). Absent is fine. A row missing either half is not: an unanswered
+  // question would publish on the listing's FAQ tab, with FAQPage markup on it.
+  if (p.faqs != null) {
+    if (!Array.isArray(p.faqs)) {
+      errors.push('faqs must be an array');
+    } else {
+      p.faqs.forEach((f, i) => {
+        const at = `faqs[${i}]`;
+        if (f === null || typeof f !== 'object' || Array.isArray(f)) {
+          errors.push(`${at} must be an object`);
+          return;
+        }
+        if (typeof f.question !== 'string' || f.question.trim() === '') {
+          errors.push(`${at}.question is required`);
+        } else if (f.question.length > 500) {
+          errors.push(`${at}.question must be <= 500 characters`);
+        }
+        if (typeof f.answer !== 'string' || f.answer.trim() === '') {
+          errors.push(`${at}.answer is required`);
+        }
+      });
     }
   }
 
@@ -378,7 +526,8 @@ function checkGrade(errors: string[], field: string, value: number | null | unde
   if (value == null || typeof value !== 'number') return; // wrong types reported separately
   if (!Number.isInteger(value) || value < MIN_GRADE || value > MAX_GRADE) {
     errors.push(
-      `${field}=${value} violates grade encoding (Pre-K ${MIN_GRADE}, K 0, 1..${MAX_GRADE})`,
+      `${field}=${value} violates grade encoding ` +
+        `(Pre-K ${MIN_GRADE}, K 0, grades 1..12, college 13..16, graduate 17)`,
     );
   }
 }

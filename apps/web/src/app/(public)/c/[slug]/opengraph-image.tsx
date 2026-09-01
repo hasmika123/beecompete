@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { categoryHue } from '@beecompete/ui';
 import { fetchCompetition } from '@/lib/catalog-api';
-import { gradeLabel } from '@/lib/catalog-display';
+import { eligibilityLabel } from '@/lib/catalog-display';
 import { PublicApiError } from '@/lib/public-api';
 import { BrandRow, GOLD, GROUND, INK, MUTED, OG_FONTS, OG_SIZE } from '@/lib/og';
 
@@ -40,8 +40,15 @@ export default async function Image({ params }: { params: Promise<{ slug: string
     name = c.name;
     categoryName = c.category.name;
     accent = categoryHue(c.category.slug);
-    const grades = gradeLabel(c.minGrade, c.maxGrade);
-    facts = [grades ?? 'All grades', c.costType === 'free' ? 'Free to enter' : 'Paid'];
+    // The stated axis, same rule as the card and the strip
+    // (blueprints decision 99). A share card is the most
+    // context-free surface we have — it travels with no page around it — so an unrecorded
+    // eligibility drops out of the fact row entirely rather than reading "All grades".
+    const eligibility = eligibilityLabel(c);
+    facts = [
+      ...(eligibility ? [eligibility] : []),
+      c.costType === 'free' ? 'Free to enter' : 'Paid',
+    ];
   } catch (e) {
     if (!(e instanceof PublicApiError && e.status === 404)) throw e;
     // 404 → the generic brand card (name/facts stay at their defaults).

@@ -16,18 +16,29 @@ export interface FormState {
   error?: string;
 }
 
+/**
+ * Create-organization result. Carries the created row so the caller can show it and — in the
+ * add-a-listing flow — select it immediately, without a page refresh to re-fetch the list.
+ */
+export interface OrganizationFormState extends FormState {
+  organization?: Organization;
+}
+
 export const PARTICIPATION_MODES = ['INDIVIDUAL', 'TEAM', 'BOTH'] as const;
 export const DELIVERIES = ['IN_PERSON', 'VIRTUAL', 'HYBRID'] as const;
 // Widened 2026-08-23 (owner): school/chapter split, EITHER renamed OPEN. Legacy EITHER is NOT
 // offered — migration 0016 rewrites those rows — but SCHOOL_OR_CHAPTER stays selectable, since
 // some competitions genuinely accept either route.
-export const ENTRY_PATHWAYS = [
-  'INDIVIDUAL',
-  'SCHOOL',
-  'CHAPTER',
-  'SCHOOL_OR_CHAPTER',
-  'OPEN',
-] as const;
+// Three tokens since `0024` (domain-model §7a.1): entry pathway is a SET, so the composites it
+// used to need — SCHOOL_OR_CHAPTER, OPEN, and the pre-0016 EITHER — are expressible directly and
+// are gone. {SCHOOL, CHAPTER} IS "school or chapter"; all three selected IS "open to all".
+export const ENTRY_PATHWAYS = ['INDIVIDUAL', 'SCHOOL', 'CHAPTER'] as const;
+// Which axis the ORGANIZER states (0023, glossary "Eligibility basis"). The stated axis is what
+// every summary surface renders; the other, when present, is a derived search range and must never
+// be shown as a rule. Absent (null) is a real state — "not stated" — and NOT a default to GRADE.
+export const ELIGIBILITY_BASES = ['GRADE', 'AGE', 'BOTH', 'OPEN'] as const;
+export type EligibilityBasis = (typeof ELIGIBILITY_BASES)[number];
+
 export const COST_TYPES = ['FREE', 'PAID'] as const;
 export const RECURRENCES = ['ANNUAL', 'ONE_OFF', 'ROLLING'] as const;
 // Org trust ladder (R1-19): CURATED (unclaimed) → CLAIMED → VERIFIED. Competitions have no
@@ -43,6 +54,21 @@ export const SCOPE_LEVELS = [
   'LOCAL',
   'VIRTUAL',
 ] as const;
+/**
+ * The key date types that can SPAN days, and so are the only ones offered an end date (owner
+ * 2026-08-30, `docs/timeline-model-plan.md` §9).
+ *
+ * The rest are instants — "registration closes", "results announced" — and an end date on them is
+ * meaningless. The control used to be offered on every row in both key-date editors, which is what
+ * prompted the question that plan answers. Live data agrees: of 52 key dates only 3 carry an
+ * `endsAt`, all of them ROUND_START.
+ *
+ * PERIOD is the escape hatch for a genuine multi-day key date ("finals week") — the plan's generic
+ * window type, which now exists. CUSTOM is deliberately NOT here: it is the generic MOMENT, and all
+ * six CUSTOM rows in the data are points, so it never belonged in this list.
+ */
+export const SPAN_KEY_DATE_TYPES: readonly string[] = ['ROUND_START', 'PERIOD'];
+
 export const KEY_DATE_TYPES = [
   'REG_OPEN',
   'REG_CLOSE',
@@ -50,6 +76,7 @@ export const KEY_DATE_TYPES = [
   'SUBMISSION_DUE',
   'RESULTS',
   'CUSTOM',
+  'PERIOD',
 ] as const;
 // Canonical evaluation tokens (R1-5 EvaluationTypes.TOKENS) — stored/validated LOWERCASE, unlike
 // the other UPPERCASE enums. Server validates these at the curation write boundary.
@@ -82,13 +109,21 @@ export const HERO_POSITIONS = ['MAIN', 'TOP_RIGHT', 'BOTTOM_LEFT'] as const;
  * live EST/EDT toggle would mean recomputing the label per row against that row's date, which
  * buys nothing: both spellings name the same zone.
  */
+/**
+ * Zone only — no city (owner 2026-08-31), and DST-agnostic on purpose.
+ *
+ * The labels used to read "EST (New York)". The city was noise once the value is an IANA zone, and
+ * "EST" was worse than noise: it means winter time specifically, so it was literally wrong for the
+ * two-thirds of the year those zones spend on daylight time. "ET" is correct year-round, and short
+ * enough that the control no longer needs a wide field.
+ */
 export const ADMIN_TIMEZONES = [
-  { value: 'America/New_York', label: 'EST (New York)' },
-  { value: 'America/Chicago', label: 'CST (Chicago)' },
-  { value: 'America/Denver', label: 'MST (Denver)' },
-  { value: 'America/Los_Angeles', label: 'PST (Los Angeles)' },
-  { value: 'America/Anchorage', label: 'AKST (Anchorage)' },
-  { value: 'Pacific/Honolulu', label: 'HST (Honolulu)' },
+  { value: 'America/New_York', label: 'ET' },
+  { value: 'America/Chicago', label: 'CT' },
+  { value: 'America/Denver', label: 'MT' },
+  { value: 'America/Los_Angeles', label: 'PT' },
+  { value: 'America/Anchorage', label: 'AKT' },
+  { value: 'Pacific/Honolulu', label: 'HT' },
   { value: 'UTC', label: 'UTC' },
 ];
 
@@ -106,8 +141,10 @@ export interface Competition {
   teamSizeMin: number | null;
   teamSizeMax: number | null;
   delivery: string;
-  entryPathway: string;
+  entryPathways: string[];
   evaluationType: string[] | null;
+  /** Which axis the ORGANIZER states: 'GRADE' | 'AGE' | 'BOTH' | 'OPEN'; null = not stated. */
+  eligibilityBasis: EligibilityBasis | null;
   minGrade: number | null;
   maxGrade: number | null;
   minAge: number | null;
@@ -156,7 +193,7 @@ export interface KeyDate {
   id: string;
   type: string;
   label: string | null;
-  /** null = TBD (R1-18): the milestone exists but its date isn't known yet. */
+  /** null = TBD (R1-18): the key date exists but its date isn't known yet. */
   startsAt: string | null;
   endsAt: string | null;
   timezone: string | null;

@@ -1693,6 +1693,86 @@ of visual breadcrumb *(superseded 2026-07-08, see below)*.
       existing `hint` line, which is what domain note #82 ("the amount LEADS; the summary is its
       caption") already describes.
 
+98. **The cost field is labeled "Entry fee"** (owner 2026-08-28). One rename, applied to every
+    surface that names the field, so a curator and a visitor read the same word: the admin
+    create/import form's Administration step (and that step's `Sign-up · entry fee · delivery`
+    summary), the details page **At-a-glance** strip and **Logistics** ledger, the marketplace
+    filter facet (legend + its radio group's accessible name), the near-miss "we relaxed …" line,
+    and the correction-request field picker. Glossary row added; **"Cost" is retired as a label.**
+    - **Names that deliberately did NOT change**, because they are contracts rather than copy:
+      `Competition.cost_type` / `costType`, `Edition.entry_fee` / `entryFee`, the `LedgerItem` /
+      strip `key: 'cost'`, and the marketplace **`?cost=free|paid` query param** — that one is a
+      public URL every shared or indexed filter link carries, so renaming it would break them for
+      no reader-facing gain. The earlier entries in this log keep their original wording; they
+      record what was decided at the time.
+    - The card is unaffected: its fact row shows the value alone (Free / Paid beside the ticket),
+      never a field label — see #75.
+
+99. **Summary surfaces render the STATED eligibility axis** (owner 2026-08-28). The card badge and
+    the At-a-glance strip showed grades and only grades, so an age-gated listing was published under
+    a grade range we had derived — Breakthrough Junior Challenge states *ages 13–18*, we showed
+    "Grades 7–12". Both surfaces now read `eligibility_basis` (glossary; domain-model Q2 refinement)
+    and render what the organizer actually stated: `Grades 9–12` · `Ages 13–18` · both when both are
+    stated · `Open to all ages`.
+    - **"All grades" is retired.** A listing with nothing on record now reads **"Not stated"**. The
+      old fallback asserted a verified fact about who may enter, on the ~21% of listings where
+      nobody had recorded one — the one claim on this page a parent acts on directly.
+    - **The Eligibility tab keeps BOTH rows** (it always did, #82/#112) and now labels the derived
+      one: "Approx. grades 7–12 — the organizer states ages". The tab is where the full picture
+      belongs; the strip and the card carry the headline only.
+    - **Widths hold.** "Ages 13–18" is narrower than "Grades 9–12", which the strip's middle column
+      already clears at its narrowest panel (#117), and the card's badge slot is fixed-height and
+      `shrink-0` (#75). Neither ratio needed retuning.
+    - Follow-on, NOT in this decision: the **Age facet** (owner-approved, registry M3) and the
+      derived filter ranges that make it complete land with the search PR — see
+      `eligibility-basis-plan.md` §4. Facet order (#10) gains **Age directly under Grade** then.
+
+100. **Creating an organization never leaves the listing you are writing** (owner 2026-08-28).
+     Three changes to one flow, plus the field rename that started it.
+     - **"Domain" → "Official website"** on the organization form. The old label named our storage,
+       not the thing being asked for. The server now reduces whatever is typed to the registrable
+       host (`WebDomains`, shared with the resolve-or-create path), so a pasted
+       `https://www.maa.org/amc` and a typed `maa.org` both land as `maa.org` — which is what host
+       verification (DQ11) will compare. **The label is "Official website", not "Official website
+       URL"**: we keep only the domain, and the edit form has to be honest about the value it shows.
+       It is also a different fact from the competition-level **Official URL**, so the two labels
+       stay distinguishable.
+     - **`+ Add organization…` opens a modal OVER the create-listing form**, replacing a
+       `window.open` into a new tab. The tab protected the in-progress listing only by abandoning
+       it: the curator had to return and reload, which lost the listing anyway. A modal never
+       unmounts the form, so every field already typed survives.
+     - **One "Organization created" confirmation serves both paths**, dismissible by its ✕ (Modal
+       carries ✕ / Escape / focus-trap already). From the standalone page it lands on
+       `/admin/organizations`; from inside a listing it returns to the listing with the new
+       organization already selected. Same message either way, by request — a curator should
+       recognize it wherever they are.
+     - **The dropdown no longer needs a refresh.** `createOrganization` returns the created row
+       instead of redirecting, and the form merges it into its own options. ⚠ The fix is
+       deliberately NOT `router.refresh()`: re-rendering this form from the server is exactly what
+       would discard the half-filled listing the modal exists to protect.
+
+101. **A pasted listing resolves its organizer before anything else** (owner 2026-08-28). A payload
+     names its organizer as TEXT and the form needs an id, so an unmatched name used to surface only
+     as a blocking warning telling the curator to go sort it out. The create form now opens with the
+     decision already on screen: **Which organization runs this?**
+     - **Similar organizations are offered first**, each with its type and domain, and picking one
+       selects it and closes. Similar = **containment either way, case-insensitive** — the server's
+       own resolve-or-create guard (`findByNameContainingIgnoreCase`) widened by one step so that
+       “Mathematical Association of America (MAA)” surfaces the plain “Mathematical Association of
+       America”. ⚠ Deliberately no fuzzier: these are candidates a human picks from, and the server's
+       stated rule is that **a wrong merge is worse than a duplicate**.
+     - **“Add ‹name› as new” opens the organization form PREFILLED** — name from `organizerName`,
+       Official website from the registrable host of the payload's `officialUrl`, which is the same
+       value the SERVER infers for an org it auto-creates. Both routes to a new organization
+       therefore land on the same domain.
+     - Creating it runs the existing confirmation (decision 100) and returns to the listing with the
+       organization **selected and in the dropdown, no refresh**, and every other pasted field still
+       in place.
+     - **The dialog is dismissible** (✕ / Escape / “I’ll choose on the form”). Forcing the choice
+       would trap a curator who wants to read the rest of the listing first; the required-ring
+       already says the organizer is missing, and the server rejects a listing without one.
+     - No prompt change was needed — `organizerName` has been in both payload prompts all along.
+
 ## Status
 | Page | Blueprint | Style prototype | Built |
 |---|---|---|---|

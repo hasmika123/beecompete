@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { Chip, cn, Plus } from '@beecompete/ui';
 
@@ -18,6 +18,13 @@ import { Chip, cn, Plus } from '@beecompete/ui';
 /** Matches the old free-text field's cap, which the serialized list still has to fit. */
 const MAX_TOTAL_CHARS = 300;
 const MAX_TAG_CHARS = 50;
+/**
+ * Five tags, max (owner 2026-08-30). The character cap alone allowed ~30 one-word tags, which is
+ * not a tag list — it is a keyword dump, and it makes every listing's chip row look the same.
+ * Five is enough to place a competition ("algebra", "proof-based", "team") and few enough that
+ * each one has to earn its slot.
+ */
+export const MAX_TAGS = 5;
 
 export interface TagsInputProps {
   name: string;
@@ -27,11 +34,24 @@ export interface TagsInputProps {
   'aria-describedby'?: string;
   'aria-required'?: boolean;
   'aria-invalid'?: boolean;
+  /**
+   * Live tag count, so the form can gate submit when a SEEDED list exceeds MAX_TAGS.
+   * `commit()` enforces the cap on typing and pasting, but `defaultValue` bypasses it — a JSON
+   * fill can arrive with more (the import queue holds payloads of 6, 8 and 11). Truncating them
+   * silently would be the wrong fix: the payload said eleven, and dropping six without a word is
+   * the same silent loss as a half-filled row. So they all render, the count goes over, and the
+   * curator picks which five survive.
+   */
+  onCountChange?: (count: number) => void;
 }
 
-export function TagsInput({ name, defaultValue = [], ...aria }: TagsInputProps) {
+export function TagsInput({ name, defaultValue = [], onCountChange, ...aria }: TagsInputProps) {
   const [tags, setTags] = useState<string[]>(defaultValue);
   const [draft, setDraft] = useState('');
+  useEffect(() => {
+    onCountChange?.(tags.length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tags.length]);
 
   const serialized = tags.join(', ');
 
@@ -48,7 +68,8 @@ export function TagsInput({ name, defaultValue = [], ...aria }: TagsInputProps) 
       const seen = new Set(next.map((t) => t.toLowerCase()));
       for (const candidate of candidates) {
         if (seen.has(candidate.toLowerCase())) continue;
-        // Stop at the serialized cap rather than letting the server reject the whole submit.
+        // Stop at either cap rather than letting the server reject the whole submit.
+        if (next.length >= MAX_TAGS) break;
         if ([...next, candidate].join(', ').length > MAX_TOTAL_CHARS) break;
         next.push(candidate);
         seen.add(candidate.toLowerCase());
@@ -75,7 +96,8 @@ export function TagsInput({ name, defaultValue = [], ...aria }: TagsInputProps) 
     }
   };
 
-  const atCapacity = serialized.length >= MAX_TOTAL_CHARS;
+  const overLimit = tags.length > MAX_TAGS;
+  const atCapacity = tags.length >= MAX_TAGS || serialized.length >= MAX_TOTAL_CHARS;
 
   return (
     <div className="grid gap-2">
@@ -104,7 +126,7 @@ export function TagsInput({ name, defaultValue = [], ...aria }: TagsInputProps) 
           // the curator tabs onward and submits.
           onBlur={() => commit(draft)}
           maxLength={MAX_TAG_CHARS}
-          placeholder={atCapacity ? 'Tag limit reached' : 'Add a tag…'}
+          placeholder={atCapacity ? `Limit reached (${MAX_TAGS} tags)` : 'Add a tag…'}
           disabled={atCapacity}
           className="min-w-0 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted focus:outline-none disabled:cursor-not-allowed"
         />
@@ -129,6 +151,14 @@ export function TagsInput({ name, defaultValue = [], ...aria }: TagsInputProps) 
         </button>
       </div>
 
+      {/* Count, so the limit is visible BEFORE it is hit rather than only as a dead input — and
+          loudly once a seeded list is over it, because that is the only way past `commit()`. */}
+      {tags.length > 0 && (
+        <p className={cn('text-xs', overLimit ? 'font-medium text-danger' : 'text-muted')}>
+          {tags.length} of {MAX_TAGS} tags
+          {overLimit && ` — ${tags.length - MAX_TAGS} over the limit`}
+        </p>
+      )}
       {tags.length > 0 && (
         // aria-live so removing/adding a chip is announced — the change happens away from focus
         // when the + button is what was clicked.

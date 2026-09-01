@@ -1,0 +1,78 @@
+# `entry_pathway` (one value) → `entry_pathways` (a SET). Planned 2026-08-23, built 2026-08-28.
+# Design + rationale: domain-model §7a.1 — this changeset executes that plan, it does not re-decide
+# it.
+#
+# Why: entry pathway is genuinely a set — a competition may accept individual entry AND school
+# entry. A single-value column could only say that with composite tokens, so the vocabulary grew
+# `SCHOOL_OR_CHAPTER` and a wildcard (`EITHER`, renamed `OPEN` by `0016`) to paper over the shape.
+# A set says `{SCHOOL, CHAPTER}` exactly, and ALL THREE composites disappear.
+#
+# Mirrors `evaluation_type`, the facet that already works this way: text[] column (`0002`), GIN
+# index (`0007`), `&&` overlap in the search service. No new pattern is invented here.
+#
+# ⚠ THE OLD COLUMN IS KEPT, dormant and unmapped — the same treatment retired `competition.summary`
+# got (§8). Dropping it would make this changeset irreversible in practice and would strand any
+# read we have not found; leaving it costs one unused column. Its NOT NULL is dropped so new rows
+# can be written without it.
+databaseChangeLog:
+  - changeSet:
+      id: 0024-entry-pathways-column
+      author: beecompete
+      comment: Add competition.entry_pathways text[] (the multi-valued replacement).
+      changes:
+        - sql:
+            comment: >-
+              text[] to match evaluation_type exactly — Liquibase's addColumn has no portable array
+              type, and the entity binds it with @JdbcTypeCode(SqlTypes.ARRAY) the same way.
+            sql: ALTER TABLE competition ADD COLUMN entry_pathways text[]
+      rollback:
+        - sql:
+            sql: ALTER TABLE competition DROP COLUMN entry_pathways
+  - changeSet:
+      id: 0024-entry-pathways-backfill
+      author: beecompete
+      comment: Expand every stored single token into its set.
+      changes:
+        - sql:
+            comment: >-
+              The composite tokens are what this migration exists to retire, so they expand rather
+              than carry over: SCHOOL_OR_CHAPTER is exactly {SCHOOL, CHAPTER}, and OPEN/EITHER
+              ("any route") is all three. Archived rows included — an archived listing still has to
+              render correctly if it is ever restored. The EITHER arm cannot fire (0016 renamed
+              every one to OPEN); it is there so the expansion is total rather than relying on
+              that migration having run.
+            sql: >-
+              UPDATE competition
+              SET entry_pathways = CASE entry_pathway
+                    WHEN 'SCHOOL_OR_CHAPTER' THEN ARRAY['SCHOOL','CHAPTER']
+                    WHEN 'OPEN'              THEN ARRAY['INDIVIDUAL','SCHOOL','CHAPTER']
+                    WHEN 'EITHER'            THEN ARRAY['INDIVIDUAL','SCHOOL','CHAPTER']
+                    ELSE ARRAY[entry_pathway]
+                  END
+              WHERE entry_pathways IS NULL AND entry_pathway IS NOT NULL
+      rollback:
+        - empty
+  - changeSet:
+      id: 0024-entry-pathways-index
+      author: beecompete
+      comment: GIN index — entry pathway is a filter facet, so this is required, not optional.
+      changes:
+        - sql:
+            sql: CREATE INDEX ix_competition_entry_pathways ON competition USING gin (entry_pathways)
+      rollback:
+        - sql:
+            sql: DROP INDEX ix_competition_entry_pathways
+  - changeSet:
+      id: 0024-entry-pathway-nullable
+      author: beecompete
+      comment: "Relax the old column's NOT NULL so it can go dormant — precedent: 0008 key_date.starts_at."
+      changes:
+        - dropNotNullConstraint:
+            tableName: competition
+            columnName: entry_pathway
+            columnDataType: VARCHAR(20)
+      rollback:
+        - empty
+# ⚠ `entry_pathway` IS NOT DROPPED and is no longer written by the application. Any future read of
+# it is reading pre-2026-08-28 data: correct for rows written before this migration, silently stale
+# for everything after. Use `entry_pathways`.
