@@ -515,7 +515,8 @@ export function CompetitionForm({
   const teamDisabled = participation === 'INDIVIDUAL';
 
   // Cost drives the fee fields (item 17): a FREE competition has no entry fee, so the fee +
-  // currency inputs are hidden and dropped from the required-ring. Controlled so the toggle is live.
+  // currency inputs go disabled. Controlled so the toggle is live. Neither input is in the
+  // required-ring any more — answering this dropdown is the whole requirement (owner 2026-09-01).
   // NO PRE-CHOSEN VALUE on any of these (owner 2026-08-28). A dropdown that opens on "Free" or
   // "Annual" looks like an answer, and after a paste it looks like the payload's answer — so a
   // curator scrolls past a guess we made and publishes it as fact. Empty + a placeholder makes the
@@ -904,7 +905,10 @@ export function CompetitionForm({
     officialUrl: c?.officialUrl ?? '',
     registrationUrl: editionSeed?.registrationUrl ?? '',
     entryFee: editionSeed?.entryFee ?? '',
-    currency: editionSeed?.currency ?? '',
+    // USD unless the payload said otherwise (owner 2026-09-01): the catalog is US-facing, and the
+    // server rejects a fee whose currency is missing, so a blank box was a trap rather than a
+    // question. Prefilled, not locked — it is still an editable 3-letter box.
+    currency: editionSeed?.currency ?? 'USD',
     teamSizeMin: c?.teamSizeMin != null ? String(c.teamSizeMin) : '',
     teamSizeMax: c?.teamSizeMax != null ? String(c.teamSizeMax) : '',
   });
@@ -1111,25 +1115,14 @@ export function CompetitionForm({
         // and team size. These five are all @NotNull server-side, so an empty one is a 400 on
         // submit either way — listing them turns that into a labelled row in the ring instead of a
         // failure after the fact, which is the whole reason the enum defaults could be dropped.
+        // ANSWERING THE DROPDOWN IS THE WHOLE REQUIREMENT (owner 2026-09-01). Free or Paid both
+        // complete this row; the AMOUNT and CURRENCY are never required. PAID used to add two more
+        // required rows, which blocked the ring on a fee a competition page routinely does not
+        // publish — and the honest answer there is "paid, amount not stated", not a made-up number.
+        // Both fields still VALIDATE what is typed (see fieldErrors on the FormField below), and
+        // the server's own rule is only that a fee needs a currency — which the USD prefill
+        // guarantees. A curator who knows the fee still types it; one who doesn't is not stuck.
         { key: 'costType', label: 'Entry fee', stepId: 'administration', ok: costType !== '' },
-        // The AMOUNT is only a field when there is one to state. FREE has no fee, and an unanswered
-        // Free/Paid has no amount to ask for yet.
-        ...(costType === 'PAID'
-          ? [
-              {
-                key: 'entryFee',
-                label: 'Entry fee amount',
-                stepId: 'administration',
-                ok: isComplete(text.entryFee, fieldErrors.entryFee),
-              },
-              {
-                key: 'currency',
-                label: 'Currency',
-                stepId: 'administration',
-                ok: isComplete(text.currency, fieldErrors.currency),
-              },
-            ]
-          : []),
         { key: 'delivery', label: 'Delivery', stepId: 'administration', ok: delivery !== '' },
         {
           key: 'participation',
@@ -1522,7 +1515,7 @@ export function CompetitionForm({
                   />
                   <Input
                     name="edition_currency"
-                    defaultValue={editionSeed?.currency ?? ''}
+                    defaultValue={editionSeed?.currency ?? 'USD'}
                     maxLength={3}
                     pattern="[A-Za-z]{3}"
                     placeholder="USD"

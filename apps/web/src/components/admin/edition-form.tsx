@@ -107,10 +107,15 @@ export function EditionForm({
             defaultValue={e?.entryFee ?? ''}
           />
         </FormField>
+        {/* USD unless this edition already stored something else (owner 2026-09-01) — the same
+          prefill the create form uses. The server rejects a fee whose currency is missing
+          (EditionRequest: "an entry fee needs a currency"), so a blank box beside a filled fee was
+          a trap rather than a question. Still an editable ISO box: an existing CAD edition keeps
+          its code and can be corrected, which is why this is a default and not a fixed label. */}
         <FormField label="Currency" hint="3-letter ISO, e.g. USD">
           <Input
             name="currency"
-            defaultValue={e?.currency ?? ''}
+            defaultValue={e?.currency ?? 'USD'}
             maxLength={3}
             pattern="[A-Za-z]{3}"
           />

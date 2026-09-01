@@ -45,8 +45,6 @@ export interface AwardRow {
   type: string;
   value: string;
   currency: string;
-  /** Sticky "Other…" selection — without it a row whose code is still blank snaps back to USD. */
-  currencyOther: boolean;
   /** Free-text for non-money types: "Gold medal + plaque", "8-week internship at the host org". */
   detail: string;
   /**
@@ -67,31 +65,19 @@ export const AWARD_TYPES = [
   { value: 'other', label: 'Other' },
 ] as const;
 
-/** Select sentinel — never stored; it only puts the row into "type the code yourself" mode. */
-const OTHER_CURRENCY = '__other__';
-
 /** Dollar-denominated types get value + currency; everything else gets a free-text detail. */
 const MONEY_TYPES = new Set(['monetary', 'scholarship']);
 
 /**
- * Currency is a dropdown, not free text (owner 2026-08-24). The catalog is US + Canada facing, so
- * those two are the whole vocabulary in practice; "Other" reveals a 3-letter code box rather than
- * storing the word — the server validates ISO-4217 and `Intl.NumberFormat` needs a real code, so
- * "OTHER" would be rejected on save and print as a bare number in the preview.
+ * Currency is FIXED TO USD and no longer pickable (owner 2026-09-01). It was a USD/CAD/Other
+ * dropdown; the catalog is US-facing, so the control asked a question with one answer on every row
+ * and spent a curator's decision per award. It comes back when we support other countries — that
+ * is a real feature, not a control to leave lying around until then.
+ *
+ * The row still CARRIES a currency, and an award that already stored something else keeps it: the
+ * code is DISPLAYED rather than edited, so re-saving an old CAD award cannot silently
+ * redenominate it. Only the ability to choose a new one is gone.
  */
-// CODE ONLY, no symbol (owner 2026-08-28). "USD · $" was the widest thing in this select and is
-// what forced its w-28; the symbol adds nothing a curator needs, since the code IS what gets
-// stored and shown. Dropping it lets the select shrink to w-20 and hands the ~32px back to the
-// Title — reversing the trade #118 had to make in the other direction.
-const CURRENCY_OPTIONS = [
-  { value: 'USD', label: 'USD' },
-  { value: 'CAD', label: 'CAD' },
-  // "Other", not "Other…": the ellipsis was the only part that did not fit the narrowed select,
-  // and it is redundant here — choosing it reveals a code input immediately beside the trigger, so
-  // the "more input follows" it promises is already on screen.
-  { value: OTHER_CURRENCY, label: 'Other' },
-];
-const LISTED_CURRENCIES = ['USD', 'CAD'];
 const DEFAULT_CURRENCY = 'USD';
 
 /** Pre-2026-08-23 rows used a catch-all token; read it as the nearest current type. */
@@ -130,8 +116,6 @@ export function awardRowsFromSeed(
       type: mapped && AWARD_TYPES.some((t) => t.value === mapped) ? mapped : 'monetary',
       value: a.value != null ? String(a.value) : '',
       currency: a.currency ?? '',
-      // A stored code outside the listed two opens the row in "Other" mode with the code shown.
-      currencyOther: !!a.currency && !LISTED_CURRENCIES.includes(a.currency.toUpperCase()),
       detail: a.detail ?? '',
       count: typeof a.count === 'number' && a.count >= 2 ? String(a.count) : '',
     };
@@ -145,7 +129,6 @@ const emptyRow = (key: number): AwardRow => ({
   type: 'monetary',
   value: '',
   currency: '',
-  currencyOther: false,
   detail: '',
   // Opens at 1 rather than blank (owner 2026-08-29). Blank already MEANT one — `toAwardJson`
   // stores a count only at 2+ — but a placeholder reads as unanswered on a step that now asks for
@@ -366,36 +349,14 @@ export function AwardsInput({
                     onChange={(e) => patch(row.key, { value: e.target.value })}
                     className="w-24"
                   />
-                  <Select
-                    aria-label={`Award ${i + 1} currency`}
-                    options={CURRENCY_OPTIONS}
-                    value={
-                      row.currencyOther
-                        ? OTHER_CURRENCY
-                        : row.currency.toUpperCase() || DEFAULT_CURRENCY
-                    }
-                    onValueChange={(v) =>
-                      patch(row.key, {
-                        currencyOther: v === OTHER_CURRENCY,
-                        // Leaving "Other" snaps to the picked code; entering it clears the box so
-                        // the curator types the real one rather than editing "USD" into place.
-                        currency: v === OTHER_CURRENCY ? '' : v,
-                      })
-                    }
-                    dense
-                    className="w-[5.25rem] shrink-0"
-                  />
-                  {row.currencyOther && (
-                    <Input
-                      aria-label={`Award ${i + 1} currency code`}
-                      placeholder="EUR"
-                      maxLength={3}
-                      pattern="[A-Za-z]{3}"
-                      value={row.currency}
-                      onChange={(e) => patch(row.key, { currency: e.target.value })}
-                      className="w-16 uppercase"
-                    />
-                  )}
+                  {/* Static code, not a control: it is the UNIT on the amount beside it, the way
+                    "kg" sits after a weight. Read-only text rather than a disabled Select because a
+                    disabled control still reads as "something you could change" and still costs a
+                    glance. It keeps the select's old 5.25rem so the row's measured wrap point (see
+                    the widths note above) is unchanged. */}
+                  <span className="w-[5.25rem] shrink-0 text-sm text-muted tabular-nums">
+                    {row.currency.toUpperCase() || DEFAULT_CURRENCY}
+                  </span>
                 </div>
               ) : (
                 <Input
