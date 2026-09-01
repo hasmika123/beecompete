@@ -295,7 +295,10 @@ where there is not.
 - Import review now shows the whole **Resources & FAQ** step, both halves — approve persists both
   since 2026-08-28.
 
-The hand-paste path (`paste-json-prompt.md`) does the same two things, plus an image prompt.
+The hand-paste path (`paste-json-prompt.md`) does the same two things, plus an **image prompt** —
+art direction in words for the listing's cover, which the curator takes to an image generator and
+uploads themselves. Removed 2026-08-31, restored 2026-09-01; either way **neither prompt ever
+sources imagery** — no `logo`, no image URL, no cover-art link (see the bullet above).
 
 ## Eligibility basis — rows needing a curator pass
 

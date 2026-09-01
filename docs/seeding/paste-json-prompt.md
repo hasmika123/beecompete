@@ -9,8 +9,10 @@
 4. If the reply ends by offering to generate more FAQs or resources, answer it **before** you paste
    — topping up in the chat costs one message; typing rows into the form costs far more.
 5. Paste the JSON into **Admin → Competitions → New → Paste JSON**.
-6. Add the **Cover image** yourself in the form (5 MB max; PNG/JPEG/WebP) — the prompt no longer
-   produces one, and the field is required.
+6. Take the **image prompt** to ChatGPT, Gemini, or any image generator, generate the cover, and
+   upload it in the form's **Cover image** control (5 MB max; PNG/JPEG/WebP). The field is required.
+   The prompt writes the art direction only — **sourcing the actual picture stays yours** (restored
+   2026-09-01; the no-imagery rule below is unchanged).
 7. Swap each Amazon link from the Amazon-links note for its `tag=beecompete-20` version in the
    **Resources** step, and **tick "affiliate" on each one as you do** — the tag is what triggers our
    disclosure obligation, and the model deliberately leaves the box unticked.
@@ -29,12 +31,13 @@ for students from elementary school through graduate school. I will give you inf
 competition — a URL, pasted page text, a flyer, an email, or just rough notes. Turn it into a single
 JSON object in the exact shape below.
 
-Return TWO things, in this order, with these exact headings:
+Return THREE things, in this order, with these exact headings:
 
 1. **## JSON** — one ```json code block, no commentary inside it.
 2. **## Notes** — the fixed sections below, in this order, EVERY TIME.
+3. **## Image prompt** — one ```text code block I can paste into an image generator.
 
-…and then a THIRD thing, but only when the shortfall check fires — see below.
+…and then a FOURTH thing, but only when the shortfall check fires — see below.
 
 **The JSON comes FIRST, and the Notes are written by READING IT BACK.** Sections 3, 4 and 5 report
 what is actually in the payload — which fields came out null, which Amazon URLs you emitted — so
@@ -56,12 +59,18 @@ you emit gets named in Notes §3, which is how the two halves check each other.
 The ONE exception is `attributes`, an open bag where you omit the keys the source doesn't state
 rather than filling them with nulls.
 
-Do **not** write an image prompt, suggest cover art, or return a logo URL. Imagery for a listing is
-sourced by us, outside this pipeline (owner 2026-08-31).
+**Never SOURCE imagery.** No `logo` field, no image URL, no link to cover art, no "here is their
+banner" — not for the listing, not for a resource. Every picture on a listing is sourced by us,
+outside this pipeline (owner 2026-08-31), and a URL you produce is a guess that fails invisibly.
+
+What you DO write is the **image prompt** — art direction, in words, as the third deliverable below.
+That is text I take to an image generator myself. Describing a picture is the job; supplying one,
+or a link to one, never is (restored 2026-09-01).
 
 ### The shortfall check — the last thing you do
 
-Once the Notes are written, COUNT the rows you actually emitted — not the ones you meant to:
+Once the Notes and the Image prompt are written, COUNT the rows you actually emitted — not the ones
+you meant to:
 
 - `faqs`: fewer than **4** rows?
 - `resources`: fewer than **8** rows?
@@ -69,13 +78,13 @@ Once the Notes are written, COUNT the rows you actually emitted — not the ones
 Each threshold is that section's own target, not one shared number: 4 is what the form needs to
 publish a listing, 8 is the resource count a prepared entrant actually wants.
 
-If either is short, finish your reply with ONE line, after the Notes and with nothing following it,
-naming the real counts and offering to fill the gap:
+If either is short, finish your reply with ONE line — after the Image prompt, with nothing following
+it — naming the real counts and offering to fill the gap:
 
 > Only 2 FAQs and 5 resources here — would you like me to generate more?
 
 If `faqs` is at 4 or more AND `resources` is at 8 or more, say nothing at all: no closing line, no
-offer. The Notes are the end of the reply.
+offer. The Image prompt is the end of the reply.
 
 ⚠ **This is a safety net, not a first pass you can skip toward.** Work the `faqs` and `resources`
 sections properly BEFORE you count. The offer is for what is genuinely left after a real attempt —
@@ -650,6 +659,50 @@ reach five. Two solid rows beat five with one guess. Answers are 1-3 plain sente
 voice, no exclamation marks. If the source gave you too little to answer anything honestly, emit
 `"faqs": []` and name it in Notes §3 — the key still ships.
 
+### The image prompt — the third deliverable
+
+Last, write a prompt I can paste into ChatGPT or Gemini to generate this listing's preview image.
+Output it in one ```text block, ready to paste, addressed to the image generator — not to me. It
+should be a single paragraph plus a short constraints line, 80-150 words, describing ONE specific
+scene. Do not include any explanation around it.
+
+⚠ You are writing WORDS, never a picture or a link. Do not return an image, an image URL, or the
+organizer's own artwork — see the no-imagery rule above.
+
+Where the image ends up, and what that forces:
+- It is the picture on the listing CARD (about 264×144 shown, ~1.8:1) and on the detail page's
+  cover (about 320×160). Both **crop to fill from the centre**, so the two crops differ.
+- Ask for **16:9 landscape**, at least 1200×675, PNG or JPEG, **under 5 MB** (that is a hard upload
+  limit — WebP is fine too, nothing else is).
+- Because of the centre crop: **keep the subject centred and give it generous margins.** Anything
+  near an edge WILL be cut on one surface or the other. No important detail in a corner. A calm,
+  uncluttered background that survives cropping beats a busy composition.
+- It is small on screen. **One clear subject, read at a glance.** A detailed scene turns to mush at
+  264px wide.
+
+What it must and must not contain:
+- **NO TEXT ANYWHERE.** No title, no words, no numbers, no letters, no signage, no watermark, no
+  captions. Say this explicitly in the prompt — image models add text unless told not to. Text also
+  makes the image wrong the moment a date changes, and it gets cropped mid-word by the card.
+- **Brand it to THIS competition or its organizer — never to BeeCompete.** Use the organizer's own
+  colour palette (name the actual colours), and subject matter that is unmistakably this
+  competition: what entrants physically do, the objects and setting involved, the discipline's
+  visual language. A robotics competition looks nothing like a debate tournament and the image
+  should make that obvious before the title is read.
+- **Do NOT reproduce their logo, wordmark, mascot, or any trademarked character** — evoke the brand
+  with palette, materials, setting and mood instead. (Being text-free rules out most wordmarks
+  already.) We are an independent catalog and must never imply endorsement.
+- No real people's faces, no identifiable minors, no copyrighted characters, no fake awards or
+  crests. Generic figures at a distance, hands, equipment, or objects are all fine.
+- Photographic or clean illustration — whichever suits the competition. Avoid generic AI
+  stock-photo tropes: no glowing blue circuitry, no floating holograms, no lens flare, no
+  "futuristic" gradients unless the competition genuinely looks like that.
+
+Good shape to aim for: `A [style] [subject doing the competition's actual activity] in [setting],
+lit by [light]. Palette of [the organizer's actual colours]. Centred composition with wide margins,
+uncluttered [background]. 16:9 landscape. No text, letters, numbers, logos, or watermarks of any
+kind.`
+
 ### Finally
 - Output valid JSON. EVERY top-level key from the shape above is present, `null` (or `[]`) where you
   have nothing — the only place you omit a key is inside `attributes`.
@@ -657,9 +710,10 @@ voice, no exclamation marks. If the source gave you too little to answer anythin
   does NOT apply inside `attributes`, which is an open object: a well-named extra key there is
   welcome (see above).
 - Do not wrap the JSON in any other object.
-- Both deliverables, every time, under their exact headings: **## JSON** first, then **## Notes**
-  (all seven sections, in order, "all clear" lines where empty). Before writing the Notes, read the
-  JSON back and confirm every key from the shape is there.
+- All three deliverables, every time, under their exact headings: **## JSON** first, then
+  **## Notes** (all seven sections, in order, "all clear" lines where empty), then
+  **## Image prompt**. Before writing the Notes, read the JSON back and confirm every key from the
+  shape is there.
 - Then run the shortfall check: count the rows and close with the one-line offer to generate more if
   `faqs` is under 4 or `resources` is under 8. If both are at target, the Notes end the reply.
 
