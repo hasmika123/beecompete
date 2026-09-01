@@ -105,7 +105,7 @@ Keep the master list in a **password manager** — never in the repo or Download
 | `BREVO_API_KEY` + list/template IDs | Prod VPS `.env` | Captures + feedback email (§6, §8) |
 | `POSTHOG_KEY`, `CF_WEB_ANALYTICS_TOKEN` | Prod VPS `.env` + local `.env.local` | Analytics (staging deliberately has none) |
 | `SENTRY_DSN` (API), `WEB_SENTRY_DSN` (web) | VPS `.env`; `WEB_SENTRY_DSN` also a **GitHub secret** (browser DSN bakes at build) | Error tracking |
-| `S3_BUCKET`, `AWS_*` keys | VPS `.env` + `apps/api/.env.s3.local` | Cover-image uploads |
+| `S3_BUCKET`, `AWS_*` keys | VPS `.env` + `apps/api/.env.s3.local` (local: start via `scripts/dev-api.ps1`, which loads it — `bootRun` alone does not) | Cover-image uploads |
 | `VPS_HOST`, `VPS_SSH_KEY`, GHCR token | GitHub Actions secrets | Deploy pipeline |
 | SSH keys | `~/.ssh/beecompete_admin` (local machine) | VPS access |
 

@@ -118,13 +118,21 @@ export function FileUpload({
       const stored = await onSelectFile(file);
       commit(stored);
       setNote(null);
-    } catch {
+    } catch (err) {
       // The note only — the URL row is NOT forced open (owner 2026-08-28). A failed upload is
       // usually worth retrying, and swapping the drop zone's companion row in unprompted both
       // moves the layout under the cursor and reads as "uploading is broken, do it the other way"
       // when the honest answer is "that attempt failed". The "or paste … URL" toggle is right
       // there for anyone who wants it.
-      setNote(`That upload didn’t go through. Try again, or paste ${nounPhrase} URL.`);
+      //
+      // The uploader's REASON is shown when it gave one. Without it, a missing bucket, a rejected
+      // file and a CORS block all read as the same sentence, and only one of the three is worth
+      // retrying — which is what the generic note tells you to do.
+      const reason =
+        err instanceof Error && err.message.trim()
+          ? ` ${err.message.trim().replace(/\.$/, '')}.`
+          : '';
+      setNote(`That upload didn’t go through.${reason} Try again, or paste ${nounPhrase} URL.`);
     } finally {
       setUploading(false);
     }

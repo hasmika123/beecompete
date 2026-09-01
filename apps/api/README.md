@@ -41,7 +41,7 @@ Wiring checks: `GET /api/v1/ping` (versioned JSON; `?name=` is Bean-Validated) a
 `db/changelog/db.changelog-master.yaml` on startup. Migrations are **additive-only** — never
 edit a shipped changeset; add a new one under `db/changelog/changes/`.
 
-### Two things that will bite you locally
+### Three things that will bite you locally
 
 **`bootRun` does not read `.env`.** Nothing loads it — `build.gradle.kts` only injects a default
 `ADMIN_API_TOKEN` when the environment doesn't already set one. Every other value comes from the
@@ -55,6 +55,22 @@ taken on Windows), moving one does not move the other, and `bootRun` dies on
 ```bash
 DATABASE_URL=jdbc:postgresql://localhost:15432/beecompete ./gradlew bootRun
 ```
+
+**That includes `.env.s3.local`, so cover-image uploads 503 by default.** `setup-runbook.md` §6a
+tells you to put the S3 credentials in `apps/api/.env.s3.local`, but per the rule above nothing
+reads that file: `aws.s3.bucket` stays blank, `S3Config` never builds the presigner, and
+`POST /api/v1/admin/uploads/cover` answers 503 "cover upload isn't configured" — which the admin
+drop zone used to render as a generic "that upload didn't go through". Load the file into the
+environment and start the API with it:
+
+```bash
+pwsh scripts/dev-api.ps1              # or: scripts/dev-api.sh
+pwsh scripts/dev-api.ps1 -CheckOnly   # just report what loaded, don't boot
+```
+
+Both scripts read `apps/api/.env.s3.local` then `.env.local` (later wins), warn when any of
+`S3_BUCKET` / `AWS_REGION` / `S3_PUBLIC_BASE_URL` / `AWS_ACCESS_KEY_ID` is still unset, and then run
+`bootRun`. Starting the API any other way leaves uploads off — the paste-a-URL fallback still works.
 
 **Stopping it is not the same as stopping Gradle.** `bootRun` forks the Spring JVM, and its
 lifetime is not reliably tied to the Gradle invocation you started it from — both of these have
