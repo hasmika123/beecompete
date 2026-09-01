@@ -62,7 +62,10 @@ const idToSlug = new Map<string, CategorySlug>(
 );
 
 const MIN_GRADE = -1; // Pre-K
-const MAX_GRADE = 12;
+// 12 = grade 12, then 13..16 = the four undergraduate years and 17 = graduate student. Mirrors the
+// server's @Min(-1) @Max(17) on CompetitionRequest: the catalog runs elementary -> graduate school,
+// so capping at 12 here silently rejected every college and graduate competition the extractor found.
+const MAX_GRADE = 17;
 /** Server-side @Size cap on officialUrl / logo (CompetitionRequest) — mirrored here (M2). */
 const MAX_URL_LENGTH = 1000;
 /** Server @Size caps on the edition + key-date fields (EditionRequest / FirstEditionKeyDate). */
@@ -523,7 +526,8 @@ function checkGrade(errors: string[], field: string, value: number | null | unde
   if (value == null || typeof value !== 'number') return; // wrong types reported separately
   if (!Number.isInteger(value) || value < MIN_GRADE || value > MAX_GRADE) {
     errors.push(
-      `${field}=${value} violates grade encoding (Pre-K ${MIN_GRADE}, K 0, 1..${MAX_GRADE})`,
+      `${field}=${value} violates grade encoding ` +
+        `(Pre-K ${MIN_GRADE}, K 0, grades 1..12, college 13..16, graduate 17)`,
     );
   }
 }

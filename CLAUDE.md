@@ -41,7 +41,9 @@ Start context: `docs/README.md` → `docs/vision-prd.md`, `docs/glossary.md`.
 - **Competition ↔ Edition** are separate (evergreen vs. one running). **Region join is Edition-level**
   (`EditionRegion`); one registration = one Edition.
 - Progress is **derived from the `ActivityEvent` log** — never add bespoke progress columns.
-- `ParticipantProfile` stores **`grad_year`** (grade is derived). Grade encoding: Pre-K −1, K 0, 1–12.
+- `ParticipantProfile` stores **`grad_year`** (grade is derived). Grade encoding: Pre-K −1, K 0,
+  1–12, then **13–16 = the four college years, 17 = graduate** — the ladder runs elementary through
+  grad school, so never cap it at 12 (`domain-model.md` Q2).
 - **Soft-delete** curated data (`archived_at`); corrections go through the `CorrectionProposal` queue.
 - **Payer ≠ beneficiary** in entitlements.
 

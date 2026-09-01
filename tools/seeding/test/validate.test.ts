@@ -193,14 +193,22 @@ test('normalize prunes null-valued attribute props so a null optional key stays 
   assert.equal(validatePayload(payload).ok, true);
 });
 
-test('bad grade encoding fails validation (grade 13 is out of range)', async () => {
-  const payload = { ...(await loadGoodPayload()), maxGrade: 13 };
+test('bad grade encoding fails validation (grade 18 is past graduate school)', async () => {
+  const payload = { ...(await loadGoodPayload()), maxGrade: 18 };
   const result = validatePayload(payload);
   assert.equal(result.ok, false);
   assert.ok(
     result.errors.some((e) => e.includes('grade encoding')),
     `expected a grade-encoding error, got: ${result.errors.join(' | ')}`,
   );
+});
+
+test('the undergraduate + graduate grades validate (13..17)', async () => {
+  // The catalog runs elementary -> graduate school. MAX_GRADE sat at 12 until 2026-08-31, which
+  // rejected every college and graduate competition the extractor found.
+  const payload = { ...(await loadGoodPayload()), minGrade: 13, maxGrade: 17 };
+  const result = validatePayload(payload);
+  assert.equal(result.ok, true, `expected 13..17 to validate, got: ${result.errors.join(' | ')}`);
 });
 
 test('unknown enum token fails validation', async () => {
