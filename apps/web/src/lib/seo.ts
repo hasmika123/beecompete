@@ -32,6 +32,18 @@ interface PageSeoInput {
   absoluteTitle?: boolean;
 }
 
+/**
+ * Shape free-form curated text into a meta description: collapse whitespace, trim to ~200
+ * chars at a word boundary (with an ellipsis), and fall back when there's no usable text
+ * (null/undefined AND empty/blank — an empty string must not produce an empty description).
+ */
+export function metaDescription(raw: string | null | undefined, fallback: string): string {
+  const text = raw?.replace(/\s+/g, ' ').trim();
+  if (!text) return fallback;
+  if (text.length <= 200) return text;
+  return `${text.slice(0, 200).replace(/\s+\S*$/, '')}…`;
+}
+
 export function pageMetadata({
   title,
   description,

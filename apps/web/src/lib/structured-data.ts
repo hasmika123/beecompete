@@ -133,6 +133,9 @@ export function siteJsonLd(): JsonLd {
         '@id': `${SITE_URL}/#organization`,
         name: SITE_NAME,
         url: SITE_URL,
+        // Google's Organization guidelines want a crawlable ≥112×112 logo; the light-mode
+        // mark (171×150) is the one drawn for white backgrounds.
+        logo: absoluteUrl('/brand/mark-light.png'),
       },
       {
         '@type': 'WebSite',

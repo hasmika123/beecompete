@@ -39,7 +39,7 @@ import { fetchCompetition } from '@/lib/catalog-api';
 import type { CompetitionDetail } from '@/lib/catalog-types';
 import { currentEdition, editionStatusLabel } from '@/lib/detail-display';
 import { PublicApiError } from '@/lib/public-api';
-import { pageMetadata } from '@/lib/seo';
+import { metaDescription, pageMetadata } from '@/lib/seo';
 import { breadcrumbJsonLd, eventJsonLd, faqJsonLd, jsonLdScript } from '@/lib/structured-data';
 
 /** Status tag tone: open reads as the brand invitation; done states go quiet. */
@@ -89,9 +89,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const competition = await load((await params).slug);
   if (!competition) return {};
-  const description =
-    competition.description?.slice(0, 200) ??
-    `${competition.name}: grades, deadlines, cost, and how to enter.`;
+  const description = metaDescription(
+    competition.description,
+    `${competition.name}: grades, deadlines, cost, and how to enter.`,
+  );
   // The per-competition OG image comes from the sibling opengraph-image route (file convention).
   return pageMetadata({
     title: competition.name,

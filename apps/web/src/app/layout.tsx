@@ -9,7 +9,10 @@ export const metadata: Metadata = {
     default: 'BeeCompete',
     template: '%s · BeeCompete',
   },
-  description: 'BeeCompete: a marketplace for academic competitions. (Skeleton build.)',
+  // Fallback for routes without their own generateMetadata (404, global error) — every public
+  // page overrides this via pageMetadata.
+  description:
+    'Find academic competitions from elementary school through graduate school — curated listings with real dates, grade ranges, and costs.',
   // No public indexing until the R1 launch gate.
   robots: { index: false, follow: false },
 };
