@@ -158,7 +158,6 @@ public class CatalogPublicController {
 		}
 	}
 
-	/** participation/pathway: the catch-all value (BOTH/EITHER) is not a filter choice — reject it. */
 	/**
 	 * The pathway filter is ONE token matched against a row's SET (0024). No enum and no catch-all
 	 * to exclude: the composite tokens that needed excluding are gone, so "school" simply means
@@ -176,6 +175,7 @@ public class CatalogPublicController {
 		return token;
 	}
 
+	/** participation: the catch-all value (BOTH) is not a filter choice — reject it. */
 	private static <E extends Enum<E>> E parseEligibility(String param, String value, Class<E> type,
 			E catchAll) {
 		E parsed = parseToken(param, value, type);

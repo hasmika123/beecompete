@@ -119,6 +119,32 @@ test('normalize sanitizes both halves of an FAQ row', async () => {
   assert.equal(rows[0]!.answer, 'Grades i9-12/i.');
 });
 
+test('the server size caps are mirrored on faq and resource rows', async () => {
+  // Unmirrored until 2026-09-01: an over-long answer or title passed validation here and failed
+  // as a 400 at submit, after the batch had already been run and reviewed.
+  const payload = await loadGoodPayload();
+  const p = payload as unknown as Record<string, unknown>;
+  p.faqs = [{ question: 'Fine?', answer: 'x'.repeat(2001) }];
+  p.resources = [
+    { title: 'x'.repeat(301), url: 'https://example.org/a', type: 'GUIDE' },
+    { title: 'Long link', url: `https://example.org/${'x'.repeat(1000)}`, type: 'GUIDE' },
+  ];
+  const { ok, errors } = validatePayload(payload);
+  assert.equal(ok, false);
+  assert.ok(
+    errors.some((e) => e.includes('faqs[0].answer')),
+    `expected an answer-length error, got: ${errors.join(' | ')}`,
+  );
+  assert.ok(
+    errors.some((e) => e.includes('resources[0].title')),
+    `expected a title-length error, got: ${errors.join(' | ')}`,
+  );
+  assert.ok(
+    errors.some((e) => e.includes('resources[1].url')),
+    `expected a url-length error, got: ${errors.join(' | ')}`,
+  );
+});
+
 test('validatePayload accepts a well-formed faq list', async () => {
   const payload = await loadGoodPayload();
   const p = payload as unknown as Record<string, unknown>;

@@ -68,6 +68,10 @@ const MIN_GRADE = -1; // Pre-K
 const MAX_GRADE = 17;
 /** Server-side @Size cap on officialUrl / logo (CompetitionRequest) — mirrored here (M2). */
 const MAX_URL_LENGTH = 1000;
+/** Server @Size caps on ResourceRequest / FaqRequest — the same mirroring MAX_URL_LENGTH does. */
+const MAX_RESOURCE_TITLE = 300;
+const MAX_FAQ_QUESTION = 500;
+const MAX_FAQ_ANSWER = 2000;
 /** Server @Size caps on the edition + key-date fields (EditionRequest / FirstEditionKeyDate). */
 const MAX_CYCLE_LABEL = 60;
 const MAX_PRIZE_SUMMARY = 500;
@@ -393,9 +397,13 @@ function validateSpine(p: CompetitionPayload, errors: string[], warnings: string
         }
         if (typeof r.title !== 'string' || r.title.trim() === '') {
           errors.push(`${at}.title is required`);
+        } else if (r.title.length > MAX_RESOURCE_TITLE) {
+          errors.push(`${at}.title must be <= ${MAX_RESOURCE_TITLE} characters`);
         }
         if (typeof r.url !== 'string' || !/^https?:\/\/\S+$/i.test(r.url.trim())) {
           errors.push(`${at}.url must be an absolute http(s) URL`);
+        } else if (r.url.length > MAX_URL_LENGTH) {
+          errors.push(`${at}.url exceeds ${MAX_URL_LENGTH} chars (server limit)`);
         }
         if (!RESOURCE_TYPES.includes(r.type as never)) {
           errors.push(`${at}.type must be one of: ${RESOURCE_TYPES.join(', ')}`);
@@ -423,11 +431,15 @@ function validateSpine(p: CompetitionPayload, errors: string[], warnings: string
         }
         if (typeof f.question !== 'string' || f.question.trim() === '') {
           errors.push(`${at}.question is required`);
-        } else if (f.question.length > 500) {
-          errors.push(`${at}.question must be <= 500 characters`);
+        } else if (f.question.length > MAX_FAQ_QUESTION) {
+          errors.push(`${at}.question must be <= ${MAX_FAQ_QUESTION} characters`);
         }
         if (typeof f.answer !== 'string' || f.answer.trim() === '') {
           errors.push(`${at}.answer is required`);
+        } else if (f.answer.length > MAX_FAQ_ANSWER) {
+          // FaqRequest.MAX_ANSWER. Unmirrored until now, so an over-long answer passed here and
+          // failed as a 400 at submit — after the batch had been run and reviewed.
+          errors.push(`${at}.answer must be <= ${MAX_FAQ_ANSWER} characters`);
         }
       });
     }

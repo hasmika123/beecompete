@@ -297,7 +297,6 @@ function sanitizeEdition(edition: unknown): unknown {
   };
 }
 
-/** Same for each key date's label — the only free text on a timeline row. */
 /**
  * Resource rows carry a model-written `title` from an untrusted page, so it gets the same M4
  * treatment as every other free-text field. `url` is deliberately NOT sanitized — stripping
@@ -329,6 +328,7 @@ function sanitizeFaqs(rows: unknown[]): unknown[] {
   });
 }
 
+/** Same for each key date's label — the only free text on a timeline row. */
 function sanitizeKeyDates(rows: unknown[]): unknown[] {
   return rows.map((row) => {
     if (typeof row !== 'object' || row === null) return row;

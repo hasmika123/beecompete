@@ -206,9 +206,6 @@ public class CompetitionSearchService {
 			params.put("participation", c.participation().name());
 		}
 		if (c.entryPathway() != null) {
-			// A pathway filter matches its own token PLUS the broader ones that include it: an
-			// OPEN listing accepts everyone, and a SCHOOL_OR_CHAPTER one satisfies both SCHOOL and
-			// CHAPTER. Filtering OPEN itself stays strict — "open to all" means only those.
 			// One token against the row's SET (0024). The old version had to expand the filter into
 			// every composite token that implied it (SCHOOL also matched SCHOOL_OR_CHAPTER and the
 			// OPEN wildcard); with a real set the containment IS the query, and a {SCHOOL,CHAPTER}
