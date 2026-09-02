@@ -12,6 +12,10 @@ import { SubSectionHeading } from '@/components/admin/form-section';
  * UX layer — the parent serializes the object back into the form's `attributes` field, so the
  * server action + networknt schema validation path is untouched (server stays the real gate).
  *
+ * EVERY field in both sections renders as a NAME box beside its VALUE control (see `fieldRow`) —
+ * these are the listing's own name/value facts, not fixed form fields like Cost, and the two
+ * sections must read as one bag.
+ *
  * Supported subset (everything the 11 launch templates use, plus the contract's headroom):
  *   string          → Input (enum → NativeSelect; format "uri" → type=url; uiHints widget
  *                     "textarea" → Textarea)
@@ -333,6 +337,48 @@ export function AttributesFields({
     return <RawJsonField id={id} value={v} onChange={(parsed) => set(key, parsed)} />;
   };
 
+  /**
+   * One attribute as a NAME box beside its VALUE control (owner 2026-09-02).
+   *
+   * BOTH sections render this shape now. The template-declared pass used to use the ordinary form
+   * idiom — a small label stacked above the control, two per row — which is right for a fixed
+   * field like Cost but wrong here: it made a category-specific attribute read as a built-in part
+   * of the form rather than one of the listing's own name/value facts, and an unfilled one showed
+   * a caption floating over an empty box with nothing to say what it belonged to. "Other fields"
+   * already rendered the name in a box beside its value, so the same bag was drawn two different
+   * ways on one tab. One renderer, one shape, so they cannot drift apart again.
+   *
+   * The name box is readOnly in both sections: a template key is the template's to name, and an
+   * extra key is renamed by removing it and adding it back. The trailing cell is the remove
+   * button for extras and an empty spacer for template keys — declared fields are cleared by
+   * emptying their value, not deleted — so both sections' columns still line up.
+   */
+  const fieldRow = (key: string, name: string, prop: SchemaProperty, onRemove?: () => void) => (
+    <div key={key} className="grid grid-cols-[180px_1fr_32px] items-start gap-2">
+      <Input value={name} readOnly aria-label={`Field ${name} name`} className="bg-surface" />
+      {/* The name lives in an Input, not a <label>, so the value control needs its own accessible
+          name — this is the sr-only twin of the visible box beside it. */}
+      <div className="grid gap-1">
+        <label htmlFor={`attr-${key}`} className="sr-only">
+          {name} value
+        </label>
+        {field(key, prop)}
+      </div>
+      {onRemove ? (
+        <button
+          type="button"
+          aria-label={`Remove field ${key}`}
+          onClick={onRemove}
+          className="grid size-8 place-items-center rounded-md text-muted hover:bg-background hover:text-danger"
+        >
+          <Trash aria-hidden="true" className="size-4" />
+        </button>
+      ) : (
+        <span aria-hidden="true" />
+      )}
+    </div>
+  );
+
   // Both sections carry their own add-a-field rows (owner 2026-08-24), so a curator adds a field
   // where they were already looking instead of scrolling to one shared control. They write to the
   // same bag — the TEMPLATE is what makes a key "category-specific", so a key typed in either row
@@ -428,15 +474,16 @@ export function AttributesFields({
           }
         />
         {schemaKeys.length > 0 && (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {schemaKeys.map((key) => (
-              <div key={key} className="grid content-start gap-1">
-                <label htmlFor={`attr-${key}`} className="text-sm font-medium text-foreground">
-                  {hintString(hints, 'labels', key) ?? enumLabel(key)}
-                </label>
-                {field(key, effectiveProp(properties[key] ?? {}, value[key]))}
-              </div>
-            ))}
+          // One field per row, not the old two-up grid: the rows are name+value pairs now, and
+          // side-by-side pairs would put two unrelated names and two values on one line.
+          <div className="grid gap-2">
+            {schemaKeys.map((key) =>
+              fieldRow(
+                key,
+                hintString(hints, 'labels', key) ?? enumLabel(key),
+                effectiveProp(properties[key] ?? {}, value[key]),
+              ),
+            )}
           </div>
         )}
         <div className="grid gap-2">{draftRows(templateDrafts, setTemplateDrafts, 'category')}</div>
@@ -448,29 +495,12 @@ export function AttributesFields({
           hint="Anything this category’s template doesn’t declare. Stored on the listing and shown on the public Overview tab."
         />
         <div className="grid gap-2">
-          {extraKeys.map((key) => (
-            <div key={key} className="grid grid-cols-[180px_1fr_32px] items-start gap-2">
-              <Input value={key} readOnly aria-label={`Field ${key} name`} className="bg-surface" />
-              {/* Same widget the template-declared pass would give this shape — see inferProp.
-                  `field()` owns the choice, so the two sections can never drift apart. The key
-                  sits in a readOnly Input here rather than a <label>, so the value control needs
-                  its own name: this is the sr-only twin of the visible label above. */}
-              <div className="grid gap-1">
-                <label htmlFor={`attr-${key}`} className="sr-only">
-                  {key} value
-                </label>
-                {field(key, inferProp(value[key]) ?? {})}
-              </div>
-              <button
-                type="button"
-                aria-label={`Remove field ${key}`}
-                onClick={() => set(key, undefined)}
-                className="grid size-8 place-items-center rounded-md text-muted hover:bg-background hover:text-danger"
-              >
-                <Trash aria-hidden="true" className="size-4" />
-              </button>
-            </div>
-          ))}
+          {/* The raw key IS the name here — an extra field has no template label to show. The
+              widget comes from the value's own shape (inferProp), the same choice `field()` makes
+              for a declared key whose value drifted. */}
+          {extraKeys.map((key) =>
+            fieldRow(key, key, inferProp(value[key]) ?? {}, () => set(key, undefined)),
+          )}
           {draftRows(extraDrafts, setExtraDrafts, 'other')}
         </div>
       </section>
