@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { eligibilityLabel, isHostMaintained, regionLabel } from '@/lib/catalog-display';
+import {
+  eligibilityLabel,
+  isHostMaintained,
+  prizeSummaryLabel,
+  regionLabel,
+} from '@/lib/catalog-display';
+import { prizeLabel } from '@/lib/detail-display';
+import type { EditionView } from '@/lib/catalog-types';
 
 // #77 (supersedes #76): a state abbreviates ONLY beside a city ("Austin, TX"); alone it keeps its
 // full name. US country tag dropped on a US-only catalog. The distinction worth pinning is the
@@ -143,5 +150,40 @@ describe('eligibilityLabel', () => {
         maxAge: null,
       }),
     ).toBe('Ages 13+');
+  });
+});
+
+// Owner 2026-09-02: the card and the detail page's Overview tab must state the SAME prize. They
+// drifted because each derived it separately — the card printed the summary while At-a-glance
+// prefixed the typed amount, so one listing read as two different prizes depending on where you
+// met it. The full amount now belongs to the Awards tab alone.
+describe('prizeSummaryLabel', () => {
+  const edition = (over: Partial<EditionView> = {}): EditionView =>
+    ({ prizeSummary: null, prizeValue: null, prizeCurrency: null, ...over }) as EditionView;
+
+  it('states the curated summary alone, ignoring any typed amount', () => {
+    expect(prizeSummaryLabel('Medals + AIME qualification')).toBe('Medals + AIME qualification');
+  });
+
+  it('falls back to Bragging rights when no prize is on record', () => {
+    expect(prizeSummaryLabel(null)).toBe('Bragging rights');
+    expect(prizeSummaryLabel(undefined)).toBe('Bragging rights');
+  });
+
+  it('agrees with the card for a listing carrying BOTH an amount and a summary', () => {
+    // AMC 10 in the real catalog: value 10000, summary "Medals + AIME qualification". The strip
+    // used to read "$10,000 · Medals + AIME qualification" against the card's bare summary.
+    const e = edition({ prizeValue: 10000, prizeCurrency: 'USD', prizeSummary: 'Medals' });
+    expect(prizeSummaryLabel(e.prizeSummary)).toBe(prizeSummaryLabel('Medals'));
+    expect(prizeSummaryLabel(e.prizeSummary)).not.toBe(prizeLabel(e));
+    // …and the Awards tab is still the place that carries the amount.
+    expect(prizeLabel(e)).toBe('$10,000 · Medals');
+  });
+
+  it('never composes a contradiction out of a mismatched amount and summary', () => {
+    // banking-financial-systems: value 300 but summary "$600 in prizes" — the old strip rendered
+    // "$300.00 · $600 in prizes", which reads as broken data to a visitor.
+    const e = edition({ prizeValue: 300, prizeCurrency: 'USD', prizeSummary: '$600 in prizes' });
+    expect(prizeSummaryLabel(e.prizeSummary)).toBe('$600 in prizes');
   });
 });

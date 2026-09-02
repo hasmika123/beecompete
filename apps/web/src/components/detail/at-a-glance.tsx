@@ -13,7 +13,7 @@ import {
   categoryArt,
   cn,
 } from '@beecompete/ui';
-import { eligibilityLabel } from '@/lib/catalog-display';
+import { eligibilityLabel, prizeSummaryLabel } from '@/lib/catalog-display';
 import { formatDate, keyDateZone } from '@/lib/dates';
 import {
   costLabel,
@@ -23,7 +23,6 @@ import {
   locationLabel,
   nextDeadline,
   participationLabel,
-  prizeLabel,
   recurrenceLabel,
   regOpensAt,
 } from '@/lib/detail-display';
@@ -86,7 +85,11 @@ export function AtAGlance({ competition }: { competition: CompetitionDetail }) {
   const edition = currentEdition(competition.editions);
   const opens = regOpensAt(competition.editions);
   const deadline = nextDeadline(competition.editions);
-  const prize = prizeLabel(edition);
+  // The CARD's prize wording, not a richer one (owner 2026-09-02): the strip is the 10-second
+  // answer and must read as the same fact the card promised. The typed amount belongs to the
+  // Awards tab, which is where the breakdown lives — and which is always present when an amount
+  // is on record (hasAwardsData).
+  const prize = prizeSummaryLabel(edition?.prizeSummary);
 
   const art = categoryArt(competition.category.slug);
 

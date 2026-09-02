@@ -182,6 +182,25 @@ export function regionLabel(regions: string[]): string | undefined {
   return `${named[0]} +${named.length - 1}`;
 }
 
+/**
+ * The prize line AS THE CARD STATES IT — the curated summary alone, with the uncurated fallback.
+ *
+ * Shared with the detail page's Overview tab (owner 2026-09-02): the two used to derive the same
+ * fact differently — the card printed the summary while At-a-glance prefixed the typed amount
+ * ("$10,000 · Medals + AIME qualification" against the card's "Medals + AIME qualification"), so
+ * the same listing read as two different prizes depending on where you met it. Worse when the two
+ * disagree: `banking-financial-systems` carries value 300 and summary "$600 in prizes", which
+ * composed into the self-contradicting "$300.00 · $600 in prizes". One function now, so a future
+ * change to the card's wording cannot silently desync the detail page again.
+ *
+ * "Bragging rights" when nothing is on record (sweep item 16) — the card's bold prize slot then
+ * always renders. A null prize is uncurated, not a guaranteed no-prize; curators fill in a real
+ * prize where one exists. The full breakdown, amount included, is the Awards tab's job.
+ */
+export function prizeSummaryLabel(prizeSummary: string | null | undefined): string {
+  return prizeSummary ?? 'Bragging rights';
+}
+
 /** CompetitionSummary → the card's display props. Detail pages live at /c/<slug> (decision #30). */
 export function toCardData(item: CompetitionSummary): CompetitionCardData {
   const deadline = deadlineDisplay(item.nextDeadline);
@@ -197,10 +216,7 @@ export function toCardData(item: CompetitionSummary): CompetitionCardData {
     blurb: item.blurb ?? undefined,
     free: item.costType === 'free',
     regionLabel: regionLabel(item.regions),
-    // "Bragging rights" when no prize is on record (sweep item 16) — the footer's bold prize slot
-    // then always renders. A null prize is uncurated, not a guaranteed no-prize; curators fill in
-    // a real prize where one exists.
-    prizeLabel: item.prizeSummary ?? 'Bragging rights',
+    prizeLabel: prizeSummaryLabel(item.prizeSummary),
     deadlineLabel: deadline?.label,
     deadlineUrgent: deadline?.urgent,
   };

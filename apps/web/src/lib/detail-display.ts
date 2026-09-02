@@ -455,11 +455,15 @@ export function costLabel(competition: CompetitionDetail, edition?: EditionView)
 }
 
 /**
- * Prize for the at-a-glance strip. #82 folds in the typed `prize_value` (it existed on Edition but
- * rendered nowhere): "$5,000 — Scholarships and medals" · "$5,000" · summary alone · "Bragging
- * rights" fallback (sweep item 16, owner-picked). The amount LEADS when present — it is the
- * scannable fact; the summary is its caption. Note: a null summary means the prize is *uncurated*,
- * not necessarily that there's none — curators still fill confirmed prizes in.
+ * The FULL prize line — amount and summary together: "$5,000 · Scholarships and medals" ·
+ * "$5,000" · summary alone · "Bragging rights" fallback (sweep item 16, owner-picked). The amount
+ * LEADS when present — it is the scannable fact; the summary is its caption. Note: a null summary
+ * means the prize is *uncurated*, not necessarily that there's none.
+ *
+ * AWARDS TAB ONLY since 2026-09-02 (owner). The at-a-glance strip used to call this too, which
+ * made the Overview state a richer prize than the card that led the visitor there; it now shares
+ * the card's `prizeSummaryLabel`. Keep the amount HERE — the Awards tab is the surface whose whole
+ * job is what winning is worth, and it is only rendered when a prize is genuinely curated.
  */
 export function prizeLabel(edition?: EditionView): string {
   const value = edition?.prizeValue;
