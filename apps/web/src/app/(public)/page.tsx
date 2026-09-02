@@ -240,7 +240,24 @@ export default async function LandingPage() {
               every phone width (280px at 320, 328px at 375), and the clamp's upper bound is the
               previous fixed value, so nothing at or above ~384px moves at all. The two
               height-gated lg/xl steps below still win wherever they apply — do not fold them in. */}
-          <h1 className="font-display text-[clamp(3.25rem,22vw,5.25rem)] leading-[0.9] font-bold text-foreground [@media(min-width:1024px)_and_(min-height:700px)]:text-[6rem] [@media(min-width:1280px)_and_(min-height:700px)]:text-[7rem]">
+          {/* SHORT-VIEWPORT LAPTOP TIER (owner 2026-09-02). The two steps above are gated on
+              min-height:700px, so a wide-but-short laptop — 1440×660 is the common one, any
+              1366×768 or 1280×800 panel once browser chrome is taken off — matched NEITHER and
+              fell all the way back to the fluid base, i.e. the PHONE cap. Measured there: 84px
+              text in a 460px column, with "Compete." setting just 334px. 126px of unused width.
+              The ceiling warning above is about WIDTH and does not bind here; what binds on a
+              short screen is the hero's vertical budget, min(100svh-4rem-1px, 46rem).
+              Measured at height 660 (budget 595px), content height against that budget:
+                1024w (399px column):  84→561  88→572  92→582  96→593   ← 96 leaves 2px, too tight
+                1280w (460px column):  84→521  96→553 104→575 112→596   ← 112 exhausts it exactly
+              So 5.75rem/92px and 6.5rem/104px are the largest that keep real slack, and each sits
+              one step under its own min-height:700px sibling — the jump across 700px is now a
+              step, not a cliff. Re-measure with that probe before changing either; do not
+              extrapolate, Fraunces sets narrower as it grows (opsz).
+              The ranges are mutually exclusive ON PURPOSE — width-banded, not just min-width — so
+              which rule wins never depends on how Tailwind happens to order two arbitrary
+              variants that both match. */}
+          <h1 className="font-display text-[clamp(3.25rem,22vw,5.25rem)] leading-[0.9] font-bold text-foreground [@media(min-width:1024px)_and_(max-width:1279px)_and_(max-height:699px)]:text-[5.75rem] [@media(min-width:1280px)_and_(max-height:699px)]:text-[6.5rem] [@media(min-width:1024px)_and_(min-height:700px)]:text-[6rem] [@media(min-width:1280px)_and_(min-height:700px)]:text-[7rem]">
             Search. Prepare.{' '}
             {/* Gold highlight streak under the last word (#51). Decorative only — aria-hidden, and
                 the word carries no meaning through it — so it is exempt from WCAG 1.4.11, which is

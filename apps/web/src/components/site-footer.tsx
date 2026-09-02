@@ -76,7 +76,23 @@ export function SiteFooter() {
           exactly two navs, so `grid-cols-2` now seats them side by side on ONE row at every width
           below lg and the old `sm:grid-cols-3` is dropped: at three tracks the pair would leave a
           visible empty third cell. The brand column spans the full row below lg, as before. */}
-      <div className="mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-7 px-4 py-6 sm:gap-8 sm:px-6 lg:grid-cols-[26rem_1fr_1fr]">
+      {/* At lg this is TWO tracks — brand, then one track holding both navs — not three (owner
+          2026-09-02). The eye reads the gaps between the ink, not the track edges, and the nav
+          text is far narrower than its track, so equal `fr` tracks left all the slack on each
+          column's right: gaps of 46 / 194 / 188px, with "Contribute" hard against the end of the
+          beta disclaimer. Sizing the tracks to content and pushing them apart with
+          `justify-between` fixed that boundary but pinned "Legal" flush to the right edge
+          (221 / 207 / 0), which just moved the crowding to the other end.
+          Both navs now share ONE track and divide it with `space-evenly`, which is the only rule
+          that makes the space BEFORE, BETWEEN and AFTER them equal — the three gaps the eye
+          actually compares. `lg:gap-x-0` on the outer grid is load-bearing: any column gap there
+          would be added to the first of those three gaps only, tilting the set it exists to even
+          out. Equal by construction at any width and whatever the labels later say, so there is
+          nothing here to re-tune.
+          The brand track stays pinned to 26rem for the reason below; its own 402px of ink inside
+          that 416px track is the one asymmetry left, and it is smaller than the raggedness of the
+          wrapped disclaimer beside it. */}
+      <div className="mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-7 px-4 py-6 sm:gap-8 sm:px-6 lg:grid-cols-[26rem_1fr] lg:gap-x-0">
         <div className="col-span-2 max-w-[26rem] text-sm lg:col-span-1">
           <Logo />
           {/* The marketing tagline that sat here was removed (#61). The disclaimer below is
@@ -97,22 +113,27 @@ export function SiteFooter() {
             and organizers listed here.
           </p>
         </div>
-        {/* Headings are bold sentence case (#63), not uppercase+tracked. Dropping the caps costs
-            the label its size cue, so they step 12 → 14px to stay distinct from the links. */}
-        {COLUMNS.map(({ label, links }) => (
-          <nav key={label} aria-label={label} className="text-sm">
-            <h2 className="mb-3 text-sm font-bold text-foreground">{label}</h2>
-            <ul className="grid gap-2">
-              {links.map(({ href, label: linkLabel }) => (
-                <li key={href}>
-                  <Link href={href} className={cn(FOOTER_TEXT, 'hover:text-foreground')}>
-                    {linkLabel}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        ))}
+        {/* Below lg this wrapper is transparent to the old layout — it spans the full row and
+            re-creates the same two equal columns the outer grid used to give the navs directly.
+            It only becomes a distributor at lg, where it owns the whole non-brand track. */}
+        <div className="col-span-2 grid grid-cols-2 gap-x-6 sm:gap-x-8 lg:col-span-1 lg:flex lg:justify-evenly lg:gap-x-0">
+          {/* Headings are bold sentence case (#63), not uppercase+tracked. Dropping the caps costs
+              the label its size cue, so they step 12 → 14px to stay distinct from the links. */}
+          {COLUMNS.map(({ label, links }) => (
+            <nav key={label} aria-label={label} className="text-sm">
+              <h2 className="mb-3 text-sm font-bold text-foreground">{label}</h2>
+              <ul className="grid gap-2">
+                {links.map(({ href, label: linkLabel }) => (
+                  <li key={href}>
+                    <Link href={href} className={cn(FOOTER_TEXT, 'hover:text-foreground')}>
+                      {linkLabel}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ))}
+        </div>
       </div>
       <div className="border-t border-border">
         {/* py-3 (#62, was py-4) — a smaller trim than the section above, per the owner. The bar is
