@@ -785,7 +785,17 @@ export function CompetitionForm({
       exactOrganizer?.id ??
       (importing && extractedOrganizer ? CREATE_ORGANIZER_SENTINEL : ''),
   );
-  const [regionIds, setRegionIds] = useState<string[]>(seed?.regionIds ?? []);
+  // A SEEDED virtual delivery has to tag Virtual/Online right here, at seed time. The auto-tag
+  // below the Delivery select only fires on a curator's own pick, so a pasted payload that already
+  // said VIRTUAL set the dropdown without ever running it — and landed one region short of the
+  // required ring, with nothing on the step to explain the red mark. Seed-time and not an effect:
+  // the tag is a STARTING value, and re-asserting it would fight a curator who removed the chip.
+  const [regionIds, setRegionIds] = useState<string[]>(() => {
+    const seeded = seed?.regionIds ?? [];
+    if (editing || c?.delivery !== 'VIRTUAL') return seeded;
+    const virtual = regions.find((r) => r.level === 'VIRTUAL');
+    return virtual && !seeded.includes(virtual.id) ? [...seeded, virtual.id] : seeded;
+  });
 
   // Awards editor seed — an extracted prize becomes the first row; create starts empty.
   const [initialAwardRows] = useState(() =>

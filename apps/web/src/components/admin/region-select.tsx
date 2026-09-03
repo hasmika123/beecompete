@@ -98,6 +98,12 @@ export function RegionSelect({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, regions, haystack, selectedIds]);
 
+  // A typed query always answers for itself (owner 2026-09-03). Rendering nothing on zero matches
+  // made an unpicked query read as a filled field — "Worldwide" sitting in the box looks exactly
+  // like a value, but no region carries that name, so nothing was selected and the required ring
+  // reddened a step whose every visible control was answered.
+  const listOpen = open && query.trim() !== '';
+
   const pick = (id: string) => {
     if (!selected.has(id)) onToggle(id);
     setQuery('');
@@ -141,7 +147,7 @@ export function RegionSelect({
             ref={inputRef}
             type="text"
             role="combobox"
-            aria-expanded={open && matches.length > 0}
+            aria-expanded={listOpen && matches.length > 0}
             aria-controls="region-select-listbox"
             aria-label={ariaLabel}
             value={query}
@@ -165,7 +171,21 @@ export function RegionSelect({
             )}
           />
         </div>
-        {open && matches.length > 0 && (
+        {listOpen && matches.length === 0 && (
+          // Same chrome as the list, so the answer arrives where the options would have. `status`
+          // (not `alert`) announces it to a screen reader without interrupting typing.
+          <div
+            role="status"
+            className={cn(
+              'absolute z-20 mt-1 w-full rounded-[var(--radius-field)] border border-border bg-surface-raised px-3.5 py-2',
+              'text-sm text-muted shadow-[var(--shadow-popover)]',
+            )}
+          >
+            No region matches “{query.trim()}” — try a country, state, or city name, or the two rows
+            that are not places: “Online” and “International”.
+          </div>
+        )}
+        {listOpen && matches.length > 0 && (
           <ul
             id="region-select-listbox"
             role="listbox"
