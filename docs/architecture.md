@@ -278,6 +278,17 @@ tooling + audit log) → Phase 2+ (dedup DQ4, conflict resolution DQ5) → Phase
   live in `components/admin/enum-labels.ts`. Multi-section forms use the shared **`FormSection`**
   (`components/admin/form-section.tsx`) plus a **sticky save bar** (`sticky bottom-0`, holds Save +
   the server-error Alert); sectioned forms cap at `max-w-3xl`, simple ones at `max-w-xl`.
+  **Transport failures (2026-09-03):** the listing and organization forms wrap their action in
+  `lib/form-action-guard.ts` `guardFormAction`. A server action is a browser `fetch`; when it never
+  completes (expired Cloudflare Access session → cross-origin login redirect, dropped connection,
+  mid-deploy, stale action id) the promise rejects and, with no `/admin` error boundary, the root
+  `global-error` unmounted the whole form. The guard re-throws Next's own control flow
+  (`unstable_rethrow` — a post-create `redirect()` arrives as a rejection), probes the no-op
+  `app/admin/session/route.ts` with `redirect: 'manual'` to tell an expired sign-in from a network
+  blip, and returns `{ ok: false, error, failure }` so `FormErrorAlert`
+  (`components/admin/form-error.tsx`) can head the message and offer "sign in again in a new tab".
+  Only `bad-response` / `stale-deploy` are reported to Sentry — the other two are the curator's
+  environment. New admin forms with long-lived input should use the same wrapper.
   `FormField`'s root is `grid content-start …` so hint-less fields don't drift ~11px low in
   multi-column grids. **Admin list tables** (`AdminTable`, `components/admin/admin-table.tsx`) stay
   **display-only server components** — row navigation is the **name-cell link only**. Whole-row-click

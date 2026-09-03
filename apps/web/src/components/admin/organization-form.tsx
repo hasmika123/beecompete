@@ -2,10 +2,12 @@
 
 import { useActionState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Alert, Button, FormField, Input, Select, useToast } from '@beecompete/ui';
+import { Button, FormField, Input, Select, useToast } from '@beecompete/ui';
 import { enumOptions } from '@/components/admin/enum-labels';
+import { FormErrorAlert } from '@/components/admin/form-error';
 import { OrganizationCreatedModal } from '@/components/admin/organization-created-modal';
 import { createOrganization, updateOrganization } from '@/app/admin/organizations/actions';
+import { guardFormAction } from '@/lib/form-action-guard';
 import { ORG_TYPES, type Organization, type OrganizationFormState } from '@/lib/admin-types';
 
 const INITIAL: OrganizationFormState = { ok: false };
@@ -34,8 +36,10 @@ export function OrganizationForm({
   onCreated?: (created: Organization) => void;
 }) {
   const editing = organization !== undefined;
+  // guardFormAction: this form also renders INSIDE the create-listing modal, where an unhandled
+  // rejection (expired sign-in, dropped connection) would take the whole listing form down with it.
   const [state, formAction, pending] = useActionState(
-    editing ? updateOrganization.bind(null, organization.id) : createOrganization,
+    guardFormAction(editing ? updateOrganization.bind(null, organization.id) : createOrganization),
     INITIAL,
   );
   const { toast } = useToast();
@@ -57,7 +61,7 @@ export function OrganizationForm({
   return (
     <>
       <form action={formAction} className="grid max-w-xl gap-5">
-        {state.error && <Alert tone="danger">{state.error}</Alert>}
+        <FormErrorAlert state={state} />
         <FormField label="Name" required>
           <Input
             name="name"

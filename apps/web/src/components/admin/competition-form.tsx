@@ -38,6 +38,8 @@ import { MAX_TAGS, TagsInput } from '@/components/admin/tags-input';
 import { enumLabel, enumOptions, keyDateOptions } from '@/components/admin/enum-labels';
 import { OrganizationForm } from '@/components/admin/organization-form';
 import { OrganizationCreatedModal } from '@/components/admin/organization-created-modal';
+import { FormErrorAlert } from '@/components/admin/form-error';
+import { FAILURE_TITLES, guardFormAction } from '@/lib/form-action-guard';
 import { GRADE_VALUES, gradeOptionLabel } from '@/lib/catalog-display';
 import { defaultKeyDateLabel } from '@/lib/detail-display';
 import {
@@ -417,12 +419,24 @@ export function CompetitionForm({
       : importing && importRecordId
         ? approveImportFromForm.bind(null, importRecordId)
         : createCompetition;
-  const [state, formAction, pending] = useActionState(action, INITIAL);
+  // guardFormAction: a dropped request (expired Cloudflare Access session, lost connection, a
+  // deploy mid-save) comes back as a state error instead of rejecting — a rejection here has no
+  // boundary short of the root error page, which unmounts this form and everything typed into it.
+  const [state, formAction, pending] = useActionState(guardFormAction(action), INITIAL);
   const { toast } = useToast();
 
   useEffect(() => {
     if (state.ok) toast({ title: 'Saved', tone: 'success' });
-  }, [state.ok, toast]);
+    // The submit lives in the rail; the error surface is at the foot of the wide column and can
+    // be below the fold on a long step. A toast makes sure a refused save is noticed at all.
+    else if (state.failure) {
+      toast({
+        title: FAILURE_TITLES[state.failure],
+        description: 'Nothing was saved — see the message under the form.',
+        tone: 'error',
+      });
+    }
+  }, [state, toast]);
 
   // Initial values come from the saved competition (edit) or the extracted payload (import). The
   // seed is a Partial by construction — an extraction states what the page stated, nothing more.
@@ -2751,11 +2765,7 @@ export function CompetitionForm({
           {!eligibilityValid && (
             <span className="text-xs text-danger">Fix the eligibility errors above to save.</span>
           )}
-          {state.error && (
-            <Alert tone="danger" className="min-w-0 flex-1">
-              {state.error}
-            </Alert>
-          )}
+          <FormErrorAlert state={state} className="min-w-0 flex-1" />
         </div>
       </form>
     );
@@ -3063,11 +3073,7 @@ export function CompetitionForm({
 
         {/* The submit itself now closes the step rail (see submitAction) — what's left here is the
             error surface, which must stay in the wide column: an Alert has no room in a 236px rail. */}
-        {state.error && (
-          <Alert tone="danger" className="mt-4">
-            {state.error}
-          </Alert>
-        )}
+        <FormErrorAlert state={state} className="mt-4" />
       </form>
 
       {/* ADD AN ORGANIZATION WITHOUT LEAVING THIS LISTING (owner 2026-08-28).

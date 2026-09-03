@@ -10,10 +10,17 @@ export interface Page<T> {
   size: number;
 }
 
+/**
+ * Why a submit never became an action result — set only by lib/form-action-guard, never by an
+ * action itself. The form uses it to head the error and, for an expired sign-in, offer the fix.
+ */
+export type FormFailure = 'session-expired' | 'unreachable' | 'bad-response' | 'stale-deploy';
+
 /** Shared server-action result for useActionState-driven admin forms. */
 export interface FormState {
   ok: boolean;
   error?: string;
+  failure?: FormFailure;
 }
 
 /**

@@ -267,7 +267,13 @@ the curator pool grows beyond people trusted with everything; it lives in this f
 3. Save. They visit `https://beecompete.com/admin`, enter that address, and Cloudflare emails a
    one-time PIN. No password to share, nothing to provision.
 4. Set the application's **session duration** to about a working day, so removing someone isn't
-   delayed by a live session.
+   delayed by a live session. **What expiry looks like mid-form (2026-09-03):** Access answers the
+   next save (a server-action POST) with a login redirect the browser's fetch cannot follow, so the
+   action fails as a bare `TypeError: Failed to fetch` — it used to crash the page to the root error
+   screen and lose everything typed. The admin forms now catch it (`lib/form-action-guard.ts`,
+   probing the no-op `/admin/session` route) and say "sign in again **in a new tab**, then press the
+   button again" — the form and its entries stay put. It is not button-specific: "Submit for review
+   failed but Save as draft worked" was the session running out between the two attempts.
 
 **To remove someone:** delete their address from the same policy.
 
