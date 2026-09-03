@@ -24,6 +24,7 @@ export interface RegionSelectProps {
 
 const LEVEL_LABEL: Record<string, string> = {
   VIRTUAL: 'Online',
+  INTERNATIONAL: 'International',
   COUNTRY: 'Country',
   STATE: 'State',
   COUNTY: 'County',
@@ -32,7 +33,14 @@ const LEVEL_LABEL: Record<string, string> = {
 
 /** Broad rungs outrank narrow ones on equal match quality — a curator reaching for "Washington"
  *  almost always wants the state, not one of the cities that share the word. */
-const LEVEL_RANK: Record<string, number> = { VIRTUAL: 0, COUNTRY: 1, STATE: 2, COUNTY: 3, CITY: 4 };
+const LEVEL_RANK: Record<string, number> = {
+  VIRTUAL: 0,
+  INTERNATIONAL: 1,
+  COUNTRY: 2,
+  STATE: 3,
+  COUNTY: 4,
+  CITY: 5,
+};
 
 const MAX_MATCHES = 10;
 

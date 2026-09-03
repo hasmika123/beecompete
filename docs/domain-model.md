@@ -177,12 +177,12 @@ display_order` *(added 2026-07-08 → H47; shape informed by the legacy prototyp
 `legacy-reference.md`. Assignment of Awards to winners is judging territory — designed at Gate B,
 never before.)*
 
-**`Region`** [P1] — `id, parent_id?, level (country|state|county|city|virtual), name, code`
+**`Region`** [P1] — `id, parent_id?, level (international|country|state|county|city|virtual), name, code`
 *(`virtual` level added at R1-1 build, 2026-07-12 — the Q3 special "Virtual/Online" region needs a
 level so virtual Editions can carry a region row. **Seeded** at sweep item 15, 2026-07-16, Liquibase
 `0010`: US + 50 states + DC + ~25 major cities + `Virtual / Online`; **`0018` (2026-08-24) widened
 the city rung to the top ~1000 US cities** — so admins pick, not hand-create; more (Canada,
-counties) via admin CRUD. City coverage is an ADMIN convenience only: `/api/v1/regions` lists just
+counties) via admin CRUD. **`0025` (2026-09-03) adds the `international` level and its single row `International / Worldwide`** — the region-side partner of `scope_level=INTERNATIONAL`: the registry is US-only, so a multi-country running had no honest tag (empty fails the required region on create; `United States` publishes it as US-only in the marketplace filter). It never parents a country row, and a running with a physical venue still carries that venue too. No migration for the column — `level` is `VARCHAR(20)` with no CHECK, same as `scope_level`. City coverage is an ADMIN convenience only: `/api/v1/regions` lists just
 the regions carrying a live listing, so the marketplace filter is unaffected by the seed size. The grouped/searchable admin picker is
 `region-picker.tsx`.)*
 ⚠ **None of this structure survives into the public search projection**: `CompetitionSummary.regions`
