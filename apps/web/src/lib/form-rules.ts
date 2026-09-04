@@ -103,6 +103,29 @@ export function urlRule(value: string, opts: TextRuleOptions): string | undefine
   return undefined;
 }
 
+/**
+ * An email address, for the ONE field that carries one — `contact_email`, the organizer's published
+ * address. Mirrors the Category Template's `{"type": "string", "format": "email"}` (changeset
+ * `0019`), which the API re-checks through `CategoryAttributeValidator`.
+ *
+ * ⚠ **Empty is always fine.** The field is optional by design — plenty of organizers publish no
+ * address at all — so this only ever speaks about a value that IS there and is malformed. It
+ * replaces the browser's own `type="email"` check, which could refuse the whole form from inside a
+ * collapsed wizard step with no message anywhere (see the form's `noValidate`).
+ *
+ * Deliberately loose: one `@`, something either side, a dot in the domain. Anything stricter starts
+ * rejecting addresses that work.
+ */
+export function emailRule(value: string, opts: TextRuleOptions): string | undefined {
+  const lengthProblem = textRule(value, opts);
+  if (lengthProblem) return lengthProblem;
+  const v = value.trim();
+  if (v === '') return undefined;
+  return /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(v)
+    ? undefined
+    : 'That doesn’t look like an email address — leave it blank if the organizer doesn’t publish one.';
+}
+
 /** Lowercase kebab-case, matching the server's `@Pattern` on `slug`. */
 export function slugRule(value: string, opts: { required?: boolean } = {}): string | undefined {
   const lengthProblem = textRule(value, {

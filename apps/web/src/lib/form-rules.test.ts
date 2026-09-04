@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   BOUNDS,
   currencyRule,
+  emailRule,
   intRule,
   isComplete,
   LIMITS,
@@ -52,6 +53,33 @@ describe('urlRule', () => {
 
   it('reports length before shape, so one message shows at a time', () => {
     expect(urlRule(`https://x.com/${'a'.repeat(1000)}`, { max: 1000 })).toContain('limit');
+  });
+});
+
+describe('emailRule', () => {
+  // The whole point: contact_email is optional, and a blank one must never speak up. It is not in
+  // the create form's required ring either — these two facts together are what "not mandatory"
+  // means, and a curator reported the opposite when the BROWSER was judging the field.
+  it('says nothing about a blank field — it is optional', () => {
+    expect(emailRule('', { max: LIMITS.contactEmail })).toBeUndefined();
+    expect(emailRule('   ', { max: LIMITS.contactEmail })).toBeUndefined();
+  });
+
+  it('accepts an ordinary organizer address', () => {
+    expect(emailRule('info@organizer.org', { max: LIMITS.contactEmail })).toBeUndefined();
+    expect(emailRule('contest.admin+amc@maa.org', { max: LIMITS.contactEmail })).toBeUndefined();
+  });
+
+  it('reports a value that is there and is not an address', () => {
+    expect(emailRule('see the website', { max: LIMITS.contactEmail })).toBeDefined();
+    expect(emailRule('info@organizer', { max: LIMITS.contactEmail })).toBeDefined();
+    expect(emailRule('info at organizer.org', { max: LIMITS.contactEmail })).toBeDefined();
+  });
+
+  it('still measures length, and trims before doing so', () => {
+    expect(emailRule(`  info@organizer.org  `, { max: LIMITS.contactEmail })).toBeUndefined();
+    const msg = emailRule(`${'a'.repeat(320)}@organizer.org`, { max: LIMITS.contactEmail });
+    expect(msg).toContain('320');
   });
 });
 

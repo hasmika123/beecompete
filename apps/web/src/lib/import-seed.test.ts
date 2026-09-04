@@ -104,6 +104,35 @@ describe('splitImportPayload', () => {
     expect(seed.keyDates.map((r) => r.type)).toEqual(['RESULTS']);
   });
 
+  /**
+   * The extraction writes an explicit null for a detail the page never published. Carried into the
+   * form it renders as an empty box the ring counts as fine, and then the save is refused by the
+   * Category Template: `$.contact_phone: null found, string expected`. The bag says "not stated"
+   * by leaving the key out.
+   */
+  it('prunes null, blank and empty-array keys out of the attributes bag', () => {
+    const seed = splitImportPayload(
+      payload({
+        attributes: {
+          contact_phone: null,
+          contact_email: '  ',
+          judging_criteria: [],
+          topics: ['algebra'],
+          student_status_required: false,
+        },
+      }),
+    );
+    expect(seed.competition.attributes).toEqual({
+      topics: ['algebra'],
+      student_status_required: false,
+    });
+  });
+
+  it('leaves no bag at all when every key was pruned', () => {
+    const seed = splitImportPayload(payload({ attributes: { contact_phone: null } }));
+    expect(seed.competition.attributes).toBeNull();
+  });
+
   // Owner 2026-08-28: these enums no longer get a substituted default. A payload that never said
   // "annual" used to reach the form showing Annual, indistinguishable from one that did — so a
   // curator could not tell our guess from the source's fact, and published the guess.
