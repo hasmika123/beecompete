@@ -107,8 +107,16 @@ only through a school/chapter — filterable, shown in the Details at-a-glance s
 > stands). Everything is computed in one place, `DuplicateDetectionService`, which also serves
 > `GET /admin/competitions/duplicates` + `GET /admin/organizations/duplicates` (the forms warn
 > before submit), the import queue's per-row `duplicate` / `pendingTwins` flags, and the seeding
-> tool's known-listing pre-check. Content **merge** (moving seasons/resources between a duplicate
-> and its canonical) is not built — DQ4 Phase 2.
+> tool's known-listing pre-check.
+> **Retiring a found duplicate (PR 2, migration `0027`):** `duplicate_of_competition_id` (self-FK)
+> names the **canonical listing** a row was archived in favour of. `POST
+> /admin/competitions/{id}/mark-duplicate` sets it together with `archived_at` (drops the featured
+> slot, as archive does); `restore` clears it. DB CHECKs hold "never itself" and "only on an
+> archived row"; the service refuses an archived or itself-duplicate canonical and **re-points**
+> anything already pointing at the row being marked, so a redirect is always one hop.
+> `GET /api/v1/competitions/{slug}/canonical` answers where a retired slug went, and `/c/[slug]`
+> issues a **permanent redirect** to it. Content **merge** (moving seasons/resources between a
+> duplicate and its canonical) is not built — DQ4 Phase 2.
 
 > **Standard attributes-bag keys** *(2026-07-08 — conventional JSONB keys, not Spine columns;
 > validated per Category Template where relevant):* `eligible_countries[]`,

@@ -166,6 +166,8 @@ export interface Competition {
   /** When the listing FIRST entered PUBLISHED; null while never-yet-published. */
   approvedAt: string | null;
   archivedAt: string | null;
+  /** The canonical listing this archived row was retired in favour of (DQ4 PR 2); null otherwise. */
+  duplicateOfCompetitionId: string | null;
   createdAt: string;
   updatedAt: string;
   version: number;

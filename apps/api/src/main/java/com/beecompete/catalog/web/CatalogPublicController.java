@@ -191,6 +191,21 @@ public class CatalogPublicController {
 				"unknown " + param + " '" + value + "'; allowed: " + String.join(", ", allowed));
 	}
 
+	/**
+	 * Where a retired slug went (DQ4 PR 2): the canonical listing's slug when {@code slug} belongs
+	 * to an archived duplicate, so the web can answer the old URL with a permanent redirect instead
+	 * of a 404. Deliberately NOT gated on the canonical being publicly visible — the redirect is
+	 * about the slug's identity, and the canonical's own page applies the §8a gate itself.
+	 */
+	@GetMapping("/competitions/{slug}/canonical")
+	public Map<String, String> canonical(@PathVariable String slug) {
+		Competition canonical = competitions.findBySlug(slug)
+				.filter(c -> c.getArchivedAt() != null && c.getDuplicateOf() != null)
+				.map(Competition::getDuplicateOf)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "not a retired duplicate"));
+		return Map.of("slug", canonical.getSlug());
+	}
+
 	@GetMapping("/competitions/{slug}")
 	public CompetitionDetail get(@PathVariable String slug) {
 		Competition competition = competitions.findBySlug(slug)

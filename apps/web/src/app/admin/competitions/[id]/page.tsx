@@ -47,14 +47,21 @@ export default async function EditCompetitionPage({ params }: { params: Promise<
     throw e;
   }
 
-  const [categories, templates, organizations, editions, faqs, resources] = await Promise.all([
-    adminFetch<Category[]>('/categories'),
-    adminFetch<CategoryTemplate[]>('/categories/templates'),
-    adminFetch<Page<Organization>>('/organizations?size=100'),
-    adminFetch<Edition[]>(`/competitions/${id}/editions`),
-    adminFetch<Faq[]>(`/competitions/${id}/faqs`),
-    adminFetch<Resource[]>(`/competitions/${id}/resources`),
-  ]);
+  const [categories, templates, organizations, editions, faqs, resources, canonical] =
+    await Promise.all([
+      adminFetch<Category[]>('/categories'),
+      adminFetch<CategoryTemplate[]>('/categories/templates'),
+      adminFetch<Page<Organization>>('/organizations?size=100'),
+      adminFetch<Edition[]>(`/competitions/${id}/editions`),
+      adminFetch<Faq[]>(`/competitions/${id}/faqs`),
+      adminFetch<Resource[]>(`/competitions/${id}/resources`),
+      // The listing this row was retired in favour of (DQ4 PR 2) — named in the banner below.
+      competition.duplicateOfCompetitionId
+        ? adminFetch<Competition>(`/competitions/${competition.duplicateOfCompetitionId}`).catch(
+            () => null,
+          )
+        : Promise.resolve(null),
+    ]);
 
   return (
     <>
@@ -74,11 +81,29 @@ export default async function EditCompetitionPage({ params }: { params: Promise<
         actions={
           <CompetitionHeaderActions
             id={id}
+            name={competition.name}
             archived={competition.archivedAt !== null}
             listingStatus={competition.listingStatus}
           />
         }
       />
+      {competition.duplicateOfCompetitionId && (
+        <Alert tone="warning" className="mb-6" title="Retired as a duplicate">
+          This listing is archived and <code className="font-mono">/c/{competition.slug}</code>{' '}
+          redirects permanently to{' '}
+          {canonical ? (
+            <Link
+              href={`/admin/competitions/${canonical.id}`}
+              className="font-medium underline underline-offset-2"
+            >
+              {canonical.name}
+            </Link>
+          ) : (
+            'its canonical listing'
+          )}
+          . Restore to make it a listing of its own again.
+        </Alert>
+      )}
       {/* R1-19: no competition-level verification badge — maintainer derives from the org. */}
       <div className="mb-6 flex flex-wrap items-center gap-2 text-sm text-muted">
         <ListingStatusBadge

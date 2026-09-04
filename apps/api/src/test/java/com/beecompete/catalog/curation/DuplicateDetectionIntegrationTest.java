@@ -300,6 +300,68 @@ class DuplicateDetectionIntegrationTest {
 	}
 
 	@Test
+	@Order(7)
+	void markAsDuplicateRetiresTheRowAndRedirectsItsSlug() throws Exception {
+		String chapter = mvc.perform(withToken(get("/api/v1/admin/competitions").param("query", "Dupe QUANTUM Chapter")))
+				.andReturn().getResponse().getContentAsString();
+		String chapterId = mapper.readTree(chapter).get("content").get(0).get("id").asText();
+		String canonicalId = seriesArchivedTwinId; // "dupe-series-again", live
+
+		// Guards: never itself; never onto an archived canonical (seriesId is archived).
+		mvc.perform(withToken(post("/api/v1/admin/competitions/" + chapterId + "/mark-duplicate"))
+						.contentType("application/json").content("{\"canonicalId\": \"" + chapterId + "\"}"))
+				.andExpect(status().isUnprocessableEntity());
+		mvc.perform(withToken(post("/api/v1/admin/competitions/" + chapterId + "/mark-duplicate"))
+						.contentType("application/json").content("{\"canonicalId\": \"" + seriesId + "\"}"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.message", containsString("archived")));
+
+		// Mark: archived + linked, in one call.
+		mvc.perform(withToken(post("/api/v1/admin/competitions/" + chapterId + "/mark-duplicate"))
+						.contentType("application/json").content("{\"canonicalId\": \"" + canonicalId + "\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.archivedAt", notNullValue()))
+				.andExpect(jsonPath("$.duplicateOfCompetitionId", is(canonicalId)));
+
+		// The retired slug now answers with where it went (public, ungated) — a live slug does not.
+		mvc.perform(get("/api/v1/competitions/dupe-chapter/canonical"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.slug", is("dupe-series-again")));
+		mvc.perform(get("/api/v1/competitions/dupe-series-again/canonical"))
+				.andExpect(status().isNotFound());
+
+		// No chains: a duplicate cannot be a canonical…
+		String quiet = mvc.perform(withToken(get("/api/v1/admin/competitions").param("query", "Dupe QUANTUM Chapter Round Junior")))
+				.andReturn().getResponse().getContentAsString();
+		String quietId = mapper.readTree(quiet).get("content").get(0).get("id").asText();
+		mvc.perform(withToken(post("/api/v1/admin/competitions/" + quietId + "/mark-duplicate"))
+						.contentType("application/json").content("{\"canonicalId\": \"" + chapterId + "\"}"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.message", containsString("itself a duplicate")));
+		// …and when a canonical is itself marked, its dependants follow it to the new canonical.
+		mvc.perform(withToken(post("/api/v1/admin/competitions/" + quietId + "/mark-duplicate"))
+						.contentType("application/json").content("{\"canonicalId\": \"" + canonicalId + "\"}"))
+				.andExpect(status().isOk());
+		String fresh = mvc.perform(create(competition("dupe-fresh-canonical", "Dupe Fresh Canonical", null, null)))
+				.andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+		String freshId = mapper.readTree(fresh).get("id").asText();
+		mvc.perform(withToken(post("/api/v1/admin/competitions/" + canonicalId + "/mark-duplicate"))
+						.contentType("application/json").content("{\"canonicalId\": \"" + freshId + "\"}"))
+				.andExpect(status().isOk());
+		mvc.perform(withToken(get("/api/v1/admin/competitions/" + chapterId)))
+				.andExpect(jsonPath("$.duplicateOfCompetitionId", is(freshId)));
+		mvc.perform(get("/api/v1/competitions/dupe-chapter/canonical"))
+				.andExpect(jsonPath("$.slug", is("dupe-fresh-canonical")));
+
+		// Restore clears the link: a restored listing is a listing again, not a pointer.
+		mvc.perform(withToken(post("/api/v1/admin/competitions/" + chapterId + "/restore")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.archivedAt", nullValue()))
+				.andExpect(jsonPath("$.duplicateOfCompetitionId", nullValue()));
+		mvc.perform(get("/api/v1/competitions/dupe-chapter/canonical")).andExpect(status().isNotFound());
+	}
+
+	@Test
 	@Order(6)
 	void organizationCreateAndUpdateAreGatedToo() throws Exception {
 		String org = "{\"name\": \"%s\", \"type\": \"HOST\"%s%s}";

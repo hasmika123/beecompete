@@ -1,7 +1,8 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { Button, Restore, Trash, useConfirm, useToast } from '@beecompete/ui';
+import { MarkDuplicateDialog } from '@/components/admin/mark-duplicate-dialog';
 import {
   archiveCompetition,
   restoreCompetition,
@@ -11,18 +12,22 @@ import type { ListingStatus } from '@/lib/admin-types';
 
 // R1-19: a competition has no verification/maintainer control of its own — that's derived from
 // the organizer org (claim the org → all its competitions become host-maintained). Archive/restore
-// plus the §8a lifecycle moves (item 14) live here. Which moves show follows the state machine —
-// the server still validates, this just doesn't offer illegal ones.
+// plus the §8a lifecycle moves (item 14) live here, and "Mark as duplicate" (DQ4 PR 2) beside
+// Archive — it is an archive with a forwarding address. Which moves show follows the state
+// machine — the server still validates, this just doesn't offer illegal ones.
 export function CompetitionHeaderActions({
   id,
+  name,
   archived,
   listingStatus,
 }: {
   id: string;
+  name: string;
   archived: boolean;
   listingStatus: ListingStatus;
 }) {
   const [pending, startTransition] = useTransition();
+  const [markingDuplicate, setMarkingDuplicate] = useState(false);
   const { confirm, dialog } = useConfirm();
   const { toast } = useToast();
 
@@ -94,25 +99,41 @@ export function CompetitionHeaderActions({
           <Restore aria-hidden="true" className="size-4" /> Restore
         </Button>
       ) : (
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={pending}
-          onClick={async () => {
-            if (
-              await confirm({
-                title: 'Archive this competition?',
-                message: 'It will be hidden from the public catalog. You can restore it later.',
-                confirmLabel: 'Archive',
-                tone: 'danger',
-              })
-            ) {
-              run(() => archiveCompetition(id), 'Archived');
-            }
-          }}
-        >
-          <Trash aria-hidden="true" className="size-4" /> Archive
-        </Button>
+        <>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={pending}
+            onClick={() => setMarkingDuplicate(true)}
+          >
+            Mark as duplicate…
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={pending}
+            onClick={async () => {
+              if (
+                await confirm({
+                  title: 'Archive this competition?',
+                  message: 'It will be hidden from the public catalog. You can restore it later.',
+                  confirmLabel: 'Archive',
+                  tone: 'danger',
+                })
+              ) {
+                run(() => archiveCompetition(id), 'Archived');
+              }
+            }}
+          >
+            <Trash aria-hidden="true" className="size-4" /> Archive
+          </Button>
+          <MarkDuplicateDialog
+            id={id}
+            name={name}
+            open={markingDuplicate}
+            onClose={() => setMarkingDuplicate(false)}
+          />
+        </>
       )}
     </div>
   );

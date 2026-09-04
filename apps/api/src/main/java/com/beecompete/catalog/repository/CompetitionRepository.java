@@ -19,6 +19,9 @@ public interface CompetitionRepository extends JpaRepository<Competition, UUID> 
 
 	boolean existsBySlug(String slug);
 
+	/** The retired duplicates pointing at this canonical (DQ4 PR 2) — re-pointed when it is itself marked. */
+	List<Competition> findByDuplicateOfId(UUID canonicalId);
+
 	/** Admin list search (R1-3) — a plain contains match; the public FTS search is CompetitionSearchService. */
 	Page<Competition> findByNameContainingIgnoreCase(String name, Pageable pageable);
 

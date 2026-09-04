@@ -16,6 +16,7 @@ import type {
   CompetitionDuplicates,
   FormState,
   ListingStatus,
+  Page,
 } from '@/lib/admin-types';
 
 /**
@@ -130,6 +131,31 @@ export async function archiveCompetition(id: string): Promise<void> {
 export async function restoreCompetition(id: string): Promise<void> {
   await adminFetch(`/competitions/${id}/restore`, { method: 'POST' });
   revalidatePath(`/admin/competitions/${id}`);
+  revalidatePath('/admin/competitions');
+}
+
+/** Candidates for "the listing this one duplicates" — the admin list search, a handful of rows. */
+export async function searchCompetitions(query: string): Promise<Competition[]> {
+  const q = query.trim();
+  if (!q) return [];
+  const page = await adminFetch<Page<Competition>>(
+    `/competitions?query=${encodeURIComponent(q)}&size=8`,
+  );
+  return page.content;
+}
+
+/**
+ * Retire this listing as a duplicate of `canonicalId` (DQ4 PR 2): archived + linked, so its slug
+ * redirects permanently to the canonical. The server refuses self, an archived canonical, and a
+ * canonical that is itself a duplicate.
+ */
+export async function markDuplicate(id: string, canonicalId: string): Promise<void> {
+  await adminFetch(`/competitions/${id}/mark-duplicate`, {
+    method: 'POST',
+    body: { canonicalId },
+  });
+  revalidatePath(`/admin/competitions/${id}`);
+  revalidatePath(`/admin/competitions/${canonicalId}`);
   revalidatePath('/admin/competitions');
 }
 

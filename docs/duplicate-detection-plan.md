@@ -2,8 +2,10 @@
 
 **Status:** approved 2026-09-03 (all five decisions in §4 taken as recommended). **PR 1 BUILT
 2026-09-03** (migration `0026`, `DuplicateDetectionService`, both gates, both `/duplicates`
-lookups, the form panels, the queue flags, the seeding pre-check). **PR 2 (mark-as-duplicate +
-redirect) follows.** Registers the Phase-1 slice of **DQ4** ("Duplicate competition detection &
+lookups, the form panels, the queue flags, the seeding pre-check). **PR 2 BUILT 2026-09-03**
+(migration `0027`, `duplicate_of_competition_id`, `POST …/mark-duplicate` with dependant
+re-pointing, `GET /api/v1/competitions/{slug}/canonical`, the `/c/[slug]` permanent redirect, the
+admin dialog + banner). Registers the Phase-1 slice of **DQ4** ("Duplicate competition detection &
 merging", `feature-registry.md`): detection + hard gates now, because several people are seeding
 at once and the catalog is about to pass 200 listings. The content-merge half of DQ4 (moving
 editions/resources/follows between listings) stays Phase 2 (`sweep-remediation-plan.md` §20).

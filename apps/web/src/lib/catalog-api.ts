@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { publicFetch } from '@/lib/public-api';
+import { PublicApiError, publicFetch } from '@/lib/public-api';
 import type {
   CategoryOption,
   CompetitionDetail,
@@ -50,6 +50,24 @@ export async function fetchCompetition(slug: string): Promise<CompetitionDetail>
   return publicFetch<CompetitionDetail>(`/competitions/${encodeURIComponent(slug)}`, {
     revalidate: CATALOG_REVALIDATE,
   });
+}
+
+/**
+ * Where a retired slug went (DQ4 PR 2): the canonical slug when `slug` belongs to a listing that
+ * was marked as a duplicate, else null. Asked only after the detail read 404s, so it costs
+ * nothing on the happy path.
+ */
+export async function fetchCanonicalSlug(slug: string): Promise<string | null> {
+  try {
+    const { slug: canonical } = await publicFetch<{ slug: string }>(
+      `/competitions/${encodeURIComponent(slug)}/canonical`,
+      { revalidate: CATALOG_REVALIDATE },
+    );
+    return canonical;
+  } catch (e) {
+    if (e instanceof PublicApiError && e.status === 404) return null;
+    throw e;
+  }
 }
 
 export async function fetchRegions(): Promise<RegionOption[]> {
