@@ -14,7 +14,7 @@ import type { Region } from '@/lib/admin-types';
  * chips + auto-opened groups) — never a hard lock; the admin can always pick anything.
  */
 
-const LEVEL_ORDER = ['VIRTUAL', 'COUNTRY', 'STATE', 'COUNTY', 'CITY'];
+const LEVEL_ORDER = ['VIRTUAL', 'INTERNATIONAL', 'COUNTRY', 'STATE', 'COUNTY', 'CITY'];
 
 interface RegionNode {
   region: Region;

@@ -99,7 +99,18 @@ export const RESOURCE_TYPES = ['BOOK', 'PAST_PAPER', 'GUIDE', 'VIDEO', 'OTHER'] 
 // separate archived_at axis. Only PUBLISHED passes the public gate.
 export const LISTING_STATUSES = ['DRAFT', 'IN_REVIEW', 'PUBLISHED', 'UNLISTED'] as const;
 export type ListingStatus = (typeof LISTING_STATUSES)[number];
-export const REGION_LEVELS = ['COUNTRY', 'STATE', 'COUNTY', 'CITY', 'VIRTUAL'] as const;
+// Broadest → narrowest, then the two rows that are not places. INTERNATIONAL (2026-09-03) is the
+// region-side partner of scope INTERNATIONAL: the registry seeds US geography only, so a
+// multi-country running could otherwise be tagged only "United States" — which publishes it as
+// US-only in the marketplace filter — or left untagged, which the create form refuses.
+export const REGION_LEVELS = [
+  'INTERNATIONAL',
+  'COUNTRY',
+  'STATE',
+  'COUNTY',
+  'CITY',
+  'VIRTUAL',
+] as const;
 export const ORG_TYPES = ['HOST', 'SCHOOL', 'SPONSOR', 'OTHER'] as const;
 export const HERO_POSITIONS = ['MAIN', 'TOP_RIGHT', 'BOTTOM_LEFT'] as const;
 

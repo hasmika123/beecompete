@@ -1,0 +1,26 @@
+# The "International / Worldwide" region row (2026-09-03) — the region-side partner of
+# ScopeLevel.INTERNATIONAL, which `0020`-era seeding runs already write for genuinely multi-country
+# competitions (ISEF, FIRST Robotics, ICSC).
+#
+# Why a row and not "leave the region empty": a listing's region set is REQUIRED on create and it
+# drives the marketplace location filter. The seeded registry is US-only (`0010` + `0018`), so an
+# international running had exactly two wrong options — no region at all (blocks the create form),
+# or "United States" (publishes it as US-only in the filter). This row is the honest third answer.
+#
+# It is NOT a country and never parents one: real countries get their own COUNTRY rows via admin
+# CRUD as coverage grows, and a competition with a physical venue should carry that venue too.
+#
+# Idempotency + visibility: same `ON CONFLICT ON CONSTRAINT uq_region_natural DO NOTHING` guard the
+# rest of the geo seed uses, and `/api/v1/regions` only lists regions carrying a live listing, so
+# this row stays out of the public filter until an edition is actually tagged with it.
+databaseChangeLog:
+  - changeSet:
+      id: 0025-seed-international-region
+      author: beecompete
+      comment: The special "International / Worldwide" region (level INTERNATIONAL, no parent).
+      changes:
+        - sql:
+            sql: >-
+              INSERT INTO region (id, level, name)
+              VALUES (gen_random_uuid(), 'INTERNATIONAL', 'International / Worldwide')
+              ON CONFLICT ON CONSTRAINT uq_region_natural DO NOTHING
