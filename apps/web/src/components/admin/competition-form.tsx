@@ -33,6 +33,7 @@ import {
 import { AttributesFields } from '@/components/admin/attributes-fields';
 import { FormSection, SubSectionHeading } from '@/components/admin/form-section';
 import { RegionSelect } from '@/components/admin/region-select';
+import { StepPromptButton } from '@/components/admin/step-prompt-button';
 import { AwardsInput, awardRowsFromSeed } from '@/components/admin/awards-input';
 import { MAX_TAGS, TagsInput } from '@/components/admin/tags-input';
 import { enumLabel, enumOptions, keyDateOptions } from '@/components/admin/enum-labels';
@@ -3141,8 +3142,27 @@ export function CompetitionForm({
                   </Tooltip>
                 )}
               </span>
-              <span className="shrink-0 text-xs text-muted tabular-nums">
-                Step {activeIndex + 1} of {steps.length}
+              {/* A prompt for THIS step's fields, built from the listing as it stands (owner
+                  2026-09-03). Create/import only — it lives on the wizard's step header, and the
+                  answer comes back through Paste JSON, which is a create-flow control. */}
+              <span className="flex shrink-0 items-center gap-2">
+                <StepPromptButton
+                  stepId={activeStepDef.id}
+                  context={{
+                    name,
+                    officialUrl: text.officialUrl,
+                    categoryName: categories.find((c) => c.id === categoryId)?.name ?? '',
+                    // Only the Custom fields step asks for the bag, and only that step's prompt
+                    // uses this — the others leave it out of the prompt entirely.
+                    attributesSchema:
+                      activeStepDef.id === 'attributes'
+                        ? ((template?.jsonSchema as Record<string, unknown> | undefined) ?? null)
+                        : null,
+                  }}
+                />
+                <span className="text-xs text-muted tabular-nums">
+                  Step {activeIndex + 1} of {steps.length}
+                </span>
               </span>
             </div>
             {/* Every step stays in the DOM (hidden when inactive) so one submit posts all fields. */}

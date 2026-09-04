@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Button, Check, Copy } from '@beecompete/ui';
 import {
   PASTE_JSON_PROMPT,
   PASTE_JSON_PROMPT_SOURCE,
   PASTE_JSON_PROMPT_STEPS,
 } from '@/lib/paste-json-prompt.generated';
+import { useCopyToClipboard } from '@/lib/use-copy';
 
 /**
  * The prompt that PRODUCES the JSON, on the screen where the JSON is pasted (owner 2026-09-03).
@@ -22,38 +23,20 @@ import {
  * network is worse than a page that weighs a little more.
  */
 export function PasteJsonPromptPanel() {
-  const [copied, setCopied] = useState(false);
-  const [blocked, setBlocked] = useState(false);
   const [open, setOpen] = useState(false);
-  const revert = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(
-    () => () => {
-      if (revert.current) clearTimeout(revert.current);
-    },
-    [],
-  );
+  const { copied, blocked, copy } = useCopyToClipboard();
 
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(PASTE_JSON_PROMPT);
-      setCopied(true);
-      setBlocked(false);
-      if (revert.current) clearTimeout(revert.current);
-      revert.current = setTimeout(() => setCopied(false), 2500);
-    } catch {
-      // Clipboard refused (permission, or a non-secure origin). Open the prompt instead of
-      // failing quietly — selecting it by hand still gets the curator moving.
-      setCopied(false);
-      setBlocked(true);
-      setOpen(true);
-    }
+  const onCopy = async () => {
+    // Clipboard refused (permission, or a non-secure origin)? Open the prompt instead of failing
+    // quietly — selecting it by hand still gets the curator moving.
+    if (!(await copy(PASTE_JSON_PROMPT))) setOpen(true);
   };
 
   return (
     <div className="grid gap-2 rounded-[var(--radius-field)] border border-border bg-surface p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-medium text-foreground">Don’t have the JSON yet?</p>
-        <Button variant="secondary" size="sm" onClick={copy}>
+        <Button variant="secondary" size="sm" onClick={onCopy}>
           {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
           {copied ? 'Copied' : 'Copy prompt'}
         </Button>
