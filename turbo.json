@@ -1,6 +1,9 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  // The admin app ships a generated copy of the paste-JSON prompt and a test that compares it to
+  // the doc — so an edit to that doc has to invalidate task caches it otherwise sits outside of.
+  "globalDependencies": ["docs/seeding/paste-json-prompt.md"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

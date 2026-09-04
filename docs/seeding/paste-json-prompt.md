@@ -1,5 +1,16 @@
 # Paste JSON prompt
 
+**The admin app carries this prompt too** (2026-09-03): *Competitions → New → Paste JSON* has a
+**Copy prompt** button, so a curator never has to come here for the text. That copy is GENERATED
+from this file — `apps/web/scripts/generate-paste-json-prompt.mjs` reads the copy box below into
+`apps/web/src/lib/paste-json-prompt.generated.ts`, which is committed because the Docker build
+context excludes `docs/`.
+
+**So after editing the prompt below: run `pnpm --filter @beecompete/web gen:prompt` and commit the
+regenerated file** (`pnpm dev` and `pnpm build` do it for you). Forget, and
+`apps/web/src/lib/paste-json-prompt.test.ts` fails CI naming the command — the button can never
+hand out a prompt this file stopped saying.
+
 ## Instructions
 
 1. Copy the prompt below into any assistant (ChatGPT, Claude, whatever).

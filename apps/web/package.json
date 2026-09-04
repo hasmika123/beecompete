@@ -5,12 +5,13 @@
   "description": "BeeCompete web app + BFF (Next.js, App Router, TS). F3 skeleton: app shell + light/dark theming; real pages land in R1.",
   "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "node scripts/generate-paste-json-prompt.mjs && next dev",
+    "build": "node scripts/generate-paste-json-prompt.mjs && next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "gen:prompt": "node scripts/generate-paste-json-prompt.mjs"
   },
   "dependencies": {
     "@beecompete/config": "workspace:*",
