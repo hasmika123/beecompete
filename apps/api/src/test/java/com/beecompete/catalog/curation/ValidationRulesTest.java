@@ -40,7 +40,7 @@ class ValidationRulesTest {
 
 	private CompetitionRequest competition(Short minGrade, Short maxGrade, Short teamMin, Short teamMax) {
 		// organizerName (not id) satisfies the mandatory-organizer rule — the resolve-or-create path.
-		return new CompetitionRequest("amc-10", "AMC 10", null, "Test Org", null, null, null, null,
+		return new CompetitionRequest("amc-10", "AMC 10", null, "Test Org", null, null, null, null, null,
 				UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, teamMin, teamMax, Delivery.IN_PERSON,
 				List.of(EntryPathways.INDIVIDUAL), null, EligibilityBasis.GRADE, minGrade, maxGrade, null, null,
 				CostType.FREE, Recurrence.ANNUAL, null);
@@ -55,7 +55,7 @@ class ValidationRulesTest {
 	void organizerMissingFails() {
 		// Neither organizerOrgId nor organizerName → the mandatory-organizer @AssertTrue fails.
 		CompetitionRequest noOrg = new CompetitionRequest("amc-10", "AMC 10", null, null, null, null, null, null,
-				UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, null, null, Delivery.IN_PERSON,
+				null, UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, null, null, Delivery.IN_PERSON,
 				List.of(EntryPathways.INDIVIDUAL), null, EligibilityBasis.GRADE, (short) 9, (short) 12, null, null,
 				CostType.FREE, Recurrence.ANNUAL, null);
 		assertTrue(hasMessage(V.validate(noOrg), "organizer is required"));
@@ -65,7 +65,7 @@ class ValidationRulesTest {
 	void organizerByIdPasses() {
 		// An organizerOrgId (no name) also satisfies the rule.
 		CompetitionRequest byId = new CompetitionRequest("amc-10", "AMC 10", UUID.randomUUID(), null, null, null,
-				null, null, UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, null, null,
+				null, null, null, UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, null, null,
 				Delivery.IN_PERSON, List.of(EntryPathways.INDIVIDUAL), null, EligibilityBasis.GRADE, (short) 9, (short) 12,
 				null, null, CostType.FREE, Recurrence.ANNUAL, null);
 		assertTrue(V.validate(byId).isEmpty());
@@ -76,7 +76,7 @@ class ValidationRulesTest {
 		// basis=GRADE with no grade range is the failure 0023 exists to end: a card and strip left
 		// asserting an eligibility nobody recorded.
 		CompetitionRequest unbacked = new CompetitionRequest("amc-10", "AMC 10", null, "Test Org", null, null,
-				null, null, UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, null, null,
+				null, null, null, UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, null, null,
 				Delivery.IN_PERSON, List.of(EntryPathways.INDIVIDUAL), null, EligibilityBasis.GRADE, null, null, null,
 				null, CostType.FREE, Recurrence.ANNUAL, null);
 		assertTrue(hasMessage(V.validate(unbacked), "eligibilityBasis must match the ranges provided"));
@@ -87,7 +87,7 @@ class ValidationRulesTest {
 		// The Breakthrough Junior Challenge shape: ages stated, grades absent. Must pass — this is
 		// precisely the listing the old grade-only model could not represent honestly.
 		CompetitionRequest ageOnly = new CompetitionRequest("bjc", "Breakthrough Junior Challenge", null,
-				"Test Org", null, null, null, null, UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL,
+				"Test Org", null, null, null, null, null, UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL,
 				null, null, Delivery.VIRTUAL, List.of(EntryPathways.INDIVIDUAL), null, EligibilityBasis.AGE, null, null,
 				(short) 13, (short) 18, CostType.FREE, Recurrence.ANNUAL, null);
 		assertTrue(V.validate(ageOnly).isEmpty());
@@ -98,7 +98,7 @@ class ValidationRulesTest {
 		// OPEN is a stated "no restriction"; null is "nobody recorded it". Neither carries a range.
 		for (EligibilityBasis basis : new EligibilityBasis[] {EligibilityBasis.OPEN, null}) {
 			CompetitionRequest noRange = new CompetitionRequest("open-comp", "Open Comp", null, "Test Org",
-					null, null, null, null, UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, null, null,
+					null, null, null, null, null, UUID.randomUUID(), null, ParticipationMode.INDIVIDUAL, null, null,
 					Delivery.VIRTUAL, List.of(EntryPathways.INDIVIDUAL), null, basis, null, null, null, null,
 					CostType.FREE, Recurrence.ANNUAL, null);
 			assertTrue(V.validate(noRange).isEmpty(), "basis " + basis + " should need no range");
@@ -172,7 +172,7 @@ class ValidationRulesTest {
 
 	/** A wrapper that satisfies every other admin-form rule, so only the cost/fee axis is under test. */
 	private CompetitionWithEditionRequest wrapper(CostType cost, BigDecimal fee, String currency) {
-		CompetitionRequest comp = new CompetitionRequest("amc-10", "AMC 10", UUID.randomUUID(), null, null,
+		CompetitionRequest comp = new CompetitionRequest("amc-10", "AMC 10", UUID.randomUUID(), null, null, null,
 				"https://example.org", null, "A description", UUID.randomUUID(), null,
 				ParticipationMode.INDIVIDUAL, null, null, Delivery.IN_PERSON,
 				List.of(EntryPathways.INDIVIDUAL), null, EligibilityBasis.GRADE, (short) 9, (short) 12, null,

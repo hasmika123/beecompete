@@ -4,6 +4,7 @@ import com.beecompete.catalog.curation.CompetitionCurationService;
 import com.beecompete.catalog.curation.CompetitionRequest;
 import com.beecompete.catalog.curation.CompetitionWithEditionRequest;
 import com.beecompete.catalog.curation.CurationStamps;
+import com.beecompete.catalog.curation.DuplicateDetectionService;
 import com.beecompete.catalog.curation.FaqRequest;
 import com.beecompete.catalog.curation.ListingCurationService;
 import com.beecompete.catalog.curation.ResourceCurationService;
@@ -67,11 +68,12 @@ public class CompetitionAdminController {
 	private final CompetitionCurationService curation;
 	private final ListingCurationService listingCuration;
 	private final ResourceCurationService resourceCuration;
+	private final DuplicateDetectionService duplicateDetection;
 
 	public CompetitionAdminController(CompetitionRepository competitions, CompetitionFaqRepository faqs,
 			ResourceRepository resources, FeaturedSlotRepository featuredSlots,
 			CompetitionCurationService curation, ListingCurationService listingCuration,
-			ResourceCurationService resourceCuration) {
+			ResourceCurationService resourceCuration, DuplicateDetectionService duplicateDetection) {
 		this.competitions = competitions;
 		this.faqs = faqs;
 		this.resources = resources;
@@ -79,6 +81,7 @@ public class CompetitionAdminController {
 		this.curation = curation;
 		this.listingCuration = listingCuration;
 		this.resourceCuration = resourceCuration;
+		this.duplicateDetection = duplicateDetection;
 	}
 
 	/**
@@ -107,6 +110,20 @@ public class CompetitionAdminController {
 		List<UUID> ids = found.getContent().stream().map(Competition::getId).toList();
 		Set<UUID> live = ids.isEmpty() ? Set.of() : Set.copyOf(competitions.idsWithLiveEdition(ids));
 		return found.map(c -> CompetitionResponse.from(c, live.contains(c.getId())));
+	}
+
+	/**
+	 * Duplicate candidates for a listing about to be saved (DQ4) — what the write gate would refuse,
+	 * asked BEFORE submit so the form can show the candidates and offer "not a duplicate" instead
+	 * of a 409/422 after the fact. Same detection the gate runs; {@code excludeId} on edit.
+	 */
+	@GetMapping("/competitions/duplicates")
+	@Transactional(readOnly = true)
+	public DuplicateDetectionService.CompetitionDuplicates duplicates(
+			@RequestParam(required = false) String name, @RequestParam(required = false) String officialUrl,
+			@RequestParam(required = false) String slug, @RequestParam(required = false) UUID excludeId,
+			@RequestParam(required = false) UUID excludeImportRecordId) {
+		return duplicateDetection.findCompetition(name, officialUrl, slug, excludeId, excludeImportRecordId);
 	}
 
 	@GetMapping("/competitions/{id}")

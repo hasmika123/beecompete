@@ -208,6 +208,7 @@ const MAPPED_COMPETITION_KEYS = new Set([
   'organizerOrgId',
   'organizerName',
   'confirmNewOrganizer',
+  'confirmNotDuplicate',
   'officialUrl',
   'logo',
   'description',

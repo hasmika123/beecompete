@@ -85,6 +85,31 @@ created_at` *(soft-delete per D7)*
 *(`entry_pathway` added 2026-07-08, legacy review: whether a student can enter independently or
 only through a school/chapter — filterable, shown in the Details at-a-glance strip.)*
 
+> **Identity keys + the duplicate rule (DQ4 Phase-1 slice, 2026-09-03, migration `0026`;
+> `duplicate-detection-plan.md`).** `name_key` and `url_key` are **stored generated columns**
+> computed by two IMMUTABLE SQL functions, `catalog_name_key(text)` (lowercase, every run of
+> non-alphanumerics → one space, trimmed; Unicode letters kept, accents not folded) and
+> `catalog_url_key(text)` (lowercase, scheme / leading `www.` / query / fragment / trailing slashes
+> dropped). `import_record` carries the same two keys from its JSONB payload and `organization`
+> carries `name_key`, so every row is comparable from the moment it exists, whatever wrote it.
+> **Java never re-implements the normalization** — lookups bind the raw value and let SQL key it
+> (`WHERE name_key = catalog_name_key(:name)`), so the two sides cannot drift.
+> **The one hard rule:** two *live* competitions may not share a `name_key`
+> (`uq_competition_name_key_live`, partial on `archived_at IS NULL`). Same-named live listings are
+> indistinguishable on a card whatever else differs, so the fix is always to rename one; the index
+> is what makes a concurrent-create race lose instead of succeed. The write gate
+> (`CompetitionCurationService.guardDuplicates`) answers it with a 409 *before* the index fires.
+> **Soft signals** — same `url_key` (umbrella programs legitimately share a page), a similar name
+> (`pg_trgm` similarity ≥ 0.45 or one key containing the other), or an *archived* same-name row —
+> are a 422 listing the candidates unless the request carries `confirmNotDuplicate: true`; same
+> shape as `confirmNewOrganizer`. `update` re-gates only when the name or URL actually changed.
+> **No** unique index on `url_key`, and **none** on `organization.name_key` (the `0012` decision
+> stands). Everything is computed in one place, `DuplicateDetectionService`, which also serves
+> `GET /admin/competitions/duplicates` + `GET /admin/organizations/duplicates` (the forms warn
+> before submit), the import queue's per-row `duplicate` / `pendingTwins` flags, and the seeding
+> tool's known-listing pre-check. Content **merge** (moving seasons/resources between a duplicate
+> and its canonical) is not built — DQ4 Phase 2.
+
 > **Standard attributes-bag keys** *(2026-07-08 — conventional JSONB keys, not Spine columns;
 > validated per Category Template where relevant):* `eligible_countries[]`,
 > `citizenship_countries[]`, `student_status_required` (**boolean** since `0022`, owner
@@ -203,17 +228,22 @@ at R2-1.)*
 > — every write path must attribute a listing. The single competition write path
 > (`CompetitionCurationService`, shared by admin CRUD, import-approve, and the combined create)
 > **resolves-or-creates** the organizer: a given `organizerOrgId` must exist; otherwise it resolves
-> `organizerName` by an **exact (normalized, case-insensitive) name match → reuse**, and creates a
-> fresh org when there is no match. Auto-created orgs are **`CURATED`/`HOST`** (unclaimed, no R1
-> verification work) with `domain` inferred from the official URL and the competition's provenance
-> stamp. Conservative by decision: a name that only matches **similar** (containing) orgs is
-> **refused (422, listing candidates)** unless the curator sets `confirmNewOrganizer` — no
-> fuzzy/acronym matching, no auto-merge (a wrong merge is worse than a duplicate). An exact match
-> that is **archived** is a 422 (restore or pick another). A row with **no organizer** is flagged
-> for manual assignment (the seeding pipeline sends `organizerName: null`, never a placeholder). No
-> unique index on `organization.name` — R2 will legitimately hold same-named schools; the
-> single-curator R1 accepts the create race. Lets the S4 seeding pipeline attribute 200+ imports
-> by name without pre-creating orgs by hand.
+> `organizerName` by an **exact name-key match → reuse** (since `0026` the DB key: case,
+> punctuation and whitespace folded), and creates a fresh org when there is no match. Auto-created
+> orgs are **`CURATED`/`HOST`** (unclaimed, no R1 verification work) with `domain` inferred from
+> the official URL and the competition's provenance stamp. Conservative by decision: a name that
+> only matches **similar** orgs — containing either way, trigram-similar, or **a different org on
+> the same registrable domain** (DQ4, 2026-09-03) — is **refused (422, listing candidates with
+> their match reasons)** unless the curator sets `confirmNewOrganizer` — no auto-merge (a wrong
+> merge is worse than a duplicate). An exact match that is **archived** is a 422 (restore or pick
+> another). A row with **no organizer** is flagged for manual assignment (the seeding pipeline
+> sends `organizerName: null`, never a placeholder). No unique index on `organization.name_key` —
+> R2 will legitimately hold same-named schools; the single-curator R1 accepts the create race.
+> Lets the S4 seeding pipeline attribute 200+ imports by name without pre-creating orgs by hand.
+> The matching itself lives in `DuplicateDetectionService` (shared with the competition gate), and
+> since DQ4 the **direct** `POST/PUT /admin/organizations` path is gated the same way: a live
+> exact name → 409 pointing at it; archived exact / same domain / similar → 422 unless
+> `confirmNotDuplicate`.
 
 **`Membership`** [P1] — `id, user_id, org_id, role_id, status`
 **`Role`** / **`Permission`** [P1] — org-scoped RBAC. `Role{id, org_id?, name}`, `Permission{role_id, action, resource}`

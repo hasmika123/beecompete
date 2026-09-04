@@ -167,7 +167,7 @@ public class CorrectionApplyService {
 			case COMPETITION -> {
 				Competition c = competitions.findById(subjectId).orElseThrow(this::subjectGone);
 				yield new CompetitionRequest(c.getSlug(), c.getName(),
-						c.getOrganizer() != null ? c.getOrganizer().getId() : null, null, null,
+						c.getOrganizer() != null ? c.getOrganizer().getId() : null, null, null, null,
 						c.getOfficialUrl(), c.getLogo(), c.getDescription(),
 						c.getCategory().getId(), c.getTags(), c.getParticipationMode(), c.getTeamSizeMin(),
 						c.getTeamSizeMax(), c.getDelivery(), c.getEntryPathways(), c.getEvaluationType(),

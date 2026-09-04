@@ -26,6 +26,12 @@ function num(form: FormData, key: string): number | undefined {
   return value === undefined ? undefined : Number(value);
 }
 
+/** A checkbox: "on" (the browser's value) or "true" (a programmatic form) → true; absent → false. */
+function checked(form: FormData, key: string): boolean {
+  const value = form.get(key);
+  return value === 'on' || value === 'true';
+}
+
 function list(form: FormData, key: string): string[] | undefined {
   const value = str(form, key);
   if (value === undefined) return undefined;
@@ -57,6 +63,9 @@ export function buildCompetitionBody(form: FormData): Record<string, unknown> {
     slug: str(form, 'slug'),
     name: str(form, 'name'),
     organizerOrgId: str(form, 'organizerOrgId') ?? null,
+    // The curator's "I looked, it's not a duplicate" (DQ4) — a checkbox, so present only when
+    // ticked. Posted as a real boolean; the server's soft duplicate signals step aside for it.
+    confirmNotDuplicate: checked(form, 'confirmNotDuplicate'),
     officialUrl: str(form, 'officialUrl') ?? null,
     logo: str(form, 'logo') ?? null,
     description: str(form, 'description') ?? null,

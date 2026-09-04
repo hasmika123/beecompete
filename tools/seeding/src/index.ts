@@ -34,6 +34,9 @@ function parseArgs(argv: string[]): Args {
       case '--allow-private':
         args.allowPrivate = true;
         break;
+      case '--include-known':
+        args.includeKnown = true;
+        break;
       case '--help':
       case '-h':
         args.help = true;
@@ -74,6 +77,9 @@ Options:
   --offline        Force the offline stub extractor (sibling <name>.expected.json), no LLM call.
                    (Also implied automatically when ANTHROPIC_API_KEY is unset.)
   --allow-private  Permit fetching private/loopback/link-local addresses (off by default — SSRF guard).
+  --include-known  Extract even what is already a live listing or a pending import record. By
+                   default such items are SKIPPED before any fetch or LLM call (the API's duplicate
+                   detection decides; needs ADMIN_API_TOKEN and not --offline).
   -h, --help       Show this help.
 
 Env (see .env.example): ANTHROPIC_API_KEY, ANTHROPIC_MODEL, BEECOMPETE_API_BASE, ADMIN_API_TOKEN.
@@ -110,6 +116,7 @@ async function main(): Promise<number> {
     dryRun: args.dryRun,
     offline: forcedOffline,
     allowPrivate: args.allowPrivate,
+    includeKnown: args.includeKnown,
     templates: resolved.templates,
   };
 
@@ -132,8 +139,10 @@ async function main(): Promise<number> {
   }
 
   const failed = reports.filter((r) => r.outcome === 'error' || r.outcome === 'invalid').length;
+  const skipped = reports.filter((r) => r.outcome === 'skipped').length;
   process.stderr.write(
-    `\nDone: ${reports.length} processed, ${failed} needing attention (invalid/error).\n`,
+    `\nDone: ${reports.length} processed, ${failed} needing attention (invalid/error)` +
+      `${skipped > 0 ? `, ${skipped} skipped as already listed/queued (--include-known overrides)` : ''}.\n`,
   );
   return failed > 0 ? 1 : 0;
 }

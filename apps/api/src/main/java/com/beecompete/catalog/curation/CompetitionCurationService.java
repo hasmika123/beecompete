@@ -16,8 +16,6 @@ import com.beecompete.catalog.service.CategoryAttributeValidator;
 import java.util.List;
 import java.time.Instant;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,13 +34,53 @@ public class CompetitionCurationService {
 	private final CategoryRepository categories;
 	private final OrganizationRepository organizations;
 	private final CategoryAttributeValidator attributeValidator;
+	private final DuplicateDetectionService duplicates;
 
 	public CompetitionCurationService(CompetitionRepository competitions, CategoryRepository categories,
-			OrganizationRepository organizations, CategoryAttributeValidator attributeValidator) {
+			OrganizationRepository organizations, CategoryAttributeValidator attributeValidator,
+			DuplicateDetectionService duplicates) {
 		this.competitions = competitions;
 		this.categories = categories;
 		this.organizations = organizations;
 		this.attributeValidator = attributeValidator;
+		this.duplicates = duplicates;
+	}
+
+	/**
+	 * The duplicate gate (DQ4, {@code docs/duplicate-detection-plan.md}) — runs BEFORE the slug
+	 * step on every create, and on an update that changes the name or the official URL.
+	 *
+	 * <p>A LIVE listing with the same name key is a <b>409</b>, never overridable: two live listings
+	 * with the same normalized name are indistinguishable on a card whatever else differs, so the
+	 * fix is always to rename one — and the partial unique index {@code uq_competition_name_key_live}
+	 * refuses the row anyway. Everything softer — the same official URL (umbrella programs
+	 * legitimately share a page), a similar name ("AMC 8" / "AMC 10"), or an ARCHIVED listing with
+	 * the same name (restore it, or it really is something new) — is a <b>422</b> listing the
+	 * candidates, unless the curator set {@code confirmNotDuplicate}. Same shape as
+	 * {@code confirmNewOrganizer}: the machine flags, a human decides.
+	 *
+	 * <p>The slug is deliberately NOT part of this gate — {@link #slugFor} keeps its own rule
+	 * (suffix on curated create, 409 on import), because a taken slug on the curated path is a
+	 * derived-name collision the curator has no field to fix.
+	 */
+	private void guardDuplicates(CompetitionRequest request, UUID selfId) {
+		List<DuplicateDetectionService.CompetitionCandidate> candidates = duplicates
+				.findCompetition(request.name(), request.officialUrl(), null, selfId, null).catalog();
+		if (candidates.isEmpty()) {
+			return;
+		}
+		DuplicateDetectionService.CompetitionCandidate liveExact = candidates.stream()
+				.filter(DuplicateDetectionService.CompetitionCandidate::isLiveNameExact).findFirst().orElse(null);
+		if (liveExact != null) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"a live listing already has this name: " + liveExact.name() + " [" + liveExact.slug() + "] ("
+							+ liveExact.id() + "). Rename this one to tell them apart, or edit that listing instead.");
+		}
+		if (!Boolean.TRUE.equals(request.confirmNotDuplicate())) {
+			throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+					"possible duplicate of: " + DuplicateDetectionService.describe(candidates)
+							+ ". Set confirmNotDuplicate=true to create it anyway.");
+		}
 	}
 
 	/** How many suffixed variants to try before giving up — far past any real collision run. */
@@ -90,6 +128,7 @@ public class CompetitionCurationService {
 		validateAttributes(request);
 		validateEvaluationTypes(request);
 		validateEntryPathways(request);
+		guardDuplicates(request, null);
 		Competition competition = new Competition(slugFor(request.slug(), stamp), request.name(), category,
 				request.participationMode(), request.delivery(), request.entryPathways(), request.costType(),
 				request.recurrence());
@@ -108,6 +147,12 @@ public class CompetitionCurationService {
 		validateAttributes(request);
 		validateEvaluationTypes(request);
 		validateEntryPathways(request);
+		// Only a changed name or URL can create a NEW collision; re-running the gate on every save
+		// would make a listing that was confirmed "not a duplicate" once need confirming forever.
+		if (!DuplicateDetectionService.sameText(competition.getName(), request.name())
+				|| !DuplicateDetectionService.sameText(competition.getOfficialUrl(), request.officialUrl())) {
+			guardDuplicates(request, id);
+		}
 		competition.setSlug(request.slug());
 		competition.setName(request.name());
 		competition.setParticipationMode(request.participationMode());
@@ -174,12 +219,15 @@ public class CompetitionCurationService {
 
 	/**
 	 * Resolve-or-create the organizer. A given {@code organizerOrgId} must exist (422 otherwise) —
-	 * unchanged behavior. Otherwise resolve by {@code organizerName}: an exact (normalized,
-	 * case-insensitive) name match is REUSED; a name that only matches SIMILAR orgs is refused (422
-	 * listing the candidates) unless the curator set {@code confirmNewOrganizer}; a name with no
-	 * match creates a fresh CURATED/HOST org (domain inferred from the official URL, same provenance
-	 * stamp as the competition). Conservative on purpose (decision a): a wrong merge is worse than a
-	 * duplicate, so only containment matches flag — no fuzzy/acronym matching, no auto-merge.
+	 * unchanged behavior. Otherwise resolve by {@code organizerName}: an exact (normalized) name
+	 * match is REUSED; a name that only matches SIMILAR orgs — or a different org on the same
+	 * registrable domain — is refused (422 listing the candidates) unless the curator set
+	 * {@code confirmNewOrganizer}; a name with no match creates a fresh CURATED/HOST org (domain
+	 * inferred from the official URL, same provenance stamp as the competition). Conservative on
+	 * purpose (decision a): a wrong merge is worse than a duplicate, so nothing is auto-merged.
+	 * The matching itself lives in {@link DuplicateDetectionService} since DQ4, shared with the
+	 * organization admin endpoints — "exact" now means the DB name key (case, punctuation and
+	 * whitespace folded), not just case-insensitive equality.
 	 */
 	private Organization resolveOrganizer(CompetitionRequest request, Provenance stamp) {
 		if (request.organizerOrgId() != null) {
@@ -193,27 +241,27 @@ public class CompetitionCurationService {
 			throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
 					"organizer is required: pass organizerOrgId or organizerName");
 		}
-		Organization exact = organizations.findByNameIgnoreCase(name).orElse(null);
+		String domain = WebDomains.registrableHost(request.officialUrl());
+		List<DuplicateDetectionService.OrganizationCandidate> candidates = duplicates.findOrganization(name, domain,
+				null);
+		DuplicateDetectionService.OrganizationCandidate exact = candidates.stream()
+				.filter(DuplicateDetectionService.OrganizationCandidate::isNameExact).findFirst().orElse(null);
 		if (exact != null) {
-			if (exact.getArchivedAt() != null) {
+			if (exact.archivedAt() != null) {
 				throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-						"organizer name matches an archived organization (" + exact.getId()
+						"organizer name matches an archived organization (" + exact.id()
 								+ "); restore it or pick another");
 			}
-			return exact; // decision (a): exact match → reuse
+			return organizations.findById(exact.id()).orElseThrow(); // decision (a): exact match → reuse
 		}
-		List<Organization> near = organizations
-				.findByNameContainingIgnoreCase(name, PageRequest.of(0, 5)).getContent();
-		if (!near.isEmpty() && !Boolean.TRUE.equals(request.confirmNewOrganizer())) {
-			String candidates = near.stream()
-					.map(o -> o.getId() + " · " + o.getName())
-					.collect(Collectors.joining(", "));
+		if (!candidates.isEmpty() && !Boolean.TRUE.equals(request.confirmNewOrganizer())) {
 			throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-					"no exact organizer match for '" + name + "' but similar organizations exist: " + candidates
+					"no exact organizer match for '" + name + "' but similar organizations exist: "
+							+ DuplicateDetectionService.describeOrganizations(candidates)
 							+ ". Set organizerOrgId to reuse one, or confirmNewOrganizer=true to create new.");
 		}
 		Organization created = new Organization(name, OrganizationType.HOST);
-		created.setDomain(WebDomains.registrableHost(request.officialUrl()));
+		created.setDomain(domain);
 		created.setProvenance(stamp); // same stamp as the competition; verificationState defaults CURATED
 		return organizations.save(created);
 	}

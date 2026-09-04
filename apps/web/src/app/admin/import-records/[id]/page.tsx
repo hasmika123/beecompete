@@ -10,7 +10,6 @@ import { importSeedWarnings, splitImportPayload } from '@/lib/import-seed';
 import type {
   Category,
   CategoryTemplate,
-  Competition,
   ImportRecord,
   Organization,
   Page,
@@ -55,18 +54,17 @@ export default async function ReviewImportPage({ params }: { params: Promise<{ i
   const seed = splitImportPayload(record.payload);
   const warnings = importSeedWarnings(record.payload, seed);
 
-  // Everything the competition form needs, plus the two lookups only review needs: organizations
-  // matching the extracted organizer name (the raw tab's resolve-or-create panel), and the listing
-  // already holding this slug, if any. Fetched in parallel — the review screen is one round trip.
-  const [categories, templates, organizations, regions, organizerMatches, duplicate] =
-    await Promise.all([
-      adminFetch<Category[]>('/categories'),
-      adminFetch<CategoryTemplate[]>('/categories/templates'),
-      adminFetch<Page<Organization>>('/organizations?size=200'),
-      adminFetch<Region[]>('/regions'),
-      findOrganizerMatches(seed.organizerName),
-      findDuplicate(record.duplicateCompetitionId),
-    ]);
+  // Everything the competition form needs, plus the one lookup only review needs: organizations
+  // matching the extracted organizer name (the raw tab's resolve-or-create panel). The duplicate
+  // verdict rides on the record itself (DQ4). Fetched in parallel — the review screen is one
+  // round trip.
+  const [categories, templates, organizations, regions, organizerMatches] = await Promise.all([
+    adminFetch<Category[]>('/categories'),
+    adminFetch<CategoryTemplate[]>('/categories/templates'),
+    adminFetch<Page<Organization>>('/organizations?size=200'),
+    adminFetch<Region[]>('/regions'),
+    findOrganizerMatches(seed.organizerName),
+  ]);
 
   return (
     <>
@@ -79,7 +77,7 @@ export default async function ReviewImportPage({ params }: { params: Promise<{ i
         record={record}
         seed={seed}
         warnings={warnings}
-        duplicate={duplicate}
+        duplicates={record.duplicates}
         categories={categories}
         organizations={organizations.content}
         templates={templates}
@@ -111,18 +109,5 @@ async function findOrganizerMatches(name: string | null): Promise<Organization[]
     return orgs.content;
   } catch {
     return [];
-  }
-}
-
-/** Names the listing that already holds this payload's slug, so the warning can link to it. */
-async function findDuplicate(
-  competitionId: string | null,
-): Promise<{ id: string; name: string } | null> {
-  if (!competitionId) return null;
-  try {
-    const existing = await adminFetch<Competition>(`/competitions/${competitionId}`);
-    return { id: existing.id, name: existing.name };
-  } catch {
-    return null;
   }
 }

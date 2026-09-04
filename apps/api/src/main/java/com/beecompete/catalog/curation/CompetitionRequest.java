@@ -35,6 +35,10 @@ public record CompetitionRequest(
 		// Curator override for the near-match guard: when a similar org name exists but no exact
 		// match, resolve-or-create refuses (422) unless this is true (create a new org anyway).
 		Boolean confirmNewOrganizer,
+		// Curator override for the duplicate guard (DQ4): a similar name, the same official URL, or
+		// an ARCHIVED listing with the same name is a 422 listing the candidates unless this is true.
+		// A LIVE listing with the same name is a 409 regardless — rename to tell them apart.
+		Boolean confirmNotDuplicate,
 		@Size(max = 1000) String officialUrl,
 		@Size(max = 1000) String logo,
 		@Size(max = 10000) String description,

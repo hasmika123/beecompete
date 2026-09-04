@@ -11,7 +11,35 @@ import {
   buildRegionIds,
   buildResources,
 } from '@/lib/competition-payload';
-import type { Competition, FormState, ListingStatus } from '@/lib/admin-types';
+import type {
+  Competition,
+  CompetitionDuplicates,
+  FormState,
+  ListingStatus,
+} from '@/lib/admin-types';
+
+/**
+ * Duplicate candidates for the listing being typed (DQ4) — the same detection the save runs, asked
+ * BEFORE submit so the form can show them and offer "not a duplicate" instead of a 409/422 after
+ * the fact. Non-fatal: a failed check returns nothing rather than breaking the form — the server
+ * gate still stands.
+ */
+export async function findCompetitionDuplicates(input: {
+  name: string;
+  officialUrl?: string | null;
+  excludeId?: string | null;
+  excludeImportRecordId?: string | null;
+}): Promise<CompetitionDuplicates> {
+  const params = new URLSearchParams({ name: input.name.trim() });
+  if (input.officialUrl?.trim()) params.set('officialUrl', input.officialUrl.trim());
+  if (input.excludeId) params.set('excludeId', input.excludeId);
+  if (input.excludeImportRecordId) params.set('excludeImportRecordId', input.excludeImportRecordId);
+  try {
+    return await adminFetch<CompetitionDuplicates>(`/competitions/duplicates?${params}`);
+  } catch {
+    return { catalog: [], pending: [] };
+  }
+}
 
 export async function createCompetition(_prev: FormState, form: FormData): Promise<FormState> {
   const requested = buildCompetitionBody(form);
