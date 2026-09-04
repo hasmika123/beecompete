@@ -45,6 +45,7 @@ import { defaultKeyDateLabel } from '@/lib/detail-display';
 import {
   BOUNDS,
   currencyRule,
+  emailRule,
   intRule,
   isComplete,
   LIMITS,
@@ -969,6 +970,14 @@ export function CompetitionForm({
     (asksFor.ages && elig.minAge === '' && elig.maxAge === '');
   const eligibilityValid = !eligErrors.minGrade && !eligErrors.minAge && !basisUnbacked;
 
+  // The organizer's published contact points, read out of the attributes bag the two controls
+  // write into. A non-string (a pasted payload can put anything under these keys) reads as blank,
+  // exactly as the controls render it — so what is judged is what the curator can see and edit.
+  const attrText = (key: string) =>
+    typeof attributes[key] === 'string' ? (attributes[key] as string) : '';
+  const contactEmail = attrText('contact_email');
+  const contactPhone = attrText('contact_phone');
+
   /**
    * Per-field messages, server-mirrored (`lib/form-rules`). Undefined = nothing to say.
    *
@@ -994,6 +1003,15 @@ export function CompetitionForm({
     teamSizeMax: intRule(text.teamSizeMax, { ...BOUNDS.teamSize, label: 'Maximum team size' }),
     teamSizeRange: rangeRule(text.teamSizeMin, text.teamSizeMax, 'team size'),
     currency: currencyRule(text.currency),
+    // The contact pair is OPTIONAL and stays optional — these rules only ever describe a value
+    // that is there and is wrong, never a blank box. They exist because the form no longer lets
+    // the BROWSER judge these fields (`noValidate`): `type="email"` used to refuse the whole
+    // submit from a collapsed step, with the offending control display:none, so Chrome could not
+    // even show its tooltip — the button simply did nothing, and the two empty-looking contact
+    // boxes were the obvious suspects. Now a bad address says so, in place, and an empty one is
+    // silent (it is not in `requiredFields` and never will be).
+    contactEmail: emailRule(contactEmail, { max: LIMITS.contactEmail, label: 'Contact email' }),
+    contactPhone: textRule(contactPhone, { max: LIMITS.contactPhone, label: 'Contact phone' }),
   };
 
   /**
@@ -1006,6 +1024,19 @@ export function CompetitionForm({
    * "incomplete".
    */
   const has = (v: string) => v.trim() !== '';
+  /**
+   * A prep-resource link that is TYPED but not a link. The browser used to catch these through
+   * `type="url"` — invisibly, and by refusing the whole form from a collapsed step — and the
+   * server does not check the shape at all (`ResourceRequest.url` is `@NotBlank @Size` only), so
+   * without this a malformed link would now just be stored and published dead.
+   */
+  const resourceUrlError = (row: { url: string; image: string }) => {
+    const link = urlRule(row.url, { max: LIMITS.resourceUrl });
+    if (link) return `Link: ${link}`;
+    const image = urlRule(row.image, { max: LIMITS.resourceImageUrl });
+    return image ? `Preview image: ${image}` : undefined;
+  };
+  const badResourceRows = resourceRows.filter((r) => resourceUrlError(r) !== undefined);
   const partialResourceRows = resourceRows.filter(
     (r) => (has(r.title) || has(r.url) || has(r.image)) && !(has(r.title) && has(r.url)),
   );
@@ -1071,6 +1102,21 @@ export function CompetitionForm({
       label: 'Finish or clear the part-filled FAQ',
       stepId: 'extras',
       ok: partialFaqRows.length === 0,
+    },
+    // The two conditions the BROWSER used to enforce, now enforced where they can be seen. Both
+    // are satisfied by an empty field, so neither makes anything mandatory — they only fire on a
+    // value that is present and malformed, and both name their step so the click lands on it.
+    {
+      key: 'contactEmailShape',
+      label: 'Fix or clear the contact email',
+      stepId: 'administration',
+      ok: fieldErrors.contactEmail === undefined,
+    },
+    {
+      key: 'resourceLinks',
+      label: 'Fix or clear the prep-resource link',
+      stepId: 'extras',
+      ok: badResourceRows.length === 0,
     },
     {
       key: 'tagLimit',
@@ -1670,36 +1716,39 @@ export function CompetitionForm({
               the Overview overflow. The organizer's OWN published details, never a person's. */}
           {structured && (
             <>
+              {/* BOTH ARE OPTIONAL, and neither is in `requiredFields` — a listing whose organizer
+                  publishes no contact details is complete without them. `inputMode` only picks the
+                  phone keyboard; the `type="email"` that used to sit here judged the field too
+                  (see `noValidate` on the form) and could kill the submit silently. */}
               <FormField
                 label="Contact email"
                 hintAs="icon"
-                hint="the organizer’s published contact address, from their site — shown on the listing. Never a personal address."
+                hint="optional — the organizer’s published contact address, from their site, shown on the listing. Never a personal address."
+                error={fieldErrors.contactEmail}
               >
                 <Input
-                  type="email"
                   inputMode="email"
-                  value={
-                    typeof attributes.contact_email === 'string' ? attributes.contact_email : ''
-                  }
+                  autoComplete="off"
+                  value={contactEmail}
                   onChange={(e) => setAttrKey('contact_email', e.target.value)}
                   placeholder="info@organizer.org"
-                  maxLength={320}
+                  maxLength={LIMITS.contactEmail}
                 />
               </FormField>
               <FormField
                 label="Contact phone"
                 hintAs="icon"
-                hint="the organizer’s published phone number, if they list one."
+                hint="optional — the organizer’s published phone number, if they list one."
+                error={fieldErrors.contactPhone}
               >
                 <Input
                   type="tel"
                   inputMode="tel"
-                  value={
-                    typeof attributes.contact_phone === 'string' ? attributes.contact_phone : ''
-                  }
+                  autoComplete="off"
+                  value={contactPhone}
                   onChange={(e) => setAttrKey('contact_phone', e.target.value)}
                   placeholder="(555) 123-4567"
-                  maxLength={40}
+                  maxLength={LIMITS.contactPhone}
                 />
               </FormField>
             </>
@@ -2519,12 +2568,17 @@ export function CompetitionForm({
                         Needs both a title and a URL — finish it, or clear the row.
                       </p>
                     )}
+                    {resourceUrlError(row) && (
+                      <p role="alert" className="mt-1.5 pl-8 text-xs font-medium text-danger">
+                        {resourceUrlError(row)}
+                      </p>
+                    )}
                     <div className="flex items-center gap-3">
                       <Input
                         aria-label={`Resource ${i + 1} URL`}
                         name={`resource_${i}_url`}
-                        type="url"
                         inputMode="url"
+                        aria-invalid={resourceUrlError(row) != null}
                         placeholder="https://…"
                         maxLength={1000}
                         value={row.url}
@@ -2546,7 +2600,6 @@ export function CompetitionForm({
                     <Input
                       aria-label={`Resource ${i + 1} preview image URL`}
                       name={`resource_${i}_image`}
-                      type="url"
                       inputMode="url"
                       placeholder="Preview image URL (optional) — https://…"
                       maxLength={1000}
@@ -2749,8 +2802,19 @@ export function CompetitionForm({
 
   // --- edit mode: the familiar stacked sections (health widget + tabs live on the edit page) ---
   if (editing) {
+    /**
+     * `noValidate` on both forms (2026-09-03). The browser's own constraint check was a THIRD gate
+     * nobody mirrored, and in the create wizard it failed in the worst possible way: every step
+     * stays mounted with the inactive ones `display:none`, so one invalid control on a step you
+     * are not looking at made the browser refuse the submit AND refuse to point at it ("An invalid
+     * form control ... is not focusable" — console only). The button simply did nothing, which
+     * read as "the two blank contact boxes must be mandatory": they were the one pair of empty
+     * fields sitting beside the dead button, and `type="email"` on one of them was usually what
+     * the browser was objecting to. Everything the native check covered is now a rule in
+     * `lib/form-rules` that renders in place, and the server stays the real gate (CLAUDE.md).
+     */
     return (
-      <form action={formAction} className="grid max-w-3xl gap-8">
+      <form action={formAction} noValidate className="grid max-w-3xl gap-8">
         {stepDefs
           .filter((s) => !s.hideOnEdit)
           .map((s) => (
@@ -2999,7 +3063,7 @@ export function CompetitionForm({
 
       {!importing && headerNotice}
 
-      <form action={formAction}>
+      <form action={formAction} noValidate>
         {/* Import review round-trip: the payload keys this form has no control for, and the
             organizer name behind the "create as extracted" option. Both are read back by
             buildImportApprovalPayload so approving can never quietly drop what was extracted. */}
