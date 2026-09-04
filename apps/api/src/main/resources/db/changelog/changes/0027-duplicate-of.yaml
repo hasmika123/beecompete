@@ -1,0 +1,40 @@
+# DQ4 PR 2 — "mark as duplicate of" (docs/duplicate-detection-plan.md §3, owner 2026-09-03).
+#
+# Detection (0026) stops most duplicates at the door; the ones that get through under a different
+# name or URL are found later, by a human. Until now the only remedy was archiving, which 404s a
+# slug that may already be indexed. This link records WHICH listing survived, so the retired slug
+# can answer with a permanent redirect to the canonical one, and so a later content merge (DQ4
+# Phase 2, sweep-remediation-plan §20) knows what to merge into what.
+#
+# Invariants the DB holds, not just the service: a listing is never its own duplicate, and a
+# duplicate is always archived (the link is meaningless on a live row — mark-duplicate archives,
+# restore clears). No chains: the service re-points a canonical's duplicates when the canonical is
+# itself marked, so a redirect is always one hop. Additive-only, as always.
+databaseChangeLog:
+  - changeSet:
+      id: 0027-competition-duplicate-of
+      author: beecompete
+      comment: competition.duplicate_of_competition_id — the canonical listing a retired duplicate points at (DQ4 PR 2).
+      changes:
+        - addColumn:
+            tableName: competition
+            columns:
+              - column:
+                  name: duplicate_of_competition_id
+                  type: UUID
+                  constraints:
+                    foreignKeyName: fk_competition_duplicate_of
+                    references: competition(id)
+        - sql:
+            comment: Never itself; and only ever set on an archived row.
+            sql: >-
+              ALTER TABLE competition
+                ADD CONSTRAINT ck_competition_duplicate_of_not_self
+                  CHECK (duplicate_of_competition_id IS NULL OR duplicate_of_competition_id <> id),
+                ADD CONSTRAINT ck_competition_duplicate_of_archived
+                  CHECK (duplicate_of_competition_id IS NULL OR archived_at IS NOT NULL)
+        - sql:
+            comment: Partial — "which duplicates point at this canonical" is asked when the canonical is itself marked or restored.
+            sql: >-
+              CREATE INDEX ix_competition_duplicate_of ON competition (duplicate_of_competition_id)
+              WHERE duplicate_of_competition_id IS NOT NULL

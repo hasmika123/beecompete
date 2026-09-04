@@ -11,7 +11,36 @@ import {
   buildRegionIds,
   buildResources,
 } from '@/lib/competition-payload';
-import type { Competition, FormState, ListingStatus } from '@/lib/admin-types';
+import type {
+  Competition,
+  CompetitionDuplicates,
+  FormState,
+  ListingStatus,
+  Page,
+} from '@/lib/admin-types';
+
+/**
+ * Duplicate candidates for the listing being typed (DQ4) — the same detection the save runs, asked
+ * BEFORE submit so the form can show them and offer "not a duplicate" instead of a 409/422 after
+ * the fact. Non-fatal: a failed check returns nothing rather than breaking the form — the server
+ * gate still stands.
+ */
+export async function findCompetitionDuplicates(input: {
+  name: string;
+  officialUrl?: string | null;
+  excludeId?: string | null;
+  excludeImportRecordId?: string | null;
+}): Promise<CompetitionDuplicates> {
+  const params = new URLSearchParams({ name: input.name.trim() });
+  if (input.officialUrl?.trim()) params.set('officialUrl', input.officialUrl.trim());
+  if (input.excludeId) params.set('excludeId', input.excludeId);
+  if (input.excludeImportRecordId) params.set('excludeImportRecordId', input.excludeImportRecordId);
+  try {
+    return await adminFetch<CompetitionDuplicates>(`/competitions/duplicates?${params}`);
+  } catch {
+    return { catalog: [], pending: [] };
+  }
+}
 
 export async function createCompetition(_prev: FormState, form: FormData): Promise<FormState> {
   const requested = buildCompetitionBody(form);
@@ -102,6 +131,31 @@ export async function archiveCompetition(id: string): Promise<void> {
 export async function restoreCompetition(id: string): Promise<void> {
   await adminFetch(`/competitions/${id}/restore`, { method: 'POST' });
   revalidatePath(`/admin/competitions/${id}`);
+  revalidatePath('/admin/competitions');
+}
+
+/** Candidates for "the listing this one duplicates" — the admin list search, a handful of rows. */
+export async function searchCompetitions(query: string): Promise<Competition[]> {
+  const q = query.trim();
+  if (!q) return [];
+  const page = await adminFetch<Page<Competition>>(
+    `/competitions?query=${encodeURIComponent(q)}&size=8`,
+  );
+  return page.content;
+}
+
+/**
+ * Retire this listing as a duplicate of `canonicalId` (DQ4 PR 2): archived + linked, so its slug
+ * redirects permanently to the canonical. The server refuses self, an archived canonical, and a
+ * canonical that is itself a duplicate.
+ */
+export async function markDuplicate(id: string, canonicalId: string): Promise<void> {
+  await adminFetch(`/competitions/${id}/mark-duplicate`, {
+    method: 'POST',
+    body: { canonicalId },
+  });
+  revalidatePath(`/admin/competitions/${id}`);
+  revalidatePath(`/admin/competitions/${canonicalId}`);
   revalidatePath('/admin/competitions');
 }
 

@@ -31,14 +31,24 @@ that the extraction pipeline and curators work down, in rank order, until the R1
    extraction — spine, first edition, timeline, regions and category attributes — with the raw
    payload one tab away for anything the form has no field for. What matters for planning a run:
    - The queue **lists what's missing before you open a row** — category, organizer, edition cycle,
-     the deadline the public card would show, a confidence meter, and a **"slug taken"** flag for
-     rows that would collide with a live listing. Filter by origin, search the payload
-     (name/slug/organizer/source URL), and sort by confidence to work the weakest extractions first
-     (or the strongest, for a fast bulk pass).
+     the deadline the public card would show, a confidence meter, and the **duplicate flags** (DQ4,
+     2026-09-03): **already listed** (a live listing has the same name), **slug taken**, **same URL
+     as a listing**, **listed before (archived)**, plus **also pending ×N** when other queued
+     records look like the same competition — so two people who queued the same page see each
+     other before either approves. Filter by origin, search the payload (name/slug/organizer/source
+     URL), and sort by confidence to work the weakest extractions first (or the strongest, for a
+     fast bulk pass).
    - **Bulk approve/reject** decides many selected rows at once. Each is decided independently, so a
      bad one can't take the batch with it; failures come back named and stay pending. Use it for a
      run whose extractions are uniformly good, or to clear a bad source in one gesture — it skips
-     the per-record form by design.
+     the per-record form by design. **Rows carrying a duplicate flag are left out of a bulk
+     approve** (bulk can't carry the "not a duplicate" confirmation only the review form can give);
+     bulk *reject* still takes them, which is usually what a duplicate deserves.
+   - **Approving a possible duplicate.** A live listing with the same normalized name is a hard
+     stop — rename it in the form or reject the record. Same URL / similar name / archived
+     same-name is a warning with the candidates listed; tick **"I checked — this is not a
+     duplicate"** in the form to approve anyway (umbrella programs like AMC 8/10/12 need exactly
+     this).
    - Approving stays **lenient on purpose**: an extraction can only state what the page stated, so
      only name/slug/category/organizer block approval. The completeness ring shows what a full
      listing would still need, and says so without blocking.
@@ -71,6 +81,19 @@ not as independent competitions:
 
 Other same-URL row groups (e.g. the MAA AMC family, NSDA events, VFW Patriot's Pen / Voice of
 Democracy) are genuinely distinct competitions that share an organizer homepage.
+
+### Known-listing pre-check (DQ4, 2026-09-03)
+
+Before fetching an item, the S3 tool asks the API's duplicate detection
+(`GET /api/v1/admin/competitions/duplicates`) with the page URL and the index-hint name. An item
+that is **already a live listing** (same name key or URL key) or **already pending in the queue**
+is reported as `SKIPPED` with the match named — no fetch, no LLM call, no second queue row. It
+runs only when the tool can reach the API (`ADMIN_API_TOKEN` set, not `--offline`); a failed
+lookup is a warning on the item, never a skip. `--include-known` extracts regardless (a deliberate
+re-extraction after a prompt fix). Similar-but-not-exact names are **never** skipped here — that
+is a curator's call on the review page, and skipping over a look-alike would silently drop real
+competitions (AMC 8 vs AMC 10). Re-running the same batch is therefore cheap and safe: everything
+already handled is skipped, only new rows spend an extraction.
 
 ## URL quality — read this before planning a bulk extraction run
 

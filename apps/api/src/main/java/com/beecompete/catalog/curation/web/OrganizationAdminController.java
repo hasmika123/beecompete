@@ -1,6 +1,7 @@
 package com.beecompete.catalog.curation.web;
 
 import com.beecompete.catalog.curation.CurationStamps;
+import com.beecompete.catalog.curation.DuplicateDetectionService;
 import com.beecompete.catalog.curation.WebDomains;
 import com.beecompete.catalog.domain.Organization;
 import com.beecompete.catalog.domain.OrganizationType;
@@ -11,6 +12,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -39,9 +41,11 @@ import org.springframework.web.server.ResponseStatusException;
 public class OrganizationAdminController {
 
 	private final OrganizationRepository organizations;
+	private final DuplicateDetectionService duplicates;
 
-	public OrganizationAdminController(OrganizationRepository organizations) {
+	public OrganizationAdminController(OrganizationRepository organizations, DuplicateDetectionService duplicates) {
 		this.organizations = organizations;
+		this.duplicates = duplicates;
 	}
 
 	@GetMapping
@@ -50,6 +54,18 @@ public class OrganizationAdminController {
 			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size) {
 		var pageable = PageRequest.of(Math.max(0, page), Math.clamp(size, 1, 100), Sort.by("name"));
 		return organizations.findByNameContainingIgnoreCase(query, pageable).map(OrganizationResponse::from);
+	}
+
+	/**
+	 * Duplicate candidates for an organization about to be saved (DQ4) — the same lookup the create
+	 * and update gates run, exposed so the form can warn before submit. {@code excludeId} on edit.
+	 */
+	@GetMapping("/duplicates")
+	@Transactional(readOnly = true)
+	public List<DuplicateDetectionService.OrganizationCandidate> duplicates(
+			@RequestParam(required = false) String name, @RequestParam(required = false) String domain,
+			@RequestParam(required = false) UUID excludeId) {
+		return duplicates.findOrganization(name, WebDomains.registrableHost(domain), excludeId);
 	}
 
 	@GetMapping("/{id}")
@@ -61,12 +77,14 @@ public class OrganizationAdminController {
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	public OrganizationResponse create(@Valid @RequestBody OrganizationRequest request) {
-		Organization organization = new Organization(request.name(), request.type());
 		// Normalized, not stored raw: the admin form asks for the "official website", so a curator
 		// may reasonably paste https://www.maa.org/amc. Host verification (DQ11) compares DOMAINS,
 		// and the resolve-or-create path already stores the registrable host — both write paths have
 		// to agree or that comparison silently fails on whichever rows came in through this one.
-		organization.setDomain(WebDomains.registrableHost(request.domain()));
+		String domain = WebDomains.registrableHost(request.domain());
+		guardDuplicates(request, domain, null);
+		Organization organization = new Organization(request.name().trim(), request.type());
+		organization.setDomain(domain);
 		organization.setProvenance(CurationStamps.curated());
 		return OrganizationResponse.from(organizations.save(organization));
 	}
@@ -74,11 +92,44 @@ public class OrganizationAdminController {
 	@PutMapping("/{id}")
 	public OrganizationResponse update(@PathVariable UUID id, @Valid @RequestBody OrganizationRequest request) {
 		Organization organization = require(id);
-		organization.setName(request.name());
+		String domain = WebDomains.registrableHost(request.domain());
+		// Only a changed name or domain can create a new collision (same rule as competitions).
+		if (!DuplicateDetectionService.sameText(organization.getName(), request.name())
+				|| !DuplicateDetectionService.sameText(organization.getDomain(), domain)) {
+			guardDuplicates(request, domain, id);
+		}
+		organization.setName(request.name().trim());
 		organization.setType(request.type());
-		organization.setDomain(WebDomains.registrableHost(request.domain()));
+		organization.setDomain(domain);
 		organization.setProvenance(CurationStamps.curated());
 		return OrganizationResponse.from(organization);
+	}
+
+	/**
+	 * The one organization write path that had no duplicate check at all until DQ4. Mirrors the
+	 * organizer resolver's rules: a LIVE organization with the same name key is a 409 pointing at
+	 * it (reuse it — or, since org names carry no unique index, rename if it truly is another);
+	 * an archived exact match, the same registrable domain, or a similar name is a 422 listing the
+	 * candidates unless the curator set {@code confirmNotDuplicate}.
+	 */
+	private void guardDuplicates(OrganizationRequest request, String domain, UUID selfId) {
+		List<DuplicateDetectionService.OrganizationCandidate> candidates = duplicates.findOrganization(request.name(),
+				domain, selfId);
+		if (candidates.isEmpty()) {
+			return;
+		}
+		DuplicateDetectionService.OrganizationCandidate liveExact = candidates.stream()
+				.filter(DuplicateDetectionService.OrganizationCandidate::isLiveExact).findFirst().orElse(null);
+		if (liveExact != null) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"an organization already has this name: " + liveExact.name() + " (" + liveExact.id()
+							+ "). Use it, or rename this one to tell them apart.");
+		}
+		if (!Boolean.TRUE.equals(request.confirmNotDuplicate())) {
+			throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+					"possible duplicate of: " + DuplicateDetectionService.describeOrganizations(candidates)
+							+ ". Set confirmNotDuplicate=true to save it anyway.");
+		}
 	}
 
 	@DeleteMapping("/{id}")
@@ -114,7 +165,9 @@ public class OrganizationAdminController {
 	}
 
 	public record OrganizationRequest(@NotBlank @Size(max = 300) String name, @NotNull OrganizationType type,
-			@Size(max = 255) String domain) {}
+			@Size(max = 255) String domain,
+			/** Curator override for the soft duplicate signals (DQ4) — never for a live exact name. */
+			Boolean confirmNotDuplicate) {}
 
 	public record OrganizationResponse(UUID id, String name, String type, String domain, String verificationState,
 			Instant archivedAt, Instant createdAt, Instant updatedAt, int version) {

@@ -55,8 +55,16 @@ import {
   urlRule,
 } from '@/lib/form-rules';
 import { uploadCoverImage } from '@/lib/cover-upload';
-import { createCompetition, updateCompetition } from '@/app/admin/competitions/actions';
+import {
+  createCompetition,
+  findCompetitionDuplicates,
+  updateCompetition,
+} from '@/app/admin/competitions/actions';
 import { approveImportFromForm } from '@/app/admin/import-records/actions';
+import {
+  CompetitionDuplicatesPanel,
+  useDuplicateCheck,
+} from '@/components/admin/duplicate-candidates';
 import { CREATE_ORGANIZER_SENTINEL, type ImportSeed } from '@/lib/import-seed';
 import { DEFAULT_TIMEZONE } from '@/lib/dates';
 import {
@@ -938,6 +946,25 @@ export function CompetitionForm({
   // Derived from the awards editor rather than typed into, so it stays a flag.
   const [hasPrizeLine, setHasPrizeLine] = useState(Boolean(editionSeed?.prizeSummary));
 
+  // DUPLICATE CHECK (DQ4). The same detection the save runs, asked while the curator types so the
+  // candidates — and the "not a duplicate" checkbox — are on the form before submit, not in a
+  // 409/422 after it. Keyed on name + official URL (the two identity signals); on EDIT it stays
+  // quiet while neither has changed, exactly as the server does not re-gate an unchanged listing.
+  const dupName = name.trim();
+  const dupUrl = text.officialUrl.trim();
+  const dupUnchangedOnEdit =
+    editing && dupName === (c?.name ?? '').trim() && dupUrl === (c?.officialUrl ?? '').trim();
+  const dupKey =
+    dupUnchangedOnEdit || (dupName.length < 3 && dupUrl === '') ? null : `${dupName}\n${dupUrl}`;
+  const { result: duplicates } = useDuplicateCheck(dupKey, () =>
+    findCompetitionDuplicates({
+      name: dupName,
+      officialUrl: dupUrl,
+      excludeId: competition?.id ?? null,
+      excludeImportRecordId: importRecordId ?? null,
+    }),
+  );
+
   // --- eligibility (grade + age dropdowns; min ≤ max) ---
   // The dropdowns only offer valid grades/ages, so the one thing left to guard is that a chosen
   // min isn't above its max. '' = "Any" (open on that side). The server re-validates regardless.
@@ -1302,6 +1329,9 @@ export function CompetitionForm({
               it stays archived.
             </Alert>
           )}
+          {/* Live duplicate candidates for the name/URL as typed (DQ4). Sits with the fields it
+              reads so a rename clears it in place; the checkbox it carries posts with the form. */}
+          <CompetitionDuplicatesPanel duplicates={duplicates} />
           {/* COLUMN ALIGNMENT (owner 2026-08-25). The grid already stretches both columns to the
               same height; what didn't line up was their CONTENT, because each stack packed to the
               top and left its slack dangling below the last field. Two changes fix it at every

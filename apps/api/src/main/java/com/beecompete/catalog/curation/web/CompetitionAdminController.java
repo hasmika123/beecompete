@@ -4,6 +4,7 @@ import com.beecompete.catalog.curation.CompetitionCurationService;
 import com.beecompete.catalog.curation.CompetitionRequest;
 import com.beecompete.catalog.curation.CompetitionWithEditionRequest;
 import com.beecompete.catalog.curation.CurationStamps;
+import com.beecompete.catalog.curation.DuplicateDetectionService;
 import com.beecompete.catalog.curation.FaqRequest;
 import com.beecompete.catalog.curation.ListingCurationService;
 import com.beecompete.catalog.curation.ResourceCurationService;
@@ -67,11 +68,12 @@ public class CompetitionAdminController {
 	private final CompetitionCurationService curation;
 	private final ListingCurationService listingCuration;
 	private final ResourceCurationService resourceCuration;
+	private final DuplicateDetectionService duplicateDetection;
 
 	public CompetitionAdminController(CompetitionRepository competitions, CompetitionFaqRepository faqs,
 			ResourceRepository resources, FeaturedSlotRepository featuredSlots,
 			CompetitionCurationService curation, ListingCurationService listingCuration,
-			ResourceCurationService resourceCuration) {
+			ResourceCurationService resourceCuration, DuplicateDetectionService duplicateDetection) {
 		this.competitions = competitions;
 		this.faqs = faqs;
 		this.resources = resources;
@@ -79,6 +81,7 @@ public class CompetitionAdminController {
 		this.curation = curation;
 		this.listingCuration = listingCuration;
 		this.resourceCuration = resourceCuration;
+		this.duplicateDetection = duplicateDetection;
 	}
 
 	/**
@@ -107,6 +110,20 @@ public class CompetitionAdminController {
 		List<UUID> ids = found.getContent().stream().map(Competition::getId).toList();
 		Set<UUID> live = ids.isEmpty() ? Set.of() : Set.copyOf(competitions.idsWithLiveEdition(ids));
 		return found.map(c -> CompetitionResponse.from(c, live.contains(c.getId())));
+	}
+
+	/**
+	 * Duplicate candidates for a listing about to be saved (DQ4) — what the write gate would refuse,
+	 * asked BEFORE submit so the form can show the candidates and offer "not a duplicate" instead
+	 * of a 409/422 after the fact. Same detection the gate runs; {@code excludeId} on edit.
+	 */
+	@GetMapping("/competitions/duplicates")
+	@Transactional(readOnly = true)
+	public DuplicateDetectionService.CompetitionDuplicates duplicates(
+			@RequestParam(required = false) String name, @RequestParam(required = false) String officialUrl,
+			@RequestParam(required = false) String slug, @RequestParam(required = false) UUID excludeId,
+			@RequestParam(required = false) UUID excludeImportRecordId) {
+		return duplicateDetection.findCompetition(name, officialUrl, slug, excludeId, excludeImportRecordId);
 	}
 
 	@GetMapping("/competitions/{id}")
@@ -153,8 +170,46 @@ public class CompetitionAdminController {
 	public CompetitionResponse restore(@PathVariable UUID id) {
 		Competition competition = require(id);
 		competition.setArchivedAt(null);
+		// A restored listing is a listing again, not a pointer (0027's CHECK would refuse anyway).
+		competition.setDuplicateOf(null);
 		return CompetitionResponse.from(competition);
 	}
+
+	/**
+	 * Retire this listing as a duplicate of {@code canonicalId} (DQ4 PR 2): archived, featured slot
+	 * dropped (as archive does), and linked so its slug answers with a permanent redirect to the
+	 * canonical. The canonical must be live and not itself a duplicate; anything already pointing
+	 * at THIS listing is re-pointed at the new canonical, so a redirect is always one hop.
+	 * Content (seasons, resources, FAQs) is NOT moved — that is DQ4 Phase 2.
+	 */
+	@PostMapping("/competitions/{id}/mark-duplicate")
+	public CompetitionResponse markDuplicate(@PathVariable UUID id, @Valid @RequestBody MarkDuplicateRequest request) {
+		if (id.equals(request.canonicalId())) {
+			throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "a listing cannot be a duplicate of itself");
+		}
+		Competition duplicate = require(id);
+		Competition canonical = competitions.findById(request.canonicalId()).orElseThrow(
+				() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "unknown canonical competition"));
+		// A duplicate is always archived, so the more specific reason goes first.
+		if (canonical.getDuplicateOf() != null) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "the canonical listing is itself a duplicate");
+		}
+		if (canonical.getArchivedAt() != null) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"the canonical listing is archived — restore it first, or pick a live one");
+		}
+		if (duplicate.getArchivedAt() == null) {
+			duplicate.setArchivedAt(Instant.now());
+		}
+		duplicate.setDuplicateOf(canonical);
+		featuredSlots.deleteByCompetitionId(id);
+		for (Competition dependant : competitions.findByDuplicateOfId(id)) {
+			dependant.setDuplicateOf(canonical);
+		}
+		return CompetitionResponse.from(duplicate);
+	}
+
+	public record MarkDuplicateRequest(@NotNull UUID canonicalId) {}
 
 	/** Explicit verification-state control (DQ13) — never a side effect of other edits. */
 	@PutMapping("/competitions/{id}/verification")
@@ -268,7 +323,10 @@ public class CompetitionAdminController {
 			String costType, String recurrence, Map<String, Object> attributes, String provenanceSource,
 			Instant provenanceLastVerifiedAt, BigDecimal provenanceConfidence, String verificationState,
 			String listingStatus, Instant approvedAt,
-			Instant archivedAt, Instant createdAt, Instant updatedAt, int version,
+			Instant archivedAt,
+			/** The canonical listing this archived row was retired in favour of (DQ4 PR 2); null otherwise. */
+			UUID duplicateOfCompetitionId,
+			Instant createdAt, Instant updatedAt, int version,
 			/**
 			 * Whether a non-archived edition exists — the readiness gate, precomputed for the admin
 			 * list's badge. NULL on every other endpoint, meaning "not computed", never "no edition":
@@ -293,7 +351,8 @@ public class CompetitionAdminController {
 					p != null && p.getSource() != null ? p.getSource().name() : null,
 					p != null ? p.getLastVerifiedAt() : null, p != null ? p.getConfidence() : null,
 					c.getVerificationState().name(), c.getListingStatus().name(), c.getApprovedAt(),
-					c.getArchivedAt(), c.getCreatedAt(), c.getUpdatedAt(),
+					c.getArchivedAt(), c.getDuplicateOf() != null ? c.getDuplicateOf().getId() : null,
+					c.getCreatedAt(), c.getUpdatedAt(),
 					c.getVersion(), hasLiveEdition);
 		}
 	}

@@ -208,7 +208,7 @@ class CatalogPublicApiIntegrationTest {
 						.contentType("application/json")
 						.content("""
 								{"slug": "%s", "name": "%s", "categoryId": "%s", "organizerOrgId": "%s",
-								 "description": "Public read API test seed.",
+								 "description": "Public read API test seed.", "confirmNotDuplicate": true,
 								 "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL",
 								 "entryPathways": ["INDIVIDUAL"], "costType": "FREE", "recurrence": "ANNUAL"}
 								""".formatted(slug, name, categoryId, orgId)))

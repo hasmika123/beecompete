@@ -7,14 +7,79 @@ import { CompetitionForm } from '@/components/admin/competition-form';
 import { ImportRawPayloadForm } from '@/components/admin/import-raw-payload-form';
 import { ImportRecordMeta } from '@/components/admin/import-record-meta';
 import { ImportRejectPanel } from '@/components/admin/import-reject-panel';
+import { describeReasons, hardCompetitionMatch } from '@/lib/duplicates';
 import type { ImportSeed, ImportSeedWarning } from '@/lib/import-seed';
 import type {
   Category,
   CategoryTemplate,
+  CompetitionDuplicates,
   ImportRecord,
   Organization,
   Region,
 } from '@/lib/admin-types';
+
+/**
+ * The record-level duplicate verdict (DQ4): one sentence naming the strongest match and any
+ * pending twins, with links, and what to do about it. Hard (a live same-name listing) reads as
+ * danger; everything else as a warning the form can confirm through.
+ */
+function DuplicateVerdict({ duplicates }: { duplicates: CompetitionDuplicates | null }) {
+  if (!duplicates || (duplicates.catalog.length === 0 && duplicates.pending.length === 0)) {
+    return null;
+  }
+  const hard = hardCompetitionMatch(duplicates);
+  const best = hard ?? duplicates.catalog[0] ?? null;
+  const twins = duplicates.pending;
+  return (
+    <Alert tone={hard ? 'danger' : 'warning'}>
+      <span className="flex flex-wrap items-center gap-1">
+        <Warning aria-hidden="true" className="size-4 shrink-0" />
+        {best ? (
+          <>
+            {hard ? 'Already listed as' : 'Looks like a possible duplicate of'}{' '}
+            <Link
+              href={`/admin/competitions/${best.id}`}
+              className="font-medium underline underline-offset-2"
+            >
+              {best.name}
+            </Link>
+            <span className="text-muted">({describeReasons(best.reasons)})</span>
+            {duplicates.catalog.length > 1 && (
+              <span className="text-muted">and {duplicates.catalog.length - 1} more below</span>
+            )}
+            .
+          </>
+        ) : (
+          <>Not listed yet, but</>
+        )}
+        {twins.length > 0 && (
+          <>
+            {' '}
+            {twins.length === 1
+              ? 'Another pending record'
+              : `${twins.length} other pending records`}{' '}
+            look{twins.length === 1 ? 's' : ''} like the same competition:{' '}
+            {twins.map((t, i) => (
+              <span key={t.importRecordId}>
+                {i > 0 && ', '}
+                <Link
+                  href={`/admin/import-records/${t.importRecordId}`}
+                  className="font-medium underline underline-offset-2"
+                >
+                  {t.name ?? 'untitled record'}
+                </Link>
+              </span>
+            ))}
+            .
+          </>
+        )}{' '}
+        {hard
+          ? 'Approving as-is will fail — rename it in the form, or reject this record as a duplicate.'
+          : 'Confirm it’s not a duplicate in the form below, or reject this record.'}
+      </span>
+    </Alert>
+  );
+}
 
 /**
  * Review one queued import.
@@ -30,7 +95,7 @@ export function ImportReview({
   record,
   seed,
   warnings,
-  duplicate,
+  duplicates,
   categories,
   organizations,
   templates,
@@ -40,8 +105,8 @@ export function ImportReview({
   record: ImportRecord;
   seed: ImportSeed;
   warnings: ImportSeedWarning[];
-  /** The live listing already holding this slug, when the API flagged a collision. */
-  duplicate: { id: string; name: string } | null;
+  /** The API's full duplicate detection for this record (DQ4), as it stood when the page loaded. */
+  duplicates: CompetitionDuplicates | null;
   categories: Category[];
   organizations: Organization[];
   templates: CategoryTemplate[];
@@ -55,23 +120,10 @@ export function ImportReview({
     <div className="grid gap-6">
       <ImportRecordMeta record={record} />
 
-      {/* Approving over a taken slug is a 409 from the write path. Curators should meet that as a
-          warning with a link to the existing listing, not as a raw error after filling the form. */}
-      {duplicate && (
-        <Alert tone="warning">
-          <span className="flex flex-wrap items-center gap-1">
-            <Warning aria-hidden="true" className="size-4 shrink-0" />
-            The slug <code className="font-mono">{seed.competition.slug}</code> is already taken by{' '}
-            <Link
-              href={`/admin/competitions/${duplicate.id}`}
-              className="font-medium underline underline-offset-2"
-            >
-              {duplicate.name}
-            </Link>
-            . Approving as-is will fail — change the slug below, or reject this as a duplicate.
-          </span>
-        </Alert>
-      )}
+      {/* The record-level verdict (DQ4): what the queue flagged, spelled out with links, before the
+          curator fills in a form they may not be able to save. The FORM below runs the same check
+          live as they edit and carries the "not a duplicate" checkbox — this is the headline. */}
+      <DuplicateVerdict duplicates={duplicates} />
 
       {warnings.length > 0 && (
         <div className="rounded-[var(--radius-panel)] border border-border p-4">

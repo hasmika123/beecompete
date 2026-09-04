@@ -1,12 +1,11 @@
 package com.beecompete.catalog.curation.web;
 
 import com.beecompete.catalog.curation.CompetitionRequest;
+import com.beecompete.catalog.curation.DuplicateDetectionService;
 import com.beecompete.catalog.curation.ImportReviewService;
-import com.beecompete.catalog.domain.Competition;
 import com.beecompete.catalog.domain.ImportOrigin;
 import com.beecompete.catalog.domain.ImportRecord;
 import com.beecompete.catalog.domain.ImportStatus;
-import com.beecompete.catalog.repository.CompetitionRepository;
 import com.beecompete.catalog.repository.ImportRecordRepository;
 import com.beecompete.catalog.repository.ImportRecordSort;
 import jakarta.validation.Valid;
@@ -21,9 +20,7 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -47,6 +44,13 @@ import org.springframework.web.server.ResponseStatusException;
  * confidence; curators edit the payload before approving via the request body override, which is
  * how the admin review FORM submits. Reject discards with a note. The decision logic itself lives
  * in {@link ImportReviewService} so bulk review can run each record in its own transaction.
+ *
+ * <p><b>Duplicate flags (DQ4).</b> Every response carries the record's strongest catalog match
+ * ({@code duplicate}) and how many other PENDING records look like the same competition
+ * ({@code pendingTwins}). The list computes only the cheap key/slug signals, in one query per
+ * page; the single-record read and the ingest response run full detection (similar names too)
+ * and add it as {@code duplicates}. Ingest still ACCEPTS a flagged record — the queue is lenient
+ * by design and re-extraction is a real use — it flags, and the submitter decides.
  */
 @RestController
 @RequestMapping("/api/v1/admin/import-records")
@@ -56,13 +60,13 @@ public class ImportQueueController {
 	private static final int BULK_LIMIT = 100;
 
 	private final ImportRecordRepository importRecords;
-	private final CompetitionRepository competitions;
+	private final DuplicateDetectionService duplicates;
 	private final ImportReviewService review;
 
-	public ImportQueueController(ImportRecordRepository importRecords, CompetitionRepository competitions,
+	public ImportQueueController(ImportRecordRepository importRecords, DuplicateDetectionService duplicates,
 			ImportReviewService review) {
 		this.importRecords = importRecords;
-		this.competitions = competitions;
+		this.duplicates = duplicates;
 		this.review = review;
 	}
 
@@ -79,8 +83,9 @@ public class ImportQueueController {
 			@RequestParam(defaultValue = "25") int size) {
 		Page<ImportRecord> records = importRecords.search(status, origin, query, sort, desc,
 				PageRequest.of(Math.max(0, page), Math.clamp(size, 1, 100)));
-		Map<String, UUID> collisions = slugCollisions(records.getContent());
-		return records.map(r -> ImportRecordResponse.from(r, collisions));
+		Map<UUID, DuplicateDetectionService.RecordDuplicateSummary> summaries = duplicates
+				.summarizeImportRecords(records.getContent().stream().map(ImportRecord::getId).toList());
+		return records.map(r -> ImportRecordResponse.from(r, summaries.get(r.getId()), null));
 	}
 
 	/** Queue depth per tab — so the list can label its tabs and show how much review work is left. */
@@ -100,28 +105,34 @@ public class ImportQueueController {
 	public ImportRecordResponse get(@PathVariable UUID id) {
 		ImportRecord record = importRecords.findById(id).orElseThrow(
 				() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "import record not found"));
-		return ImportRecordResponse.from(record, slugCollisions(List.of(record)));
+		return withFullDetection(record);
 	}
 
-	/** Pipeline ingress (S3). Also usable manually to queue a record for review. */
+	/**
+	 * Pipeline ingress (S3). Also usable manually to queue a record for review. The response carries
+	 * the full duplicate detection so the seeding tool can say "already listed as X" / "already
+	 * pending as Y" in its report — the record is queued either way.
+	 */
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	@Transactional
 	public ImportRecordResponse submit(@Valid @RequestBody ImportSubmission submission) {
-		ImportRecord saved = importRecords.save(
+		// Flushed so the row — and its DB-generated keys — exists before detection runs against the
+		// rest of the queue; the new record itself is excluded from its own twins by id.
+		ImportRecord saved = importRecords.saveAndFlush(
 				new ImportRecord(submission.payload(), submission.sourceUrl(), submission.confidence()));
-		return ImportRecordResponse.from(saved, Map.of());
+		return withFullDetection(saved);
 	}
 
 	@PostMapping("/{id}/approve")
 	public ImportRecordResponse approve(@PathVariable UUID id,
 			@RequestBody(required = false) Map<String, Object> payloadOverride) {
-		return ImportRecordResponse.from(review.approve(id, payloadOverride), Map.of());
+		return ImportRecordResponse.from(review.approve(id, payloadOverride), null, null);
 	}
 
 	@PostMapping("/{id}/reject")
 	public ImportRecordResponse reject(@PathVariable UUID id, @RequestBody(required = false) RejectRequest body) {
-		return ImportRecordResponse.from(review.reject(id, body != null ? body.note() : null), Map.of());
+		return ImportRecordResponse.from(review.reject(id, body != null ? body.note() : null), null, null);
 	}
 
 	/**
@@ -159,21 +170,11 @@ public class ImportQueueController {
 		return new BulkReviewResponse((int) succeeded, results.size() - (int) succeeded, results);
 	}
 
-	/**
-	 * Which of these records' payload slugs are already taken in the catalog — the duplicate warning
-	 * curators need BEFORE approving (approving over a taken slug is a 409 they'd otherwise meet as a
-	 * raw error). One query per page rather than one per row.
-	 */
-	private Map<String, UUID> slugCollisions(List<ImportRecord> records) {
-		Set<String> slugs = records.stream()
-				.map(ImportRecordResponse::slugOf)
-				.filter(s -> s != null)
-				.collect(Collectors.toSet());
-		if (slugs.isEmpty()) {
-			return Map.of();
-		}
-		return competitions.findBySlugIn(slugs).stream()
-				.collect(Collectors.toMap(Competition::getSlug, Competition::getId, (a, b) -> a));
+	/** Full detection (similar names included) for one record — the review page and the ingest reply. */
+	private ImportRecordResponse withFullDetection(ImportRecord record) {
+		DuplicateDetectionService.CompetitionDuplicates found = duplicates.findForImportRecord(record);
+		return ImportRecordResponse.from(record,
+				new DuplicateDetectionService.RecordDuplicateSummary(found.best(), found.pending().size()), found);
 	}
 
 	public record ImportSubmission(@NotNull Map<String, Object> payload, @Size(max = 1000) String sourceUrl,
@@ -193,25 +194,22 @@ public class ImportQueueController {
 
 	public record BulkReviewResponse(int succeeded, int failed, List<BulkOutcome> results) {}
 
+	/**
+	 * {@code duplicate} = the strongest catalog match (null when none); {@code pendingTwins} = how
+	 * many OTHER pending records look like the same competition; {@code duplicates} = the full
+	 * detection, only on the single-record read and the ingest reply (null on the list, where only
+	 * the cheap signals are computed).
+	 */
 	public record ImportRecordResponse(UUID id, Map<String, Object> payload, String sourceUrl,
 			BigDecimal confidence, String status, String origin, String note, Instant reviewedAt,
-			Instant createdAt, UUID duplicateCompetitionId) {
+			Instant createdAt, DuplicateDetectionService.CompetitionCandidate duplicate, int pendingTwins,
+			DuplicateDetectionService.CompetitionDuplicates duplicates) {
 
-		static ImportRecordResponse from(ImportRecord r, Map<String, UUID> slugCollisions) {
-			String slug = slugOf(r);
+		static ImportRecordResponse from(ImportRecord r, DuplicateDetectionService.RecordDuplicateSummary summary,
+				DuplicateDetectionService.CompetitionDuplicates full) {
 			return new ImportRecordResponse(r.getId(), r.getPayload(), r.getSourceUrl(), r.getConfidence(),
 					r.getStatus().name(), r.getOrigin().name(), r.getNote(), r.getReviewedAt(), r.getCreatedAt(),
-					slug == null ? null : slugCollisions.get(slug));
-		}
-
-		/** The payload is untrusted JSON — a non-string slug is simply "no slug to check". */
-		static String slugOf(ImportRecord r) {
-			return extractText(r.getPayload(), "slug");
-		}
-
-		private static String extractText(Map<String, Object> payload, String key) {
-			Object value = payload == null ? null : payload.get(key);
-			return value instanceof String s && !s.isBlank() ? s : null;
+					summary != null ? summary.duplicate() : null, summary != null ? summary.pendingTwins() : 0, full);
 		}
 	}
 }

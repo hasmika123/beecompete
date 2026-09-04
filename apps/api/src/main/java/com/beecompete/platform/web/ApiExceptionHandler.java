@@ -44,7 +44,26 @@ public class ApiExceptionHandler {
 
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	public ResponseEntity<Map<String, Object>> onConstraint(DataIntegrityViolationException ex) {
+		// The duplicate guard's DB backstop (0026): two curators creating the same listing at once
+		// both pass the service check, and the loser lands here. Name the rule, as the service would.
+		if (mentions(ex, "uq_competition_name_key_live")) {
+			return body(HttpStatus.CONFLICT,
+					"a live listing with this name was created at the same moment — rename this one to tell them apart");
+		}
+		if (mentions(ex, "uq_competition_slug")) {
+			return body(HttpStatus.CONFLICT, "slug already exists");
+		}
 		return body(HttpStatus.CONFLICT, "the change conflicts with existing data (a unique or reference constraint)");
+	}
+
+	/** Whether the constraint name appears anywhere down the cause chain (the driver puts it in the root). */
+	private static boolean mentions(Throwable ex, String constraint) {
+		for (Throwable t = ex; t != null; t = t.getCause()) {
+			if (t.getMessage() != null && t.getMessage().contains(constraint)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private ResponseEntity<Map<String, Object>> body(HttpStatusCode status, String message) {

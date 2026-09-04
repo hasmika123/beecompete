@@ -1,0 +1,113 @@
+# DQ4 Phase-1 slice — duplicate detection (docs/duplicate-detection-plan.md, owner 2026-09-03).
+#
+# Identity keys, computed IN THE DATABASE. Two IMMUTABLE functions normalize a name and a URL into
+# comparable strings, and stored generated columns carry the result on competition, import_record
+# (from the JSONB payload) and organization — so every row gets the same key whether it arrived via
+# the API, a migration, or raw seed SQL, with no application code to keep in step (the 0007 search
+# vector pattern). Java never re-implements the normalization: lookups pass the raw value and let
+# SQL key it (`WHERE name_key = catalog_name_key(:name)`), which is what keeps the two sides from
+# drifting.
+#
+# Uniqueness: two LIVE competitions may not share a name key (partial unique index). That is the
+# one hard rule — same-named live listings are indistinguishable on a card whatever else differs,
+# so the fix is always to rename one, and only a DB index makes a concurrent-create race LOSE
+# instead of succeed. No unique index on url_key (umbrella programs legitimately share a page:
+# AMC 8/10/12, NSDA events, Scholastic Art vs Writing — docs/seeding/README.md) and none on
+# organization.name_key (the 0012 decision stands: R2 will hold same-named schools).
+#
+# ⚠ A literal `?` anywhere in a changeset is eaten as a JDBC bind placeholder. The query-string
+# regex below is therefore written with an E-string escape (E'[\x3f#]', \x3f = '?') — never '[?#]'.
+databaseChangeLog:
+  - changeSet:
+      id: 0026-duplicate-key-functions
+      author: beecompete
+      comment: catalog_name_key(text) + catalog_url_key(text) — the DB-side identity normalizers behind duplicate detection (DQ4).
+      changes:
+        - sql:
+            comment: >-
+              Name key: lowercase; every run of non-alphanumerics becomes one space; trimmed; NULL when
+              nothing is left. [[:alnum:]] keeps Unicode letters (accents are NOT folded — unaccent()
+              is only STABLE and cannot feed a generated column). "MATHCOUNTS®", "Mathcounts" and
+              "MATH-COUNTS" all key to 'mathcounts'.
+            splitStatements: false
+            sql: >-
+              CREATE FUNCTION catalog_name_key(raw text) RETURNS text
+              LANGUAGE sql IMMUTABLE PARALLEL SAFE
+              RETURN nullif(trim(regexp_replace(lower(raw), '[^[:alnum:]]+', ' ', 'g')), '')
+        - sql:
+            comment: >-
+              URL key: lowercase + trim; drop the scheme; drop a leading www.; drop the query string and
+              fragment; drop trailing slashes; NULL when nothing is left. "https://www.maa.org/amc/",
+              "http://maa.org/amc?x=1" and "maa.org/amc" all key to 'maa.org/amc'.
+            splitStatements: false
+            sql: >-
+              CREATE FUNCTION catalog_url_key(raw text) RETURNS text
+              LANGUAGE sql IMMUTABLE PARALLEL SAFE
+              RETURN nullif(
+                regexp_replace(
+                  regexp_replace(
+                    regexp_replace(
+                      regexp_replace(lower(trim(raw)), '^[a-z][a-z0-9+.-]*://', ''),
+                      '^www\.', ''),
+                    E'[\x3f#].*$', ''),
+                  '/+$', ''),
+                '')
+
+  - changeSet:
+      id: 0026-duplicate-key-columns
+      author: beecompete
+      comment: Stored generated name_key / url_key on competition, import_record (from the payload) and organization, with the lookup indexes.
+      changes:
+        - sql:
+            sql: >-
+              ALTER TABLE competition
+                ADD COLUMN name_key text GENERATED ALWAYS AS (catalog_name_key(name)) STORED,
+                ADD COLUMN url_key text GENERATED ALWAYS AS (catalog_url_key(official_url)) STORED
+        - sql:
+            comment: Partial — a listing with no official URL has nothing to collide on.
+            sql: CREATE INDEX ix_competition_url_key ON competition (url_key) WHERE url_key IS NOT NULL
+        - sql:
+            comment: >-
+              The queue's keys come out of the JSONB payload the extractor sent (->> is IMMUTABLE), so a
+              record is comparable to the catalog — and to the rest of the queue — from the moment it is
+              inserted, with nothing for the ingest path to compute.
+            sql: >-
+              ALTER TABLE import_record
+                ADD COLUMN name_key text GENERATED ALWAYS AS (catalog_name_key(payload->>'name')) STORED,
+                ADD COLUMN url_key text GENERATED ALWAYS AS (catalog_url_key(payload->>'officialUrl')) STORED
+        - sql:
+            comment: Only PENDING rows are ever compared (a "pending twin" is a record still awaiting review).
+            sql: CREATE INDEX ix_import_record_pending_name_key ON import_record (name_key) WHERE status = 'PENDING'
+        - sql:
+            sql: CREATE INDEX ix_import_record_pending_url_key ON import_record (url_key) WHERE status = 'PENDING'
+        - sql:
+            sql: ALTER TABLE organization ADD COLUMN name_key text GENERATED ALWAYS AS (catalog_name_key(name)) STORED
+        - sql:
+            comment: Plain (non-unique) — see the header; the write path refuses exact live matches, the index just makes the lookup cheap.
+            sql: CREATE INDEX ix_organization_name_key ON organization (name_key)
+        - sql:
+            comment: Same registrable host = the strongest "same organization" signal we have (DQ11 will verify against it).
+            sql: CREATE INDEX ix_organization_domain ON organization (domain) WHERE domain IS NOT NULL
+
+  - changeSet:
+      id: 0026-competition-name-key-unique-live
+      author: beecompete
+      comment: Two LIVE competitions may not share a name key — the one hard duplicate rule, and the only guard that survives a concurrent-create race.
+      preConditions:
+        - onFail: HALT
+        - onFailMessage: >-
+            Some live (non-archived) competitions already share a normalized name. Rename one of each
+            pair (e.g. add the country or organizer in parentheses) or archive the duplicate BEFORE this
+            migration — the index cannot be created over them. Find them with:
+            SELECT name_key, array_agg(slug) FROM competition WHERE archived_at IS NULL
+            GROUP BY name_key HAVING count(*) > 1;
+        - sqlCheck:
+            expectedResult: 0
+            sql: >-
+              SELECT count(*) FROM (
+                SELECT name_key FROM competition WHERE archived_at IS NULL
+                GROUP BY name_key HAVING count(*) > 1
+              ) collisions
+      changes:
+        - sql:
+            sql: CREATE UNIQUE INDEX uq_competition_name_key_live ON competition (name_key) WHERE archived_at IS NULL

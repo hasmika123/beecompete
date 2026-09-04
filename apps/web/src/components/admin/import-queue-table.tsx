@@ -19,6 +19,7 @@ import { ConfidenceMeter } from '@/components/admin/confidence-meter';
 import { ImportOriginBadge, ReviewStatusBadge } from '@/components/admin/status-badges';
 import { bulkReviewImports } from '@/app/admin/import-records/actions';
 import { formatDate, keyDateZone } from '@/lib/dates';
+import { blocksBulkApprove, queueDuplicateBadge } from '@/lib/duplicates';
 import { summarizeImportRow } from '@/lib/import-queue';
 import type { BulkOutcome, Category, ImportRecord, Organization } from '@/lib/admin-types';
 
@@ -80,24 +81,39 @@ export function ImportQueueTable({
   const toggleAll = () => setSelected(allSelected ? new Set() : new Set(records.map((r) => r.id)));
 
   const run = async (action: 'APPROVE' | 'REJECT') => {
-    const ids = selectedIds;
-    if (ids.length === 0) return;
+    const selectedNow = selectedIds;
+    if (selectedNow.length === 0) return;
     const approving = action === 'APPROVE';
-    const collisions = ids.filter(
-      (id) => records.find((r) => r.id === id)?.duplicateCompetitionId != null,
-    );
+    // Rows flagged as a possible duplicate (DQ4) are LEFT OUT of a bulk approve rather than sent
+    // to fail: bulk skips the review form, and the form is the only place a curator can say "not
+    // a duplicate". Rejecting in bulk is unaffected — a duplicate is exactly what gets rejected.
+    const flagged = approving
+      ? selectedNow.filter((id) => {
+          const record = records.find((r) => r.id === id);
+          return record !== undefined && blocksBulkApprove(record);
+        })
+      : [];
+    const ids = selectedNow.filter((id) => !flagged.includes(id));
+    if (ids.length === 0) {
+      toast({
+        title: 'Every selected record is flagged as a possible duplicate',
+        description: 'Open each one to review it — the form can confirm it through, bulk cannot.',
+        tone: 'error',
+      });
+      return;
+    }
     const ok = await confirm({
       title: approving
         ? `Approve ${ids.length} record${plural(ids)}?`
         : `Reject ${ids.length} record${plural(ids)}?`,
       message: approving
         ? `Each one is created exactly as extracted — nobody opens the review form for these. ${
-            collisions.length > 0
-              ? `${collisions.length} of them already collide with a live listing and will fail. `
+            flagged.length > 0
+              ? `${flagged.length} flagged as a possible duplicate ${flagged.length === 1 ? 'is' : 'are'} left out — review ${flagged.length === 1 ? 'it' : 'those'} individually. `
               : ''
           }Anything that fails validation stays pending and is listed back to you.`
         : 'Rejection is final. None of these can be reopened for approval.',
-      confirmLabel: approving ? 'Approve all' : 'Reject all',
+      confirmLabel: approving ? `Approve ${ids.length}` : 'Reject all',
       tone: approving ? 'default' : 'danger',
     });
     if (!ok) return;
@@ -240,7 +256,7 @@ export function ImportQueueTable({
                     {summary.slug && (
                       <code className="font-mono text-xs text-muted">{summary.slug}</code>
                     )}
-                    {record.duplicateCompetitionId && <Badge variant="danger">slug taken</Badge>}
+                    <DuplicateBadges record={record} />
                     {status !== 'PENDING' && <ReviewStatusBadge status={record.status} />}
                   </div>
                 </td>
@@ -281,6 +297,27 @@ export function ImportQueueTable({
         </table>
       </div>
     </div>
+  );
+}
+
+/**
+ * The row's duplicate flags (DQ4): the strongest catalog match, worded by lib/duplicates, and a
+ * count of other pending records that look like the same competition — so two people who queued
+ * the same page see each other before either approves.
+ */
+function DuplicateBadges({ record }: { record: ImportRecord }) {
+  const badge = queueDuplicateBadge(record);
+  return (
+    <>
+      {badge && (
+        <Badge variant={badge.variant} title={record.duplicate?.name}>
+          {badge.label}
+        </Badge>
+      )}
+      {record.pendingTwins > 0 && (
+        <Badge variant="outline">also pending ×{record.pendingTwins}</Badge>
+      )}
+    </>
   );
 }
 

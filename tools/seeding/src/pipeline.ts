@@ -5,6 +5,7 @@ import type { TemplateMap } from './templates.ts';
 import { extract, type ExtractBackend } from './extract.ts';
 import { fetchPage, htmlToText } from './fetch.ts';
 import { compareHints } from './hints.ts';
+import { checkKnown, describeKnown } from './known.ts';
 import { submitToImportQueue } from './submit.ts';
 import type { ImportSubmission, SeedHints } from './types.ts';
 import { validatePayload } from './validate.ts';
@@ -24,6 +25,12 @@ export interface RunOptions {
   /** SSRF-guard opt-out for the fetch step (--allow-private). */
   allowPrivate?: boolean;
   /**
+   * Extract even what the catalog or the queue already holds (--include-known). Off by default:
+   * the pre-check (known.ts) skips an item whose URL or hint name is already a live listing or a
+   * pending record — no fetch, no LLM call, no duplicate row for a curator.
+   */
+  includeKnown?: boolean;
+  /**
    * This run's Category Templates, resolved ONCE in index.ts (server copy, or the mirror with a
    * warning). Optional so existing callers and tests keep working on the checked-in default.
    */
@@ -42,7 +49,8 @@ export interface ItemReport {
   reviewerNotes?: string;
   submission?: ImportSubmission;
   submittedId?: string;
-  outcome: 'dry-run' | 'submitted' | 'invalid' | 'error';
+  /** `skipped` = the known-listing pre-check found it already listed or already queued (DQ4). */
+  outcome: 'dry-run' | 'submitted' | 'invalid' | 'error' | 'skipped';
   message?: string;
 }
 
@@ -55,6 +63,27 @@ export async function runItem(
   opts: RunOptions,
 ): Promise<ItemReport> {
   try {
+    // Known-listing pre-check (DQ4) — before spending a fetch and an LLM call. Only for URLs
+    // (a local fixture has nothing to look up), only when the run can reach the API (a token, and
+    // not --offline), and only unless told to extract regardless. A failed lookup is a warning,
+    // not a skip: the approve path still gates duplicates, so this is an economy, not the guard.
+    const preCheckWarnings: string[] = [];
+    if (isUrl(item.source) && !opts.offline && !opts.includeKnown) {
+      const known = await checkKnown(item.source, item.hints, config);
+      if (known && 'error' in known) {
+        preCheckWarnings.push(known.error);
+      } else if (known) {
+        return {
+          source: item.source,
+          valid: true,
+          errors: [],
+          warnings: [],
+          outcome: 'skipped',
+          message: describeKnown(known),
+        };
+      }
+    }
+
     const { sourceUrl, pageText, inputPath, remote } = await acquireText(item, config, opts);
     const { extraction, backend } = await extract(
       { sourceUrl, pageText, inputPath, hints: item.hints, templates: opts.templates },
@@ -63,6 +92,7 @@ export async function runItem(
     );
 
     const { ok, errors, warnings } = validatePayload(extraction.payload);
+    warnings.push(...preCheckWarnings);
     warnings.push(...crossCheckOfficialUrl(extraction.payload.officialUrl, sourceUrl, remote));
     // A page that names no organizer stays null (decision b) — flag it: approve is now blocked
     // until a curator assigns an org, since organizer is mandatory on every write path.

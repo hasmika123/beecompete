@@ -167,6 +167,16 @@ public class Competition {
 	private Instant archivedAt;
 
 	/**
+	 * The canonical listing this row was retired in favour of (DQ4 PR 2, migration {@code 0027}):
+	 * set by mark-as-duplicate together with {@code archivedAt}, cleared by restore. Drives the
+	 * permanent redirect from this row's slug to the canonical one. Never itself, never a chain
+	 * (the service re-points dependants when a canonical is marked) — both held by DB constraints.
+	 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "duplicate_of_competition_id")
+	private Competition duplicateOf;
+
+	/**
 	 * Lifecycle (§8a): only PUBLISHED passes the public gate. Defaults to PUBLISHED — the admin
 	 * one-step create and import approve publish directly; DRAFT / IN_REVIEW are opted into.
 	 */
@@ -413,6 +423,14 @@ public class Competition {
 
 	public void setArchivedAt(Instant archivedAt) {
 		this.archivedAt = archivedAt;
+	}
+
+	public Competition getDuplicateOf() {
+		return duplicateOf;
+	}
+
+	public void setDuplicateOf(Competition duplicateOf) {
+		this.duplicateOf = duplicateOf;
 	}
 
 	public ListingStatus getListingStatus() {

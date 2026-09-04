@@ -1,6 +1,6 @@
 # BeeCompete — Glossary (Ubiquitous Language)
 
-**Status:** Living document · **Last updated:** 2026-08-26
+**Status:** Living document · **Last updated:** 2026-09-03
 
 The single source of truth for **what we call things**. Every other doc, conversation, UI label,
 and eventually every table/field name uses these exact terms. When a term has tempting synonyms,
@@ -116,6 +116,11 @@ the **canonical** term is bolded and the synonyms-to-avoid are listed so we stay
 | **Event Log** (a.k.a. **Activity Log**) | The append-only record of things that happened; the single source all *progress* is derived from. | Foundation Hook #9. Never store bespoke progress fields. |
 | **HeroCard** | One of the **three admin-managed image cards** in the Landing hero's right half (1 main + 2 satellites): image, position, and — main card — a link + short description shown on a hover scrim. | → M36, R1-1 schema, R1-3 admin CRUD, R1-6b render. Avoid "banner", "hero image". |
 | **FeaturedSlot** | An **admin-picked, ordered** entry in the Landing "Featured Competitions" carousel, pointing at a Competition. | → M36. Editorial picks; distinct from **Promotion** (paid, labeled — M28, Phase 3). |
+| **Duplicate candidate** | An existing Competition (or Organization, or PENDING import record) that a detection rule says may be the same thing as the one being written. Always carries its **match reasons**. | DQ4, `duplicate-detection-plan.md` (2026-09-03). Computed by `DuplicateDetectionService`; shown by the admin forms before submit, the import queue, and the seeding tool. |
+| **Match reason** | Why something is a duplicate candidate: `NAME_EXACT`, `URL_EXACT`, `NAME_SIMILAR`, `SLUG_TAKEN` (competitions); `NAME_EXACT`, `DOMAIN_EXACT`, `NAME_SIMILAR` (organizations). | The two/three EXACT reasons mean the identity keys agree; the rest are soft — a curator looks and may say "not a duplicate" (`confirmNotDuplicate`). A **live** `NAME_EXACT` competition is never overridable (unique index). |
+| **Name key / URL key** | The normalized, database-computed identity strings (`name_key`, `url_key`, migration `0026`) two rows are compared on. Lowercase, punctuation and whitespace folded; scheme / `www.` / query / trailing slash dropped. | Never displayed, never typed. Java never re-implements them — lookups pass the raw value and SQL keys it. |
+| **Pending twin** | A PENDING import record whose name or URL keys match the one being reviewed — "someone already queued this". | Counted per queue row (`pendingTwins`); listed on the review page. Never blocks — the queue is lenient by design. |
+| **Canonical listing** | The one Competition that survives when duplicates are found. A merged duplicate is archived and points at it (`duplicate_of_competition_id`, plan PR 2). | Content merge (moving seasons/resources across) stays DQ4 Phase 2. |
 
 ## Compliance & minors
 

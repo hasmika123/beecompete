@@ -115,7 +115,7 @@ though we build them later. Those feed directly into the Domain & Data Model doc
 | DQ1 | Data provenance + confidence indicators (user-facing) | 1 | M | 🪝 Every listing shows source, freshness, verification, confidence |
 | DQ2 | Stale listing detection | 2 | M | Flags listings past dates with no new Edition |
 | DQ3 | Annual listing re-verification | 2 | M | Ties to Edition recurrence; prompts refresh each cycle |
-| DQ4 | Duplicate competition detection & merging | 2 | L | Critical once importing/crowdsourcing |
+| DQ4 | Duplicate competition detection & merging | 1 (detection) / 2 (merge) | L | **Detection slice BUILT 2026-09-03** (`duplicate-detection-plan.md`, migration `0026`): DB name/URL keys, live-name uniqueness, confirmable soft signals, form pre-check, queue flags + pending twins, seeding pre-check, organization gate, and (PR 2, migration `0027`) mark-as-duplicate with a permanent redirect from the retired slug. **Content merge stays Phase 2** (`sweep-remediation-plan.md` §20). |
 | DQ5 | Conflicting-source resolution | 3 | M | Reconcile disagreeing sources; extends provenance |
 | DQ6 | User-submitted competition corrections | 1 | M | Light crowdsource; stored as `CorrectionProposal` rows, curator-approved (see `domain-model.md` D7) |
 | DQ7 | Trust & safety reporting | 2 | M | Report bad content/behavior. Elevated priority — minors |

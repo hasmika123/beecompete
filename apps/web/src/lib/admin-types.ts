@@ -166,6 +166,8 @@ export interface Competition {
   /** When the listing FIRST entered PUBLISHED; null while never-yet-published. */
   approvedAt: string | null;
   archivedAt: string | null;
+  /** The canonical listing this archived row was retired in favour of (DQ4 PR 2); null otherwise. */
+  duplicateOfCompetitionId: string | null;
   createdAt: string;
   updatedAt: string;
   version: number;
@@ -268,11 +270,56 @@ export interface ImportRecord {
   reviewedAt: string | null;
   createdAt: string;
   /**
-   * The live competition already holding this payload's slug, if any — approving would collide.
-   * Computed per page by the API (one lookup, not one per row); archived listings count, because a
-   * slug stays taken after archive (D7).
+   * The strongest catalog match for this payload (DQ4) — same name, same official URL, or the slug
+   * already taken — with its reasons; null when nothing matched. Computed per page by the API (one
+   * query, not one per row). Archived listings count: an archived same-name row is still a signal,
+   * and a slug stays taken after archive (D7).
    */
-  duplicateCompetitionId: string | null;
+  duplicate: DuplicateCandidate | null;
+  /** How many OTHER pending records look like the same competition ("someone already queued this"). */
+  pendingTwins: number;
+  /** Full detection (similar names + the pending twins themselves) — only on the single-record read. */
+  duplicates: CompetitionDuplicates | null;
+}
+
+// --- duplicate detection (DQ4; mirrors the API's DuplicateDetectionService records) ---
+
+/** Why something is a duplicate candidate — the API's MatchReason enum. */
+export type MatchReason =
+  'NAME_EXACT' | 'URL_EXACT' | 'DOMAIN_EXACT' | 'NAME_SIMILAR' | 'SLUG_TAKEN';
+
+/** An existing competition that may be the one being written. */
+export interface DuplicateCandidate {
+  id: string;
+  slug: string;
+  name: string;
+  organizerName: string | null;
+  listingStatus: ListingStatus;
+  archivedAt: string | null;
+  reasons: MatchReason[];
+}
+
+/** A PENDING import record that looks like the same competition. */
+export interface PendingTwin {
+  importRecordId: string;
+  name: string | null;
+  sourceUrl: string | null;
+  createdAt: string;
+  reasons: MatchReason[];
+}
+
+export interface CompetitionDuplicates {
+  catalog: DuplicateCandidate[];
+  pending: PendingTwin[];
+}
+
+export interface OrganizationCandidate {
+  id: string;
+  name: string;
+  type: string;
+  domain: string | null;
+  archivedAt: string | null;
+  reasons: MatchReason[];
 }
 
 /** Sort orders the import queue offers — mirrors the API's ImportRecordSort enum. */

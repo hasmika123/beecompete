@@ -261,6 +261,17 @@ the season's bag either way.
 
 ---
 
+### 20. Duplicate content merge — DQ4 Phase 2 (registered 2026-09-03)
+
+**Built now** (`duplicate-detection-plan.md`): detection + gates, the queue flags, the seeding
+pre-check, and (PR 2) `duplicate_of_competition_id` with mark-as-duplicate + a permanent redirect
+from the retired slug. **Not built:** moving a duplicate's *content* onto its canonical listing —
+editions/seasons, resources, FAQs, follows, featured slots, correction proposals — with a
+per-field pick where both rows hold a value. That is the "merging" half of DQ4 and needs the §19
+season-owns-the-listing rebuild first (a merge across two season-owned listings is a season
+merge). Until then a found duplicate is archived + linked; anything worth keeping is copied by
+hand before marking it.
+
 ## Phase 3 — Host Tools, lifecycle machine & structure (don't build now)
 
 _Items 13/14 are **design-gated at Gate A** — deliberately not planned deeper here (don't harden

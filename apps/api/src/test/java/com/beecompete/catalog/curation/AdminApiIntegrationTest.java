@@ -115,9 +115,11 @@ class AdminApiIntegrationTest {
 
 		// Duplicate slug on a CURATED create → suffixed, not rejected: the admin form derives the
 		// slug from the name and has no slug field, so a 409 would be an error with nothing to fix.
-		// (The import-approve path still 409s — see the import queue test.)
+		// (The import-approve path still 409s — see the import queue test.) The NAME differs —
+		// an identical live name is the DQ4 gate's 409 — and, being similar, is confirmed.
 		mvc.perform(withToken(post("/api/v1/admin/competitions")).contentType("application/json")
-						.content(goodCompetition))
+						.content(goodCompetition.replace("\"name\": \"AMC 10\"",
+								"\"name\": \"AMC 10 Junior\", \"confirmNotDuplicate\": true")))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.slug", is("amc-10-2")));
 
@@ -678,11 +680,13 @@ class AdminApiIntegrationTest {
 				.andExpect(jsonPath("$.APPROVED", notNullValue()))
 				.andExpect(jsonPath("$.REJECTED", notNullValue()));
 
-		// The duplicate flag warns BEFORE the curator fills in a form they can't save.
+		// The duplicate flag warns BEFORE the curator fills in a form they can't save (DQ4: the
+		// strongest match with its reasons — here the taken slug).
 		mvc.perform(withToken(get("/api/v1/admin/import-records/" + duplicate)))
-				.andExpect(jsonPath("$.duplicateCompetitionId", notNullValue()));
+				.andExpect(jsonPath("$.duplicate.id", notNullValue()))
+				.andExpect(jsonPath("$.duplicate.reasons", hasItem("SLUG_TAKEN")));
 		mvc.perform(withToken(get("/api/v1/admin/import-records/" + withRegion)))
-				.andExpect(jsonPath("$.duplicateCompetitionId", nullValue()));
+				.andExpect(jsonPath("$.duplicate", nullValue()));
 
 		// Bulk approve: the good row lands, the unparseable and the colliding ones report their own
 		// errors and stay PENDING. One bad extraction must not discard the batch around it.
@@ -836,6 +840,10 @@ class AdminApiIntegrationTest {
 		if (confirmNewOrganizer != null) {
 			sb.append(", \"confirmNewOrganizer\": ").append(confirmNewOrganizer);
 		}
+		// These fixtures deliberately use sibling names ("Alpha Reuse One" / "… Two"), which the
+		// DQ4 duplicate gate flags as similar; they are about organizers, so the flag is waived
+		// here. DuplicateDetectionIntegrationTest covers the gate itself.
+		sb.append(", \"confirmNotDuplicate\": true");
 		sb.append(", \"participationMode\": \"INDIVIDUAL\", \"delivery\": \"VIRTUAL\","
 				+ " \"entryPathways\": [\"INDIVIDUAL\"], \"costType\": \"FREE\", \"recurrence\": \"ANNUAL\"}");
 		return sb.toString();
@@ -845,7 +853,8 @@ class AdminApiIntegrationTest {
 	 * Slugs are DERIVED from the name now (the admin form has no slug field), so two listings whose
 	 * names reduce to the same slug is an ordinary event, not curator error — and a 409 would leave
 	 * them with no field to fix. Create suffixes instead; UPDATE still refuses, because there the
-	 * slug is a deliberate choice.
+	 * slug is a deliberate choice. The three names differ (an IDENTICAL name is the DQ4 duplicate
+	 * gate's 409, tested separately) but the client sends the same slug for each.
 	 */
 	@Test
 	@Order(10)
@@ -855,26 +864,26 @@ class AdminApiIntegrationTest {
 		String mathId = findBySlug(categories, "math");
 
 		String first = mvc.perform(withToken(post("/api/v1/admin/competitions")).contentType("application/json")
-						.content(byName("slug-clash", "Slug Clash", mathId, "Clash Org", null, null)))
+						.content(byName("slug-clash", "Slug Clash Alpha", mathId, "Clash Org", null, null)))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.slug", is("slug-clash")))
 				.andReturn().getResponse().getContentAsString();
 
 		// Same derived slug → stored as -2, not rejected.
 		mvc.perform(withToken(post("/api/v1/admin/competitions")).contentType("application/json")
-						.content(byName("slug-clash", "Slug Clash", mathId, "Clash Org", null, null)))
+						.content(byName("slug-clash", "Slug Clash Beta", mathId, "Clash Org", null, null)))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.slug", is("slug-clash-2")));
 		// ...and it keeps counting rather than reusing -2.
 		mvc.perform(withToken(post("/api/v1/admin/competitions")).contentType("application/json")
-						.content(byName("slug-clash", "Slug Clash", mathId, "Clash Org", null, null)))
+						.content(byName("slug-clash", "Slug Clash Gamma", mathId, "Clash Org", null, null)))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.slug", is("slug-clash-3")));
 
 		// Update onto a taken slug is still a hard conflict.
 		String firstId = mapper.readTree(first).get("id").asText();
 		mvc.perform(withToken(put("/api/v1/admin/competitions/" + firstId)).contentType("application/json")
-						.content(byName("slug-clash-2", "Slug Clash", mathId, "Clash Org", null, null)))
+						.content(byName("slug-clash-2", "Slug Clash Alpha", mathId, "Clash Org", null, null)))
 				.andExpect(status().isConflict());
 	}
 

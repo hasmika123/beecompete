@@ -272,6 +272,7 @@ class CatalogSearchIntegrationTest {
 	private String competitionJson(String slug, String name, String catId) {
 		return """
 				{"slug": "%s", "name": "%s", "categoryId": "%s", "description": "%s",
+				 "confirmNotDuplicate": true,
 				 "participationMode": "INDIVIDUAL", "delivery": "VIRTUAL", "entryPathways": ["INDIVIDUAL"],
 				 "costType": "FREE", "recurrence": "ANNUAL", "evaluationType": []}
 				""".formatted(slug, name, catId, MARK);

@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import {
   Avatar,
   Badge,
@@ -35,7 +35,7 @@ import { FollowPanel, FollowProvider, FollowTrigger } from '@/components/detail/
 import { followByEmail } from '@/components/detail/capture-actions';
 import { ClaimListingCta } from '@/components/detail/claim-listing-cta';
 import { TrustPanel } from '@/components/detail/trust-panel';
-import { fetchCompetition } from '@/lib/catalog-api';
+import { fetchCanonicalSlug, fetchCompetition } from '@/lib/catalog-api';
 import type { CompetitionDetail } from '@/lib/catalog-types';
 import { currentEdition, editionStatusLabel } from '@/lib/detail-display';
 import { PublicApiError } from '@/lib/public-api';
@@ -109,7 +109,13 @@ export default async function CompetitionDetailPage({
 }) {
   const { slug } = await params;
   const competition = await load(slug);
-  if (!competition) notFound();
+  if (!competition) {
+    // A slug retired as a duplicate (DQ4 PR 2) forwards to the listing that survived — a 301,
+    // so an already-indexed URL carries its weight across instead of going dead.
+    const canonical = await fetchCanonicalSlug(slug);
+    if (canonical) permanentRedirect(`/c/${canonical}`);
+    notFound();
+  }
 
   const edition = currentEdition(competition.editions);
   const path = `/c/${competition.slug}`;

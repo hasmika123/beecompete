@@ -1,12 +1,20 @@
 'use client';
 
-import { useActionState, useEffect } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, FormField, Input, Select, useToast } from '@beecompete/ui';
+import {
+  OrganizationDuplicatesPanel,
+  useDuplicateCheck,
+} from '@/components/admin/duplicate-candidates';
 import { enumOptions } from '@/components/admin/enum-labels';
 import { FormErrorAlert } from '@/components/admin/form-error';
 import { OrganizationCreatedModal } from '@/components/admin/organization-created-modal';
-import { createOrganization, updateOrganization } from '@/app/admin/organizations/actions';
+import {
+  createOrganization,
+  findOrganizationDuplicates,
+  updateOrganization,
+} from '@/app/admin/organizations/actions';
 import { guardFormAction } from '@/lib/form-action-guard';
 import { ORG_TYPES, type Organization, type OrganizationFormState } from '@/lib/admin-types';
 
@@ -45,6 +53,29 @@ export function OrganizationForm({
   const { toast } = useToast();
   const router = useRouter();
 
+  // The two identity signals, mirrored into state as they are typed (the inputs stay
+  // uncontrolled) so the duplicate check below can read them.
+  const [name, setName] = useState(organization?.name ?? prefill?.name ?? '');
+  const [domain, setDomain] = useState(organization?.domain ?? prefill?.domain ?? '');
+
+  // DUPLICATE CHECK (DQ4): the same lookup the save runs, before submit. Quiet on EDIT while
+  // neither name nor website has changed — the server does not re-gate an unchanged row either.
+  const dupName = name.trim();
+  const dupDomain = domain.trim();
+  const unchangedOnEdit =
+    editing &&
+    dupName === (organization.name ?? '').trim() &&
+    dupDomain === (organization.domain ?? '').trim();
+  const dupKey =
+    unchangedOnEdit || (dupName.length < 3 && dupDomain === '') ? null : `${dupName}\n${dupDomain}`;
+  const { result: candidates } = useDuplicateCheck(dupKey, () =>
+    findOrganizationDuplicates({
+      name: dupName,
+      domain: dupDomain,
+      excludeId: organization?.id ?? null,
+    }),
+  );
+
   // On EDIT the action returns {ok} and the page stays put, so a toast is the right weight. On
   // CREATE there is a new row to name and somewhere to go next — that gets the modal below.
   useEffect(() => {
@@ -69,6 +100,7 @@ export function OrganizationForm({
             required
             maxLength={300}
             autoFocus={prefill?.name != null}
+            onChange={(e) => setName(e.target.value)}
           />
         </FormField>
         <FormField label="Type">
@@ -91,8 +123,11 @@ export function OrganizationForm({
             defaultValue={organization?.domain ?? prefill?.domain ?? ''}
             maxLength={255}
             placeholder="maa.org"
+            onChange={(e) => setDomain(e.target.value)}
           />
         </FormField>
+        {/* Candidates for the name/website as typed; carries the "not a duplicate" checkbox. */}
+        <OrganizationDuplicatesPanel candidates={candidates} />
         <div>
           <Button type="submit" disabled={pending}>
             {pending ? 'Saving…' : editing ? 'Save changes' : 'Create organization'}

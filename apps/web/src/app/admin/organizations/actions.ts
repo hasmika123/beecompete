@@ -2,14 +2,33 @@
 
 import { revalidatePath } from 'next/cache';
 import { adminFetch } from '@/lib/admin-api';
-import type { Organization, OrganizationFormState } from '@/lib/admin-types';
+import type { Organization, OrganizationCandidate, OrganizationFormState } from '@/lib/admin-types';
 
 function body(form: FormData) {
   return {
     name: (form.get('name') as string)?.trim(),
     type: form.get('type'),
     domain: ((form.get('domain') as string) || '').trim() || null,
+    // The curator's "I looked, it's not a duplicate" (DQ4): the soft signals — a similar name,
+    // the same website — step aside for it. A live exact name never does.
+    confirmNotDuplicate: form.get('confirmNotDuplicate') === 'on',
   };
+}
+
+/** Duplicate candidates for the organization being typed (DQ4) — asked before submit. Non-fatal. */
+export async function findOrganizationDuplicates(input: {
+  name: string;
+  domain?: string | null;
+  excludeId?: string | null;
+}): Promise<OrganizationCandidate[]> {
+  const params = new URLSearchParams({ name: input.name.trim() });
+  if (input.domain?.trim()) params.set('domain', input.domain.trim());
+  if (input.excludeId) params.set('excludeId', input.excludeId);
+  try {
+    return await adminFetch<OrganizationCandidate[]>(`/organizations/duplicates?${params}`);
+  } catch {
+    return [];
+  }
 }
 
 /**
