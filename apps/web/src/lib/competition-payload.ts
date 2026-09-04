@@ -12,7 +12,7 @@
  */
 
 import { DEFAULT_TIMEZONE, zonedWallClockToInstant } from '@/lib/dates';
-import { CREATE_ORGANIZER_SENTINEL } from '@/lib/import-seed';
+import { CREATE_ORGANIZER_SENTINEL, prunedAttributes } from '@/lib/import-seed';
 
 export function str(form: FormData, key: string): string | undefined {
   const value = form.get(key);
@@ -47,11 +47,21 @@ export function buildCompetitionBody(form: FormData): Record<string, unknown> {
   let attributes: unknown = undefined;
   const rawAttributes = str(form, 'attributes');
   if (rawAttributes) {
+    let parsed: unknown;
     try {
-      attributes = JSON.parse(rawAttributes);
+      parsed = JSON.parse(rawAttributes);
     } catch {
       throw new Error('Attributes must be valid JSON.');
     }
+    // Pruned again HERE, not only where a pasted payload is adopted: this is the one point every
+    // submit passes through, and the raw-JSON escape hatch lets a curator type `null` straight
+    // into the bag. A null key is refused by the Category Template ($.key: null found, string
+    // expected) and reads to the curator as a field that has become mandatory — see
+    // `prunedAttributes`.
+    attributes =
+      parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? prunedAttributes(parsed as Record<string, unknown>)
+        : parsed;
   }
   return {
     slug: str(form, 'slug'),

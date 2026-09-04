@@ -151,6 +151,35 @@ function obj(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
+/**
+ * Drop the keys an attributes bag has no business carrying — the bag says "not stated" by leaving
+ * a key OUT, never by holding a null (domain-model §7).
+ *
+ * ⚠ This is a REAL save-blocker, not tidiness. An extraction writes `"contact_phone": null` for a
+ * detail the page never published; the form renders that as an empty box (the controls read a
+ * string or show blank), the ring counts the listing complete, and the save is then refused by the
+ * Category Template with `$.contact_phone: null found, string expected`. To a curator that reads
+ * as "I cannot submit unless I fill in the contact phone" — and typing into the box really does
+ * fix it, because the keystroke replaces the null with a string. Clearing it fixes it too, since
+ * `setAttrKey` deletes an emptied key. Only never touching it stays broken.
+ *
+ * Matches `setAttrKey`'s own contract exactly (null/undefined, blank string, empty array), so a
+ * pasted bag and a hand-edited one settle on the same shape. `false` and `0` are VALUES and stay —
+ * `student_status_required: false` is an answer.
+ */
+export function prunedAttributes(
+  value: Record<string, unknown> | null,
+): Record<string, unknown> | null {
+  if (value == null) return null;
+  const kept = Object.entries(value).filter(([, v]) => {
+    if (v == null) return false;
+    if (typeof v === 'string') return v.trim() !== '';
+    if (Array.isArray(v)) return v.length > 0;
+    return true;
+  });
+  return kept.length > 0 ? Object.fromEntries(kept) : null;
+}
+
 function text(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value : null;
 }
@@ -290,7 +319,7 @@ export function splitImportPayload(payload: Record<string, unknown>): ImportSeed
       maxGrade: int(payload.maxGrade),
       minAge: int(payload.minAge),
       maxAge: int(payload.maxAge),
-      attributes: obj(payload.attributes),
+      attributes: prunedAttributes(obj(payload.attributes)),
     },
     edition: edition && {
       cycleLabel: text(edition.cycleLabel) ?? '',

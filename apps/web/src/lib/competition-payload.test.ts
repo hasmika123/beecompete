@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildCompetitionBody,
   buildFaqs,
   buildFirstEdition,
   buildImportApprovalPayload,
@@ -191,6 +192,60 @@ describe('buildFirstEdition — multi-winner awards (owner 2026-08-26)', () => {
       form({ ...BASE, edition_awards: medals, edition_awardsMode: 'top' }),
     );
     expect(top.prizeSummary).toBe('Medal + plaque');
+  });
+});
+
+describe('buildCompetitionBody — attributes bag', () => {
+  const SPINE = {
+    slug: 'acsl',
+    name: 'ACSL',
+    categoryId: 'beec0000-0000-4000-8000-000000000003',
+    participationMode: 'TEAM',
+    delivery: 'VIRTUAL',
+    costType: 'PAID',
+    recurrence: 'ANNUAL',
+  };
+
+  /**
+   * The save-blocker from the field: an extraction writes `"contact_phone": null` for a detail the
+   * page never published, the box renders blank, the ring says the listing is complete — and the
+   * API refuses it with `$.contact_phone: null found, string expected`. The bag says "not stated"
+   * by leaving the key OUT.
+   */
+  it('drops a null-valued key instead of posting it', () => {
+    const body = buildCompetitionBody(
+      form({ ...SPINE, attributes: JSON.stringify({ topics: ['algebra'], contact_phone: null }) }),
+    );
+    expect(body.attributes).toEqual({ topics: ['algebra'] });
+  });
+
+  it('drops blank strings and empty arrays too — the same shape setAttrKey leaves behind', () => {
+    const body = buildCompetitionBody(
+      form({
+        ...SPINE,
+        attributes: JSON.stringify({ contact_email: '   ', judging_criteria: [], syllabus: 'ok' }),
+      }),
+    );
+    expect(body.attributes).toEqual({ syllabus: 'ok' });
+  });
+
+  /** `false` and `0` are ANSWERS — student_status_required: false means "no, not required". */
+  it('keeps false and 0', () => {
+    const body = buildCompetitionBody(
+      form({
+        ...SPINE,
+        attributes: JSON.stringify({ student_status_required: false, word_limit: 0 }),
+      }),
+    );
+    expect(body.attributes).toEqual({ student_status_required: false, word_limit: 0 });
+  });
+
+  it('sends null when the bag is empty, or emptied by pruning', () => {
+    expect(buildCompetitionBody(form({ ...SPINE })).attributes).toBeNull();
+    expect(
+      buildCompetitionBody(form({ ...SPINE, attributes: JSON.stringify({ contact_phone: null }) }))
+        .attributes,
+    ).toBeNull();
   });
 });
 
