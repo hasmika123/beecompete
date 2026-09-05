@@ -300,6 +300,33 @@ export function buildFirstEdition(form: FormData): Record<string, unknown> {
 }
 
 /**
+ * The season body for the unified listing save (2026-09-05): the create form's first-edition
+ * block, with the season's OTHER attributes merged back UNDER the awards.
+ *
+ * The form owns exactly two bag keys — `awards` and `prize_display_mode` — and carries every other
+ * key the season already stored in a hidden field (`edition_keepAttributes`, from
+ * `lib/listing-seed`). Those ride through untouched; an emptied awards editor drops both of the
+ * form's keys, which is the per-edition editor's rule too (a display mode without rows means
+ * nothing). Null rather than `{}` when nothing is left, matching what the API stores for "no bag".
+ */
+export function buildEditionBody(form: FormData): Record<string, unknown> {
+  const edition = buildFirstEdition(form);
+  const raw = str(form, 'edition_keepAttributes');
+  let kept: Record<string, unknown> = {};
+  if (raw) {
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (asRecordOrNull(parsed)) kept = parsed as Record<string, unknown>;
+    } catch {
+      throw new Error('The season’s preserved attributes could not be read. Reload and try again.');
+    }
+  }
+  const { awards: _awards, prize_display_mode: _mode, ...rest } = kept;
+  const merged = { ...rest, ...(asRecordOrNull(edition.attributes) ?? {}) };
+  return { ...edition, attributes: Object.keys(merged).length > 0 ? merged : null };
+}
+
+/**
  * Prep resources from the create form's indexed rows (`resource_0_title`, …) — the extras step,
  * 2026-08-25. A row needs BOTH a title and a URL to count (the pair is what the public row
  * renders); anything less is an abandoned blank and is skipped, so the empty seeded row posts
@@ -309,37 +336,100 @@ export function buildFirstEdition(form: FormData): Record<string, unknown> {
  * of an existing competition, so `createCompetition` posts them AFTER the create returns an id.
  */
 export function buildResources(form: FormData): Record<string, unknown>[] {
-  const rows: Record<string, unknown>[] = [];
-  for (let i = 0; form.has(`resource_${i}_title`); i++) {
-    const title = str(form, `resource_${i}_title`);
-    const url = str(form, `resource_${i}_url`);
-    if (title === undefined || url === undefined) continue;
-    rows.push({
-      title,
-      url,
-      type: str(form, `resource_${i}_type`) ?? 'OTHER',
-      // The affiliate-disclosure driver (🔒 affiliate links must be labeled) — checkbox
-      // presence, the same contract as the key-date TBD flag.
-      isAffiliate: form.get(`resource_${i}_affiliate`) != null,
-      affiliateMeta: null,
-      displayOrder: rows.length,
-      imageUrl: str(form, `resource_${i}_image`) ?? null,
-    });
-  }
-  return rows;
+  return buildResourceEdits(form).map((r) => r.body);
+}
+
+/** One prep-resource row as posted, or null for a row missing its title or URL. */
+function resourceRowAt(form: FormData, i: number, displayOrder: number) {
+  const title = str(form, `resource_${i}_title`);
+  const url = str(form, `resource_${i}_url`);
+  if (title === undefined || url === undefined) return null;
+  return {
+    title,
+    url,
+    type: str(form, `resource_${i}_type`) ?? 'OTHER',
+    // The affiliate-disclosure driver (🔒 affiliate links must be labeled) — checkbox
+    // presence, the same contract as the key-date TBD flag.
+    isAffiliate: form.get(`resource_${i}_affiliate`) != null,
+    affiliateMeta: null,
+    displayOrder,
+    imageUrl: str(form, `resource_${i}_image`) ?? null,
+  };
 }
 
 /** FAQ entries from the create form's indexed rows — same skip-the-incomplete rule as resources:
  *  a question without an answer (or vice versa) is an abandoned draft, not half a FAQ. */
 export function buildFaqs(form: FormData): Record<string, unknown>[] {
-  const rows: Record<string, unknown>[] = [];
-  for (let i = 0; form.has(`faq_${i}_question`); i++) {
-    const question = str(form, `faq_${i}_question`);
-    const answer = str(form, `faq_${i}_answer`);
-    if (question === undefined || answer === undefined) continue;
-    rows.push({ question, answer, displayOrder: rows.length });
+  return buildFaqEdits(form).map((r) => r.body);
+}
+
+function faqRowAt(form: FormData, i: number, displayOrder: number) {
+  const question = str(form, `faq_${i}_question`);
+  const answer = str(form, `faq_${i}_answer`);
+  if (question === undefined || answer === undefined) return null;
+  return { question, answer, displayOrder };
+}
+
+/**
+ * A season row as the unified listing save (2026-09-05) needs it: the request body, the FORM's
+ * stable row key (echoed back so a new row can be stamped with its id), and the saved id when the
+ * row already exists — that is what decides update-in-place versus create.
+ */
+export interface RowEdit {
+  key: string;
+  id: string | null;
+  body: Record<string, unknown>;
+}
+
+/**
+ * The indexed rows with their keys and ids. `displayOrder` numbers the KEPT rows, exactly as the
+ * create builders do, so a skipped blank never leaves a hole in the order.
+ *
+ * The three `*Edits` builders share this loop; the create-path `build*` functions are the same
+ * rows with the bookkeeping stripped, so create and edit can never disagree about what a row is.
+ */
+function rowEdits(
+  form: FormData,
+  prefix: string,
+  presentField: string,
+  rowAt: (i: number, displayOrder: number) => Record<string, unknown> | null,
+): RowEdit[] {
+  const rows: RowEdit[] = [];
+  for (let i = 0; form.has(`${prefix}_${i}_${presentField}`); i++) {
+    const body = rowAt(i, rows.length);
+    if (body === null) continue;
+    rows.push({
+      key: str(form, `${prefix}_${i}_key`) ?? String(i),
+      id: str(form, `${prefix}_${i}_id`) ?? null,
+      body,
+    });
   }
   return rows;
+}
+
+export function buildResourceEdits(form: FormData): RowEdit[] {
+  return rowEdits(form, 'resource', 'title', (i, order) => resourceRowAt(form, i, order));
+}
+
+export function buildFaqEdits(form: FormData): RowEdit[] {
+  return rowEdits(form, 'faq', 'question', (i, order) => faqRowAt(form, i, order));
+}
+
+export function buildKeyDateEdits(form: FormData): RowEdit[] {
+  return rowEdits(form, 'keydate', 'type', (i) => keyDateRowAt(form, i));
+}
+
+/**
+ * The ids of saved rows the curator REMOVED — posted as repeated hidden fields (`keydate_removed`,
+ * `resource_removed`, `faq_removed`) by the form, which records an id the moment its row is
+ * taken away. Deletion is explicit by design: a row the save happens to skip (a blank one) is
+ * never inferred to be a deletion.
+ */
+export function removedIds(form: FormData, name: string): string[] {
+  return form
+    .getAll(name)
+    .filter((v): v is string => typeof v === 'string' && v.trim() !== '')
+    .map((v) => v.trim());
 }
 
 /** The regions the first edition covers (a card fact) — the selected region ids. */
@@ -378,26 +468,27 @@ function endsAtFor(
  * create time was silently lost until someone re-edited the edition.
  */
 export function buildKeyDates(form: FormData): Record<string, unknown>[] {
-  const rows: Record<string, unknown>[] = [];
-  for (let i = 0; form.has(`keydate_${i}_type`); i++) {
-    const type = str(form, `keydate_${i}_type`);
-    const timezone = str(form, `keydate_${i}_timezone`) ?? DEFAULT_TIMEZONE;
-    const tbd = form.get(`keydate_${i}_tbd`) != null;
-    const date = str(form, `keydate_${i}_date`);
-    if (type === undefined || (!tbd && date === undefined)) continue;
-    const startsAt =
-      tbd || date === undefined
-        ? null
-        : zonedWallClockToInstant(`${date}T${str(form, `keydate_${i}_time`) ?? '23:59'}`, timezone);
-    rows.push({
-      type,
-      label: str(form, `keydate_${i}_label`) ?? null,
-      startsAt,
-      endsAt: endsAtFor(form, i, timezone, startsAt),
-      timezone,
-    });
-  }
-  return rows;
+  return buildKeyDateEdits(form).map((r) => r.body);
+}
+
+/** One key-date row as posted, or null for a row with neither a date nor TBD. */
+function keyDateRowAt(form: FormData, i: number): Record<string, unknown> | null {
+  const type = str(form, `keydate_${i}_type`);
+  const timezone = str(form, `keydate_${i}_timezone`) ?? DEFAULT_TIMEZONE;
+  const tbd = form.get(`keydate_${i}_tbd`) != null;
+  const date = str(form, `keydate_${i}_date`);
+  if (type === undefined || (!tbd && date === undefined)) return null;
+  const startsAt =
+    tbd || date === undefined
+      ? null
+      : zonedWallClockToInstant(`${date}T${str(form, `keydate_${i}_time`) ?? '23:59'}`, timezone);
+  return {
+    type,
+    label: str(form, `keydate_${i}_label`) ?? null,
+    startsAt,
+    endsAt: endsAtFor(form, i, timezone, startsAt),
+    timezone,
+  };
 }
 
 /**

@@ -397,3 +397,147 @@ describe('buildKeyDates — multi-day rows', () => {
     expect(date?.endsAt).toBeNull();
   });
 });
+
+// --- the unified listing save (2026-09-05): rows carry keys + ids, deletions are explicit ---
+
+import {
+  buildEditionBody,
+  buildFaqEdits,
+  buildKeyDateEdits,
+  buildResourceEdits,
+  removedIds,
+} from '@/lib/competition-payload';
+
+describe('row edits — keys, ids, and order', () => {
+  it('carries each kept row’s form key and saved id, numbering displayOrder over KEPT rows', () => {
+    const edits = buildResourceEdits(
+      form({
+        resource_0_key: '7',
+        resource_0_id: 'r-saved',
+        resource_0_title: 'Past papers',
+        resource_0_url: 'https://a',
+        resource_0_type: 'PAST_PAPER',
+        // A blank row in the middle is skipped and must not leave a hole in the order.
+        resource_1_key: '8',
+        resource_1_title: '',
+        resource_1_url: '',
+        resource_2_key: '9',
+        resource_2_title: 'Guide',
+        resource_2_url: 'https://b',
+      }),
+    );
+    expect(edits).toEqual([
+      {
+        key: '7',
+        id: 'r-saved',
+        body: {
+          title: 'Past papers',
+          url: 'https://a',
+          type: 'PAST_PAPER',
+          isAffiliate: false,
+          affiliateMeta: null,
+          displayOrder: 0,
+          imageUrl: null,
+        },
+      },
+      {
+        key: '9',
+        id: null,
+        body: {
+          title: 'Guide',
+          url: 'https://b',
+          type: 'OTHER',
+          isAffiliate: false,
+          affiliateMeta: null,
+          displayOrder: 1,
+          imageUrl: null,
+        },
+      },
+    ]);
+  });
+
+  it('falls back to the posted index as the key when the create form posts none', () => {
+    const edits = buildFaqEdits(form({ faq_0_question: 'Q', faq_0_answer: 'A' }));
+    expect(edits).toEqual([
+      { key: '0', id: null, body: { question: 'Q', answer: 'A', displayOrder: 0 } },
+    ]);
+  });
+
+  it('reads key-date rows with the same date rules as the create path', () => {
+    const edits = buildKeyDateEdits(
+      form({
+        keydate_0_key: '3',
+        keydate_0_id: 'kd-1',
+        keydate_0_type: 'REG_CLOSE',
+        keydate_0_date: '2026-03-03',
+        keydate_0_timezone: 'America/New_York',
+        // Neither a date nor TBD: skipped, exactly as buildKeyDates skips it.
+        keydate_1_key: '4',
+        keydate_1_type: 'RESULTS',
+      }),
+    );
+    expect(edits).toHaveLength(1);
+    expect(edits[0]).toMatchObject({ key: '3', id: 'kd-1' });
+    expect(edits[0]!.body).toMatchObject({
+      type: 'REG_CLOSE',
+      startsAt: '2026-03-04T04:59:00.000Z',
+    });
+  });
+
+  it('lists removed ids from the repeated hidden field, ignoring blanks', () => {
+    const f = new FormData();
+    f.append('faq_removed', 'f1');
+    f.append('faq_removed', '');
+    f.append('faq_removed', ' f2 ');
+    expect(removedIds(f, 'faq_removed')).toEqual(['f1', 'f2']);
+    expect(removedIds(f, 'resource_removed')).toEqual([]);
+  });
+});
+
+describe('buildEditionBody — the season bag round-trips', () => {
+  const awards = JSON.stringify([
+    { title: 'First', type: 'monetary', value: 500, currency: 'USD' },
+  ]);
+
+  it('merges the kept attributes UNDER the awards the form owns', () => {
+    const body = buildEditionBody(
+      form({
+        ...BASE,
+        edition_awards: awards,
+        edition_awardsMode: 'total',
+        edition_keepAttributes: JSON.stringify({
+          aime_cutoff: 'top 2.5%',
+          // Stale copies of the two keys the form owns must not survive the merge.
+          awards: [{ title: 'Old' }],
+          prize_display_mode: 'custom',
+        }),
+      }),
+    );
+    expect(body.attributes).toEqual({
+      aime_cutoff: 'top 2.5%',
+      awards: [{ title: 'First', type: 'monetary', value: 500, currency: 'USD' }],
+      prize_display_mode: 'total',
+    });
+    expect(body.prizeSummary).toBe('$500 in prizes');
+  });
+
+  it('keeps the other attributes when the awards editor is emptied, dropping the mode', () => {
+    const body = buildEditionBody(
+      form({
+        ...BASE,
+        edition_keepAttributes: JSON.stringify({ aime_cutoff: 'top 2.5%' }),
+      }),
+    );
+    expect(body.attributes).toEqual({ aime_cutoff: 'top 2.5%' });
+  });
+
+  it('sends null, not {}, when nothing is left in the bag', () => {
+    expect(buildEditionBody(form(BASE)).attributes).toBeNull();
+  });
+
+  it('refuses a corrupted kept-attributes field loudly', () => {
+    expect(() => buildEditionBody(form({ ...BASE, edition_keepAttributes: '{nope' }))).toThrow(
+      /preserved attributes/,
+    );
+  });
+});

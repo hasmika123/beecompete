@@ -24,6 +24,32 @@ export interface FormState {
 }
 
 /**
+ * What a unified listing save (2026-09-05) created or deleted, keyed by the FORM's own row keys.
+ *
+ * The listing form posts every season row (key dates, prep resources, FAQ) with a stable row key
+ * and, for a saved row, its id. New rows come back here with the id the server assigned, so the
+ * form can stamp them and a second save updates rather than duplicates. Present on a FAILED save
+ * too: the write is sequential, so what landed before the failure must still be recorded, or the
+ * retry would re-create it.
+ */
+export interface SavedRowIds {
+  /** The season the rows hang off — set by the save that created one for a listing without. */
+  editionId: string | null;
+  keyDates: Record<string, string>;
+  resources: Record<string, string>;
+  faqs: Record<string, string>;
+  /** Ids whose delete went through, so the form can stop asking for them. */
+  deleted: { keyDates: string[]; resources: string[]; faqs: string[] };
+}
+
+/** The listing form's action result: a plain {@link FormState} plus what the save changed. */
+export interface ListingFormState extends FormState {
+  saved?: SavedRowIds;
+  /** Success toast title when the save also moved the listing ("Saved and published"). */
+  notice?: string;
+}
+
+/**
  * Create-organization result. Carries the created row so the caller can show it and — in the
  * add-a-listing flow — select it immediately, without a page refresh to re-fetch the list.
  */

@@ -1,41 +1,42 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import {
-  Alert,
-  ArrowLeft,
-  Badge,
-  buttonClasses,
-  ExternalLink,
-  Plus,
-  Tab,
-  TabList,
-  TabPanel,
-  Tabs,
-} from '@beecompete/ui';
+import { Alert, ArrowLeft, ExternalLink, Plus } from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
-import { AdminTable } from '@/components/admin/admin-table';
 import { enumLabel } from '@/components/admin/enum-labels';
-import { ArchivedBadge, ListingStatusBadge } from '@/components/admin/status-badges';
+import { ListingStatusBadge } from '@/components/admin/status-badges';
 import { CompetitionForm } from '@/components/admin/competition-form';
 import { CompetitionHeaderActions } from '@/components/admin/competition-header-actions';
 import { CreatedToast } from '@/components/admin/created-toast';
-import { FaqManager } from '@/components/admin/faq-manager';
-import { ResourceManager } from '@/components/admin/resource-manager';
-import { ListingHealth } from '@/components/admin/listing-health';
 import { adminFetch, AdminApiError } from '@/lib/admin-api';
-import { listingHealth } from '@/lib/listing-health';
+import { formatDate } from '@/lib/dates';
+import { currentEdition, seedFromListing } from '@/lib/listing-seed';
 import type {
   Category,
   CategoryTemplate,
   Competition,
   Edition,
   Faq,
+  KeyDate,
   Organization,
   Page,
+  Region,
   Resource,
 } from '@/lib/admin-types';
 
+/**
+ * The listing page — and the review surface (owner 2026-09-05).
+ *
+ * It used to be four tabs (Details / Editions / FAQ / Resources) with the season a further click
+ * away on its own page, so reviewing a submitted listing meant hunting for fields that the create
+ * form had shown in one place. It is now the SAME stepper form the create flow uses, seeded with
+ * the saved listing plus its current season, timeline, regions, awards, prep resources and FAQ
+ * (`lib/listing-seed`), every row editable in place, with one save for all of it and the review
+ * decision (publish / send back) riding on that save from the form's rail.
+ *
+ * Other seasons keep their own edit page (advancement chain, raw attributes) and are one click
+ * away in the season strip under the title.
+ */
 export default async function EditCompetitionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
@@ -47,11 +48,12 @@ export default async function EditCompetitionPage({ params }: { params: Promise<
     throw e;
   }
 
-  const [categories, templates, organizations, editions, faqs, resources, canonical] =
+  const [categories, templates, organizations, regions, editions, faqs, resources, canonical] =
     await Promise.all([
       adminFetch<Category[]>('/categories'),
       adminFetch<CategoryTemplate[]>('/categories/templates'),
-      adminFetch<Page<Organization>>('/organizations?size=100'),
+      adminFetch<Page<Organization>>('/organizations?size=200'),
+      adminFetch<Region[]>('/regions'),
       adminFetch<Edition[]>(`/competitions/${id}/editions`),
       adminFetch<Faq[]>(`/competitions/${id}/faqs`),
       adminFetch<Resource[]>(`/competitions/${id}/resources`),
@@ -62,6 +64,32 @@ export default async function EditCompetitionPage({ params }: { params: Promise<
           )
         : Promise.resolve(null),
     ]);
+
+  // The season the form edits, with the two things only it has: its timeline and its regions.
+  const season = currentEdition(editions);
+  const [keyDates, regionIds, organizer] = await Promise.all([
+    season ? adminFetch<KeyDate[]>(`/editions/${season.id}/key-dates`) : Promise.resolve([]),
+    season ? adminFetch<string[]>(`/editions/${season.id}/regions`) : Promise.resolve([]),
+    // The organizer may sit past the first page of organizations; without it the dropdown would
+    // open blank and the ring would claim the organizer is missing when it is not.
+    competition.organizerOrgId &&
+    !organizations.content.some((o) => o.id === competition.organizerOrgId)
+      ? adminFetch<Organization>(`/organizations/${competition.organizerOrgId}`).catch(() => null)
+      : Promise.resolve(null),
+  ]);
+  const organizationOptions = organizer
+    ? [...organizations.content, organizer]
+    : organizations.content;
+  const otherSeasons = editions.filter((e) => e.id !== season?.id);
+
+  const seed = seedFromListing({
+    competition,
+    edition: season,
+    keyDates,
+    regionIds,
+    resources,
+    faqs,
+  });
 
   return (
     <>
@@ -105,7 +133,7 @@ export default async function EditCompetitionPage({ params }: { params: Promise<
         </Alert>
       )}
       {/* R1-19: no competition-level verification badge — maintainer derives from the org. */}
-      <div className="mb-6 flex flex-wrap items-center gap-2 text-sm text-muted">
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-sm text-muted">
         <ListingStatusBadge
           listingStatus={competition.listingStatus}
           archivedAt={competition.archivedAt}
@@ -129,84 +157,63 @@ export default async function EditCompetitionPage({ params }: { params: Promise<
         </a>
       </div>
 
-      <Tabs defaultValue="details">
-        <TabList>
-          <Tab value="details">Details</Tab>
-          <Tab value="editions">Editions ({editions.length})</Tab>
-          <Tab value="faq">FAQ ({faqs.length})</Tab>
-          <Tab value="resources">Resources ({resources.length})</Tab>
-        </TabList>
+      {/* Season strip: which running the form below edits, and the way to every other one. */}
+      <div className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+        {season ? (
+          <span>
+            Season <span className="font-medium text-foreground">{season.cycleLabel}</span>{' '}
+            <span className="text-xs">({enumLabel(season.status).toLowerCase()})</span> is on this
+            page
+          </span>
+        ) : (
+          <span className="font-medium text-foreground">No season yet — add one below</span>
+        )}
+        {otherSeasons.length > 0 && (
+          <>
+            <span>·</span>
+            <span>
+              Other seasons:{' '}
+              {otherSeasons.map((e, i) => (
+                <span key={e.id}>
+                  {i > 0 && ', '}
+                  <Link
+                    href={`/admin/competitions/${id}/editions/${e.id}`}
+                    className="underline underline-offset-2 hover:text-foreground"
+                  >
+                    {e.cycleLabel}
+                  </Link>
+                  {e.archivedAt && <span className="text-xs"> (archived)</span>}
+                </span>
+              ))}
+            </span>
+          </>
+        )}
+        <span>·</span>
+        <Link
+          href={`/admin/competitions/${id}/editions/new`}
+          className="inline-flex items-center gap-1 underline underline-offset-2 hover:text-foreground"
+        >
+          <Plus aria-hidden="true" className="size-3.5" /> New season
+        </Link>
+      </div>
 
-        <TabPanel value="details">
-          <div className="pt-6">
-            <ListingHealth checks={listingHealth(competition, editions, faqs, resources)} />
-            <CompetitionForm
-              competition={competition}
-              categories={categories}
-              organizations={organizations.content}
-              templates={templates}
-            />
-          </div>
-        </TabPanel>
+      {competition.listingStatus === 'IN_REVIEW' && !competition.archivedAt && (
+        <Alert tone="info" className="mb-6" title="Submitted for review">
+          Every part of the listing is on this page — check each step, fix anything in place, then
+          publish or send it back from the panel beside the form. Your edits save with the decision.
+          Last changed {formatDate(competition.updatedAt)}.
+        </Alert>
+      )}
 
-        <TabPanel value="editions">
-          <div className="pt-6">
-            {/* Moved from the bottom of the competition form (item 7) — this is where the
-                pointer is actionable. */}
-            <Alert tone="info" className="mb-4">
-              Dates &amp; deadlines live here. Add an Edition, then set its key dates (registration
-              close, submission due, results) on the edition page.
-            </Alert>
-            <div className="mb-3 flex justify-end">
-              <Link
-                href={`/admin/competitions/${id}/editions/new`}
-                className={buttonClasses({ size: 'sm' })}
-              >
-                <Plus aria-hidden="true" className="size-4" /> New edition
-              </Link>
-            </div>
-            <AdminTable
-              rows={editions}
-              rowKey={(ed) => ed.id}
-              empty="No editions yet."
-              columns={[
-                {
-                  header: 'Cycle',
-                  cell: (ed) => (
-                    <Link
-                      href={`/admin/competitions/${id}/editions/${ed.id}`}
-                      className="font-medium hover:underline"
-                    >
-                      {ed.cycleLabel}
-                    </Link>
-                  ),
-                },
-                {
-                  header: 'Status',
-                  cell: (ed) => <Badge variant="outline">{enumLabel(ed.status)}</Badge>,
-                },
-                {
-                  header: 'Scope',
-                  cell: (ed) => <Badge variant="outline">{enumLabel(ed.scopeLevel)}</Badge>,
-                },
-                { header: 'State', cell: (ed) => <ArchivedBadge archivedAt={ed.archivedAt} /> },
-              ]}
-            />
-          </div>
-        </TabPanel>
-
-        <TabPanel value="faq">
-          <div className="pt-6">
-            <FaqManager competitionId={id} faqs={faqs} />
-          </div>
-        </TabPanel>
-
-        <TabPanel value="resources">
-          <div className="pt-6">
-            <ResourceManager competitionId={id} resources={resources} />
-          </div>
-        </TabPanel>
-      </Tabs>
+      <CompetitionForm
+        competition={competition}
+        seed={seed}
+        editionId={season?.id ?? null}
+        categories={categories}
+        organizations={organizationOptions}
+        templates={templates}
+        regions={regions}
+      />
     </>
   );
 }

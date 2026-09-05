@@ -31,7 +31,7 @@ import {
   useToast,
 } from '@beecompete/ui';
 import { AttributesFields } from '@/components/admin/attributes-fields';
-import { FormSection, SubSectionHeading } from '@/components/admin/form-section';
+import { SubSectionHeading } from '@/components/admin/form-section';
 import { RegionSelect } from '@/components/admin/region-select';
 import { StepPromptButton } from '@/components/admin/step-prompt-button';
 import { AwardsInput, awardRowsFromSeed } from '@/components/admin/awards-input';
@@ -61,7 +61,7 @@ import { uploadCoverImage } from '@/lib/cover-upload';
 import {
   createCompetition,
   findCompetitionDuplicates,
-  updateCompetition,
+  updateListing,
 } from '@/app/admin/competitions/actions';
 import { approveImportFromForm } from '@/app/admin/import-records/actions';
 import {
@@ -73,6 +73,7 @@ import { DEFAULT_TIMEZONE } from '@/lib/dates';
 import {
   ADMIN_TIMEZONES,
   COST_TYPES,
+  EDITION_STATUSES,
   ELIGIBILITY_BASES,
   DELIVERIES,
   EVALUATION_TYPES,
@@ -85,12 +86,13 @@ import {
   type Category,
   type CategoryTemplate,
   type Competition,
-  type FormState,
+  type ListingFormState,
   type Organization,
   type Region,
+  type SavedRowIds,
 } from '@/lib/admin-types';
 
-const INITIAL: FormState = { ok: false };
+const INITIAL: ListingFormState = { ok: false };
 
 /** Sentinel option in the Organizer dropdown that opens the add-organization form (item 7). */
 const ADD_ORG = '__add_org__';
@@ -284,8 +286,6 @@ interface StepDef {
   content: ReactNode;
   /** Hidden from the create flow (e.g. category attributes, which need a saved category). */
   hideOnCreate?: boolean;
-  /** Hidden from the edit page (the first-edition block — later years use the Editions tab). */
-  hideOnEdit?: boolean;
   /** Hidden from import review — for steps whose data the approve path cannot persist (the
    *  approve response carries no competition id to hang sub-resources off). Hiding the step is
    *  the no-silently-dropped-input rule: better no controls than controls that discard. */
@@ -331,6 +331,27 @@ const IMPORT_BLOCKING_KEYS = [
   'scopeLevel',
   'recurrence',
   'entryPathway',
+];
+
+/**
+ * What a plain SAVE from the listing page refuses (2026-09-05): only what the server itself
+ * refuses on the competition and season writes — the @NotNull/@NotBlank/@NotEmpty set of
+ * `CompetitionRequest` plus the season's label and scope. Everything else in the checklist is
+ * advice on edit, exactly as on import: a reviewer fixing one typo on a legacy listing must not
+ * be held hostage by six fields nobody has curated yet. PUBLISHING from that page uses the whole
+ * checklist — see `publishRemaining`.
+ */
+const EDIT_BLOCKING_KEYS = [
+  'name',
+  'category',
+  'organizer',
+  'costType',
+  'delivery',
+  'participation',
+  'recurrence',
+  'entryPathway',
+  'scopeLevel',
+  'cycleLabel',
 ];
 
 /**
@@ -404,11 +425,32 @@ function registrableHost(url: string | undefined): string | undefined {
   }
 }
 
+/** A step's title with its ⓘ — the panel header in one-step mode, each section's head in all-steps mode. */
+function StepHeading({ label, hint }: { label: string; hint?: string }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <h2 className="font-display text-xl text-foreground">{label}</h2>
+      {hint && (
+        <Tooltip content={hint}>
+          <button
+            type="button"
+            aria-label={`More about ${label}`}
+            className="inline-flex rounded-full text-muted transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:outline-none"
+          >
+            <Info aria-hidden="true" className="size-4" />
+          </button>
+        </Tooltip>
+      )}
+    </span>
+  );
+}
+
 export function CompetitionForm({
   competition,
   mode = competition ? 'edit' : 'create',
   importRecordId,
   seed,
+  editionId: initialEditionId = null,
   headerAction,
   headerNotice,
   organizerMatches = [],
@@ -422,8 +464,17 @@ export function CompetitionForm({
   mode?: CompetitionFormMode;
   /** Import mode only — the record whose approve this form submits. */
   importRecordId?: string;
-  /** Import mode only — the extracted payload read into form values (lib/import-seed). */
+  /**
+   * The season block, timeline, regions, awards, resources and FAQ read into form values —
+   * from the extracted payload on import (lib/import-seed) or from the saved listing on edit
+   * (lib/listing-seed). Edit ignores `seed.competition`: the saved row itself is the source.
+   */
   seed?: ImportSeed;
+  /**
+   * Edit only — the season the form edits, or null when the listing has none yet (the save then
+   * CREATES one from the season fields, and the form remembers the id it was given).
+   */
+  editionId?: string | null;
   /**
    * Create mode only — rendered on the title line, right-aligned (e.g. “Paste JSON”). Lives here
    * rather than above the form because create draws its own page header; a caller-owned row would
@@ -447,9 +498,9 @@ export function CompetitionForm({
 }) {
   const editing = mode === 'edit';
   const importing = mode === 'import';
-  const action =
+  const action: (prev: ListingFormState, form: FormData) => Promise<ListingFormState> =
     editing && competition
-      ? updateCompetition.bind(null, competition.id)
+      ? updateListing.bind(null, competition.id)
       : importing && importRecordId
         ? approveImportFromForm.bind(null, importRecordId)
         : createCompetition;
@@ -460,7 +511,7 @@ export function CompetitionForm({
   const { toast } = useToast();
 
   useEffect(() => {
-    if (state.ok) toast({ title: 'Saved', tone: 'success' });
+    if (state.ok) toast({ title: state.notice ?? 'Saved', tone: 'success' });
     // The submit lives in the rail; the error surface is at the foot of the wide column and can
     // be below the fold on a long step. A toast makes sure a refused save is noticed at all.
     else if (state.failure) {
@@ -597,6 +648,8 @@ export function CompetitionForm({
   // the date/time inputs are then disabled (and not posted). First row defaults to REG_CLOSE.
   interface KeyDateRow {
     key: number;
+    /** Edit only — the saved row's id; a row without one is created on save. */
+    id?: string;
     type: string;
     date: string;
     /** Optional — set only for a key date that spans days; posts as end-of-day in `timezone`. */
@@ -631,8 +684,14 @@ export function CompetitionForm({
       ...rows,
       emptyKeyDateRow(Math.max(...rows.map((r) => r.key), -1) + 1, 'ROUND_START'),
     ]);
-  const removeKeyDateRow = (key: number) =>
+  // A SAVED row's removal is remembered by id and posted as an explicit delete (`keydate_removed`);
+  // the save never infers a deletion from a row that simply is not there.
+  const [removedKeyDateIds, setRemovedKeyDateIds] = useState<string[]>([]);
+  const removeKeyDateRow = (key: number) => {
+    const gone = keyDateRows.find((r) => r.key === key);
+    if (gone?.id) setRemovedKeyDateIds((ids) => [...ids, gone.id!]);
     setKeyDateRows((rows) => rows.filter((r) => r.key !== key));
+  };
 
   // --- Resources + FAQ rows (create-only extras step, 2026-08-25). Same repeatable-row grammar
   // as key dates: controls carry indexed names (`resource_0_title`, …) derived from RENDER
@@ -640,6 +699,8 @@ export function CompetitionForm({
   // each from the start — blanks post nothing (buildResources/buildFaqs skip the incomplete).
   interface ResourceRow {
     key: number;
+    /** Edit only — the saved row's id; a row without one is created on save. */
+    id?: string;
     title: string;
     url: string;
     type: string;
@@ -648,6 +709,8 @@ export function CompetitionForm({
   }
   interface FaqRow {
     key: number;
+    /** Edit only — the saved row's id; a row without one is created on save. */
+    id?: string;
     question: string;
     answer: string;
   }
@@ -662,6 +725,7 @@ export function CompetitionForm({
   const [resourceRows, setResourceRows] = useState<ResourceRow[]>(() => {
     const seeded = (seed?.resources ?? []).map((r, i) => ({
       key: i,
+      id: r.id,
       title: r.title,
       url: r.url,
       type: r.type,
@@ -675,6 +739,7 @@ export function CompetitionForm({
   const [faqRows, setFaqRows] = useState<FaqRow[]>(() => {
     const seeded = (seed?.faqs ?? []).map((f, i) => ({
       key: i,
+      id: f.id,
       question: f.question,
       answer: f.answer,
     }));
@@ -702,19 +767,67 @@ export function CompetitionForm({
       ...rows,
       { key: Math.max(...rows.map((r) => r.key), -1) + 1, question: '', answer: '' },
     ]);
+  // Saved rows removed here are posted as explicit deletes (`resource_removed` / `faq_removed`) —
+  // the same rule as the key dates. Cleared-in-place rows (below) lose their id the same way:
+  // the blank that remains is a fresh row, not the old one emptied.
+  const [removedResourceIds, setRemovedResourceIds] = useState<string[]>([]);
+  const [removedFaqIds, setRemovedFaqIds] = useState<string[]>([]);
   // The last row clears instead of disappearing — the editor stays ready to type (awards rule).
-  const removeResourceRow = (key: number) =>
+  const removeResourceRow = (key: number) => {
+    const gone = resourceRows.find((r) => r.key === key);
+    if (gone?.id) setRemovedResourceIds((ids) => [...ids, gone.id!]);
     setResourceRows((rows) =>
       rows.length === 1
         ? [{ key: rows[0]!.key, title: '', url: '', type: 'GUIDE', affiliate: false, image: '' }]
         : rows.filter((r) => r.key !== key),
     );
-  const removeFaqRow = (key: number) =>
+  };
+  const removeFaqRow = (key: number) => {
+    const gone = faqRows.find((f) => f.key === key);
+    if (gone?.id) setRemovedFaqIds((ids) => [...ids, gone.id!]);
     setFaqRows((rows) =>
       rows.length === 1
         ? [{ key: rows[0]!.key, question: '', answer: '' }]
         : rows.filter((r) => r.key !== key),
     );
+  };
+
+  // --- edit mode bookkeeping (owner 2026-09-05) ---
+  // The season the rows hang off. Null for a listing with no season: the first save creates one
+  // and hands its id back, after which every save updates it in place.
+  const [editionId, setEditionId] = useState<string | null>(initialEditionId);
+  // The season label: an assigned year on create, the extracted label on import (blank there
+  // means "no running" — see the Timeline step), and an editable field on edit.
+  const [cycleLabel, setCycleLabel] = useState(
+    seed?.edition?.cycleLabel ?? (importing ? '' : String(new Date().getFullYear())),
+  );
+  const [editionStatus, setEditionStatus] = useState(seed?.edition?.status ?? '');
+  /**
+   * Stamp what a save created or deleted back onto the rows, by the row keys the form itself
+   * posted. Without this a second save would POST the same new rows again; the keys make the
+   * mapping exact even if rows were added or dragged while the save was in flight. Runs on a
+   * FAILED save too — the sequence stops at the first refusal, and what landed before it is real.
+   *
+   * Applied DURING RENDER when a new action result arrives — React's "adjust state when something
+   * changes" shape (it re-renders at once with the adjusted state), used instead of an effect
+   * because a setState inside an effect is a cascading render the React Compiler lint refuses.
+   */
+  const [appliedSave, setAppliedSave] = useState<SavedRowIds | undefined>(undefined);
+  if (state.saved !== undefined && state.saved !== appliedSave) {
+    const saved = state.saved;
+    setAppliedSave(saved);
+    if (saved.editionId) setEditionId(saved.editionId);
+    const stamp = <T extends { key: number; id?: string }>(
+      rows: T[],
+      ids: Record<string, string>,
+    ) => rows.map((r) => (ids[String(r.key)] && !r.id ? { ...r, id: ids[String(r.key)] } : r));
+    setKeyDateRows((rows) => stamp(rows, saved.keyDates));
+    setResourceRows((rows) => stamp(rows, saved.resources));
+    setFaqRows((rows) => stamp(rows, saved.faqs));
+    setRemovedKeyDateIds((ids) => ids.filter((id) => !saved.deleted.keyDates.includes(id)));
+    setRemovedResourceIds((ids) => ids.filter((id) => !saved.deleted.resources.includes(id)));
+    setRemovedFaqIds((ids) => ids.filter((id) => !saved.deleted.faqs.includes(id)));
+  }
   // Drag reordering, the AwardsInput grammar verbatim (owner 2026-08-25): rows are draggable
   // only while the grip is held (armed), and the held row follows the row the pointer enters.
   // Order is meaning — buildResources/buildFaqs number displayOrder from row position. One
@@ -823,18 +936,22 @@ export function CompetitionForm({
     return virtual && !seeded.includes(virtual.id) ? [...seeded, virtual.id] : seeded;
   });
 
-  // Awards editor seed — an extracted prize becomes the first row; create starts empty.
+  // Awards editor seed — the season's saved rows on edit; an extracted prize becomes the first
+  // row on import (and a season saved before the rows editor seeds one row from its flat prize
+  // columns the same way); create starts empty.
   const [initialAwardRows] = useState(() =>
     awardRowsFromSeed(
-      editionSeed?.prizeSummary || editionSeed?.prizeValue
-        ? [
-            {
-              title: editionSeed?.prizeSummary ?? '',
-              value: editionSeed?.prizeValue || undefined,
-              currency: editionSeed?.prizeCurrency || undefined,
-            },
-          ]
-        : [],
+      editionSeed?.awards && editionSeed.awards.length > 0
+        ? editionSeed.awards
+        : editionSeed?.prizeSummary || editionSeed?.prizeValue
+          ? [
+              {
+                title: editionSeed?.prizeSummary ?? '',
+                value: editionSeed?.prizeValue || undefined,
+                currency: editionSeed?.prizeCurrency || undefined,
+              },
+            ]
+          : [],
     ),
   );
   const toggleRegion = (id: string) =>
@@ -920,7 +1037,14 @@ export function CompetitionForm({
    * asked to publish — painting a form red while it is still being filled in would flag every step
    * the moment the page loads, which reads as broken rather than incomplete.
    */
-  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState<false | 'save' | 'publish'>(false);
+  /**
+   * Edit opens with EVERY step visible (owner 2026-09-05): a reviewer reads the whole listing top
+   * to bottom, and the rail still carries the per-step state and jumps to a section. Create and
+   * import keep one step at a time — there the work is filling in, not reading back. Either can
+   * be switched from the panel header.
+   */
+  const [showAll, setShowAll] = useState(editing);
 
   const enterRawMode = () => {
     setRawText(Object.keys(attributes).length ? JSON.stringify(attributes, null, 2) : '');
@@ -1110,8 +1234,13 @@ export function CompetitionForm({
    * label. Such a row must resolve to a real date or an explicit TBD — the R1-18 encoding — or it
    * posts nothing and the milestone vanishes.
    */
+  // A SAVED row counts as touched too: clearing its date without marking it TBD would otherwise
+  // skip it on save and leave the stored date standing, which is not what the blank says.
   const partialKeyDateRows = keyDateRows.filter(
-    (r) => (has(r.date) || has(r.endDate) || has(r.label)) && !r.tbd && !has(r.date),
+    (r) =>
+      (has(r.date) || has(r.endDate) || has(r.label) || r.id !== undefined) &&
+      !r.tbd &&
+      !has(r.date),
   );
 
   const orgChosen = organizerOrgId !== '' && organizerOrgId !== ADD_ORG;
@@ -1202,173 +1331,181 @@ export function CompetitionForm({
     },
   ];
   // Create front-loads everything the public card/detail shows (item 5/9): the listing is
-  // complete-by-default. Edit keeps only the base spine required, so legacy listings still save.
-  // Import uses the SAME full checklist as create, but only to SHOW what a curator would have to
-  // chase — see `blockingFields` below for what actually gates the button.
-  const requiredFields = editing
-    ? [
-        { key: 'name', label: 'Name', stepId: 'overview', ok: isComplete(name, fieldErrors.name) },
-        { key: 'category', label: 'Category', stepId: 'overview', ok: categoryId !== '' },
-        { key: 'organizer', label: 'Organizer', stepId: 'overview', ok: orgChosen },
-      ]
-    : [
-        { key: 'name', label: 'Name', stepId: 'overview', ok: isComplete(name, fieldErrors.name) },
-        { key: 'category', label: 'Category', stepId: 'overview', ok: categoryId !== '' },
-        { key: 'organizer', label: 'Organizer', stepId: 'overview', ok: orgChosen },
-        {
-          key: 'description',
-          label: 'Description',
-          stepId: 'overview',
-          ok: isComplete(text.description, fieldErrors.description),
-        },
-        {
-          key: 'officialUrl',
-          label: 'Official URL',
-          stepId: 'overview',
-          ok: isComplete(text.officialUrl, fieldErrors.officialUrl),
-        },
-        {
-          key: 'cover',
-          label: 'Cover image',
-          stepId: 'overview',
-          ok: isComplete(coverUrl, fieldErrors.coverUrl),
-        },
-        {
-          key: 'registrationUrl',
-          label: 'Registration URL',
-          stepId: 'administration',
-          ok: isComplete(text.registrationUrl, fieldErrors.registrationUrl),
-        },
-        // ADMINISTRATION IS REQUIRED THROUGHOUT (owner 2026-08-28), except the two contact fields
-        // and team size. These five are all @NotNull server-side, so an empty one is a 400 on
-        // submit either way — listing them turns that into a labelled row in the ring instead of a
-        // failure after the fact, which is the whole reason the enum defaults could be dropped.
-        // ANSWERING THE DROPDOWN IS THE WHOLE REQUIREMENT (owner 2026-09-01). Free or Paid both
-        // complete this row; the AMOUNT and CURRENCY are never required. PAID used to add two more
-        // required rows, which blocked the ring on a fee a competition page routinely does not
-        // publish — and the honest answer there is "paid, amount not stated", not a made-up number.
-        // Both fields still VALIDATE what is typed (see fieldErrors on the FormField below), and
-        // the server's own rule is only that a fee needs a currency — which the USD prefill
-        // guarantees. A curator who knows the fee still types it; one who doesn't is not stuck.
-        { key: 'costType', label: 'Entry fee', stepId: 'administration', ok: costType !== '' },
-        { key: 'delivery', label: 'Delivery', stepId: 'administration', ok: delivery !== '' },
-        {
-          key: 'participation',
-          label: 'Participation',
-          stepId: 'administration',
-          ok: participation !== '',
-        },
-        {
-          key: 'scopeLevel',
-          label: 'Scope level',
-          stepId: 'administration',
-          ok: scopeLevel !== '',
-        },
-        { key: 'recurrence', label: 'Recurrence', stepId: 'administration', ok: recurrence !== '' },
-        {
-          key: 'eligibilityBasis',
-          label: 'What the organizer provides',
-          stepId: 'eligibility',
-          ok: eligibilityBasis !== '',
-        },
-        // The three bag-backed eligibility gates. "Not provided" SATISFIES them — it is an answer
-        // ("I read the page and it is silent"), and the listing shows it as one. What does not
-        // satisfy them is '': nobody has looked. That distinction is the entire point of the
-        // option, and it is why these read off form state rather than the stored bag, which
-        // cannot tell the two apart.
-        {
-          key: 'studentStatus',
-          label: 'Student status',
-          stepId: 'eligibility',
-          ok: studentStatus !== '',
-        },
-        {
-          key: 'eligibleCountries',
-          label: 'Eligible countries',
-          stepId: 'eligibility',
-          ok: eligibleCountry !== '',
-        },
-        {
-          key: 'citizenship',
-          label: 'Citizenship',
-          stepId: 'eligibility',
-          ok: citizenship !== '',
-        },
-        {
-          key: 'entryPathway',
-          label: 'Entry pathway',
-          stepId: 'eligibility',
-          ok: entryPathways.length > 0,
-        },
-        // Only the axis the curator said the organizer provides. The ring is where "still missing"
-        // lives on this form, so the range requirement reads there instead of reddening a field
-        // nobody has reached yet.
-        ...(asksFor.grades
-          ? [
-              {
-                key: 'gradeRange',
-                label: 'Grade range',
-                stepId: 'eligibility',
-                ok: elig.minGrade !== '' || elig.maxGrade !== '',
-              },
-            ]
-          : []),
-        ...(asksFor.ages
-          ? [
-              {
-                key: 'ageRange',
-                label: 'Age range',
-                stepId: 'eligibility',
-                ok: elig.minAge !== '' || elig.maxAge !== '',
-              },
-            ]
-          : []),
-        {
-          key: 'evaluationType',
-          label: 'Evaluation types',
-          stepId: 'judging',
-          ok: evaluationTypes.length > 0,
-        },
-        {
-          key: 'judgingCriteria',
-          label: 'What judges look for',
-          stepId: 'judging',
-          // Bag-backed, so it is read from the stored value rather than the control — equally
-          // satisfiable in raw-JSON mode, where the textarea is not rendered.
-          ok: Array.isArray(attributes.judging_criteria)
-            ? attributes.judging_criteria.length > 0
-            : typeof attributes.judging_criteria === 'string' &&
-              attributes.judging_criteria.trim() !== '',
-        },
-        { key: 'prize', label: 'Awards', stepId: 'awards', ok: hasPrizeLine },
-        // COMPLETE rows only, counted the same way the submit path counts them (buildResources /
-        // buildFaqs skip a row missing either half), so the ring can never say "done" on rows that
-        // will be dropped on save. ⚠ A resource's preview image is NOT part of complete — most
-        // resources never get one, and the card falls back to per-type art by design.
-        {
-          key: 'resources',
-          label: `Prep resources (${MIN_EXTRAS})`,
-          stepId: 'extras',
-          ok:
-            resourceRows.filter((r) => r.title.trim() !== '' && r.url.trim() !== '').length >=
-            MIN_EXTRAS,
-        },
-        {
-          key: 'faqs',
-          label: `FAQ entries (${MIN_EXTRAS})`,
-          stepId: 'extras',
-          ok:
-            faqRows.filter((f) => f.question.trim() !== '' && f.answer.trim() !== '').length >=
-            MIN_EXTRAS,
-        },
-        { key: 'region', label: 'Region', stepId: 'administration', ok: regionIds.length > 0 },
-        ...REQUIRED_KEY_DATE_TYPES.map((type) => ({
-          key: `keydate_${type}`,
-          label: defaultKeyDateLabel(type),
-          stepId: 'timeline',
-          ok: keyDateOk(type),
-        })),
-      ];
+  // complete-by-default. Import and edit use the SAME full checklist, but only to SHOW what a
+  // curator would have to chase — see `blockingFields` below for what actually gates the button.
+  // (Edit used to list only name/category/organizer; since the listing page became the review
+  // surface, 2026-09-05, a reviewer needs the whole picture, and PUBLISH from that page is held
+  // to the create gate. A plain SAVE is not — legacy listings still save.)
+  const requiredFields = [
+    { key: 'name', label: 'Name', stepId: 'overview', ok: isComplete(name, fieldErrors.name) },
+    { key: 'category', label: 'Category', stepId: 'overview', ok: categoryId !== '' },
+    { key: 'organizer', label: 'Organizer', stepId: 'overview', ok: orgChosen },
+    {
+      key: 'description',
+      label: 'Description',
+      stepId: 'overview',
+      ok: isComplete(text.description, fieldErrors.description),
+    },
+    {
+      key: 'officialUrl',
+      label: 'Official URL',
+      stepId: 'overview',
+      ok: isComplete(text.officialUrl, fieldErrors.officialUrl),
+    },
+    {
+      key: 'cover',
+      label: 'Cover image',
+      stepId: 'overview',
+      ok: isComplete(coverUrl, fieldErrors.coverUrl),
+    },
+    {
+      key: 'registrationUrl',
+      label: 'Registration URL',
+      stepId: 'administration',
+      ok: isComplete(text.registrationUrl, fieldErrors.registrationUrl),
+    },
+    // ADMINISTRATION IS REQUIRED THROUGHOUT (owner 2026-08-28), except the two contact fields
+    // and team size. These five are all @NotNull server-side, so an empty one is a 400 on
+    // submit either way — listing them turns that into a labelled row in the ring instead of a
+    // failure after the fact, which is the whole reason the enum defaults could be dropped.
+    // ANSWERING THE DROPDOWN IS THE WHOLE REQUIREMENT (owner 2026-09-01). Free or Paid both
+    // complete this row; the AMOUNT and CURRENCY are never required. PAID used to add two more
+    // required rows, which blocked the ring on a fee a competition page routinely does not
+    // publish — and the honest answer there is "paid, amount not stated", not a made-up number.
+    // Both fields still VALIDATE what is typed (see fieldErrors on the FormField below), and
+    // the server's own rule is only that a fee needs a currency — which the USD prefill
+    // guarantees. A curator who knows the fee still types it; one who doesn't is not stuck.
+    { key: 'costType', label: 'Entry fee', stepId: 'administration', ok: costType !== '' },
+    { key: 'delivery', label: 'Delivery', stepId: 'administration', ok: delivery !== '' },
+    {
+      key: 'participation',
+      label: 'Participation',
+      stepId: 'administration',
+      ok: participation !== '',
+    },
+    {
+      key: 'scopeLevel',
+      label: 'Scope level',
+      stepId: 'administration',
+      ok: scopeLevel !== '',
+    },
+    { key: 'recurrence', label: 'Recurrence', stepId: 'administration', ok: recurrence !== '' },
+    {
+      key: 'eligibilityBasis',
+      label: 'What the organizer provides',
+      stepId: 'eligibility',
+      ok: eligibilityBasis !== '',
+    },
+    // The three bag-backed eligibility gates. "Not provided" SATISFIES them — it is an answer
+    // ("I read the page and it is silent"), and the listing shows it as one. What does not
+    // satisfy them is '': nobody has looked. That distinction is the entire point of the
+    // option, and it is why these read off form state rather than the stored bag, which
+    // cannot tell the two apart.
+    {
+      key: 'studentStatus',
+      label: 'Student status',
+      stepId: 'eligibility',
+      ok: studentStatus !== '',
+    },
+    {
+      key: 'eligibleCountries',
+      label: 'Eligible countries',
+      stepId: 'eligibility',
+      ok: eligibleCountry !== '',
+    },
+    {
+      key: 'citizenship',
+      label: 'Citizenship',
+      stepId: 'eligibility',
+      ok: citizenship !== '',
+    },
+    {
+      key: 'entryPathway',
+      label: 'Entry pathway',
+      stepId: 'eligibility',
+      ok: entryPathways.length > 0,
+    },
+    // Only the axis the curator said the organizer provides. The ring is where "still missing"
+    // lives on this form, so the range requirement reads there instead of reddening a field
+    // nobody has reached yet.
+    ...(asksFor.grades
+      ? [
+          {
+            key: 'gradeRange',
+            label: 'Grade range',
+            stepId: 'eligibility',
+            ok: elig.minGrade !== '' || elig.maxGrade !== '',
+          },
+        ]
+      : []),
+    ...(asksFor.ages
+      ? [
+          {
+            key: 'ageRange',
+            label: 'Age range',
+            stepId: 'eligibility',
+            ok: elig.minAge !== '' || elig.maxAge !== '',
+          },
+        ]
+      : []),
+    {
+      key: 'evaluationType',
+      label: 'Evaluation types',
+      stepId: 'judging',
+      ok: evaluationTypes.length > 0,
+    },
+    {
+      key: 'judgingCriteria',
+      label: 'What judges look for',
+      stepId: 'judging',
+      // Bag-backed, so it is read from the stored value rather than the control — equally
+      // satisfiable in raw-JSON mode, where the textarea is not rendered.
+      ok: Array.isArray(attributes.judging_criteria)
+        ? attributes.judging_criteria.length > 0
+        : typeof attributes.judging_criteria === 'string' &&
+          attributes.judging_criteria.trim() !== '',
+    },
+    { key: 'prize', label: 'Awards', stepId: 'awards', ok: hasPrizeLine },
+    // COMPLETE rows only, counted the same way the submit path counts them (buildResources /
+    // buildFaqs skip a row missing either half), so the ring can never say "done" on rows that
+    // will be dropped on save. ⚠ A resource's preview image is NOT part of complete — most
+    // resources never get one, and the card falls back to per-type art by design.
+    {
+      key: 'resources',
+      label: `Prep resources (${MIN_EXTRAS})`,
+      stepId: 'extras',
+      ok:
+        resourceRows.filter((r) => r.title.trim() !== '' && r.url.trim() !== '').length >=
+        MIN_EXTRAS,
+    },
+    {
+      key: 'faqs',
+      label: `FAQ entries (${MIN_EXTRAS})`,
+      stepId: 'extras',
+      ok:
+        faqRows.filter((f) => f.question.trim() !== '' && f.answer.trim() !== '').length >=
+        MIN_EXTRAS,
+    },
+    { key: 'region', label: 'Region', stepId: 'administration', ok: regionIds.length > 0 },
+    ...REQUIRED_KEY_DATE_TYPES.map((type) => ({
+      key: `keydate_${type}`,
+      label: defaultKeyDateLabel(type),
+      stepId: 'timeline',
+      ok: keyDateOk(type),
+    })),
+    // Edit only: the season label is a real field there (assigned on create, extracted on
+    // import) and the server refuses a blank one on the season write.
+    ...(editing
+      ? [
+          {
+            key: 'cycleLabel',
+            label: 'Season',
+            stepId: 'timeline',
+            ok: cycleLabel.trim() !== '',
+          },
+        ]
+      : []),
+  ];
   const filledCount = requiredFields.filter((r) => r.ok).length;
   const totalRequired = requiredFields.length;
   const allComplete = filledCount === totalRequired;
@@ -1379,14 +1516,16 @@ export function CompetitionForm({
   // "improved" review screen would quietly halt seeding.
   const blockingFields = importing
     ? requiredFields.filter((r) => IMPORT_BLOCKING_KEYS.includes(r.key))
-    : requiredFields;
+    : editing
+      ? requiredFields.filter((r) => EDIT_BLOCKING_KEYS.includes(r.key))
+      : requiredFields;
   const rowIssuesRemaining = rowIssues.filter((r) => !r.ok);
+  /** What a SAVE (edit) or APPROVE (import) still needs — on create, the same as publishing. */
   const blockingRemaining = [...blockingFields.filter((r) => !r.ok), ...rowIssuesRemaining];
-  const submittable = blockingRemaining.length === 0 && eligibilityValid;
-  // On create every listed field carries a visible asterisk; on edit only the spine fields
-  // (name/slug/category/organizer) do — organizer is now mandatory in edit mode too. Import shows
-  // the same asterisks as create (they mark a complete listing), while still allowing approve.
-  const req = !editing;
+  /** What PUBLISHING still needs: the whole checklist, in every mode (the create gate). */
+  const publishRemaining = [...requiredFields.filter((r) => !r.ok), ...rowIssuesRemaining];
+  // Every listed field carries a visible asterisk in every mode — they mark a COMPLETE listing,
+  // which is what a reviewer is checking for, not what the save button refuses.
 
   // --- WHEN a field speaks (owner 2026-09-05) ---
   // Every message is JUDGED live (`fieldErrors`, `requiredFields`) but SHOWN only once one of three
@@ -1535,7 +1674,7 @@ export function CompetitionForm({
               </FormField>
               <FormField
                 label="Description"
-                required={req}
+                required
                 hintAs="icon"
                 hint="Full write-up (About tab) — its first ~300 chars also become the card blurb. Write our own; never paste theirs."
                 error={fieldMessage('description', fieldErrors.description)}
@@ -1601,7 +1740,7 @@ export function CompetitionForm({
               </FormField>
               <FormField
                 label="Official URL"
-                required={req}
+                required
                 hintAs="icon"
                 hint="the competition’s home page."
                 error={fieldMessage('officialUrl', fieldErrors.officialUrl)}
@@ -1628,7 +1767,7 @@ export function CompetitionForm({
                 className={cn('flex-1', JUDGING_FIELD)}
                 label="Cover image"
                 labelAsText
-                required={req}
+                required
                 hintAs="icon"
                 hint="Shown on the listing card and the detail header."
                 error={coverMessage}
@@ -1671,37 +1810,33 @@ export function CompetitionForm({
       id: 'administration',
       label: 'Administration',
       meta: 'Sign-up · entry fee · delivery',
-      // NOT hideOnEdit: delivery/cost/recurrence are competition-level and must stay editable.
-      // The seasonal fields inside (location, fee, sign-up link, scope) carry their own !editing
-      // guards — those are edited per-edition on the Editions tab.
+      // The seasonal fields inside (location, fee, sign-up link, scope) post as `edition_*` and
+      // land on the current season — on create the first one, on edit the one the listing page
+      // names (since 2026-09-05 edit shows the full grid too; the Editions tab is gone).
       content: (
         // One 2-column grid, owner-set order (2026-08-23): sign-up + cost, then delivery +
         // location, then scope + recurrence — the sign-up link and price lead because they're
-        // what a curator copies off the organizer's page first. On EDIT the three edition-level
-        // fields (registration URL, location, scope) drop out and the remaining three simply
-        // repack; only the create/import form shows the full 3×2.
+        // what a curator copies off the organizer's page first.
         <div className="grid gap-4 sm:grid-cols-2">
-          {!editing && (
-            <FormField
-              label="Registration URL"
-              required
-              hintAs="icon"
-              hint="where entrants sign up."
-              error={fieldMessage('registrationUrl', fieldErrors.registrationUrl)}
-            >
-              <Input
-                name="edition_registrationUrl"
-                type="url"
-                inputMode="url"
-                defaultValue={editionSeed?.registrationUrl ?? ''}
-                maxLength={1000}
-                placeholder="https://…"
-                onChange={mark('registrationUrl')}
-                onBlur={onLeave('registrationUrl')}
-              />
-            </FormField>
-          )}
-          <FormField label="Entry fee" labelAsText required={req} error={feeMessage}>
+          <FormField
+            label="Registration URL"
+            required
+            hintAs="icon"
+            hint="where entrants sign up."
+            error={fieldMessage('registrationUrl', fieldErrors.registrationUrl)}
+          >
+            <Input
+              name="edition_registrationUrl"
+              type="url"
+              inputMode="url"
+              defaultValue={editionSeed?.registrationUrl ?? ''}
+              maxLength={1000}
+              placeholder="https://…"
+              onChange={mark('registrationUrl')}
+              onBlur={onLeave('registrationUrl')}
+            />
+          </FormField>
+          <FormField label="Entry fee" labelAsText required error={feeMessage}>
             <div className="flex items-start gap-2" onBlur={onLeave('costType')}>
               {/* Only the control the message is about goes red: the dropdown when the answer is
                   missing, the amount or currency box when what is typed in it is wrong. */}
@@ -1714,46 +1849,42 @@ export function CompetitionForm({
                 aria-invalid={feeMessage !== undefined && costType === ''}
                 className="w-32 shrink-0"
               />
-              {!editing && (
-                // Fee + currency stay MOUNTED on FREE and go disabled instead of vanishing
-                // (owner 2026-08-23): the row keeps its shape, and a price typed before someone
-                // flips to Free survives the flip back. Disabled controls are omitted from the
-                // submission, so FREE still posts no fee — same payload the unmounted version
-                // sent. `text` needs no resetting for the same reason: the values persist, so the
-                // rules stay true to them (and entryFee/currency drop out of `requiredFields`
-                // entirely while FREE, so a stale amount can never block a free listing).
-                <>
-                  <Input
-                    name="edition_entryFee"
-                    type="number"
-                    step="0.01"
-                    min={0}
-                    max={100000}
-                    defaultValue={editionSeed?.entryFee ?? ''}
-                    placeholder="0.00"
-                    aria-label="Entry fee"
-                    aria-invalid={!isFree && feeShown && fieldErrors.entryFee !== undefined}
-                    disabled={isFree}
-                    onChange={mark('entryFee')}
-                    className="min-w-0 flex-1"
-                  />
-                  <Input
-                    name="edition_currency"
-                    defaultValue={seededCurrency}
-                    maxLength={3}
-                    pattern="[A-Za-z]{3}"
-                    placeholder="USD"
-                    aria-label="Currency"
-                    aria-invalid={!isFree && feeShown && fieldErrors.currency !== undefined}
-                    disabled={isFree}
-                    onChange={mark('currency')}
-                    className="w-20 shrink-0 uppercase"
-                  />
-                </>
-              )}
+              {/* Fee + currency stay MOUNTED on FREE and go disabled instead of vanishing
+                  (owner 2026-08-23): the row keeps its shape, and a price typed before someone
+                  flips to Free survives the flip back. Disabled controls are omitted from the
+                  submission, so FREE still posts no fee — same payload the unmounted version
+                  sent. `text` needs no resetting for the same reason: the values persist, so the
+                  rules stay true to them (and entryFee/currency drop out of `requiredFields`
+                  entirely while FREE, so a stale amount can never block a free listing). */}
+              <Input
+                name="edition_entryFee"
+                type="number"
+                step="0.01"
+                min={0}
+                max={100000}
+                defaultValue={editionSeed?.entryFee ?? ''}
+                placeholder="0.00"
+                aria-label="Entry fee"
+                aria-invalid={!isFree && feeShown && fieldErrors.entryFee !== undefined}
+                disabled={isFree}
+                onChange={mark('entryFee')}
+                className="min-w-0 flex-1"
+              />
+              <Input
+                name="edition_currency"
+                defaultValue={seededCurrency}
+                maxLength={3}
+                pattern="[A-Za-z]{3}"
+                placeholder="USD"
+                aria-label="Currency"
+                aria-invalid={!isFree && feeShown && fieldErrors.currency !== undefined}
+                disabled={isFree}
+                onChange={mark('currency')}
+                className="w-20 shrink-0 uppercase"
+              />
             </div>
           </FormField>
-          <FormField label="Delivery" required={req} error={fieldMessage('delivery')}>
+          <FormField label="Delivery" required error={fieldMessage('delivery')}>
             <Select
               name="delivery"
               options={enumOptions(DELIVERIES)}
@@ -1771,35 +1902,33 @@ export function CompetitionForm({
               }}
             />
           </FormField>
-          {!editing && (
-            <FormField
-              label={delivery === 'VIRTUAL' ? 'Who can enter' : 'Location'}
-              required
-              labelAsText
-              hintAs="icon"
-              hint="the regions this running covers — shown on the card and drives the marketplace region filter. Virtual competitions keep the Online tag; add regions to say who may enter."
-              error={regionMessage}
-            >
-              <div className="grid gap-1" onBlur={onLeave('region')}>
-                {regionIds.map((id) => (
-                  <input key={id} type="hidden" name="edition_regionIds" value={id} />
-                ))}
-                <RegionSelect
-                  regions={regions}
-                  selectedIds={regionIds}
-                  onToggle={toggleRegion}
-                  invalid={regionMessage !== undefined}
-                  ariaLabel={delivery === 'VIRTUAL' ? 'Who can enter' : 'Location'}
-                />
-              </div>
-            </FormField>
-          )}
+          <FormField
+            label={delivery === 'VIRTUAL' ? 'Who can enter' : 'Location'}
+            required
+            labelAsText
+            hintAs="icon"
+            hint="the regions this running covers — shown on the card and drives the marketplace region filter. Virtual competitions keep the Online tag; add regions to say who may enter."
+            error={regionMessage}
+          >
+            <div className="grid gap-1" onBlur={onLeave('region')}>
+              {regionIds.map((id) => (
+                <input key={id} type="hidden" name="edition_regionIds" value={id} />
+              ))}
+              <RegionSelect
+                regions={regions}
+                selectedIds={regionIds}
+                onToggle={toggleRegion}
+                invalid={regionMessage !== undefined}
+                ariaLabel={delivery === 'VIRTUAL' ? 'Who can enter' : 'Location'}
+              />
+            </div>
+          </FormField>
           {/* Row 3 — WHO ENTERS, moved off the Eligibility step (owner 2026-08-24): participation
               and its dependent team size are administrative shape ("how is this run"), not who
               qualifies, and they belong beside delivery. Team size only applies to team/both, so
               the inputs stay disabled otherwise — disabled fields aren't submitted, so
               INDIVIDUAL never posts a stray size. */}
-          <FormField label="Participation" required={req} error={fieldMessage('participation')}>
+          <FormField label="Participation" required error={fieldMessage('participation')}>
             <Select
               name="participationMode"
               options={enumOptions(PARTICIPATION_MODES)}
@@ -1853,25 +1982,23 @@ export function CompetitionForm({
             </div>
           </FormField>
           {/* Row 4 */}
-          {!editing && (
-            <FormField
-              label="Scope level"
-              required={req}
-              error={fieldMessage('scopeLevel')}
-              hintAs="icon"
-              hint="the season's overall reach — a regionals→nationals program is National."
-            >
-              <Select
-                name="edition_scopeLevel"
-                options={enumOptions(SCOPE_LEVELS)}
-                placeholder="Select…"
-                value={scopeLevel}
-                onValueChange={setScopeLevel}
-                onBlur={() => markTouched('scopeLevel')}
-              />
-            </FormField>
-          )}
-          <FormField label="Recurrence" required={req} error={fieldMessage('recurrence')}>
+          <FormField
+            label="Scope level"
+            required
+            error={fieldMessage('scopeLevel')}
+            hintAs="icon"
+            hint="the season's overall reach — a regionals→nationals program is National."
+          >
+            <Select
+              name="edition_scopeLevel"
+              options={enumOptions(SCOPE_LEVELS)}
+              placeholder="Select…"
+              value={scopeLevel}
+              onValueChange={setScopeLevel}
+              onBlur={() => markTouched('scopeLevel')}
+            />
+          </FormField>
+          <FormField label="Recurrence" required error={fieldMessage('recurrence')}>
             <Select
               name="recurrence"
               options={enumOptions(RECURRENCES)}
@@ -1951,7 +2078,7 @@ export function CompetitionForm({
           <FormField
             label="What does the organizer provide?"
             labelAsText
-            required={req}
+            required
             error={basisMessage}
             className="sm:col-span-2"
             hintAs="icon"
@@ -2071,7 +2198,7 @@ export function CompetitionForm({
           {structured && (
             <FormField
               label="Student status"
-              required={req}
+              required
               error={fieldMessage('studentStatus')}
               hintAs="icon"
               hint="whether entrants must be enrolled students. The exact wording of the rule goes in Other eligibility requirements below."
@@ -2098,23 +2225,21 @@ export function CompetitionForm({
               />
             </FormField>
           )}
-          {!editing && (
-            <FormField
-              label="Age cutoff date"
-              hintAs="icon"
-              hint="age eligibility is computed “as of” this date, the way competitions state age rules. Re-dated each season."
-            >
-              <Input
-                name="edition_ageCutoffDate"
-                type="date"
-                defaultValue={editionSeed?.ageCutoffDate ?? ''}
-              />
-            </FormField>
-          )}
+          <FormField
+            label="Age cutoff date"
+            hintAs="icon"
+            hint="age eligibility is computed “as of” this date, the way competitions state age rules. Re-dated each season."
+          >
+            <Input
+              name="edition_ageCutoffDate"
+              type="date"
+              defaultValue={editionSeed?.ageCutoffDate ?? ''}
+            />
+          </FormField>
           {/* Row 3 — how they enter, then the citizenship gate. */}
           <FormField
             label="Entry pathway"
-            required={req}
+            required
             error={fieldMessage('entryPathway')}
             hintAs="icon"
             hint="how an entrant signs up. Tick every route the competition accepts — a listing open to both school and chapter entry is both boxes, and all three is open to all."
@@ -2147,7 +2272,7 @@ export function CompetitionForm({
             <>
               <FormField
                 label="Citizenship"
-                required={req}
+                required
                 error={fieldMessage('citizenship')}
                 hintAs="icon"
                 hint="citizenship / permanent-residency requirement, independent of where they live (e.g. USAMO). Pick Not provided when the page never raises it — that is an answer, and the listing shows it as one."
@@ -2191,7 +2316,7 @@ export function CompetitionForm({
               </FormField>
               <FormField
                 label="Eligible countries"
-                required={req}
+                required
                 error={fieldMessage('eligibleCountries')}
                 hintAs="icon"
                 hint="where entrants must live or study. Pick Not provided when the page never says; pick Other and spell the rule out under Other requirements."
@@ -2230,7 +2355,7 @@ export function CompetitionForm({
         <div className="grid gap-4 lg:grid-cols-2">
           <FormField
             label="Evaluation types"
-            required={req}
+            required
             hintAs="icon"
             hint="how entries are judged; pick any that apply."
             labelAsText
@@ -2282,7 +2407,7 @@ export function CompetitionForm({
               <FormField
                 className={JUDGING_FIELD}
                 label="What judges look for"
-                required={req}
+                required
                 error={fieldMessage('judgingCriteria')}
                 hintAs="icon"
                 hint="short criteria, comma-separated — e.g. Originality 40%, Method 30%, Presentation 30%."
@@ -2382,13 +2507,12 @@ export function CompetitionForm({
       id: 'awards',
       label: 'Awards',
       meta: 'Prizes · order · value',
-      // Awards are seasonal — managed per-edition on the Editions tab after create.
-      hideOnEdit: true,
+      // Awards are seasonal — they post with the current season on create AND edit.
       content: (
         <FormField
           label="Awards"
           labelAsText
-          required={req}
+          required
           error={prizeMessage}
           hintAs="icon"
           hint="one complete award at least — a title plus its value (or its detail, for a non-money award). Listed in display order; the first money award leads the card (“$10,000 · …”). If the competition awards nothing but the placing, say so with “No award provided?” — that answers this too."
@@ -2397,6 +2521,14 @@ export function CompetitionForm({
             <AwardsInput
               name="edition_awards"
               initial={initialAwardRows}
+              // Edit reopens the card-line chooser as saved (legacy `titles` shows as "Top award
+              // value", the editor's own rule); create and import take the editor's default.
+              initialMode={editing ? (editionSeed?.prizeDisplayMode ?? 'titles') : undefined}
+              initialCustom={
+                editing && editionSeed?.prizeDisplayMode === 'custom'
+                  ? (editionSeed.prizeSummary ?? '')
+                  : ''
+              }
               onPrizeLineChange={setHasPrizeLine}
               invalid={prizeMessage !== undefined}
             />
@@ -2408,9 +2540,30 @@ export function CompetitionForm({
       id: 'timeline',
       label: 'Timeline',
       meta: 'The running · dates · regions',
-      hideOnEdit: true,
       content: (
         <div className="grid gap-4">
+          {/* Edit only: the season the rows hang off, and every saved row the curator removed —
+              deleted by id on save, never inferred from absence. `edition_keepAttributes` is the
+              rest of the season's bag, merged back under the awards (see buildEditionBody). */}
+          {editing && (
+            <>
+              <input type="hidden" name="edition_id" value={editionId ?? ''} />
+              <input
+                type="hidden"
+                name="edition_keepAttributes"
+                value={JSON.stringify(editionSeed?.keepAttributes ?? {})}
+              />
+              {removedKeyDateIds.map((id) => (
+                <input key={id} type="hidden" name="keydate_removed" value={id} />
+              ))}
+            </>
+          )}
+          {editing && editionId === null && (
+            <Alert tone="warning" title="No season yet">
+              This listing has no running, so the public catalog hides it (the readiness gate). Fill
+              in the season below — saving creates it.
+            </Alert>
+          )}
           {/* Import only: the cycle label is what decides whether an edition exists at all, so an
               empty one has to say what that costs. Extractions of pages that describe no running
               are legitimate — they just leave a listing the readiness gate hides. */}
@@ -2428,12 +2581,58 @@ export function CompetitionForm({
           {/* Status is ASSIGNED, not asked — the create form dropped its control on 2026-08-22 and
               the server derives it from the key dates. It rides as a hidden field only so a
               SUPPLIED one is honoured (owner 2026-08-31); blank keeps the derive. */}
-          <input type="hidden" name="edition_status" value={editionSeed?.status ?? ''} />
-          <input
-            type="hidden"
-            name="edition_cycleLabel"
-            value={editionSeed?.cycleLabel ?? (importing ? '' : String(new Date().getFullYear()))}
-          />
+          {editing ? (
+            // On edit both are real fields (owner 2026-09-05): the label because a reviewer
+            // must be able to correct "2025" to "2026", the status because the server only
+            // derives it on create — an edit keeps whatever is stored unless someone changes it.
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                label="Season"
+                required
+                error={fieldMessage('cycleLabel')}
+                hintAs="icon"
+                hint="the running this page edits — a year, or a label like “2025–26”. Other seasons are linked above the form."
+              >
+                <Input
+                  name="edition_cycleLabel"
+                  value={cycleLabel}
+                  maxLength={60}
+                  onChange={(e) => setCycleLabel(e.target.value)}
+                  onBlur={onLeave('cycleLabel')}
+                />
+              </FormField>
+              <FormField
+                label="Season status"
+                hintAs="icon"
+                hint="where this running stands. Leave it and the stored status is kept; a season created by this save derives it from the key dates."
+              >
+                <Select
+                  name="edition_status"
+                  options={enumOptions(EDITION_STATUSES)}
+                  placeholder="Derived from the key dates"
+                  value={editionStatus}
+                  onValueChange={setEditionStatus}
+                />
+              </FormField>
+              {editionId && competition && (
+                <p className="text-xs text-muted sm:col-span-2">
+                  Advancement chain and the season’s raw attributes are on the{' '}
+                  <Link
+                    href={`/admin/competitions/${competition.id}/editions/${editionId}`}
+                    className="underline underline-offset-2 hover:text-foreground"
+                  >
+                    season settings page
+                  </Link>
+                  .
+                </p>
+              )}
+            </div>
+          ) : (
+            <>
+              <input type="hidden" name="edition_status" value={editionStatus} />
+              <input type="hidden" name="edition_cycleLabel" value={cycleLabel} />
+            </>
+          )}
           <FormField
             label="Key dates"
             labelAsText
@@ -2504,6 +2703,9 @@ export function CompetitionForm({
                       </span>
                     </div>
                     <div className="grid min-w-0 flex-1 gap-3">
+                      {/* Row identity for the save (see the resource rows). */}
+                      <input type="hidden" name={`keydate_${i}_key`} value={row.key} />
+                      {row.id && <input type="hidden" name={`keydate_${i}_id`} value={row.id} />}
                       <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
                         <FormField
                           label="Type"
@@ -2672,8 +2874,9 @@ export function CompetitionForm({
     },
     // Resources + FAQ (owner 2026-08-25): the two curated extras the create flow never collected
     // — both previously reachable only via the edit page's managers AFTER a save, which meant a
-    // second trip for data the curator had on screen during the first. The edit page keeps its
-    // managers (they edit rows in place), so this step stays create/import-only.
+    // second trip for data the curator had on screen during the first. Since 2026-09-05 the
+    // listing page renders this same step (rows carry ids; the save updates in place), so the
+    // delete-only managers are gone.
     //
     // IMPORT REVIEW SHOWS THIS STEP (2026-08-28). It used to be hidden outright because approve
     // could not persist a sub-resource; ImportReviewService now creates the payload's `resources`
@@ -2684,13 +2887,19 @@ export function CompetitionForm({
       id: 'extras',
       label: 'Resources & FAQ',
       meta: 'Prep links · questions',
-      hideOnEdit: true,
       content: (
         <div className="grid gap-6">
+          {/* Saved rows the curator removed — explicit deletes on save (see the timeline). */}
+          {removedResourceIds.map((id) => (
+            <input key={id} type="hidden" name="resource_removed" value={id} />
+          ))}
+          {removedFaqIds.map((id) => (
+            <input key={id} type="hidden" name="faq_removed" value={id} />
+          ))}
           <FormField
             label="Prep resources"
             labelAsText
-            required={req}
+            required
             error={resourcesMessage}
             hintAs="icon"
             hint={`at least ${MIN_EXTRAS} — curated links that help someone prepare: books, past papers, guides, videos. A row counts once it has a title and a URL; the preview image is optional. Shown in the Prep resources row on the listing; mark paid placements as affiliate so the disclosure renders.`}
@@ -2744,6 +2953,10 @@ export function CompetitionForm({
                       >
                         {i + 1}
                       </span>
+                      {/* Row identity for the save: the form's own key (echoed back so a new
+                          row can be stamped with its id) and, on edit, the saved id. */}
+                      <input type="hidden" name={`resource_${i}_key`} value={row.key} />
+                      {row.id && <input type="hidden" name={`resource_${i}_id`} value={row.id} />}
                       <Input
                         aria-label={`Resource ${i + 1} title`}
                         name={`resource_${i}_title`}
@@ -2832,7 +3045,7 @@ export function CompetitionForm({
           <FormField
             label="FAQ"
             labelAsText
-            required={req}
+            required
             error={faqsMessage}
             hintAs="icon"
             hint={`at least ${MIN_EXTRAS} — questions parents and students actually ask, shown as the listing's FAQ tab. A row counts once it has both a question and an answer. Write our own answers; never paste the organizer's.`}
@@ -2883,6 +3096,8 @@ export function CompetitionForm({
                       >
                         {i + 1}
                       </span>
+                      <input type="hidden" name={`faq_${i}_key`} value={row.key} />
+                      {row.id && <input type="hidden" name={`faq_${i}_id`} value={row.id} />}
                       <Input
                         aria-label={`FAQ ${i + 1} question`}
                         name={`faq_${i}_question`}
@@ -3025,57 +3240,48 @@ export function CompetitionForm({
    * reveals every field's own message (`submitAttempted` → `revealAll`), so the blank or wrong
    * control is named where it sits, not only in the rail.
    *
-   * Edit uses it too: there is no rail to jump along, but the same click surfaces the messages and
-   * spares a round trip for a save the server would refuse anyway.
+   * Edit uses it too, with two gates (2026-09-05): a plain save is held only to what the server
+   * refuses, publishing to the whole checklist — so a reviewer can save a half-fixed legacy listing
+   * but cannot publish one.
    *
    * This is UX, not enforcement. The server's @AssertTrue set runs on every submit regardless, and
    * remains the only real gate.
    */
-  const guardSubmit = (e: MouseEvent<HTMLButtonElement>) => {
-    if (submittable) return;
+  /** Make a step the active one — and, when every step is showing, scroll to it. */
+  const goToStep = (id: string) => {
+    setActiveStepId(id);
+    if (showAll) {
+      document.getElementById(`step-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+  /**
+   * `strict` = the publish gate (the whole checklist); otherwise the save/approve gate (what the
+   * server refuses). On create the two are the same set.
+   */
+  const guardSubmit = (strict: boolean) => (e: MouseEvent<HTMLButtonElement>) => {
+    const remaining = strict ? publishRemaining : blockingRemaining;
+    if (remaining.length === 0 && eligibilityValid) return;
     e.preventDefault();
-    setSubmitAttempted(true);
-    const first = blockingRemaining[0];
-    if (first) setActiveStepId(first.stepId);
-    else if (!eligibilityValid) setActiveStepId('eligibility');
+    setSubmitAttempted(strict ? 'publish' : 'save');
+    const first = remaining[0];
+    if (first) goToStep(first.stepId);
+    else if (!eligibilityValid) goToStep('eligibility');
   };
 
-  // --- edit mode: the familiar stacked sections (health widget + tabs live on the edit page) ---
-  if (editing) {
-    /**
-     * `noValidate` on both forms (2026-09-03). The browser's own constraint check was a THIRD gate
-     * nobody mirrored, and in the create wizard it failed in the worst possible way: every step
-     * stays mounted with the inactive ones `display:none`, so one invalid control on a step you
-     * are not looking at made the browser refuse the submit AND refuse to point at it ("An invalid
-     * form control ... is not focusable" — console only). The button simply did nothing, which
-     * read as "the two blank contact boxes must be mandatory": they were the one pair of empty
-     * fields sitting beside the dead button, and `type="email"` on one of them was usually what
-     * the browser was objecting to. Everything the native check covered is now a rule in
-     * `lib/form-rules` that renders in place, and the server stays the real gate (CLAUDE.md).
-     */
-    return (
-      <form action={formAction} noValidate className="grid max-w-3xl gap-8">
-        {stepDefs
-          .filter((s) => !s.hideOnEdit)
-          .map((s) => (
-            <FormSection key={s.id} title={s.label} hint={s.hint}>
-              {s.content}
-            </FormSection>
-          ))}
-        <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border-t border-border bg-background py-3">
-          <Button type="submit" disabled={pending || !eligibilityValid} onClick={guardSubmit}>
-            {pending ? 'Saving…' : 'Save changes'}
-          </Button>
-          {!eligibilityValid && (
-            <span className="text-xs text-danger">Fix the eligibility errors above to save.</span>
-          )}
-          <FormErrorAlert state={state} className="min-w-0 flex-1" />
-        </div>
-      </form>
-    );
-  }
-
-  // --- create + import: vertical stepper + a form-wide completion ring ---
+  // --- every mode: vertical stepper + a form-wide completion ring ---
+  // (Edit used to render the steps as stacked sections without the rail or the season steps; since
+  // 2026-09-05 the listing page IS the review surface and shows the same form the listing was
+  // typed into, every step included.)
+  //
+  // `noValidate` on the form (2026-09-03). The browser's own constraint check was a THIRD gate
+  // nobody mirrored, and in the wizard it failed in the worst possible way: every step stays
+  // mounted with the inactive ones `display:none`, so one invalid control on a step you are not
+  // looking at made the browser refuse the submit AND refuse to point at it ("An invalid form
+  // control ... is not focusable" — console only). The button simply did nothing, which read as
+  // "the two blank contact boxes must be mandatory": they were the one pair of empty fields
+  // sitting beside the dead button, and `type="email"` on one of them was usually what the
+  // browser was objecting to. Everything the native check covered is now a rule in
+  // `lib/form-rules` that renders in place, and the server stays the real gate (CLAUDE.md).
   const steps = stepDefs.filter(
     (s) => !(s.hideOnCreate && mode === 'create') && !(s.hideOnImport && mode === 'import'),
   );
@@ -3126,7 +3332,11 @@ export function CompetitionForm({
       // Red is the state after a blocked submit, plus any live error — an error the curator can
       // see does not need a submit to justify flagging.
       invalid:
-        erroredHere || (submitAttempted && blockingFields.some((r) => r.stepId === s.id && !r.ok)),
+        erroredHere ||
+        (submitAttempted !== false &&
+          (submitAttempted === 'publish' ? publishRemaining : blockingRemaining).some(
+            (r) => r.stepId === s.id,
+          )),
     };
   });
 
@@ -3141,7 +3351,7 @@ export function CompetitionForm({
         value={filledCount}
         max={totalRequired}
         label={
-          importing
+          importing || editing
             ? `${filledCount} of ${totalRequired} listing-completeness fields filled`
             : `${filledCount} of ${totalRequired} required fields complete`
         }
@@ -3158,10 +3368,10 @@ export function CompetitionForm({
       <div className="min-w-0">
         <div className="text-sm font-semibold text-foreground">
           {allComplete
-            ? importing
+            ? importing || editing
               ? 'Complete listing'
               : 'Ready to create'
-            : importing
+            : importing || editing
               ? 'Gaps to fill in'
               : 'Almost ready'}
         </div>
@@ -3170,7 +3380,9 @@ export function CompetitionForm({
             ? 'All required fields filled'
             : importing
               ? `${remaining.length} field${remaining.length === 1 ? '' : 's'} the page didn’t give us`
-              : `${remaining.length} required field${remaining.length === 1 ? '' : 's'} left`}
+              : editing
+                ? `${remaining.length} field${remaining.length === 1 ? '' : 's'} to fill before publishing`
+                : `${remaining.length} required field${remaining.length === 1 ? '' : 's'} left`}
         </div>
       </div>
     </div>
@@ -3180,84 +3392,175 @@ export function CompetitionForm({
   // bottom as state → steps → the action they lead to, so the action sits where the work ends
   // instead of in a bar pinned across the viewport. Create stays gated on the whole ring; import
   // gates only on what the server actually refuses, and says so.
+  // EDIT: the review decision rides WITH the save (owner 2026-09-05). "Save & publish" and
+  // "Save & submit for review" are held to the publish gate; "Save changes" and "Save & send back
+  // to draft" only to what the server refuses — a listing goes back to draft precisely because it
+  // is not complete. Only the moves the §8a state machine allows from the current status show.
+  const listingStatus = competition?.listingStatus;
+  const canDecide =
+    editing &&
+    competition !== undefined &&
+    competition.archivedAt === null &&
+    (listingStatus === 'DRAFT' || listingStatus === 'IN_REVIEW');
+  // The gate the last blocked click was held to, and the verb that click promised.
+  const attemptedRemaining = submitAttempted === 'publish' ? publishRemaining : blockingRemaining;
+  const attemptedVerb = importing
+    ? 'approved'
+    : editing
+      ? submitAttempted === 'publish'
+        ? 'published or sent for review'
+        : 'saved'
+      : 'published';
   const submitAction = (
     <div className="grid gap-2">
-      <Button
-        type="submit"
-        variant="brand"
-        disabled={pending}
-        onClick={guardSubmit}
-        className="w-full"
-      >
-        {importing
-          ? pending
-            ? 'Approving…'
-            : 'Approve & create'
-          : pending
-            ? 'Saving…'
-            : 'Publish now'}
-      </Button>
-      {/* §8a lifecycle split (item 14): the same submit, parameterized by where the listing
-          starts. Buttons post `listing_intent`; the server action maps it to listingStatus.
-          "Submit for review" parks it on the review queue (/admin/review) for a second pair of
-          eyes — process, not permission: with no roles yet, nothing STOPS direct publishing.
-          Draft skips the completeness gate? No — same gate: the server's @AssertTrue checks run
-          regardless of status, so a draft must already be a complete listing. */}
-      {!importing && (
+      {editing ? (
+        <>
+          {canDecide && (
+            <Button
+              type="submit"
+              name="listing_intent"
+              value="publish"
+              variant="brand"
+              disabled={pending}
+              onClick={guardSubmit(true)}
+              className="w-full"
+            >
+              {pending ? 'Saving…' : 'Save & publish'}
+            </Button>
+          )}
+          <Button
+            type="submit"
+            variant={canDecide ? 'secondary' : 'primary'}
+            disabled={pending}
+            onClick={guardSubmit(false)}
+            className="w-full"
+          >
+            {pending ? 'Saving…' : 'Save changes'}
+          </Button>
+          {canDecide && listingStatus === 'IN_REVIEW' && (
+            <Button
+              type="submit"
+              name="listing_intent"
+              value="draft"
+              variant="ghost"
+              disabled={pending}
+              onClick={guardSubmit(false)}
+              className="w-full"
+            >
+              Save &amp; send back to draft
+            </Button>
+          )}
+          {canDecide && listingStatus === 'DRAFT' && (
+            <Button
+              type="submit"
+              name="listing_intent"
+              value="review"
+              variant="ghost"
+              disabled={pending}
+              onClick={guardSubmit(true)}
+              className="w-full"
+            >
+              Save &amp; submit for review
+            </Button>
+          )}
+        </>
+      ) : (
         <>
           <Button
             type="submit"
-            name="listing_intent"
-            value="review"
-            variant="secondary"
+            variant="brand"
             disabled={pending}
-            onClick={guardSubmit}
+            onClick={guardSubmit(!importing)}
             className="w-full"
           >
-            Submit for review
+            {importing
+              ? pending
+                ? 'Approving…'
+                : 'Approve & create'
+              : pending
+                ? 'Saving…'
+                : 'Publish now'}
           </Button>
-          <Button
-            type="submit"
-            name="listing_intent"
-            value="draft"
-            variant="ghost"
-            disabled={pending}
-            onClick={guardSubmit}
-            className="w-full"
-          >
-            Save as draft
-          </Button>
+          {/* §8a lifecycle split (item 14): the same submit, parameterized by where the listing
+              starts. Buttons post `listing_intent`; the server action maps it to listingStatus.
+              "Submit for review" parks it on the review queue (/admin/review) for a second pair
+              of eyes — process, not permission: with no roles yet, nothing STOPS direct
+              publishing. Draft skips the completeness gate? No — same gate: the server's
+              @AssertTrue checks run regardless of status, so a draft must already be a complete
+              listing. */}
+          {!importing && (
+            <>
+              <Button
+                type="submit"
+                name="listing_intent"
+                value="review"
+                variant="secondary"
+                disabled={pending}
+                onClick={guardSubmit(true)}
+                className="w-full"
+              >
+                Submit for review
+              </Button>
+              <Button
+                type="submit"
+                name="listing_intent"
+                value="draft"
+                variant="ghost"
+                disabled={pending}
+                onClick={guardSubmit(true)}
+                className="w-full"
+              >
+                Save as draft
+              </Button>
+            </>
+          )}
         </>
       )}
-      {blockingRemaining.length > 0 ? (
-        // Create mode says nothing here: the ring at the head of the rail already carries the
-        // count, and the disabled submit carries the consequence. Import still names what the
-        // server will refuse, because there the button is NOT disabled by the same rule.
-        importing || submitAttempted ? (
-          <button
-            type="button"
-            onClick={() => {
-              const first = blockingRemaining[0];
-              if (first) setActiveStepId(first.stepId);
-            }}
-            className="text-left text-xs font-medium text-danger hover:underline"
-          >
-            Needs {blockingRemaining.map((r) => r.label.toLowerCase()).join(', ')} before it can be{' '}
-            {importing ? 'approved' : 'published'}
-          </button>
-        ) : null
+      {submitAttempted !== false && attemptedRemaining.length > 0 ? (
+        // After a blocked click, name what that click was missing — and jump to it.
+        <button
+          type="button"
+          onClick={() => {
+            const first = attemptedRemaining[0];
+            if (first) goToStep(first.stepId);
+          }}
+          className="text-left text-xs font-medium text-danger hover:underline"
+        >
+          Needs {attemptedRemaining.map((r) => r.label.toLowerCase()).join(', ')} before it can be{' '}
+          {attemptedVerb}
+        </button>
+      ) : importing && blockingRemaining.length > 0 ? (
+        // Import names what the server will refuse up front, because there the button is NOT
+        // disabled by the same rule. Create says nothing until a click: the ring already carries
+        // the count.
+        <button
+          type="button"
+          onClick={() => {
+            const first = blockingRemaining[0];
+            if (first) goToStep(first.stepId);
+          }}
+          className="text-left text-xs font-medium text-danger hover:underline"
+        >
+          Needs {blockingRemaining.map((r) => r.label.toLowerCase()).join(', ')} before it can be
+          approved
+        </button>
       ) : !eligibilityValid ? (
         <button
           type="button"
-          onClick={() => setActiveStepId('eligibility')}
+          onClick={() => goToStep('eligibility')}
           className="text-left text-xs font-medium text-danger hover:underline"
         >
-          Fix the errors in Format &amp; eligibility to continue
+          Fix the errors in Eligibility to continue
         </button>
       ) : importing && !allComplete ? (
         <span className="text-xs text-muted">
           {remaining.length} field{remaining.length === 1 ? '' : 's'} still empty — you can approve
           anyway and fill them in on the listing.
+        </span>
+      ) : editing && !allComplete ? (
+        <span className="text-xs text-muted">
+          {remaining.length} field{remaining.length === 1 ? '' : 's'} still empty — saving is fine;
+          publishing needs them.
         </span>
       ) : null}
     </div>
@@ -3268,7 +3571,7 @@ export function CompetitionForm({
       {/* Import review supplies its own page header (source, confidence, tabs), so create mode is
           the only one that draws a header here — and the completion ring now lives at the head of
           the step rail below, not beside the title. */}
-      {!importing && (
+      {mode === 'create' && (
         <div className="mb-5">
           <Link
             href="/admin/competitions"
@@ -3283,7 +3586,7 @@ export function CompetitionForm({
         </div>
       )}
 
-      {!importing && headerNotice}
+      {mode === 'create' && headerNotice}
 
       <form action={formAction} noValidate>
         {/* Import review round-trip: the payload keys this form has no control for, and the
@@ -3299,7 +3602,7 @@ export function CompetitionForm({
           <Stepper
             steps={stepperSteps}
             activeId={activeStepId}
-            onSelect={setActiveStepId}
+            onSelect={goToStep}
             header={completionSummary}
             footer={submitAction}
             // order-last on mobile: the single-column stack would otherwise put the rail — and now
@@ -3308,71 +3611,92 @@ export function CompetitionForm({
             className="order-last md:order-none md:sticky md:top-4"
           />
           <div className="min-w-0 rounded-[var(--radius-panel)] border border-border bg-surface-raised p-5 sm:p-6">
-            <div className="mb-5 flex items-baseline justify-between gap-3 border-b border-border pb-3">
-              <span className="flex items-center gap-1.5">
-                <h2 className="font-display text-xl text-foreground">{activeStepDef.label}</h2>
-                {activeStepDef.hint && (
-                  <Tooltip content={activeStepDef.hint}>
-                    <button
-                      type="button"
-                      aria-label={`More about ${activeStepDef.label}`}
-                      className="inline-flex rounded-full text-muted transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:outline-none"
-                    >
-                      <Info aria-hidden="true" className="size-4" />
-                    </button>
-                  </Tooltip>
+            <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3 border-b border-border pb-3">
+              {showAll ? (
+                <h2 className="font-display text-xl text-foreground">Every step</h2>
+              ) : (
+                <StepHeading label={activeStepDef.label} hint={activeStepDef.hint} />
+              )}
+              <span className="flex shrink-0 items-center gap-3">
+                {/* A prompt for THIS step's fields, built from the listing as it stands (owner
+                    2026-09-03). Create/import only — it lives on the wizard's step header, and
+                    the answer comes back through Paste JSON, which is a create-flow control. */}
+                {!editing && !showAll && (
+                  <StepPromptButton
+                    stepId={activeStepDef.id}
+                    context={{
+                      name,
+                      officialUrl: text.officialUrl,
+                      categoryName: categories.find((c) => c.id === categoryId)?.name ?? '',
+                      // Only the Custom fields step asks for the bag, and only that step's
+                      // prompt uses this — the others leave it out of the prompt entirely.
+                      attributesSchema:
+                        activeStepDef.id === 'attributes'
+                          ? ((template?.jsonSchema as Record<string, unknown> | undefined) ?? null)
+                          : null,
+                    }}
+                  />
                 )}
-              </span>
-              {/* A prompt for THIS step's fields, built from the listing as it stands (owner
-                  2026-09-03). Create/import only — it lives on the wizard's step header, and the
-                  answer comes back through Paste JSON, which is a create-flow control. */}
-              <span className="flex shrink-0 items-center gap-2">
-                <StepPromptButton
-                  stepId={activeStepDef.id}
-                  context={{
-                    name,
-                    officialUrl: text.officialUrl,
-                    categoryName: categories.find((c) => c.id === categoryId)?.name ?? '',
-                    // Only the Custom fields step asks for the bag, and only that step's prompt
-                    // uses this — the others leave it out of the prompt entirely.
-                    attributesSchema:
-                      activeStepDef.id === 'attributes'
-                        ? ((template?.jsonSchema as Record<string, unknown> | undefined) ?? null)
-                        : null,
-                  }}
-                />
-                <span className="text-xs text-muted tabular-nums">
-                  Step {activeIndex + 1} of {steps.length}
-                </span>
+                {/* One page or one step: a reviewer reads everything, a curator fills one step
+                    at a time. Either way the rail keeps every step's state and jumps to it. */}
+                <button
+                  type="button"
+                  aria-pressed={showAll}
+                  onClick={() => setShowAll((v) => !v)}
+                  className="text-xs font-medium text-muted underline underline-offset-2 hover:text-foreground"
+                >
+                  {showAll ? 'One step at a time' : 'Show every step'}
+                </button>
+                {!showAll && (
+                  <span className="text-xs text-muted tabular-nums">
+                    Step {activeIndex + 1} of {steps.length}
+                  </span>
+                )}
               </span>
             </div>
             {/* Every step stays in the DOM (hidden when inactive) so one submit posts all fields. */}
-            {steps.map((s) => (
-              <div key={s.id} className={cn(s.id === activeStepId ? 'block' : 'hidden')}>
-                {s.content}
-              </div>
-            ))}
-            <div className="mt-6 flex items-center justify-between gap-3 border-t border-border pt-4">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                disabled={!prevStep}
-                onClick={() => prevStep && setActiveStepId(prevStep.id)}
+            {steps.map((s, i) => (
+              <section
+                key={s.id}
+                id={`step-${s.id}`}
+                aria-label={s.label}
+                className={cn(
+                  showAll || s.id === activeStepId ? 'block' : 'hidden',
+                  showAll && 'scroll-mt-6',
+                  showAll && i > 0 && 'mt-8 border-t border-border pt-6',
+                )}
               >
-                <ArrowLeft aria-hidden="true" className="size-4" /> Back
-              </Button>
-              {nextStep && (
+                {showAll && (
+                  <div className="mb-4">
+                    <StepHeading label={s.label} hint={s.hint} />
+                  </div>
+                )}
+                {s.content}
+              </section>
+            ))}
+            {!showAll && (
+              <div className="mt-6 flex items-center justify-between gap-3 border-t border-border pt-4">
                 <Button
                   type="button"
-                  variant="secondary"
+                  variant="ghost"
                   size="sm"
-                  onClick={() => setActiveStepId(nextStep.id)}
+                  disabled={!prevStep}
+                  onClick={() => prevStep && goToStep(prevStep.id)}
                 >
-                  Continue <ArrowRight aria-hidden="true" className="size-4" />
+                  <ArrowLeft aria-hidden="true" className="size-4" /> Back
                 </Button>
-              )}
-            </div>
+                {nextStep && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => goToStep(nextStep.id)}
+                  >
+                    Continue <ArrowRight aria-hidden="true" className="size-4" />
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
