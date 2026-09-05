@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useActionState, useEffect, useState } from 'react';
-import type { ChangeEvent, MouseEvent, ReactNode } from 'react';
+import type { ChangeEvent, FocusEvent, MouseEvent, ReactNode } from 'react';
 import {
   Alert,
   ArrowLeft,
@@ -50,6 +50,7 @@ import {
   intRule,
   isComplete,
   LIMITS,
+  missingMessage,
   moneyRule,
   rangeRule,
   slugRule,
@@ -357,6 +358,29 @@ const REQUIRED_KEY_DATE_TYPES = ['REG_OPEN', 'REG_CLOSE', 'SUBMISSION_DUE', 'RES
  * hand off to one another as each passes.
  */
 const SINGLETON_KEY_DATE_TYPES: readonly string[] = ['REG_OPEN', 'REG_CLOSE'];
+
+/**
+ * What a BLANK required field says under itself (owner 2026-09-05), keyed by its `requiredFields`
+ * entry, where the generic "<label> is required." would read badly — composite controls mostly,
+ * whose label names a group rather than the one thing to fill. Every other required field gets
+ * the generic sentence from `missingMessage`, the same words the text rules use.
+ */
+const MISSING_MESSAGES: Record<string, string> = {
+  cover: 'Cover image is required — upload one or paste an image URL.',
+  costType: 'Choose Free or Paid.',
+  region: 'Pick at least one region.',
+  eligibilityBasis: 'Choose what the organizer provides — grades, ages, both, or open to all.',
+  gradeRange: 'Enter the grade range the organizer provides — one end is enough.',
+  ageRange: 'Enter the age range the organizer provides — one end is enough.',
+  entryPathway: 'Pick at least one entry pathway.',
+  evaluationType: 'Pick at least one evaluation type.',
+  prize:
+    'Add at least one complete award — a title plus its value or detail — or answer “No award provided?”.',
+  resources: `At least ${MIN_EXTRAS} complete prep resources are required — a title and a URL each.`,
+  faqs: `At least ${MIN_EXTRAS} complete FAQ entries are required — a question and an answer each.`,
+};
+/** The one message a key date row shows when it needs a date and has neither that nor TBD. */
+const KEY_DATE_MISSING = 'Needs a date — or mark it TBD.';
 
 /** Case- and whitespace-insensitive org-name key — mirrors the server's normalize on resolve. */
 const orgNameKey = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
@@ -1364,6 +1388,91 @@ export function CompetitionForm({
   // the same asterisks as create (they mark a complete listing), while still allowing approve.
   const req = !editing;
 
+  // --- WHEN a field speaks (owner 2026-09-05) ---
+  // Every message is JUDGED live (`fieldErrors`, `requiredFields`) but SHOWN only once one of three
+  // things has happened: the curator visited the field and left it (touched), a submit was blocked,
+  // or the form was FILLED FOR THEM — a pasted payload, a queued extraction, a saved listing on
+  // edit — where every value is already someone else's answer and the point of the review is to
+  // see which are wrong or missing. Until then a blank form stays quiet: "X is required" under
+  // thirty empty controls on first paint reads as broken, not incomplete (the rule the ring and
+  // the step rail already follow). Once shown, a message tracks the value keystroke by keystroke,
+  // so fixing it clears it in place.
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const markTouched = (key: string) => setTouched((t) => (t[key] ? t : { ...t, [key]: true }));
+  /**
+   * Blur handler for a control OR a wrapper around several: fires only when focus leaves the
+   * element entirely, so moving between the min and max of a range, or from a dropdown's trigger
+   * into its list, is not "leaving" the field. On a bare input `relatedTarget` is never inside it,
+   * so the same handler serves both.
+   */
+  const onLeave = (key: string) => (e: FocusEvent<HTMLElement>) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) markTouched(key);
+  };
+  const revealAll = seed !== undefined || editing || submitAttempted;
+  const shown = (key: string) => revealAll || touched[key] === true;
+  /**
+   * The message under a field, or nothing. A value that is there and wrong outranks a blank; a
+   * blank speaks only for a field that BLOCKS this form's submit — on import the advisory rows stay
+   * with the ring, since approve does not need them. `key` is the field's `requiredFields` key; a
+   * key with no entry there is an optional field, which only ever reports a format error.
+   */
+  const fieldMessage = (key: string, formatError?: string): string | undefined => {
+    if (!shown(key)) return undefined;
+    if (formatError) return formatError;
+    const required = blockingFields.find((r) => r.key === key);
+    if (!required || required.ok) return undefined;
+    return MISSING_MESSAGES[key] ?? missingMessage(required.label);
+  };
+  // The composite fields' messages, computed once each: the FormField shows the text and the
+  // controls inside it (which FormField cannot reach) take their danger border from the same value.
+  const coverMessage = fieldMessage('cover', fieldErrors.coverUrl);
+  const feeShown = shown('costType');
+  const feeMessage = fieldMessage(
+    'costType',
+    isFree ? undefined : (fieldErrors.entryFee ?? fieldErrors.currency),
+  );
+  const teamSizeMessage = fieldMessage(
+    'teamSize',
+    teamDisabled
+      ? undefined
+      : (fieldErrors.teamSizeMin ?? fieldErrors.teamSizeMax ?? fieldErrors.teamSizeRange),
+  );
+  const regionMessage = fieldMessage('region');
+  const basisMessage = fieldMessage('eligibilityBasis');
+  // The unbacked-basis half of `eligibilityValid` rides in as the range's own message rather than
+  // through `blockingFields`, so it also speaks on EDIT, where the ranges are not ring entries but
+  // the server still refuses a basis with no range behind it.
+  const gradesMessage = fieldMessage(
+    'gradeRange',
+    eligErrors.minGrade ??
+      (asksFor.grades && elig.minGrade === '' && elig.maxGrade === ''
+        ? MISSING_MESSAGES.gradeRange
+        : undefined),
+  );
+  const agesMessage = fieldMessage(
+    'ageRange',
+    eligErrors.minAge ??
+      (asksFor.ages && elig.minAge === '' && elig.maxAge === ''
+        ? MISSING_MESSAGES.ageRange
+        : undefined),
+  );
+  const evaluationMessage = fieldMessage('evaluationType');
+  const prizeMessage = fieldMessage('prize');
+  const resourcesMessage = fieldMessage('resources');
+  const faqsMessage = fieldMessage('faqs');
+  /**
+   * A key date row's own message: it needs a date — a required type still unmet, or a row someone
+   * has started typing into — and has neither a date nor TBD. Shown on the same terms as every
+   * other field, per row.
+   */
+  const keyDateMessage = (row: KeyDateRow): string | undefined => {
+    if (!shown(`keydate_row_${row.key}`) || row.tbd || row.date !== '') return undefined;
+    const unmet =
+      (REQUIRED_KEY_DATE_TYPES as readonly string[]).includes(row.type) && !keyDateOk(row.type);
+    const started = has(row.endDate) || has(row.label);
+    return unmet || started ? KEY_DATE_MISSING : undefined;
+  };
+
   // --- step content (written once; laid out as a stepper on create, stacked sections on edit) ---
   const stepDefs: StepDef[] = [
     {
@@ -1400,7 +1509,7 @@ export function CompetitionForm({
               given breakpoint — no hard-coded "left is taller" assumption to go stale. */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex h-full flex-col gap-4">
-              <FormField label="Name" required error={fieldErrors.name}>
+              <FormField label="Name" required error={fieldMessage('name', fieldErrors.name)}>
                 <Input
                   name="name"
                   value={name}
@@ -1411,15 +1520,17 @@ export function CompetitionForm({
                     setName(v);
                     if (!slugLocked) setSlug(slugify(v));
                   }}
+                  onBlur={onLeave('name')}
                 />
               </FormField>
-              <FormField label="Category" required>
+              <FormField label="Category" required error={fieldMessage('category')}>
                 <Select
                   name="categoryId"
                   options={categoryOptions}
                   placeholder="Select category…"
                   value={categoryId}
                   onValueChange={setCategoryId}
+                  onBlur={() => markTouched('category')}
                 />
               </FormField>
               <FormField
@@ -1427,7 +1538,7 @@ export function CompetitionForm({
                 required={req}
                 hintAs="icon"
                 hint="Full write-up (About tab) — its first ~300 chars also become the card blurb. Write our own; never paste theirs."
-                error={fieldErrors.description}
+                error={fieldMessage('description', fieldErrors.description)}
               >
                 <Textarea
                   name="description"
@@ -1442,6 +1553,7 @@ export function CompetitionForm({
                   // the long prose this field takes.
                   className="min-h-0"
                   onChange={mark('description')}
+                  onBlur={onLeave('description')}
                 />
               </FormField>
               <FormField
@@ -1457,6 +1569,7 @@ export function CompetitionForm({
               <FormField
                 label="Organizer"
                 required
+                error={fieldMessage('organizer')}
                 hintAs="icon"
                 hint={
                   importing && extractedOrganizer
@@ -1482,6 +1595,7 @@ export function CompetitionForm({
                     }
                     setOrganizerOrgId(v);
                   }}
+                  onBlur={() => markTouched('organizer')}
                   searchable
                 />
               </FormField>
@@ -1490,7 +1604,7 @@ export function CompetitionForm({
                 required={req}
                 hintAs="icon"
                 hint="the competition’s home page."
-                error={fieldErrors.officialUrl}
+                error={fieldMessage('officialUrl', fieldErrors.officialUrl)}
               >
                 <Input
                   name="officialUrl"
@@ -1500,6 +1614,7 @@ export function CompetitionForm({
                   maxLength={1000}
                   placeholder="https://…"
                   onChange={mark('officialUrl')}
+                  onBlur={onLeave('officialUrl')}
                 />
               </FormField>
               {/* ALIGNED TO THE LEFT COLUMN'S THIRD FIELD (owner 2026-08-28). `mt-auto` pinned only
@@ -1516,12 +1631,14 @@ export function CompetitionForm({
                 required={req}
                 hintAs="icon"
                 hint="Shown on the listing card and the detail header."
+                error={coverMessage}
               >
                 {/* w-full min-w-0: a grid item defaults to min-width:auto, which let the drop
                   zone size itself from its content height and overflow the column. */}
-                <div className="h-full min-h-0 w-full min-w-0">
+                <div className="h-full min-h-0 w-full min-w-0" onBlur={onLeave('cover')}>
                   <ImageUpload
                     compact
+                    invalid={coverMessage !== undefined}
                     // A FIXED height (h-36 = 144px, the listing card cover's real pixel height),
                     // not the `aspect-[263/144]` it used to carry. An aspect ratio makes the box
                     // grow and shrink with the column, so this column's total height changed at
@@ -1570,7 +1687,7 @@ export function CompetitionForm({
               required
               hintAs="icon"
               hint="where entrants sign up."
-              error={fieldErrors.registrationUrl}
+              error={fieldMessage('registrationUrl', fieldErrors.registrationUrl)}
             >
               <Input
                 name="edition_registrationUrl"
@@ -1580,22 +1697,21 @@ export function CompetitionForm({
                 maxLength={1000}
                 placeholder="https://…"
                 onChange={mark('registrationUrl')}
+                onBlur={onLeave('registrationUrl')}
               />
             </FormField>
           )}
-          <FormField
-            label="Entry fee"
-            labelAsText
-            required={req}
-            error={isFree ? undefined : (fieldErrors.entryFee ?? fieldErrors.currency)}
-          >
-            <div className="flex items-start gap-2">
+          <FormField label="Entry fee" labelAsText required={req} error={feeMessage}>
+            <div className="flex items-start gap-2" onBlur={onLeave('costType')}>
+              {/* Only the control the message is about goes red: the dropdown when the answer is
+                  missing, the amount or currency box when what is typed in it is wrong. */}
               <Select
                 name="costType"
                 options={enumOptions(COST_TYPES)}
                 placeholder="Free or paid…"
                 value={costType}
                 onValueChange={setCostType}
+                aria-invalid={feeMessage !== undefined && costType === ''}
                 className="w-32 shrink-0"
               />
               {!editing && (
@@ -1616,6 +1732,7 @@ export function CompetitionForm({
                     defaultValue={editionSeed?.entryFee ?? ''}
                     placeholder="0.00"
                     aria-label="Entry fee"
+                    aria-invalid={!isFree && feeShown && fieldErrors.entryFee !== undefined}
                     disabled={isFree}
                     onChange={mark('entryFee')}
                     className="min-w-0 flex-1"
@@ -1627,6 +1744,7 @@ export function CompetitionForm({
                     pattern="[A-Za-z]{3}"
                     placeholder="USD"
                     aria-label="Currency"
+                    aria-invalid={!isFree && feeShown && fieldErrors.currency !== undefined}
                     disabled={isFree}
                     onChange={mark('currency')}
                     className="w-20 shrink-0 uppercase"
@@ -1635,12 +1753,13 @@ export function CompetitionForm({
               )}
             </div>
           </FormField>
-          <FormField label="Delivery" required={req}>
+          <FormField label="Delivery" required={req} error={fieldMessage('delivery')}>
             <Select
               name="delivery"
               options={enumOptions(DELIVERIES)}
               placeholder="Select…"
               value={delivery}
+              onBlur={() => markTouched('delivery')}
               onValueChange={(v) => {
                 setDelivery(v);
                 // Virtual delivery auto-tags the Virtual/Online region — the location IS the
@@ -1659,8 +1778,9 @@ export function CompetitionForm({
               labelAsText
               hintAs="icon"
               hint="the regions this running covers — shown on the card and drives the marketplace region filter. Virtual competitions keep the Online tag; add regions to say who may enter."
+              error={regionMessage}
             >
-              <div className="grid gap-1">
+              <div className="grid gap-1" onBlur={onLeave('region')}>
                 {regionIds.map((id) => (
                   <input key={id} type="hidden" name="edition_regionIds" value={id} />
                 ))}
@@ -1668,6 +1788,7 @@ export function CompetitionForm({
                   regions={regions}
                   selectedIds={regionIds}
                   onToggle={toggleRegion}
+                  invalid={regionMessage !== undefined}
                   ariaLabel={delivery === 'VIRTUAL' ? 'Who can enter' : 'Location'}
                 />
               </div>
@@ -1678,30 +1799,32 @@ export function CompetitionForm({
               qualifies, and they belong beside delivery. Team size only applies to team/both, so
               the inputs stay disabled otherwise — disabled fields aren't submitted, so
               INDIVIDUAL never posts a stray size. */}
-          <FormField label="Participation" required={req}>
+          <FormField label="Participation" required={req} error={fieldMessage('participation')}>
             <Select
               name="participationMode"
               options={enumOptions(PARTICIPATION_MODES)}
               placeholder="Select…"
               value={participation}
               onValueChange={setParticipation}
+              onBlur={() => markTouched('participation')}
             />
           </FormField>
           <FormField
             label="Team size"
             hintAs="icon"
             hint="team competitions only"
-            error={
-              teamDisabled
-                ? undefined
-                : (fieldErrors.teamSizeMin ?? fieldErrors.teamSizeMax ?? fieldErrors.teamSizeRange)
-            }
+            error={teamSizeMessage}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" onBlur={onLeave('teamSize')}>
+              {/* A range-order mistake reddens both ends; a bad number only its own box. */}
               <Input
                 name="teamSizeMin"
                 type="number"
                 aria-label="Team size (min)"
+                aria-invalid={
+                  teamSizeMessage !== undefined &&
+                  (fieldErrors.teamSizeMin ?? fieldErrors.teamSizeRange) !== undefined
+                }
                 placeholder="min"
                 defaultValue={c?.teamSizeMin ?? ''}
                 min={BOUNDS.teamSize.min}
@@ -1716,6 +1839,10 @@ export function CompetitionForm({
                 name="teamSizeMax"
                 type="number"
                 aria-label="Team size (max)"
+                aria-invalid={
+                  teamSizeMessage !== undefined &&
+                  (fieldErrors.teamSizeMax ?? fieldErrors.teamSizeRange) !== undefined
+                }
                 placeholder="max"
                 defaultValue={c?.teamSizeMax ?? ''}
                 min={BOUNDS.teamSize.min}
@@ -1730,6 +1857,7 @@ export function CompetitionForm({
             <FormField
               label="Scope level"
               required={req}
+              error={fieldMessage('scopeLevel')}
               hintAs="icon"
               hint="the season's overall reach — a regionals→nationals program is National."
             >
@@ -1739,16 +1867,18 @@ export function CompetitionForm({
                 placeholder="Select…"
                 value={scopeLevel}
                 onValueChange={setScopeLevel}
+                onBlur={() => markTouched('scopeLevel')}
               />
             </FormField>
           )}
-          <FormField label="Recurrence" required={req}>
+          <FormField label="Recurrence" required={req} error={fieldMessage('recurrence')}>
             <Select
               name="recurrence"
               options={enumOptions(RECURRENCES)}
               placeholder="Select…"
               value={recurrence}
               onValueChange={setRecurrence}
+              onBlur={() => markTouched('recurrence')}
             />
           </FormField>
           {/* Row 5 — the organizer's published contact points (owner 2026-08-25). Bag keys
@@ -1765,13 +1895,14 @@ export function CompetitionForm({
                 label="Contact email"
                 hintAs="icon"
                 hint="optional — the organizer’s published contact address, from their site, shown on the listing. Never a personal address."
-                error={fieldErrors.contactEmail}
+                error={fieldMessage('contactEmail', fieldErrors.contactEmail)}
               >
                 <Input
                   inputMode="email"
                   autoComplete="off"
                   value={contactEmail}
                   onChange={(e) => setAttrKey('contact_email', e.target.value)}
+                  onBlur={onLeave('contactEmail')}
                   placeholder="info@organizer.org"
                   maxLength={LIMITS.contactEmail}
                 />
@@ -1780,7 +1911,7 @@ export function CompetitionForm({
                 label="Contact phone"
                 hintAs="icon"
                 hint="optional — the organizer’s published phone number, if they list one."
-                error={fieldErrors.contactPhone}
+                error={fieldMessage('contactPhone', fieldErrors.contactPhone)}
               >
                 <Input
                   type="tel"
@@ -1788,6 +1919,7 @@ export function CompetitionForm({
                   autoComplete="off"
                   value={contactPhone}
                   onChange={(e) => setAttrKey('contact_phone', e.target.value)}
+                  onBlur={onLeave('contactPhone')}
                   placeholder="(555) 123-4567"
                   maxLength={LIMITS.contactPhone}
                 />
@@ -1820,6 +1952,7 @@ export function CompetitionForm({
             label="What does the organizer provide?"
             labelAsText
             required={req}
+            error={basisMessage}
             className="sm:col-span-2"
             hintAs="icon"
             hint="the axis the official page actually gives, and it decides which range you fill in below. Pick Ages when the page says “ages 13–18” even if you could work out the grades — a range we derived is used for filtering and is never shown as the rule. Leave it unanswered if the page states no eligibility at all; the ring will keep naming it."
@@ -1839,6 +1972,7 @@ export function CompetitionForm({
               onValueChange={setEligibilityBasis}
               aria-label="What does the organizer provide?"
               className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+              onBlur={onLeave('eligibilityBasis')}
             >
               {ELIGIBILITY_BASIS_OPTIONS.map((o) => (
                 <Radio
@@ -1850,7 +1984,9 @@ export function CompetitionForm({
                     'h-10 items-center justify-center rounded-[var(--radius-field)] border px-2 text-center text-sm transition-colors',
                     eligibilityBasis === o.value
                       ? 'border-primary bg-primary font-medium text-primary-foreground'
-                      : 'border-border bg-background text-foreground hover:border-muted/50',
+                      : basisMessage !== undefined
+                        ? 'border-danger bg-background text-foreground'
+                        : 'border-border bg-background text-foreground hover:border-muted/50',
                   )}
                 />
               ))}
@@ -1865,17 +2001,18 @@ export function CompetitionForm({
           <FormField
             label="Grades"
             labelAsText
-            error={eligErrors.minGrade}
+            error={gradesMessage}
             hintAs="icon"
             hint="required when the organizer provides grades — leave the row alone otherwise; it is disabled unless the choice above asks for it."
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" onBlur={onLeave('gradeRange')}>
               <Select
                 name="minGrade"
                 options={GRADE_OPTIONS}
                 value={elig.minGrade}
                 onValueChange={setEligValue('minGrade')}
                 aria-label="Min grade"
+                aria-invalid={gradesMessage !== undefined}
                 disabled={!asksFor.grades}
                 className="min-w-0 flex-1"
               />
@@ -1888,6 +2025,7 @@ export function CompetitionForm({
                 value={elig.maxGrade}
                 onValueChange={setEligValue('maxGrade')}
                 aria-label="Max grade"
+                aria-invalid={gradesMessage !== undefined}
                 disabled={!asksFor.grades}
                 className="min-w-0 flex-1"
               />
@@ -1896,17 +2034,18 @@ export function CompetitionForm({
           <FormField
             label="Ages"
             labelAsText
-            error={eligErrors.minAge}
+            error={agesMessage}
             hintAs="icon"
             hint="required when the organizer provides ages — leave the row alone otherwise; it is disabled unless the choice above asks for it."
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" onBlur={onLeave('ageRange')}>
               <Select
                 name="minAge"
                 options={AGE_OPTIONS}
                 value={elig.minAge}
                 onValueChange={setEligValue('minAge')}
                 aria-label="Min age"
+                aria-invalid={agesMessage !== undefined}
                 disabled={!asksFor.ages}
                 className="min-w-0 flex-1"
               />
@@ -1919,6 +2058,7 @@ export function CompetitionForm({
                 value={elig.maxAge}
                 onValueChange={setEligValue('maxAge')}
                 aria-label="Max age"
+                aria-invalid={agesMessage !== undefined}
                 disabled={!asksFor.ages}
                 className="min-w-0 flex-1"
               />
@@ -1932,6 +2072,7 @@ export function CompetitionForm({
             <FormField
               label="Student status"
               required={req}
+              error={fieldMessage('studentStatus')}
               hintAs="icon"
               hint="whether entrants must be enrolled students. The exact wording of the rule goes in Other eligibility requirements below."
             >
@@ -1953,6 +2094,7 @@ export function CompetitionForm({
                   setAttrKey('student_status_required', answeredAttr(v) ? v === 'true' : undefined);
                 }}
                 aria-label="Student status"
+                onBlur={() => markTouched('studentStatus')}
               />
             </FormField>
           )}
@@ -1973,6 +2115,7 @@ export function CompetitionForm({
           <FormField
             label="Entry pathway"
             required={req}
+            error={fieldMessage('entryPathway')}
             hintAs="icon"
             hint="how an entrant signs up. Tick every route the competition accepts — a listing open to both school and chapter entry is both boxes, and all three is open to all."
           >
@@ -1989,6 +2132,7 @@ export function CompetitionForm({
               onValuesChange={setEntryPathways}
               placeholder="Select…"
               aria-label="Entry pathway"
+              onBlur={() => markTouched('entryPathway')}
             />
           </FormField>
           {/* The two country gates are CLOSED dropdowns rather than the old comma-separated text
@@ -2004,12 +2148,14 @@ export function CompetitionForm({
               <FormField
                 label="Citizenship"
                 required={req}
+                error={fieldMessage('citizenship')}
                 hintAs="icon"
                 hint="citizenship / permanent-residency requirement, independent of where they live (e.g. USAMO). Pick Not provided when the page never raises it — that is an answer, and the listing shows it as one."
               >
                 <Select
                   options={CITIZENSHIP_OPTIONS}
                   value={citizenship}
+                  onBlur={() => markTouched('citizenship')}
                   onValueChange={(v) => {
                     setCitizenship(v);
                     setAttrKey('citizenship_countries', answeredAttr(v) ? [v] : []);
@@ -2046,12 +2192,14 @@ export function CompetitionForm({
               <FormField
                 label="Eligible countries"
                 required={req}
+                error={fieldMessage('eligibleCountries')}
                 hintAs="icon"
                 hint="where entrants must live or study. Pick Not provided when the page never says; pick Other and spell the rule out under Other requirements."
               >
                 <Select
                   options={ELIGIBLE_COUNTRY_OPTIONS}
                   value={eligibleCountry}
+                  onBlur={() => markTouched('eligibleCountries')}
                   onValueChange={(v) => {
                     setEligibleCountry(v);
                     setAttrKey('eligible_countries', answeredAttr(v) ? [v] : []);
@@ -2086,11 +2234,12 @@ export function CompetitionForm({
             hintAs="icon"
             hint="how entries are judged; pick any that apply."
             labelAsText
+            error={evaluationMessage}
           >
             {/* One row per type instead of a wrapped checkbox line: each option gets its
                 explainer, a full-width hit area, and a visible selected state (border-primary,
                 the same selected token Chip/Tabs use). */}
-            <div className="grid gap-2">
+            <div className="grid gap-2" onBlur={onLeave('evaluationType')}>
               {EVALUATION_TYPES.map((token) => {
                 const selected = evaluationTypes.includes(token);
                 return (
@@ -2104,7 +2253,9 @@ export function CompetitionForm({
                       'items-start gap-2.5 rounded-[var(--radius-field)] border p-3 transition-colors',
                       selected
                         ? 'border-primary bg-surface-raised'
-                        : 'border-border hover:bg-background',
+                        : evaluationMessage !== undefined
+                          ? 'border-danger hover:bg-background'
+                          : 'border-border hover:bg-background',
                     )}
                     label={
                       <span className="grid gap-0.5">
@@ -2132,6 +2283,7 @@ export function CompetitionForm({
                 className={JUDGING_FIELD}
                 label="What judges look for"
                 required={req}
+                error={fieldMessage('judgingCriteria')}
                 hintAs="icon"
                 hint="short criteria, comma-separated — e.g. Originality 40%, Method 30%, Presentation 30%."
               >
@@ -2153,6 +2305,7 @@ export function CompetitionForm({
                     setJudgingCriteriaText(e.target.value);
                     setAttrKey('judging_criteria', csvToList(e.target.value));
                   }}
+                  onBlur={onLeave('judgingCriteria')}
                   maxLength={500}
                   rows={2}
                   className="min-h-0"
@@ -2236,14 +2389,18 @@ export function CompetitionForm({
           label="Awards"
           labelAsText
           required={req}
+          error={prizeMessage}
           hintAs="icon"
           hint="one complete award at least — a title plus its value (or its detail, for a non-money award). Listed in display order; the first money award leads the card (“$10,000 · …”). If the competition awards nothing but the placing, say so with “No award provided?” — that answers this too."
         >
-          <AwardsInput
-            name="edition_awards"
-            initial={initialAwardRows}
-            onPrizeLineChange={setHasPrizeLine}
-          />
+          <div onBlur={onLeave('prize')}>
+            <AwardsInput
+              name="edition_awards"
+              initial={initialAwardRows}
+              onPrizeLineChange={setHasPrizeLine}
+              invalid={prizeMessage !== undefined}
+            />
+          </div>
         </FormField>
       ),
     },
@@ -2306,6 +2463,7 @@ export function CompetitionForm({
                     }}
                     onDragOver={(e) => e.preventDefault()} // required for the drop cursor
                     onDragEnter={() => dragOverKeyDate(row.key)}
+                    onBlur={onLeave(`keydate_row_${row.key}`)}
                     className={cn(
                       'group flex gap-3 px-3.5 py-3.5',
                       keyDateDragKey === row.key && 'bg-brand-gold-soft/50 opacity-80',
@@ -2399,7 +2557,11 @@ export function CompetitionForm({
                           submitted, so a TBD row posts no date — the same payload the hidden flag
                           below already implied. */}
                       <div className="flex flex-wrap items-end gap-2">
-                        <FormField label="Date" className="min-w-36 flex-1">
+                        <FormField
+                          label="Date"
+                          className="min-w-36 flex-1"
+                          error={keyDateMessage(row)}
+                        >
                           <Input
                             name={`keydate_${i}_date`}
                             type="date"
@@ -2529,10 +2691,17 @@ export function CompetitionForm({
             label="Prep resources"
             labelAsText
             required={req}
+            error={resourcesMessage}
             hintAs="icon"
             hint={`at least ${MIN_EXTRAS} — curated links that help someone prepare: books, past papers, guides, videos. A row counts once it has a title and a URL; the preview image is optional. Shown in the Prep resources row on the listing; mark paid placements as affiliate so the disclosure renders.`}
           >
-            <div className="rounded-[var(--radius-field)] border border-border">
+            <div
+              onBlur={onLeave('resources')}
+              className={cn(
+                'rounded-[var(--radius-field)] border',
+                resourcesMessage !== undefined ? 'border-danger' : 'border-border',
+              )}
+            >
               <div className="divide-y divide-border">
                 {resourceRows.map((row, i) => (
                   <div
@@ -2664,10 +2833,17 @@ export function CompetitionForm({
             label="FAQ"
             labelAsText
             required={req}
+            error={faqsMessage}
             hintAs="icon"
             hint={`at least ${MIN_EXTRAS} — questions parents and students actually ask, shown as the listing's FAQ tab. A row counts once it has both a question and an answer. Write our own answers; never paste the organizer's.`}
           >
-            <div className="rounded-[var(--radius-field)] border border-border">
+            <div
+              onBlur={onLeave('faqs')}
+              className={cn(
+                'rounded-[var(--radius-field)] border',
+                faqsMessage !== undefined ? 'border-danger' : 'border-border',
+              )}
+            >
               <div className="divide-y divide-border">
                 {faqRows.map((row, i) => (
                   <div
@@ -2841,6 +3017,29 @@ export function CompetitionForm({
     },
   ];
 
+  /**
+   * The submit guard (owner 2026-08-30). The three buttons used to be `disabled` while the form was
+   * incomplete, which is a dead end: nothing explains WHY, and the rail's amber dots are easy to
+   * miss. They are now live, and a blocked click paints the failing steps red and jumps to the
+   * first one — the click becomes the thing that tells you what is wrong. Since 2026-09-05 it also
+   * reveals every field's own message (`submitAttempted` → `revealAll`), so the blank or wrong
+   * control is named where it sits, not only in the rail.
+   *
+   * Edit uses it too: there is no rail to jump along, but the same click surfaces the messages and
+   * spares a round trip for a save the server would refuse anyway.
+   *
+   * This is UX, not enforcement. The server's @AssertTrue set runs on every submit regardless, and
+   * remains the only real gate.
+   */
+  const guardSubmit = (e: MouseEvent<HTMLButtonElement>) => {
+    if (submittable) return;
+    e.preventDefault();
+    setSubmitAttempted(true);
+    const first = blockingRemaining[0];
+    if (first) setActiveStepId(first.stepId);
+    else if (!eligibilityValid) setActiveStepId('eligibility');
+  };
+
   // --- edit mode: the familiar stacked sections (health widget + tabs live on the edit page) ---
   if (editing) {
     /**
@@ -2864,7 +3063,7 @@ export function CompetitionForm({
             </FormSection>
           ))}
         <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border-t border-border bg-background py-3">
-          <Button type="submit" disabled={pending || !eligibilityValid}>
+          <Button type="submit" disabled={pending || !eligibilityValid} onClick={guardSubmit}>
             {pending ? 'Saving…' : 'Save changes'}
           </Button>
           {!eligibilityValid && (
@@ -2981,24 +3180,6 @@ export function CompetitionForm({
   // bottom as state → steps → the action they lead to, so the action sits where the work ends
   // instead of in a bar pinned across the viewport. Create stays gated on the whole ring; import
   // gates only on what the server actually refuses, and says so.
-  /**
-   * The submit guard (owner 2026-08-30). The three buttons used to be `disabled` while the form was
-   * incomplete, which is a dead end: nothing explains WHY, and the rail's amber dots are easy to
-   * miss. They are now live, and a blocked click paints the failing steps red and jumps to the
-   * first one — the click becomes the thing that tells you what is wrong.
-   *
-   * This is UX, not enforcement. The server's @AssertTrue set runs on every submit regardless, and
-   * remains the only real gate.
-   */
-  const guardSubmit = (e: MouseEvent<HTMLButtonElement>) => {
-    if (submittable) return;
-    e.preventDefault();
-    setSubmitAttempted(true);
-    const first = blockingRemaining[0];
-    if (first) setActiveStepId(first.stepId);
-    else if (!eligibilityValid) setActiveStepId('eligibility');
-  };
-
   const submitAction = (
     <div className="grid gap-2">
       <Button

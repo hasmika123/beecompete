@@ -20,6 +20,11 @@ export interface RegionSelectProps {
   /** Field label context, e.g. "Location" vs "Who can enter" — used for the input's aria-label. */
   ariaLabel?: string;
   placeholder?: string;
+  /**
+   * The field is showing an error (nothing picked on a required row) — the shell wears the danger
+   * border and the combobox reports aria-invalid. The message is the caller's (FormField).
+   */
+  invalid?: boolean;
 }
 
 const LEVEL_LABEL: Record<string, string> = {
@@ -50,6 +55,7 @@ export function RegionSelect({
   onToggle,
   ariaLabel = 'Regions',
   placeholder = 'Type a state, country, or city…',
+  invalid = false,
 }: RegionSelectProps) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -123,8 +129,11 @@ export function RegionSelect({
             added; in-field, the selection IS the field's value, which is what it always was. */}
         <div
           className={cn(
-            'flex min-h-10 w-full flex-wrap items-center gap-1.5 rounded-[var(--radius-field)] border border-border bg-background px-2 py-1.5',
-            'focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-ring',
+            'flex min-h-10 w-full flex-wrap items-center gap-1.5 rounded-[var(--radius-field)] border bg-background px-2 py-1.5',
+            invalid
+              ? 'border-danger focus-within:outline-danger'
+              : 'border-border focus-within:outline-ring',
+            'focus-within:outline-2 focus-within:outline-offset-1',
           )}
         >
           {selectedIds.map((id) => {
@@ -150,6 +159,7 @@ export function RegionSelect({
             aria-expanded={listOpen && matches.length > 0}
             aria-controls="region-select-listbox"
             aria-label={ariaLabel}
+            aria-invalid={invalid || undefined}
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);

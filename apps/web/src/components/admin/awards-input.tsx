@@ -158,6 +158,7 @@ export function AwardsInput({
   initialMode = 'total',
   initialCustom = '',
   onPrizeLineChange,
+  invalid = false,
 }: {
   name: string;
   initial: AwardRow[];
@@ -173,6 +174,11 @@ export function AwardsInput({
   initialCustom?: string;
   /** Fires with whether the card will carry a prize line at all — feeds the completion ring. */
   onPrizeLineChange?: (hasLine: boolean) => void;
+  /**
+   * The field is showing an error (the awards question is required and unanswered) — the rows
+   * panel wears the danger border. The message itself is the caller's (FormField).
+   */
+  invalid?: boolean;
 }) {
   const [rows, setRows] = useState<AwardRow[]>(initial.length > 0 ? initial : [emptyRow(0)]);
   const [nextKey, setNextKey] = useState(Math.max(initial.length, 1));
@@ -261,7 +267,12 @@ export function AwardsInput({
       <input type="hidden" name={name} value={serialized} />
       {/* No overflow-hidden: the type + card-line Selects open ABSOLUTE popovers inside this
           panel, and clipping them cut the list off. The footer rounds its own bottom corners. */}
-      <div className="rounded-[var(--radius-field)] border border-border">
+      <div
+        className={cn(
+          'rounded-[var(--radius-field)] border',
+          invalid ? 'border-danger' : 'border-border',
+        )}
+      >
         <div className="divide-y divide-border">
           {rows.map((row, i) => (
             <div

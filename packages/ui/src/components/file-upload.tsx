@@ -62,6 +62,12 @@ export interface FileUploadProps {
   placeholder?: string;
   /** aria-label for the remove button (default "Remove {noun}"). */
   removeLabel?: string;
+  /**
+   * The field is showing an error (missing when required, or a URL the form's rules refuse) —
+   * paints the drop zone or the filled card with the danger border every other control wears.
+   * The message itself is the caller's (FormField), which is where the explanation belongs.
+   */
+  invalid?: boolean;
 }
 
 export function FileUpload({
@@ -82,6 +88,7 @@ export function FileUpload({
   urlIcon,
   placeholder = 'https://…',
   removeLabel,
+  invalid = false,
 }: FileUploadProps) {
   const initial = defaultValue ?? '';
   const [url, setUrl] = useState(initial);
@@ -170,7 +177,12 @@ export function FileUpload({
       {name != null && <input type="hidden" name={name} value={url} />}
 
       {hasFile ? (
-        <div className="flex min-w-0 items-center gap-3 rounded-[var(--radius-field)] border border-border bg-surface-raised p-2.5">
+        <div
+          className={cn(
+            'flex min-w-0 items-center gap-3 rounded-[var(--radius-field)] border bg-surface-raised p-2.5',
+            invalid ? 'border-danger' : 'border-border',
+          )}
+        >
           {renderPreview ? (
             renderPreview(url)
           ) : (
@@ -242,7 +254,11 @@ export function FileUpload({
           className={cn(
             'flex flex-col items-center justify-center rounded-[var(--radius-panel)] border border-dashed text-center transition-colors',
             compact ? 'gap-1.5 px-3 py-3' : 'gap-2 px-5 py-6',
-            dragOver ? 'border-brand-gold bg-brand-gold-soft/40' : 'border-border bg-surface',
+            dragOver
+              ? 'border-brand-gold bg-brand-gold-soft/40'
+              : invalid
+                ? 'border-danger bg-surface'
+                : 'border-border bg-surface',
             'cursor-pointer',
             dropZoneClassName,
           )}

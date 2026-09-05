@@ -43,6 +43,8 @@ export interface ImageUploadProps {
    */
   dropZoneClassName?: string;
   className?: string;
+  /** The field is showing an error — see {@link FileUpload}'s `invalid`. */
+  invalid?: boolean;
 }
 
 export function ImageUpload({
