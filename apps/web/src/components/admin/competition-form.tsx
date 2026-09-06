@@ -3785,10 +3785,18 @@ export function CompetitionForm({
             onSelect={goToStep}
             header={completionSummary}
             footer={submitAction}
-            // order-last on mobile: the single-column stack would otherwise put the rail — and now
-            // the submit that closes it — ABOVE the fields, so you'd meet "Create competition"
-            // before anything to fill in. Desktop keeps source order (rail left, sticky).
-            className="order-last md:order-none md:sticky md:top-4"
+            // order-last on mobile: the single-column stack would otherwise put the rail — and
+            // the submit that closes it — ABOVE the fields, so you'd meet "Publish" before
+            // anything to fill in. Desktop keeps source order (rail left, sticky).
+            //
+            // ⚠ THE STICKY RAIL MUST SCROLL INSIDE ITSELF (owner 2026-09-05, found on prod). A
+            // sticky box taller than the viewport can never show its own bottom: scrolling the
+            // page just holds it in place. The rail's bottom is the DECISION — Publish, Send back
+            // to draft, Save without deciding — so on a short window (or at browser zoom: a
+            // 773px rail in a 412px viewport at 150%) those buttons were simply unreachable.
+            // Capping the height and letting the overflow scroll is the same recipe AdminSidebar
+            // already uses for its bottom-anchored Collapse button, for the same reason.
+            className="order-last md:order-none md:sticky md:top-4 md:max-h-[calc(100dvh-2rem)] md:overflow-y-auto"
           />
           <div className="min-w-0 rounded-[var(--radius-panel)] border border-border bg-surface-raised p-5 sm:p-6">
             <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3 border-b border-border pb-3">
