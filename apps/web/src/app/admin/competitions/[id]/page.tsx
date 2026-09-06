@@ -185,13 +185,6 @@ export default async function EditCompetitionPage({
         adding={adding}
       />
 
-      {competition.listingStatus === 'IN_REVIEW' && !competition.archivedAt && (
-        <Alert tone="info" className="mb-6" title="In review">
-          Check each step, fix anything in place, then decide from the panel beside the form. Every
-          button there saves your edits first.
-        </Alert>
-      )}
-
       {/* Keyed by season so switching seasons remounts the form on the new seed — the row state
           (ids, removals) is per season and must not carry across. */}
       <CompetitionForm

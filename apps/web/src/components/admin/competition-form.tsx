@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { useActionState, useEffect, useState } from 'react';
 import type { ChangeEvent, FocusEvent, MouseEvent, ReactNode } from 'react';
 import {
@@ -519,6 +520,9 @@ export function CompetitionForm({
   // boundary short of the root error page, which unmounts this form and everything typed into it.
   const [state, formAction, pending] = useActionState(guardFormAction(action), INITIAL);
   const { toast } = useToast();
+  // Only used to move onto a season this form just created — see the save-applied block below.
+  const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (state.ok) toast({ title: state.notice ?? 'Saved', tone: 'success' });
@@ -815,6 +819,22 @@ export function CompetitionForm({
   // The season this one's winners move on to (Q5) — a state round feeding a national one.
   const [advancesTo, setAdvancesTo] = useState(seed?.edition?.advancesToEditionId ?? '');
   const otherSeasons = seasons.filter((s) => s.id !== editionId);
+
+  /**
+   * A save that CREATED the season moves the page onto it (`?season=<id>`), so the switcher stops
+   * highlighting "New season" and a reload lands on what was just created rather than on a second
+   * blank one. Replace, not push: the blank form is not a place to go back to.
+   *
+   * In an effect, not in the save-applied block below: that block runs during RENDER, and a
+   * router call there updates the Router while this component is rendering (React warns, and the
+   * navigation is a side effect either way). The URL is an external system — exactly what effects
+   * are for.
+   */
+  useEffect(() => {
+    if (initialEditionId === null && editionId && pathname) {
+      router.replace(`${pathname}?season=${editionId}`, { scroll: false });
+    }
+  }, [initialEditionId, editionId, pathname, router]);
   /**
    * Stamp what a save created or deleted back onto the rows, by the row keys the form itself
    * posted. Without this a second save would POST the same new rows again; the keys make the
@@ -3499,9 +3519,9 @@ export function CompetitionForm({
     <div className="grid gap-2">
       {editing ? (
         canDecide ? (
-          // The DECISION reads as one block — the two outcomes first, the plain save under a
-          // rule — and a single caption replaces the "Save &" on every label (owner 2026-09-05:
-          // "Save & send back to draft" read as two actions). Every button saves first.
+          // The DECISION reads as one block of three real buttons — the two outcomes, then the
+          // plain save — with no "Save &" on any label (owner 2026-09-05: "Save & send back to
+          // draft" read as two actions). Every one of them saves the edits first.
           <>
             <p className="text-[11px] font-semibold tracking-wide text-muted uppercase">Decision</p>
             <Button
@@ -3540,17 +3560,15 @@ export function CompetitionForm({
                 Submit for review
               </Button>
             )}
-            <div className="my-1 border-t border-border" />
             <Button
               type="submit"
-              variant="ghost"
+              variant="secondary"
               disabled={pending}
               onClick={guardSubmit(false)}
               className="w-full"
             >
               {pending ? 'Saving…' : 'Save without deciding'}
             </Button>
-            <p className="text-center text-xs text-muted">Every button saves your edits first.</p>
           </>
         ) : (
           <Button

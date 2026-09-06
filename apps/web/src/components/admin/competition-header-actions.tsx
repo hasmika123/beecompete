@@ -99,18 +99,18 @@ export function CompetitionHeaderActions({
         </Button>
       ) : (
         <>
-          {/* Quiet (ghost) — these two RETIRE a listing, and a reviewer should not read them as
-              peers of the pause button beside them, let alone of the decision in the rail. */}
+          {/* Real (bordered) buttons, not ghost text — owner 2026-09-05: they must read as
+              buttons before anyone hovers. Both open a confirm, so no trailing ellipsis. */}
           <Button
-            variant="ghost"
+            variant="secondary"
             size="sm"
             disabled={pending}
             onClick={() => setMarkingDuplicate(true)}
           >
-            Mark as duplicate…
+            Mark as duplicate
           </Button>
           <Button
-            variant="ghost"
+            variant="secondary"
             size="sm"
             disabled={pending}
             onClick={async () => {
