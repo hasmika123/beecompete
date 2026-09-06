@@ -12,9 +12,12 @@ import type { ListingStatus } from '@/lib/admin-types';
 
 // R1-19: a competition has no verification/maintainer control of its own — that's derived from
 // the organizer org (claim the org → all its competitions become host-maintained). Archive/restore
-// plus the §8a lifecycle moves (item 14) live here, and "Mark as duplicate" (DQ4 PR 2) beside
-// Archive — it is an archive with a forwarding address. Which moves show follows the state
-// machine — the server still validates, this just doesn't offer illegal ones.
+// lives here, and "Mark as duplicate" (DQ4 PR 2) beside Archive — it is an archive with a
+// forwarding address. Of the §8a lifecycle moves (item 14) only the PAUSE pair stays up here
+// (Unlist / Re-list): since 2026-09-05 publish, submit-for-review and send-back-to-draft are
+// save-and-move buttons on the listing form's rail, so a reviewer's edits can never be left
+// behind by the decision click. Which moves show follows the state machine — the server still
+// validates, this just doesn't offer illegal ones.
 export function CompetitionHeaderActions({
   id,
   name,
@@ -41,7 +44,8 @@ export function CompetitionHeaderActions({
       }
     });
 
-  // label · next state · needs-confirm. Publish from DRAFT/IN_REVIEW, the pause pair on the rest.
+  // label · next state · needs-confirm. The pause pair only — DRAFT/IN_REVIEW listings move
+  // from the form's rail, together with a save.
   const moves: Array<{ label: string; next: ListingStatus; confirmMsg?: string }> = archived
     ? []
     : listingStatus === 'PUBLISHED'
@@ -54,12 +58,7 @@ export function CompetitionHeaderActions({
         ]
       : listingStatus === 'UNLISTED'
         ? [{ label: 'Re-list', next: 'PUBLISHED' }]
-        : [
-            { label: 'Publish', next: 'PUBLISHED' },
-            ...(listingStatus === 'DRAFT'
-              ? [{ label: 'Submit for review', next: 'IN_REVIEW' as ListingStatus }]
-              : [{ label: 'Send back to draft', next: 'DRAFT' as ListingStatus }]),
-          ];
+        : [];
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -100,13 +99,15 @@ export function CompetitionHeaderActions({
         </Button>
       ) : (
         <>
+          {/* Real (bordered) buttons, not ghost text — owner 2026-09-05: they must read as
+              buttons before anyone hovers. Both open a confirm, so no trailing ellipsis. */}
           <Button
             variant="secondary"
             size="sm"
             disabled={pending}
             onClick={() => setMarkingDuplicate(true)}
           >
-            Mark as duplicate…
+            Mark as duplicate
           </Button>
           <Button
             variant="secondary"

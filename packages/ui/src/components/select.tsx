@@ -67,6 +67,17 @@ export interface SelectProps {
   /** Accessible name for the trigger — pair with a visible <label id> via aria-labelledby instead when possible. */
   'aria-label'?: string;
   'aria-labelledby'?: string;
+  /** Set by FormField when the field shows an error — paints the trigger's danger border. */
+  'aria-invalid'?: boolean;
+  'aria-describedby'?: string;
+  'aria-required'?: boolean;
+  /**
+   * Fires once focus has LEFT the control entirely — trigger and popover alike — or an open
+   * popover was dismissed by a click elsewhere. Not on every focus hop inside it: moving from the
+   * trigger into the list is not leaving the field. For a form's "touched" tracking, which decides
+   * when a required-field message may appear.
+   */
+  onBlur?: () => void;
   id?: string;
   className?: string;
 }
@@ -85,6 +96,7 @@ export function Select({
   required,
   searchable,
   dense = false,
+  onBlur,
   id,
   className,
   ...aria
@@ -112,6 +124,11 @@ export function Select({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  // The latest onBlur, readable from the outside-click listener without re-subscribing it.
+  const onBlurRef = useRef(onBlur);
+  useEffect(() => {
+    onBlurRef.current = onBlur;
+  });
 
   // The option list the popover shows — filtered while a query is typed. activeIndex
   // indexes into THIS array, not `options`.
@@ -177,7 +194,12 @@ export function Select({
     if (!open) return;
     (withSearch ? searchRef.current : listRef.current)?.focus();
     const onPointerDown = (e: PointerEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) closeList(false);
+      if (!rootRef.current?.contains(e.target as Node)) {
+        closeList(false);
+        // The focused list (or filter input) is unmounted by the close, and a removed element
+        // fires no blur — so this is the one place the leave can be reported.
+        onBlurRef.current?.();
+      }
     };
     document.addEventListener('pointerdown', onPointerDown);
     return () => document.removeEventListener('pointerdown', onPointerDown);
@@ -243,7 +265,15 @@ export function Select({
   };
 
   return (
-    <div ref={rootRef} className={cn('relative', className)}>
+    <div
+      ref={rootRef}
+      className={cn('relative', className)}
+      // Focus hopping between the trigger, the filter input and the list stays INSIDE this root,
+      // so only a relatedTarget outside it counts as leaving the control.
+      onBlur={(e) => {
+        if (!rootRef.current?.contains(e.relatedTarget as Node | null)) onBlur?.();
+      }}
+    >
       {/* FormData + constraint-validation mirror. Not display:none — an invisible overlay,
           so a `required` failure can focus it and anchor the bubble on the trigger. */}
       {name && (
@@ -285,6 +315,8 @@ export function Select({
           dense ? 'px-2.5' : 'px-3.5',
           'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring',
           'disabled:pointer-events-none disabled:opacity-45',
+          // The same soft invalid state Input wears, keyed off the aria-invalid FormField sets.
+          'aria-invalid:border-danger aria-invalid:focus-visible:outline-danger',
           hasSelection ? 'text-foreground' : 'text-muted',
         )}
         {...aria}

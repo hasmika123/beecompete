@@ -239,7 +239,12 @@ tooling + audit log) → Phase 2+ (dedup DQ4, conflict resolution DQ5) → Phase
 - **Create-competition form (sweep stepper build, 2026-07-15/16):** a **vertical stepper**
   (`packages/ui` `Stepper`) over five steps — Basics / About / Format & eligibility / Media & links /
   First edition — with a form-wide required-fields **completion ring** (`packages/ui` `ProgressRing`)
-  that gates the Create button (server re-validates regardless). Field UX worth keeping: **auto-slug**
+  that gates the Create button (server re-validates regardless). **Per-field messages (2026-09-05):**
+  every control also names its own problem in place — a blank required field ("X is required." /
+  a composite-specific line) or a wrong value (`lib/form-rules`) — shown once the field is **touched**
+  (focus left it), after a **blocked submit**, or for **every field at once** when the form was filled
+  for the curator (paste JSON, import review, edit); dropdowns, the cover upload, the region picker and
+  the row editors carry the same danger border as text inputs. Field UX worth keeping: **auto-slug**
   (`slugify(name)` until the slug is hand-edited; create-only — slugs are permanent), grade/age as
   **dropdowns** sharing the marketplace grade ladder (`GRADE_VALUES`, an "Any" default, age to "99+")
   with min ≤ max validation, an **Organizer "+ Add organization…"** option, a repeatable **typed

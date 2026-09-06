@@ -642,6 +642,25 @@ and PENDING import records (deep review stays on the import screen). Create form
 Publish now / Submit for review / Save as draft — same completeness gate for all three; with no
 roles yet, review is process + audit trail, not permission.
 
+**As-built (2026-09-05 — the listing page IS the review surface, owner-requested):** `/admin/competitions/{id}`
+no longer splits a listing over Details / Editions / FAQ / Resources tabs with the season on its own
+page. It renders the SAME stepper form as the create flow (`CompetitionForm`, edit mode), seeded
+from the saved listing + its **current season** (`lib/listing-seed`: newest live edition by cycle
+label), the season’s key dates and regions, its awards rows, and the resources + FAQ rows — every
+row editable in place, every step visible at once by default (toggle to one-at-a-time). ONE save
+(`updateListing`) writes competition → season (created if the listing had none) → regions → key
+dates → resources → FAQ, matching rows by id (PUT in place / POST new / DELETE only what the
+curator explicitly removed), then applies the review decision: the rail offers **Save & publish**,
+**Save changes**, and **Save & send back to draft** / **Save & submit for review** per the state
+machine, so a reviewer’s fixes can never be left behind by the decision click. Gates: a plain save
+refuses only what the server refuses (`EDIT_BLOCKING_KEYS`); publish / submit-for-review use the
+create form’s full checklist. Unlist / Re-list, Archive, Mark-as-duplicate stay in the page header.
+Every season, old or new, opens in this same form via `?season=<id|new>` (a season switcher
+under the title; the old per-edition routes redirect there), so older seasons never show a
+different field layout. The advancement chain moved onto the Timeline step; the season’s other
+attributes ride through a save untouched. The `/admin/review` queue still lists IN_REVIEW rows with inline
+publish / send-back; the row’s name opens this page.
+
 **Deferred seams — design now, build later:**
 - **IN_REVIEW + DQ12** pre-publication review (Phase 3): `approved` becomes the review outcome, and an
   **edit keeps the current version public** while the edited version is re-reviewed (never dark a live

@@ -45,3 +45,16 @@ export function keyDateOptions(tokens: readonly string[]): SelectOption[] {
       t === 'CUSTOM' ? 'Custom event' : t === 'PERIOD' ? 'Custom period' : defaultKeyDateLabel(t),
   }));
 }
+
+/**
+ * A SEASON's run status, in its own words (2026-09-05). `enumLabel` maps OPEN → "Open to all"
+ * for the eligibility/pathway tokens, which on a season read as nonsense ("Season 2026 · Open to
+ * all"): a season is open for REGISTRATION. Every other status derives from its token as usual.
+ */
+export function seasonStatusLabel(status: string): string {
+  return status === 'OPEN' ? 'Open' : enumLabel(status);
+}
+
+export function seasonStatusOptions(tokens: readonly string[]): SelectOption[] {
+  return tokens.map((t) => ({ value: t, label: seasonStatusLabel(t) }));
+}

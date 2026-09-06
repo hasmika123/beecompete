@@ -1,5 +1,26 @@
 # Paste JSON prompt
 
+**The admin app carries this prompt too** (2026-09-03): *Competitions → New → Paste JSON* has a
+**Copy prompt** button, so a curator never has to come here for the text. That copy is GENERATED
+from this file — `apps/web/scripts/generate-paste-json-prompt.mjs` reads the copy box below into
+`apps/web/src/lib/paste-json-prompt.generated.ts`, which is committed because the Docker build
+context excludes `docs/`.
+
+**So after editing the prompt below: run `pnpm --filter @beecompete/web gen:prompt` and commit the
+regenerated file** (`pnpm dev` and `pnpm build` do it for you). Forget, and
+`apps/web/src/lib/paste-json-prompt.test.ts` fails CI naming the command — the button can never
+hand out a prompt this file stopped saying.
+
+**Each step of the create form also has an "Ask an assistant" button** (2026-09-03) that asks for
+just that tab's fields. Those mini prompts are CUT from the box below by the `STEPS` manifest in
+the same generator: each one quotes that step's keys from *The JSON shape* and the `###` sections
+governing them, then attaches the listing as it currently stands and asks for it back whole — so
+the reply pastes into *Paste JSON* without blanking the other steps. Two consequences when editing
+below: **renaming a `###` heading or removing a key from the JSON shape fails the build** (the
+generator names what it could not find — update the manifest in the same commit), and a rule you
+write under the right heading reaches the mini prompt for free. The award ROWS are the one thing
+no key can carry back, so that step asks for them in prose; see `tail` in the manifest.
+
 ## Instructions
 
 1. Copy the prompt below into any assistant (ChatGPT, Claude, whatever).

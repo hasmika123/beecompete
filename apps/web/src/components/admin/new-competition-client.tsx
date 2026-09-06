@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Alert, Button, Code, Modal, Textarea } from '@beecompete/ui';
 import { CompetitionForm } from '@/components/admin/competition-form';
+import { PasteJsonPromptPanel } from '@/components/admin/paste-json-prompt-panel';
 import {
   importSeedWarnings,
   splitImportPayload,
@@ -209,6 +210,9 @@ export function NewCompetitionClient({
       <Modal
         open={open}
         onClose={() => setOpen(false)}
+        // Short laptops: the prompt panel can be opened, so the dialog has to be able to scroll
+        // rather than run off the screen — page scroll is locked while it is up.
+        className="max-h-[85vh] overflow-y-auto"
         title="Fill the form from JSON"
         description={
           seed || pasteCount > 0
@@ -226,7 +230,10 @@ export function NewCompetitionClient({
           </div>
         }
       >
-        <div className="grid grid-cols-1 gap-2">
+        <div className="grid grid-cols-1 gap-3">
+          {/* The prompt that produces this JSON, on the screen that consumes it — copying it used
+              to mean a trip to docs/seeding/paste-json-prompt.md. */}
+          <PasteJsonPromptPanel />
           <Textarea
             aria-label="Competition JSON"
             value={raw}

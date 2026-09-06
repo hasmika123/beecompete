@@ -6,6 +6,7 @@ import {
   intRule,
   isComplete,
   LIMITS,
+  missingMessage,
   moneyRule,
   rangeRule,
   slugRule,
@@ -153,6 +154,19 @@ describe('rangeRule', () => {
 
   it('stays silent on malformed input — intRule owns that message', () => {
     expect(rangeRule('abc', '9')).toBeUndefined();
+  });
+});
+
+describe('missingMessage', () => {
+  it('is the same sentence the text rules use for a blank required field', () => {
+    expect(missingMessage('Category')).toBe('Category is required.');
+    expect(textRule('', { max: 10, required: true, label: 'Category' })).toBe(
+      missingMessage('Category'),
+    );
+  });
+
+  it('falls back to a generic subject with no label', () => {
+    expect(missingMessage()).toBe('This field is required.');
   });
 });
 

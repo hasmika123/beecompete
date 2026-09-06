@@ -17,3 +17,6 @@ apps/api/
 
 # Claude Code harness state (worktrees, local settings) — never format-checked.
 .claude/
+
+# Generated from docs/ by its own script — see apps/web/scripts/generate-paste-json-prompt.mjs.
+apps/web/src/lib/*.generated.ts

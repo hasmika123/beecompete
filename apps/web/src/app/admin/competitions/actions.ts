@@ -5,18 +5,28 @@ import { redirect } from 'next/navigation';
 import { adminFetch } from '@/lib/admin-api';
 import {
   buildCompetitionBody,
+  buildEditionBody,
+  buildFaqEdits,
   buildFaqs,
   buildFirstEdition,
+  buildKeyDateEdits,
   buildKeyDates,
   buildRegionIds,
+  buildResourceEdits,
   buildResources,
+  removedIds,
+  str,
+  type RowEdit,
 } from '@/lib/competition-payload';
 import type {
   Competition,
   CompetitionDuplicates,
+  Edition,
   FormState,
+  ListingFormState,
   ListingStatus,
   Page,
+  SavedRowIds,
 } from '@/lib/admin-types';
 
 /**
@@ -98,22 +108,181 @@ export async function createCompetition(_prev: FormState, form: FormData): Promi
   redirect(`/admin/competitions/${created.id}?${params}`);
 }
 
-export async function updateCompetition(
+/**
+ * The unified listing save (owner 2026-09-05): ONE submit from the listing page persists the
+ * competition, its current season, the season's regions and timeline, and the prep resources +
+ * FAQ — then, when a review button was pressed, moves the listing's status. The page used to
+ * scatter these over four tabs and a separate season page, each with its own save.
+ *
+ * The API has no combined update, so this is SEQUENTIAL, and it fails honestly: the first write
+ * that is refused ends the save with a message naming what did and did not land, and `saved`
+ * records every row created or deleted before that point — so the form can stamp new rows with
+ * their ids and a retry updates rather than duplicates. Rows are matched by id: a saved row is
+ * PUT in place, a new one POSTed, and only a row the curator explicitly removed is DELETEd
+ * (`*_removed`); nothing is inferred from a row's absence.
+ */
+export async function updateListing(
   id: string,
-  _prev: FormState,
+  _prev: ListingFormState,
   form: FormData,
-): Promise<FormState> {
+): Promise<ListingFormState> {
+  const saved: SavedRowIds = {
+    editionId: str(form, 'edition_id') ?? null,
+    keyDates: {},
+    resources: {},
+    faqs: {},
+    deleted: { keyDates: [], resources: [], faqs: [] },
+  };
+  const finish = () => {
+    revalidatePath(`/admin/competitions/${id}`);
+    revalidatePath('/admin/competitions');
+    revalidatePath('/admin/review');
+  };
+  const failed = (what: string, e: unknown): ListingFormState => {
+    finish();
+    const detail = e instanceof Error ? e.message : 'request failed';
+    return { ok: false, error: `${what} — ${detail}`, saved };
+  };
+
   try {
     await adminFetch<Competition>(`/competitions/${id}`, {
       method: 'PUT',
       body: buildCompetitionBody(form),
     });
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'update failed' };
+    return failed('Nothing was saved: the listing itself was refused', e);
   }
-  revalidatePath(`/admin/competitions/${id}`);
-  revalidatePath('/admin/competitions');
-  return { ok: true };
+
+  // The season: updated in place, or created for a listing that had none (the readiness gate
+  // hides those — domain-model §8a — so giving it a season is what makes it publishable).
+  let editionBody: Record<string, unknown>;
+  try {
+    editionBody = buildEditionBody(form);
+  } catch (e) {
+    return failed('The listing saved, but the season did not', e);
+  }
+  try {
+    if (saved.editionId) {
+      await adminFetch(`/editions/${saved.editionId}`, { method: 'PUT', body: editionBody });
+    } else {
+      const created = await adminFetch<Edition>(`/competitions/${id}/editions`, {
+        method: 'POST',
+        body: editionBody,
+      });
+      saved.editionId = created.id;
+    }
+  } catch (e) {
+    return failed('The listing saved, but the season did not', e);
+  }
+  const editionId = saved.editionId;
+
+  try {
+    await adminFetch(`/editions/${editionId}/regions`, {
+      method: 'PUT',
+      body: { regionIds: buildRegionIds(form) },
+    });
+  } catch (e) {
+    return failed('The listing and season saved, but the regions did not', e);
+  }
+
+  // Child rows: deletes first (a removed singleton must be gone before its replacement posts),
+  // then updates and creates in display order.
+  type Child = 'keyDates' | 'resources' | 'faqs';
+  const children: Array<{
+    kind: Child;
+    noun: string;
+    removedField: string;
+    edits: RowEdit[];
+    deletePath: (rowId: string) => string;
+    putPath: (rowId: string) => string;
+    postPath: string;
+  }> = [
+    {
+      kind: 'keyDates',
+      noun: 'a key date',
+      removedField: 'keydate_removed',
+      edits: buildKeyDateEdits(form),
+      deletePath: (rowId) => `/key-dates/${rowId}`,
+      putPath: (rowId) => `/key-dates/${rowId}`,
+      postPath: `/editions/${editionId}/key-dates`,
+    },
+    {
+      kind: 'resources',
+      noun: 'a prep resource',
+      removedField: 'resource_removed',
+      edits: buildResourceEdits(form),
+      deletePath: (rowId) => `/resources/${rowId}`,
+      putPath: (rowId) => `/resources/${rowId}`,
+      postPath: `/competitions/${id}/resources`,
+    },
+    {
+      kind: 'faqs',
+      noun: 'an FAQ entry',
+      removedField: 'faq_removed',
+      edits: buildFaqEdits(form),
+      deletePath: (rowId) => `/faqs/${rowId}`,
+      putPath: (rowId) => `/faqs/${rowId}`,
+      postPath: `/competitions/${id}/faqs`,
+    },
+  ];
+  for (const child of children) {
+    for (const rowId of removedIds(form, child.removedField)) {
+      try {
+        await adminFetch(child.deletePath(rowId), { method: 'DELETE' });
+        saved.deleted[child.kind].push(rowId);
+      } catch (e) {
+        return failed(`Most of the listing saved, but removing ${child.noun} was refused`, e);
+      }
+    }
+    for (const row of child.edits) {
+      try {
+        if (row.id) {
+          await adminFetch(child.putPath(row.id), { method: 'PUT', body: row.body });
+        } else {
+          const created = await adminFetch<{ id: string }>(child.postPath, {
+            method: 'POST',
+            body: row.body,
+          });
+          saved[child.kind][row.key] = created.id;
+        }
+      } catch (e) {
+        return failed(`Most of the listing saved, but ${child.noun} was refused`, e);
+      }
+    }
+  }
+
+  // The review decision, LAST — it only makes sense once everything it judges has landed. The
+  // same §8a moves the header used to offer status-only; here they ride with the save so a
+  // reviewer's fixes can never be left behind by the publish click.
+  const intent = form.get('listing_intent');
+  const next: ListingStatus | null =
+    intent === 'publish'
+      ? 'PUBLISHED'
+      : intent === 'review'
+        ? 'IN_REVIEW'
+        : intent === 'draft'
+          ? 'DRAFT'
+          : null;
+  if (next) {
+    try {
+      await adminFetch(`/competitions/${id}/listing-status`, {
+        method: 'PUT',
+        body: { status: next },
+      });
+    } catch (e) {
+      return failed('Everything saved, but the status change was refused', e);
+    }
+  }
+  finish();
+  const notice =
+    next === 'PUBLISHED'
+      ? 'Saved and published'
+      : next === 'IN_REVIEW'
+        ? 'Saved and submitted for review'
+        : next === 'DRAFT'
+          ? 'Saved and sent back to draft'
+          : 'Saved';
+  return { ok: true, saved, notice };
 }
 
 export async function setCompetitionVerification(id: string, state: string): Promise<void> {

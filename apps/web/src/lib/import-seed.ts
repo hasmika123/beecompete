@@ -17,6 +17,7 @@
  */
 
 import { DEFAULT_TIMEZONE, instantToZonedWallClock } from '@/lib/dates';
+import type { AwardJson } from '@/lib/competition-payload';
 import {
   COST_TYPES,
   EDITION_STATUSES,
@@ -85,10 +86,28 @@ export interface EditionSeed {
   prizeValue: string;
   prizeCurrency: string;
   ageCutoffDate: string;
+  /**
+   * EDIT ONLY (2026-09-05) — the saved awards rows (`attributes.awards`), so the unified listing
+   * form opens the Awards step on the season's real rows rather than the one legacy row the flat
+   * prize columns can seed. Absent for an extraction, which only ever states a prize summary.
+   */
+  awards?: AwardJson[];
+  /** Edit only — the stored `prize_display_mode`, so the card-line chooser reopens as saved. */
+  prizeDisplayMode?: string;
+  /** Edit only — the season this one's winners advance into (Q5); null/absent = standalone. */
+  advancesToEditionId?: string | null;
+  /**
+   * Edit only — every OTHER key of the season's attributes bag (not awards, not the display
+   * mode). The form has no control for these; they ride a hidden field and are merged back under
+   * the awards on save, so editing a season never silently drops what someone else stored there.
+   */
+  keepAttributes?: Record<string, unknown>;
 }
 
 /** One editable key-date row: wall clock in `timezone`, or TBD (R1-18). */
 export interface KeyDateSeed {
+  /** Edit only — the saved row's id, so a save updates it in place instead of adding a twin. */
+  id?: string;
   type: string;
   date: string;
   /** Calendar day the key date ends on, for a multi-day row; '' when it is a single day. */
@@ -110,6 +129,8 @@ export interface KeyDateSeed {
  * box at the same moment they swap the tagged URL in.
  */
 export interface ResourceSeed {
+  /** Edit only — the saved row's id (see {@link KeyDateSeed.id}). */
+  id?: string;
   title: string;
   url: string;
   type: string;
@@ -123,6 +144,8 @@ export interface ResourceSeed {
  * stated facts. A curator reads every one before approval.
  */
 export interface FaqSeed {
+  /** Edit only — the saved row's id (see {@link KeyDateSeed.id}). */
+  id?: string;
   question: string;
   answer: string;
 }

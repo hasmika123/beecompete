@@ -67,12 +67,17 @@ export interface TextRuleOptions {
   label?: string;
 }
 
-const missing = (label?: string) => `${label ?? 'This field'} is required.`;
+/**
+ * The one sentence a BLANK required field says under itself — exported so the form can say it for
+ * the required fields that are not text (dropdowns, pickers, row editors) in the same words the
+ * text rules use.
+ */
+export const missingMessage = (label?: string) => `${label ?? 'This field'} is required.`;
 
 /** Plain text: required-ness and length. */
 export function textRule(value: string, opts: TextRuleOptions): string | undefined {
   const v = value.trim();
-  if (v === '') return opts.required ? missing(opts.label) : undefined;
+  if (v === '') return opts.required ? missingMessage(opts.label) : undefined;
   if (v.length > opts.max) {
     return `${v.length.toLocaleString()} characters — the limit is ${opts.max.toLocaleString()}.`;
   }
@@ -152,7 +157,7 @@ export interface IntRuleOptions {
 /** A whole number inside inclusive bounds. '' is empty, not zero. */
 export function intRule(value: string, opts: IntRuleOptions): string | undefined {
   const v = value.trim();
-  if (v === '') return opts.required ? missing(opts.label) : undefined;
+  if (v === '') return opts.required ? missingMessage(opts.label) : undefined;
   if (!/^-?\d+$/.test(v)) return 'Enter a whole number.';
   const n = Number(v);
   if (n < opts.min || n > opts.max) return `Must be between ${opts.min} and ${opts.max}.`;
@@ -162,7 +167,7 @@ export function intRule(value: string, opts: IntRuleOptions): string | undefined
 /** Money: non-negative, ≤10 digits before the point and ≤2 after (`@Digits`). */
 export function moneyRule(value: string, opts: { required?: boolean; label?: string } = {}) {
   const v = value.trim();
-  if (v === '') return opts.required ? missing(opts.label) : undefined;
+  if (v === '') return opts.required ? missingMessage(opts.label) : undefined;
   if (!/^\d+(\.\d+)?$/.test(v)) return 'Enter an amount like 25 or 25.00 — no symbols.';
   const [whole = '', fraction = ''] = v.split('.');
   if (whole.replace(/^0+(?=\d)/, '').length > MONEY.maxIntegerDigits) {
@@ -175,7 +180,7 @@ export function moneyRule(value: string, opts: { required?: boolean; label?: str
 /** Exactly three uppercase letters (`@Pattern` on `currency` / `prizeCurrency`). */
 export function currencyRule(value: string, opts: { required?: boolean } = {}): string | undefined {
   const v = value.trim();
-  if (v === '') return opts.required ? missing('Currency') : undefined;
+  if (v === '') return opts.required ? missingMessage('Currency') : undefined;
   return /^[A-Z]{3}$/.test(v) ? undefined : 'Use a 3-letter code, like USD.';
 }
 

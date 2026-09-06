@@ -32,7 +32,7 @@ function diagnose(e: unknown): { title: string; hint: string } {
   if (e instanceof AdminApiError && (e.status === 401 || e.status === 403)) {
     return {
       title: `The admin API rejected the request (${e.status}).`,
-      hint: 'Make sure the API is running with the same ADMIN_API_TOKEN as apps/web/.env.local. For local dev, `./gradlew bootRun` defaults it to `dev-admin-token`, matching the checked-in .env.local.',
+      hint: 'The API and this app must carry the SAME ADMIN_API_TOKEN. The API defaults it to BLANK, and a blank token rejects every admin call (fail-closed), so it has to be passed in: `ADMIN_API_TOKEN=dev-admin-token ./gradlew bootRun`, with the same value in apps/web/.env.local (gitignored — create it if it is missing). On staging this screen is expected: staging deliberately has no admin token, because its /admin is not behind Cloudflare Access.',
     };
   }
   if (e instanceof AdminApiError) {

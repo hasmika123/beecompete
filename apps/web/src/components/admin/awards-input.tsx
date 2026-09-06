@@ -158,6 +158,7 @@ export function AwardsInput({
   initialMode = 'total',
   initialCustom = '',
   onPrizeLineChange,
+  invalid = false,
 }: {
   name: string;
   initial: AwardRow[];
@@ -173,6 +174,11 @@ export function AwardsInput({
   initialCustom?: string;
   /** Fires with whether the card will carry a prize line at all — feeds the completion ring. */
   onPrizeLineChange?: (hasLine: boolean) => void;
+  /**
+   * The field is showing an error (the awards question is required and unanswered) — the rows
+   * panel wears the danger border. The message itself is the caller's (FormField).
+   */
+  invalid?: boolean;
 }) {
   const [rows, setRows] = useState<AwardRow[]>(initial.length > 0 ? initial : [emptyRow(0)]);
   const [nextKey, setNextKey] = useState(Math.max(initial.length, 1));
@@ -261,7 +267,12 @@ export function AwardsInput({
       <input type="hidden" name={name} value={serialized} />
       {/* No overflow-hidden: the type + card-line Selects open ABSOLUTE popovers inside this
           panel, and clipping them cut the list off. The footer rounds its own bottom corners. */}
-      <div className="rounded-[var(--radius-field)] border border-border">
+      <div
+        className={cn(
+          'rounded-[var(--radius-field)] border',
+          invalid ? 'border-danger' : 'border-border',
+        )}
+      >
         <div className="divide-y divide-border">
           {rows.map((row, i) => (
             <div
@@ -352,9 +363,16 @@ export function AwardsInput({
                   {/* Static code, not a control: it is the UNIT on the amount beside it, the way
                     "kg" sits after a weight. Read-only text rather than a disabled Select because a
                     disabled control still reads as "something you could change" and still costs a
-                    glance. It keeps the select's old 5.25rem so the row's measured wrap point (see
-                    the widths note above) is unchanged. */}
-                  <span className="w-[5.25rem] shrink-0 text-sm text-muted tabular-nums">
+                    glance.
+                    ⚠ SIZED TO ITS CONTENT (owner 2026-09-05). It inherited the retired select's
+                    5.25rem "so the wrap point is unchanged", but the content is a 3-letter code in
+                    an 84px box, so a money row showed ~56px of dead space between "USD" and the ×N
+                    field. Intrinsic width leaves the row's own gap-2 as the only separation, and
+                    the freed pixels land in the Title, which is `flex-1`. Safe against the widths
+                    note above: that note guards against GROWING the base sizes (a flex line breaks
+                    on their sum), and this only shrinks them — the row wraps later now, not
+                    sooner. Nothing can truncate here either; the code is always three letters. */}
+                  <span className="shrink-0 text-sm text-muted tabular-nums">
                     {row.currency.toUpperCase() || DEFAULT_CURRENCY}
                   </span>
                 </div>
