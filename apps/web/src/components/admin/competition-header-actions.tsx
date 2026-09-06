@@ -99,8 +99,10 @@ export function CompetitionHeaderActions({
         </Button>
       ) : (
         <>
+          {/* Quiet (ghost) — these two RETIRE a listing, and a reviewer should not read them as
+              peers of the pause button beside them, let alone of the decision in the rail. */}
           <Button
-            variant="secondary"
+            variant="ghost"
             size="sm"
             disabled={pending}
             onClick={() => setMarkingDuplicate(true)}
@@ -108,7 +110,7 @@ export function CompetitionHeaderActions({
             Mark as duplicate…
           </Button>
           <Button
-            variant="secondary"
+            variant="ghost"
             size="sm"
             disabled={pending}
             onClick={async () => {

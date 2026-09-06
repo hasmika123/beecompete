@@ -10,6 +10,7 @@ import {
   Button,
   Check,
   Checkbox,
+  ChevronDown,
   GripHandle,
   cn,
   FilePdf,
@@ -36,7 +37,12 @@ import { RegionSelect } from '@/components/admin/region-select';
 import { StepPromptButton } from '@/components/admin/step-prompt-button';
 import { AwardsInput, awardRowsFromSeed } from '@/components/admin/awards-input';
 import { MAX_TAGS, TagsInput } from '@/components/admin/tags-input';
-import { enumLabel, enumOptions, keyDateOptions } from '@/components/admin/enum-labels';
+import {
+  enumLabel,
+  enumOptions,
+  keyDateOptions,
+  seasonStatusOptions,
+} from '@/components/admin/enum-labels';
 import { OrganizationForm } from '@/components/admin/organization-form';
 import { OrganizationCreatedModal } from '@/components/admin/organization-created-modal';
 import { FormErrorAlert } from '@/components/admin/form-error';
@@ -86,6 +92,7 @@ import {
   type Category,
   type CategoryTemplate,
   type Competition,
+  type Edition,
   type ListingFormState,
   type Organization,
   type Region,
@@ -451,6 +458,7 @@ export function CompetitionForm({
   importRecordId,
   seed,
   editionId: initialEditionId = null,
+  seasons = [],
   headerAction,
   headerNotice,
   organizerMatches = [],
@@ -475,6 +483,8 @@ export function CompetitionForm({
    * CREATES one from the season fields, and the form remembers the id it was given).
    */
   editionId?: string | null;
+  /** Edit only — every season of this listing, for the "advances to" chain on the Timeline step. */
+  seasons?: Edition[];
   /**
    * Create mode only — rendered on the title line, right-aligned (e.g. “Paste JSON”). Lives here
    * rather than above the form because create draws its own page header; a caller-owned row would
@@ -802,6 +812,9 @@ export function CompetitionForm({
     seed?.edition?.cycleLabel ?? (importing ? '' : String(new Date().getFullYear())),
   );
   const [editionStatus, setEditionStatus] = useState(seed?.edition?.status ?? '');
+  // The season this one's winners move on to (Q5) — a state round feeding a national one.
+  const [advancesTo, setAdvancesTo] = useState(seed?.edition?.advancesToEditionId ?? '');
+  const otherSeasons = seasons.filter((s) => s.id !== editionId);
   /**
    * Stamp what a save created or deleted back onto the rows, by the row keys the form itself
    * posted. Without this a second save would POST the same new rows again; the keys make the
@@ -1045,6 +1058,8 @@ export function CompetitionForm({
    * be switched from the panel header.
    */
   const [showAll, setShowAll] = useState(editing);
+  /** The "what's missing" list under the completion ring — opened by its subtitle, or by a blocked click. */
+  const [showMissing, setShowMissing] = useState(false);
 
   const enterRawMode = () => {
     setRawText(Object.keys(attributes).length ? JSON.stringify(attributes, null, 2) : '');
@@ -2559,9 +2574,9 @@ export function CompetitionForm({
             </>
           )}
           {editing && editionId === null && (
-            <Alert tone="warning" title="No season yet">
-              This listing has no running, so the public catalog hides it (the readiness gate). Fill
-              in the season below — saving creates it.
+            <Alert tone="warning" title="This season isn’t saved yet">
+              Fill in the season fields below — saving creates it. A listing with no live season
+              stays hidden from the public catalog.
             </Alert>
           )}
           {/* Import only: the cycle label is what decides whether an edition exists at all, so an
@@ -2585,13 +2600,13 @@ export function CompetitionForm({
             // On edit both are real fields (owner 2026-09-05): the label because a reviewer
             // must be able to correct "2025" to "2026", the status because the server only
             // derives it on create — an edit keeps whatever is stored unless someone changes it.
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <FormField
                 label="Season"
                 required
                 error={fieldMessage('cycleLabel')}
                 hintAs="icon"
-                hint="the running this page edits — a year, or a label like “2025–26”. Other seasons are linked above the form."
+                hint="the running this page edits — a year, or a label like “2025–26”. Switch seasons above the form."
               >
                 <Input
                   name="edition_cycleLabel"
@@ -2608,24 +2623,31 @@ export function CompetitionForm({
               >
                 <Select
                   name="edition_status"
-                  options={enumOptions(EDITION_STATUSES)}
+                  options={seasonStatusOptions(EDITION_STATUSES)}
                   placeholder="Derived from the key dates"
                   value={editionStatus}
                   onValueChange={setEditionStatus}
                 />
               </FormField>
-              {editionId && competition && (
-                <p className="text-xs text-muted sm:col-span-2">
-                  Advancement chain and the season’s raw attributes are on the{' '}
-                  <Link
-                    href={`/admin/competitions/${competition.id}/editions/${editionId}`}
-                    className="underline underline-offset-2 hover:text-foreground"
-                  >
-                    season settings page
-                  </Link>
-                  .
-                </p>
-              )}
+              {/* The advancement chain (Q5) lived on the retired per-season page; it is the one
+                  season fact that names ANOTHER season, hence the sibling list. */}
+              <FormField
+                label="Advances to"
+                hintAs="icon"
+                hint="the season this one’s winners move on to — a state round feeding the national one. None for a standalone season."
+              >
+                <Select
+                  name="edition_advancesToEditionId"
+                  options={[
+                    { value: '', label: 'None' },
+                    ...otherSeasons.map((s) => ({ value: s.id, label: s.cycleLabel })),
+                  ]}
+                  placeholder="None"
+                  value={advancesTo}
+                  onValueChange={setAdvancesTo}
+                  disabled={otherSeasons.length === 0}
+                />
+              </FormField>
             </div>
           ) : (
             <>
@@ -3343,48 +3365,108 @@ export function CompetitionForm({
   // Completion summary — crowns the step rail rather than floating in its own card beside it, so
   // the overall state and the steps that add up to it read as one timeline. Which step holds the
   // next gap is left to the rail's own amber flags; repeating it here just crowded the header.
+  /**
+   * WHAT is missing, by step (owner 2026-09-05) — the list behind the ring's subtitle. It used to
+   * be a run-on sentence under the submit ("Needs cover image, student status, …"), and a second
+   * "N fields still empty" line above that. Now the ring's own subtitle opens a grouped list, each
+   * entry a jump to its step, and the footer only ever says whether the last click was refused.
+   */
+  const missingByStep = steps
+    .map((s) => ({
+      id: s.id,
+      label: s.label,
+      items: [
+        ...requiredFields.filter((r) => !r.ok && r.stepId === s.id),
+        ...rowIssues.filter((r) => !r.ok && r.stepId === s.id),
+      ],
+    }))
+    .filter((g) => g.items.length > 0);
+  const missingCount = missingByStep.reduce((n, g) => n + g.items.length, 0);
   const completionSummary = (
-    <div className="flex items-center gap-3">
-      <ProgressRing
-        size={56}
-        thickness={6}
-        value={filledCount}
-        max={totalRequired}
-        label={
-          importing || editing
-            ? `${filledCount} of ${totalRequired} listing-completeness fields filled`
-            : `${filledCount} of ${totalRequired} required fields complete`
-        }
-      >
-        {allComplete ? (
-          <Check weight="bold" className="size-6 text-success" />
-        ) : (
-          <span className="text-base font-semibold tabular-nums text-foreground">
-            {filledCount}
-            <span className="text-xs text-muted">/{totalRequired}</span>
-          </span>
-        )}
-      </ProgressRing>
-      <div className="min-w-0">
-        <div className="text-sm font-semibold text-foreground">
-          {allComplete
-            ? importing || editing
-              ? 'Complete listing'
-              : 'Ready to create'
-            : importing || editing
-              ? 'Gaps to fill in'
-              : 'Almost ready'}
-        </div>
-        <div className="mt-0.5 text-xs text-muted">
-          {allComplete
-            ? 'All required fields filled'
-            : importing
-              ? `${remaining.length} field${remaining.length === 1 ? '' : 's'} the page didn’t give us`
+    <div>
+      <div className="flex items-center gap-3">
+        <ProgressRing
+          size={56}
+          thickness={6}
+          value={filledCount}
+          max={totalRequired}
+          label={
+            importing || editing
+              ? `${filledCount} of ${totalRequired} listing-completeness fields filled`
+              : `${filledCount} of ${totalRequired} required fields complete`
+          }
+        >
+          {allComplete ? (
+            <Check weight="bold" className="size-6 text-success" />
+          ) : (
+            <span className="text-base font-semibold tabular-nums text-foreground">
+              {filledCount}
+              <span className="text-xs text-muted">/{totalRequired}</span>
+            </span>
+          )}
+        </ProgressRing>
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-foreground">
+            {allComplete
+              ? importing || editing
+                ? 'Complete listing'
+                : 'Ready to create'
               : editing
-                ? `${remaining.length} field${remaining.length === 1 ? '' : 's'} to fill before publishing`
-                : `${remaining.length} required field${remaining.length === 1 ? '' : 's'} left`}
+                ? 'Not ready to publish'
+                : importing
+                  ? 'Gaps to fill in'
+                  : 'Almost ready'}
+          </div>
+          <div className="mt-0.5 text-xs text-muted">
+            {allComplete ? (
+              'All required fields filled'
+            ) : (
+              <button
+                type="button"
+                aria-expanded={showMissing}
+                onClick={() => setShowMissing((v) => !v)}
+                className="inline-flex items-center gap-1 text-left hover:text-foreground"
+              >
+                {importing
+                  ? `${missingCount} field${missingCount === 1 ? '' : 's'} the page didn’t give us`
+                  : `${missingCount} field${missingCount === 1 ? '' : 's'} to fill`}
+                <ChevronDown
+                  aria-hidden="true"
+                  className={cn('size-3.5 transition-transform', showMissing && 'rotate-180')}
+                />
+              </button>
+            )}
+          </div>
         </div>
       </div>
+      {showMissing && !allComplete && (
+        <ul className="mt-3 grid gap-2.5 border-t border-border pt-3">
+          {missingByStep.map((g) => (
+            <li key={g.id}>
+              <button
+                type="button"
+                onClick={() => goToStep(g.id)}
+                className="text-[11px] font-semibold tracking-wide text-muted uppercase hover:text-foreground"
+              >
+                {g.label}
+              </button>
+              <ul className="mt-0.5 grid gap-0.5 text-xs">
+                {g.items.map((item) => (
+                  <li key={item.key}>
+                    <button
+                      type="button"
+                      onClick={() => goToStep(g.id)}
+                      className="text-left text-foreground hover:underline"
+                    >
+                      {item.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 
@@ -3408,14 +3490,20 @@ export function CompetitionForm({
     ? 'approved'
     : editing
       ? submitAttempted === 'publish'
-        ? 'published or sent for review'
+        ? listingStatus === 'DRAFT'
+          ? 'published or submitted'
+          : 'published'
         : 'saved'
       : 'published';
   const submitAction = (
     <div className="grid gap-2">
       {editing ? (
-        <>
-          {canDecide && (
+        canDecide ? (
+          // The DECISION reads as one block — the two outcomes first, the plain save under a
+          // rule — and a single caption replaces the "Save &" on every label (owner 2026-09-05:
+          // "Save & send back to draft" read as two actions). Every button saves first.
+          <>
+            <p className="text-[11px] font-semibold tracking-wide text-muted uppercase">Decision</p>
             <Button
               type="submit"
               name="listing_intent"
@@ -3425,45 +3513,56 @@ export function CompetitionForm({
               onClick={guardSubmit(true)}
               className="w-full"
             >
-              {pending ? 'Saving…' : 'Save & publish'}
+              {pending ? 'Saving…' : 'Publish'}
             </Button>
-          )}
+            {listingStatus === 'IN_REVIEW' ? (
+              <Button
+                type="submit"
+                name="listing_intent"
+                value="draft"
+                variant="secondary"
+                disabled={pending}
+                onClick={guardSubmit(false)}
+                className="w-full"
+              >
+                Send back to draft
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                name="listing_intent"
+                value="review"
+                variant="secondary"
+                disabled={pending}
+                onClick={guardSubmit(true)}
+                className="w-full"
+              >
+                Submit for review
+              </Button>
+            )}
+            <div className="my-1 border-t border-border" />
+            <Button
+              type="submit"
+              variant="ghost"
+              disabled={pending}
+              onClick={guardSubmit(false)}
+              className="w-full"
+            >
+              {pending ? 'Saving…' : 'Save without deciding'}
+            </Button>
+            <p className="text-center text-xs text-muted">Every button saves your edits first.</p>
+          </>
+        ) : (
           <Button
             type="submit"
-            variant={canDecide ? 'secondary' : 'primary'}
+            variant="primary"
             disabled={pending}
             onClick={guardSubmit(false)}
             className="w-full"
           >
             {pending ? 'Saving…' : 'Save changes'}
           </Button>
-          {canDecide && listingStatus === 'IN_REVIEW' && (
-            <Button
-              type="submit"
-              name="listing_intent"
-              value="draft"
-              variant="ghost"
-              disabled={pending}
-              onClick={guardSubmit(false)}
-              className="w-full"
-            >
-              Save &amp; send back to draft
-            </Button>
-          )}
-          {canDecide && listingStatus === 'DRAFT' && (
-            <Button
-              type="submit"
-              name="listing_intent"
-              value="review"
-              variant="ghost"
-              disabled={pending}
-              onClick={guardSubmit(true)}
-              className="w-full"
-            >
-              Save &amp; submit for review
-            </Button>
-          )}
-        </>
+        )
       ) : (
         <>
           <Button
@@ -3517,17 +3616,20 @@ export function CompetitionForm({
         </>
       )}
       {submitAttempted !== false && attemptedRemaining.length > 0 ? (
-        // After a blocked click, name what that click was missing — and jump to it.
+        // After a blocked click: the count and the verb, and the click opens the list under the
+        // ring and jumps to the first gap. The full field list used to be spelled out HERE as one
+        // run-on sentence; it lives in the grouped list now.
         <button
           type="button"
           onClick={() => {
+            setShowMissing(true);
             const first = attemptedRemaining[0];
             if (first) goToStep(first.stepId);
           }}
           className="text-left text-xs font-medium text-danger hover:underline"
         >
-          Needs {attemptedRemaining.map((r) => r.label.toLowerCase()).join(', ')} before it can be{' '}
-          {attemptedVerb}
+          Can’t be {attemptedVerb} yet — {attemptedRemaining.length} field
+          {attemptedRemaining.length === 1 ? '' : 's'} to fill, listed under the ring above.
         </button>
       ) : importing && blockingRemaining.length > 0 ? (
         // Import names what the server will refuse up front, because there the button is NOT
@@ -3556,11 +3658,6 @@ export function CompetitionForm({
         <span className="text-xs text-muted">
           {remaining.length} field{remaining.length === 1 ? '' : 's'} still empty — you can approve
           anyway and fill them in on the listing.
-        </span>
-      ) : editing && !allComplete ? (
-        <span className="text-xs text-muted">
-          {remaining.length} field{remaining.length === 1 ? '' : 's'} still empty — saving is fine;
-          publishing needs them.
         </span>
       ) : null}
     </div>

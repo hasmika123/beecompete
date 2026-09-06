@@ -323,7 +323,12 @@ export function buildEditionBody(form: FormData): Record<string, unknown> {
   }
   const { awards: _awards, prize_display_mode: _mode, ...rest } = kept;
   const merged = { ...rest, ...(asRecordOrNull(edition.attributes) ?? {}) };
-  return { ...edition, attributes: Object.keys(merged).length > 0 ? merged : null };
+  return {
+    ...edition,
+    // The advancement chain (Q5) — edit only; the create form has no sibling season to name.
+    advancesToEditionId: str(form, 'edition_advancesToEditionId') ?? null,
+    attributes: Object.keys(merged).length > 0 ? merged : null,
+  };
 }
 
 /**

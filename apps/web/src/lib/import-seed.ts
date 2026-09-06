@@ -94,6 +94,8 @@ export interface EditionSeed {
   awards?: AwardJson[];
   /** Edit only — the stored `prize_display_mode`, so the card-line chooser reopens as saved. */
   prizeDisplayMode?: string;
+  /** Edit only — the season this one's winners advance into (Q5); null/absent = standalone. */
+  advancesToEditionId?: string | null;
   /**
    * Edit only — every OTHER key of the season's attributes bag (not awards, not the display
    * mode). The form has no control for these; they ride a hidden field and are merged back under

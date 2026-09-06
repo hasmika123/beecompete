@@ -122,6 +122,7 @@ export function seedFromListing({
       ageCutoffDate: e.ageCutoffDate ?? '',
       awards: awardsOf(bag),
       prizeDisplayMode: typeof storedMode === 'string' ? storedMode : undefined,
+      advancesToEditionId: e.advancesToEditionId,
       keepAttributes,
     },
     // Shown as the wall clock in the row's OWN zone — the day the curator typed, not the server's

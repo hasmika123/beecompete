@@ -655,8 +655,10 @@ curator explicitly removed), then applies the review decision: the rail offers *
 machine, so a reviewer’s fixes can never be left behind by the decision click. Gates: a plain save
 refuses only what the server refuses (`EDIT_BLOCKING_KEYS`); publish / submit-for-review use the
 create form’s full checklist. Unlist / Re-list, Archive, Mark-as-duplicate stay in the page header.
-Other seasons keep the per-edition page (advancement chain, raw attributes), linked from a season
-strip under the title. The `/admin/review` queue still lists IN_REVIEW rows with inline
+Every season, old or new, opens in this same form via `?season=<id|new>` (a season switcher
+under the title; the old per-edition routes redirect there), so older seasons never show a
+different field layout. The advancement chain moved onto the Timeline step; the season’s other
+attributes ride through a save untouched. The `/admin/review` queue still lists IN_REVIEW rows with inline
 publish / send-back; the row’s name opens this page.
 
 **Deferred seams — design now, build later:**

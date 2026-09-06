@@ -541,3 +541,16 @@ describe('buildEditionBody — the season bag round-trips', () => {
     );
   });
 });
+
+describe('buildEditionBody — advancement chain', () => {
+  it('posts the chosen season, and null when none is chosen', () => {
+    expect(
+      buildEditionBody(form({ ...BASE, edition_advancesToEditionId: 'ed-national' }))
+        .advancesToEditionId,
+    ).toBe('ed-national');
+    expect(buildEditionBody(form(BASE)).advancesToEditionId).toBeNull();
+    expect(
+      buildEditionBody(form({ ...BASE, edition_advancesToEditionId: '' })).advancesToEditionId,
+    ).toBeNull();
+  });
+});
