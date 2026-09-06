@@ -1,8 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft } from '@beecompete/ui';
+import { ArrowLeft, ExternalLink } from '@beecompete/ui';
 import { PageHeader } from '@/components/admin/page-header';
 import { ImportRecordMeta } from '@/components/admin/import-record-meta';
+import { ImportOriginBadge } from '@/components/admin/status-badges';
+import { ConfidenceMeter } from '@/components/admin/confidence-meter';
+import { formatDate } from '@/lib/dates';
 import { ImportReview } from '@/components/admin/import-review';
 import { ReviewOutcome } from '@/components/admin/review-outcome';
 import { AdminApiError, adminFetch } from '@/lib/admin-api';
@@ -69,9 +72,36 @@ export default async function ReviewImportPage({ params }: { params: Promise<{ i
   return (
     <>
       <BackLink />
+      {/* The RECORD names itself (owner 2026-09-05): the extraction's own name on the title line
+          with its origin beside it, and the provenance a curator judges by — source page,
+          extraction confidence, when it landed — as the quiet meta strip under it. It was a
+          generic "Review import" heading, a sentence restating what the form below plainly is,
+          and a separate labelled block for those four facts. */}
       <PageHeader
-        title="Review import"
-        description="The listing form, pre-filled from the extraction. Approving creates the competition."
+        title={seed.competition.name || 'Untitled extraction'}
+        badge={<ImportOriginBadge origin={record.origin} />}
+        meta={
+          <>
+            {record.sourceUrl ? (
+              <a
+                href={record.sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex max-w-[52ch] items-center gap-1 truncate align-bottom underline underline-offset-2 hover:text-foreground"
+              >
+                <span className="truncate">{record.sourceUrl}</span>
+                <ExternalLink aria-hidden="true" className="size-3.5 shrink-0" />
+                <span className="sr-only">(opens the source page in a new tab)</span>
+              </a>
+            ) : (
+              <span>No source page</span>
+            )}
+            <span aria-hidden="true">·</span>
+            <ConfidenceMeter value={record.confidence} />
+            <span aria-hidden="true">·</span>
+            <span>Queued {formatDate(record.createdAt)}</span>
+          </>
+        }
       />
       <ImportReview
         record={record}

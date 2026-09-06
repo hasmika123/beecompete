@@ -460,6 +460,7 @@ export function CompetitionForm({
   seed,
   editionId: initialEditionId = null,
   seasons = [],
+  decisionExtra,
   headerAction,
   headerNotice,
   organizerMatches = [],
@@ -486,6 +487,12 @@ export function CompetitionForm({
   editionId?: string | null;
   /** Edit only — every season of this listing, for the "advances to" chain on the Timeline step. */
   seasons?: Edition[];
+  /**
+   * Import only — the OTHER decision, rendered in the rail under Approve (the reject action).
+   * A slot rather than a built-in because rejecting is not a submit of this form and carries its
+   * own confirm modal; the form only owns where it sits.
+   */
+  decisionExtra?: ReactNode;
   /**
    * Create mode only — rendered on the title line, right-aligned (e.g. “Paste JSON”). Lives here
    * rather than above the form because create draws its own page header; a caller-owned row would
@@ -1129,12 +1136,13 @@ export function CompetitionForm({
    */
   const [submitAttempted, setSubmitAttempted] = useState<false | 'save' | 'publish'>(false);
   /**
-   * Edit opens with EVERY step visible (owner 2026-09-05): a reviewer reads the whole listing top
-   * to bottom, and the rail still carries the per-step state and jumps to a section. Create and
-   * import keep one step at a time — there the work is filling in, not reading back. Either can
+   * BOTH REVIEW SURFACES open with EVERY step visible (owner 2026-09-05): a reviewer reads a
+   * whole listing top to bottom — someone else's extraction on import, someone else's submission
+   * on edit — and the rail still carries the per-step state and jumps to a section. Only CREATE
+   * keeps one step at a time, because there the work is filling in, not reading back. Either can
    * be switched from the panel header.
    */
-  const [showAll, setShowAll] = useState(editing);
+  const [showAll, setShowAll] = useState(mode !== 'create');
   /** The "what's missing" list under the completion ring — opened by its subtitle, or by a blocked click. */
   const [showMissing, setShowMissing] = useState(false);
 
@@ -3513,7 +3521,9 @@ export function CompetitionForm({
                 className="inline-flex items-center gap-1 text-left hover:text-foreground"
               >
                 {importing
-                  ? `${missingCount} field${missingCount === 1 ? '' : 's'} the page didn’t give us`
+                  ? // Import can approve with these still empty (only IMPORT_BLOCKING_KEYS gate
+                    // it), so the count says what it is rather than what it stops.
+                    `${missingCount} field${missingCount === 1 ? '' : 's'} the page didn’t give us`
                   : `${missingCount} field${missingCount === 1 ? '' : 's'} to fill`}
                 <ChevronDown
                   aria-hidden="true"
@@ -3648,6 +3658,14 @@ export function CompetitionForm({
         )
       ) : (
         <>
+          {/* Import review is a DECISION too — approve or reject — and it reads as one block, the
+              same as the listing page's (owner 2026-09-05). Reject arrives through
+              `decisionExtra`: it is not a submit of this form, and it lives in its own client
+              component with the confirm modal. It used to sit in a panel at the foot of the page,
+              a scroll away from the button it is the alternative to. */}
+          {importing && (
+            <p className="text-[11px] font-semibold tracking-wide text-muted uppercase">Decision</p>
+          )}
           <Button
             type="submit"
             variant="brand"
@@ -3663,6 +3681,7 @@ export function CompetitionForm({
                 ? 'Saving…'
                 : 'Publish now'}
           </Button>
+          {importing && decisionExtra}
           {/* §8a lifecycle split (item 14): the same submit, parameterized by where the listing
               starts. Buttons post `listing_intent`; the server action maps it to listingStatus.
               "Submit for review" parks it on the review queue (/admin/review) for a second pair
@@ -3737,11 +3756,6 @@ export function CompetitionForm({
         >
           Fix the errors in Eligibility to continue
         </button>
-      ) : importing && !allComplete ? (
-        <span className="text-xs text-muted">
-          {remaining.length} field{remaining.length === 1 ? '' : 's'} still empty — you can approve
-          anyway and fill them in on the listing.
-        </span>
       ) : null}
     </div>
   );
