@@ -5,8 +5,7 @@ import { useState } from 'react';
 import { Alert, cn, Tab, TabList, TabPanel, Tabs, Warning } from '@beecompete/ui';
 import { CompetitionForm } from '@/components/admin/competition-form';
 import { ImportRawPayloadForm } from '@/components/admin/import-raw-payload-form';
-import { ImportRecordMeta } from '@/components/admin/import-record-meta';
-import { ImportRejectPanel } from '@/components/admin/import-reject-panel';
+import { ImportRejectAction } from '@/components/admin/import-reject-action';
 import { describeReasons, hardCompetitionMatch } from '@/lib/duplicates';
 import type { ImportSeed, ImportSeedWarning } from '@/lib/import-seed';
 import type {
@@ -118,8 +117,6 @@ export function ImportReview({
 
   return (
     <div className="grid gap-6">
-      <ImportRecordMeta record={record} />
-
       {/* The record-level verdict (DQ4): what the queue flagged, spelled out with links, before the
           curator fills in a form they may not be able to save. The FORM below runs the same check
           live as they edit and carries the "not a duplicate" checkbox — this is the headline. */}
@@ -173,14 +170,13 @@ export function ImportReview({
             templates={templates}
             regions={regions}
             organizerMatches={initialOrganizerMatches}
+            decisionExtra={<ImportRejectAction recordId={record.id} />}
           />
         </TabPanel>
         <TabPanel value="raw">
           <ImportRawPayloadForm record={record} initialOrganizerMatches={initialOrganizerMatches} />
         </TabPanel>
       </Tabs>
-
-      <ImportRejectPanel recordId={record.id} />
     </div>
   );
 }
