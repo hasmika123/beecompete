@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, MouseEvent, ReactNode } from 'react';
 import {
   Alert,
@@ -765,7 +765,7 @@ export function CompetitionForm({
    * (`keydate_0_*`, `keydate_1_*`, …), which is harmless — `buildKeyDates` only needs them
    * contiguous, and the server re-sorts anyway.
    */
-  const orderedKeyDateRows = keyDateRows
+  const chronologicalKeyDateRows = keyDateRows
     .map((row, seq) => ({ row, seq }))
     .sort((a, b) => {
       const at = a.row.tbd || !a.row.date ? null : `${a.row.date}T${a.row.time || '23:59'}`;
@@ -776,6 +776,63 @@ export function CompetitionForm({
       return at < bt ? -1 : 1;
     })
     .map(({ row }) => row);
+
+  /**
+   * ORDER IS HELD WHILE A DATE OR TIME FIELD IS IN USE (owner 2026-09-03). A native date input
+   * reports every intermediate value — each segment typed, each arrow press, each day walked
+   * through in the browser's own calendar — and React's onChange fires on all of them. Sorting on
+   * those made the row travel up and down the list while the curator was still deciding, which
+   * moved the very field they were typing into.
+   *
+   * So while focus is inside one of the two fields the sort reads (date, time), the list keeps
+   * the order it had when that field was entered: `heldKeyDateOrder` is a snapshot of the
+   * rendered keys, and any row outside it (one added mid-edit) falls to the end in date order.
+   * The chronology re-asserts itself the moment focus leaves the field — the value is settled by
+   * then, which is what "a date was actually chosen" means for a native picker.
+   *
+   * Released on a timer rather than straight out of onBlur, so that moving date → time (or on to
+   * the next row) doesn't re-sort in the gap between blur and focus and slide the target out from
+   * under the pointer. The next focus cancels it; anything else lets it through a tick later.
+   */
+  const [heldKeyDateOrder, setHeldKeyDateOrder] = useState<number[] | null>(null);
+  const keyDateOrderRelease = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (keyDateOrderRelease.current) clearTimeout(keyDateOrderRelease.current);
+    },
+    [],
+  );
+
+  const orderedKeyDateRows = (() => {
+    const held = heldKeyDateOrder;
+    if (!held) return chronologicalKeyDateRows;
+    const rank = (row: KeyDateRow) => {
+      const i = held.indexOf(row.key);
+      return i < 0 ? held.length : i;
+    };
+    return chronologicalKeyDateRows
+      .map((row, seq) => ({ row, seq }))
+      .sort((a, b) => rank(a.row) - rank(b.row) || a.seq - b.seq)
+      .map(({ row }) => row);
+  })();
+
+  /** Entering a date/time field: freeze the order as it stands (and cancel any pending release). */
+  const holdKeyDateOrder = () => {
+    if (keyDateOrderRelease.current) {
+      clearTimeout(keyDateOrderRelease.current);
+      keyDateOrderRelease.current = null;
+    }
+    const snapshot = orderedKeyDateRows.map((r) => r.key);
+    setHeldKeyDateOrder((current) => current ?? snapshot);
+  };
+  /** Leaving one: let the chronology re-assert itself, a tick later (see the note above). */
+  const releaseKeyDateOrder = () => {
+    if (keyDateOrderRelease.current) clearTimeout(keyDateOrderRelease.current);
+    keyDateOrderRelease.current = setTimeout(() => {
+      keyDateOrderRelease.current = null;
+      setHeldKeyDateOrder(null);
+    }, 0);
+  };
 
   // Controlled selections — feed both the form post and the required-field ring.
   const [categoryId, setCategoryId] = useState(c?.categoryId ?? '');
@@ -2405,6 +2462,10 @@ export function CompetitionForm({
                             disabled={row.tbd}
                             value={row.date}
                             onChange={(e) => patchKeyDateRow(row.key, { date: e.target.value })}
+                            // The sort reads this field, so the list holds still while it is in
+                            // use — see heldKeyDateOrder.
+                            onFocus={holdKeyDateOrder}
+                            onBlur={releaseKeyDateOrder}
                             className="w-full min-w-0"
                           />
                         </FormField>
@@ -2443,6 +2504,10 @@ export function CompetitionForm({
                             disabled={row.tbd}
                             value={row.time}
                             onChange={(e) => patchKeyDateRow(row.key, { time: e.target.value })}
+                            // Same hold as the date field: time is the tiebreak inside a day, so
+                            // scrubbing it re-sorted the row mid-edit too.
+                            onFocus={holdKeyDateOrder}
+                            onBlur={releaseKeyDateOrder}
                             className="w-full min-w-0"
                           />
                         </FormField>
