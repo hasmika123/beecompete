@@ -72,9 +72,11 @@ Every external account the project depends on. All free-tier unless noted — **
 - Push to `main` → **deploy-staging** builds the image (`:sha`) → refreshes staging automatically. Gated by repo variable `DEPLOY_ENABLED=true`.
 - Push a release tag → **deploy-prod** promotes the **exact same image** to prod:
   ```
-  git tag R1.3 && git push origin R1.3
+  # the NEXT tag after the current one — never reuse a tag, a pushed tag is a release
+  git tag --sort=-creatordate | head -1   # what prod is running now
+  git tag R1.14 && git push origin R1.14  # example: bump the last number
   ```
-- Current prod tag: **R1.2**. The `production` GitHub Environment must keep its **tag rule `R*`** or tag deploys are rejected.
+- The `production` GitHub Environment must keep its **tag rule `R*`** or tag deploys are rejected.
 - The **edge Caddy stack is NOT in CI** — after editing `infra/Caddyfile`, copy it to `~/beecompete-edge/` on the box and `caddy reload` manually.
 
 **On the VPS** (login: `deploy@74.208.212.158`, SSH key-only; `root` also works with `~/.ssh/beecompete_admin`):
@@ -326,8 +328,10 @@ bound**, Neon PITR **enabled** (done at the plan level 2026-08-20) + one tested 
 ## 12. Command cheatsheet
 
 ```bash
-# Deploy to prod (promotes the staging-tested image)
-git tag R1.3 && git push origin R1.3
+# Deploy to prod (promotes the staging-tested image). Check what is live first — a tag is a
+# release and is never reused.
+git tag --sort=-creatordate | head -1
+git tag R1.14 && git push origin R1.14  # example: the next number up
 
 # SSH to the VPS. The -i is REQUIRED: the keys use non-default names, so OpenSSH auto-offers
 # nothing and a bare `ssh deploy@…` fails with "Permission denied (publickey)".

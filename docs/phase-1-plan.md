@@ -12,7 +12,7 @@
 > **S2/S3 seeding done:** the 448-competition master index (`docs/seeding/`, incl. the 2026-07-29 S2b/S2c extensions) + the S3 extraction pipeline
 > (`tools/seeding/`); S4 curation (the ≥ 200-live content gate) is the remaining seeding work.
 > **Deployed:** IONOS VPS behind a shared edge Caddy, build-once-promote (staging on a `main` push, prod
-> on an `R*` tag; currently **R1.2**) — see `setup-runbook.md` "Current deployment — AS BUILT".
+> on an `R*` tag) — see `setup-runbook.md` "Current deployment — AS BUILT"; `git tag` names the live one.
 > **R1-17 activation DONE (2026-07-18):** privacy-first analytics, Brevo captures, admin lockdown
 > (Cloudflare Access + `ADMIN_API_TOKEN`), Cloudflare WAF + rate-limiting, UptimeRobot, and Sentry
 > (web + API) are all live; Neon logical backups scripted (`scripts/backup-neon.sh`; paid-tier PITR
