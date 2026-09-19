@@ -125,11 +125,22 @@ job types; revisit only at thousands of jobs/second.
   `Logo` (wordmark) + `LogoMark` (icon-only) **components** live in `packages/ui`; the raster PNG art
   they render is served from **`apps/web/public/brand/`** (`{logo,mark}-{light,dark}.png`). Both theme
   variants sit in the DOM and CSS swaps them via the class-based `.dark` selector — SSR-safe and
-  flash-free (no `useTheme`). The favicon (`apps/web/src/app/icon.svg`) is a self-contained SVG that
-  embeds both icon marks and swaps on `prefers-color-scheme`; the OG share cards embed the wordmark as
-  a base64 data URI (`lib/og-wordmark.ts`) since `next/og` can't fetch app assets at render time. The
-  owner-supplied art is **raster PNG** (not true vector) — adequate for every current surface; a large
-  (≥512px) app/PWA icon would need a higher-res or vector source.
+  flash-free (no `useTheme`). The OG share cards embed the wordmark as a base64 data URI
+  (`lib/og-wordmark.ts`) since `next/og` can't fetch app assets at render time. The owner-supplied art
+  is **raster PNG** (not true vector) — adequate for every current surface, and the reason the app
+  icon set tops out at 192px; a larger app/PWA icon would need a higher-res or vector source.
+- **App icon set (rev 2026-09-19):** `apps/web/src/app/{favicon.ico,icon.png,icon.svg,apple-icon.png}`
+  — 16/32/48 in the ICO, 192 PNG, 180 Apple — all **generated** from `mark-light.png` by
+  `scripts/generate-app-icons.mjs`. Regenerate after a mark change; never hand-edit the outputs. Every
+  one is the colour mark on a **full-bleed white disc with transparent corners** (owner-chosen). Two
+  reasons: Google only shows a favicon in search results when it can fetch a **square** icon (and it
+  falls back to `/favicon.ico`, which used to 404 — the old hand-written `icon.svg` inherited the
+  mark's non-square 171×150 box), and the white disc is what keeps the mark legible on a **dark tab
+  strip**. `icon.svg` stays the tab icon and is now the vector twin of the rasters: **same geometry,
+  disc in both themes, no `prefers-color-scheme` branch** — one mark on every surface. `mark-dark.png`
+  is no longer used there; its white line art dissolved at 16px. The Apple icon is opaque white rather
+  than transparent because iOS composites a transparent touch icon onto black before applying its own
+  mask.
 - **Client validation:** field checks mirror server rules for UX; **server-side Bean Validation is the real enforcement.**
 - **SEO:** semantic markup, metadata/OpenGraph, sitemaps, per-competition/-category landing pages, clean URLs. Submit sitemap to **Google Search Console + Bing Webmaster Tools** at launch.
 

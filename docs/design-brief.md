@@ -217,9 +217,13 @@ The hero design pass is therefore two checkpoints: 🧑 approve the **blueprint*
 ## 6. Assets *(inventory — placeholders until finals, swapped in place)*
 
 - Logo/icon/favicon (light + dark variants) — ✅ **finals in (owner-supplied 2026-07-16)**: `Logo` +
-  `LogoMark` components in `packages/ui`; raster art served from `apps/web/public/brand/`; adaptive
-  `icon.svg` favicon; OG cards embed the wordmark. Supersedes the placeholder wordmark (§1 references,
-  architecture §8).
+  `LogoMark` components in `packages/ui`; raster art served from `apps/web/public/brand/`; OG cards
+  embed the wordmark. Supersedes the placeholder wordmark (§1 references, architecture §8).
+  **App icon treatment (owner, 2026-09-19):** the colour bee on a **full-bleed white disc with
+  transparent corners**, across favicon/tab/Apple icons — the disc is what makes the mark read on a
+  dark browser tab strip, where the white-line `mark-dark.png` disappeared. The disc shows in **both
+  themes** (owner-confirmed): one mark everywhere, and it matches what Google renders in search
+  results. Generated, not hand-drawn — see architecture §8 and `scripts/generate-app-icons.mjs`.
 - **Category cover-art system** (owner-approved 2026-07-07): generated category-based default
   covers for CompetitionCards — built alongside F7; real per-competition art overrides when available.
 - **Landing hero image cards** *(supersedes the hero SVG plan, 2026-07-08 — blueprints #25)*:
