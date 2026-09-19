@@ -140,8 +140,19 @@ fixes + the `/api/healthz/db` monitoring probe are in `setup-runbook.md` (as-bui
    are still org front doors. Read `docs/seeding/README.md` → "URL quality" before planning a bulk
    run; 5 rows are `robots.txt`-disallowed and must never be extracted, and ten top-50 rows carry a
    `URL AUDIT:` note explaining why no URL edit can fix them.
-3. **Flip indexing** — set `SEARCH_INDEXING=on` in `~/beecompete-prod/.env` + recreate web, verify
-   `robots.txt` / a page's `index,follow`, and submit `sitemap.xml` to Google + Bing.
+
+**Indexing flip — DONE (2026-09-18).** `SEARCH_INDEXING=on` is live in prod: `beecompete.com/robots.txt`
+serves `Allow: /` + `Disallow: /admin` + the `Sitemap:` line, pages carry `index, follow`, and staging
+still serves `Disallow: /` (its compose has no way to receive the flag). `sitemap.xml` — **111 URLs**
+(94 listings + 10 category hubs + 7 static/legal) — is submitted to Google Search Console and reads
+**Success**. The sitemap is generated, not hand-maintained: new listings appear automatically within
+the hour (`revalidate = 3600`), so no per-URL submission is ever needed.
+**Note the ordering:** the site is crawlable while items 1–2 above are still open —
+`LEGAL_REVIEW_PENDING` is still `true` (legal pages indexed as drafts) and the catalog is at 94 of
+the 200-listing target.
+**Gotcha:** Cloudflare caches `robots.txt` for 4 h (`max-age=14400`) and each edge PoP caches
+independently — after any change, purge the Cloudflare cache before trusting a `curl`. A stale
+`Disallow: /` copy misled a check on 2026-09-18, hours after the flip was already live.
 
 **Deferred backlog:** `docs/sweep-remediation-plan.md` (R2 + Phase-3 items — headline: **§19
 season-owns-the-listing rebuild**, owner 2026-09-01, `domain-model.md` §8c) · PR C (hero-card image
