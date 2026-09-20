@@ -168,6 +168,17 @@ viral day costs cents. What cost ~$19/mo was a compute that never slept, with no
   so every filtered search is a DB query. Put a **Cloudflare Cache Rule** on it (even 60 s collapses a
   spike into one query/minute) **before flipping `SEARCH_INDEXING`** and inviting crawlers in. Cache
   Rules are on the free CF plan and are separate from the single free rate-limit rule.
+- **OG share images want a Cache Rule too** *(2026-09-19, and this one is about share latency, not
+  Neon — the cards are ISR-cached, so they never touch the DB)*. The routes are **extensionless**
+  (`/opengraph-image-*` and `/c/*/opengraph-image-*/og`), and Cloudflare only caches by file
+  extension by default, so every Facebook / LinkedIn / WhatsApp / Slack scrape currently goes to the
+  origin box in US East: `cf-cache-status: DYNAMIC` on every fetch. The app now sends
+  `Cache-Control: public, max-age=3600, stale-while-revalidate=86400` (matching the listing's own
+  `revalidate = 3600`), but **Cloudflare ignores that on an extensionless URL until a Cache Rule
+  says otherwise.** Add one: match `http.request.uri.path contains "opengraph-image"` → **Eligible
+  for cache**, Edge TTL **respect origin**. Verify with `curl -sI` on a card URL and look for
+  `cf-cache-status: HIT` (purge first — see the `robots.txt` gotcha above; CF PoPs cache
+  independently).
 - **Keep the `/api/healthz/db` monitor at 60 min, not 30.** Each hit wakes Neon ~5 min, so the
   interval *is* a line item: 30 min ≈ $3.20/mo, 60 min ≈ $1.60/mo.
 - The golden rule from the July incident is unchanged and now costs money instead of causing an

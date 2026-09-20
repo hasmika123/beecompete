@@ -17,6 +17,10 @@ const nextConfig: NextConfig = {
   // Shared workspace packages are consumed as source (architecture §16) — Next
   // compiles their TS/JSX rather than expecting a pre-built dist.
   transpilePackages: ['@beecompete/ui', '@beecompete/config'],
+  // sharp re-encodes the competition share card to JPEG (lib/og-jpeg.ts). It's a native
+  // module, so it must stay external and be required at runtime rather than bundled —
+  // otherwise the standalone image ships a broken .node binding.
+  serverExternalPackages: ['sharp'],
 };
 
 // Observability (F8): Sentry wraps the config for error monitoring + tunnel/route

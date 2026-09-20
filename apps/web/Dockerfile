@@ -37,6 +37,22 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 
+# sharp (lib/og-jpeg.ts) is a native module, so it's in serverExternalPackages and stays a plain
+# runtime `require`. Next's tracer copies its pnpm store entries into node_modules/.pnpm but NOT
+# the symlinks pnpm normally puts beside them, so `require('sharp')` fails with MODULE_NOT_FOUND
+# even though every file is present — verified on this image before this step existed. Recreate
+# the links (sharp itself plus its @img/* platform packages, which sharp requires by bare name).
+# Version-agnostic on purpose: the lockfile stays the single source of truth for which sharp ships.
+RUN set -eu; \
+    for store in node_modules/.pnpm/sharp@*/node_modules/sharp node_modules/.pnpm/@img+*/node_modules/@img/*; do \
+      [ -d "$store" ] || continue; \
+      link="node_modules/${store#*/node_modules/}"; \
+      mkdir -p "$(dirname "$link")"; \
+      ln -sfn "/app/$store" "/app/$link"; \
+    done; \
+    chown -R nextjs:nodejs node_modules; \
+    node -e "require('sharp')" # fail the build here, not in prod, if the links are wrong
+
 USER nextjs
 EXPOSE 3000
 CMD ["node", "apps/web/server.js"]

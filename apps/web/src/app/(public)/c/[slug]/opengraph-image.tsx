@@ -4,6 +4,7 @@ import { fetchCompetition } from '@/lib/catalog-api';
 import { eligibilityLabel } from '@/lib/catalog-display';
 import { PublicApiError } from '@/lib/public-api';
 import { BrandRow, GOLD, GROUND, INK, MUTED, OG_FONTS, OG_SIZE } from '@/lib/og';
+import { toJpegResponse } from '@/lib/og-jpeg';
 
 // Per-competition OpenGraph/share card (R1-10; cover art per owner 2026-09-01). Brand chrome
 // (fonts, wordmark) stays inlined, and when the competition has cover art the card's right half
@@ -12,7 +13,10 @@ import { BrandRow, GOLD, GROUND, INK, MUTED, OG_FONTS, OG_SIZE } from '@/lib/og'
 // renders a broken image.
 export const runtime = 'nodejs';
 export const size = OG_SIZE;
-export const contentType = 'image/png';
+// JPEG rather than next/og's PNG (2026-09-19): this card carries a photograph, and as PNG it ran
+// 736-965KB in prod — past the size WhatsApp will render, so competition links previewed with no
+// image at all. See lib/og-jpeg.ts for the measurements.
+export const contentType = 'image/jpeg';
 
 // Right-hand cover panel width; the text column keeps the remaining ~640px.
 const COVER_W = 540;
@@ -48,7 +52,7 @@ export async function generateImageMetadata({ params }: { params: Promise<{ slug
   } catch {
     // keep the generic alt
   }
-  return [{ id: 'og', size: OG_SIZE, contentType: 'image/png', alt }];
+  return [{ id: 'og', size: OG_SIZE, contentType: 'image/jpeg', alt }];
 }
 
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
@@ -80,7 +84,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
     // 404 → the generic brand card (name/facts stay at their defaults).
   }
 
-  return new ImageResponse(
+  const card = new ImageResponse(
     <div
       style={{
         height: '100%',
@@ -171,4 +175,6 @@ export default async function Image({ params }: { params: Promise<{ slug: string
     </div>,
     { ...size, fonts: OG_FONTS },
   );
+
+  return toJpegResponse(card);
 }
