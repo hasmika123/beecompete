@@ -124,6 +124,22 @@ export function Select({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const mirrorRef = useRef<HTMLSelectElement>(null);
+  // RESET-PROOF MIRROR. React 19 resets a `<form action={fn}>` after every submit, and a native
+  // reset puts each option back to its `defaultSelected` — which React never sets on a controlled
+  // select. The mirror went blank while the trigger (React state) still showed the choice, so the
+  // NEXT submit posted nothing: a listing's second save was refused for "categoryId must not be
+  // null" with every field visibly filled. Keeping `defaultSelected` in step with the value makes
+  // the reset restore the current selection instead.
+  useEffect(() => {
+    const mirror = mirrorRef.current;
+    if (!mirror) return;
+    for (const option of Array.from(mirror.options)) {
+      option.defaultSelected = multiple
+        ? picked.includes(option.value)
+        : option.value === (value ?? '');
+    }
+  });
   // The latest onBlur, readable from the outside-click listener without re-subscribing it.
   const onBlurRef = useRef(onBlur);
   useEffect(() => {
@@ -278,6 +294,7 @@ export function Select({
           so a `required` failure can focus it and anchor the bubble on the trigger. */}
       {name && (
         <select
+          ref={mirrorRef}
           name={name}
           required={required}
           multiple={multiple}

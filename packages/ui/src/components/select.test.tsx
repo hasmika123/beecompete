@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { vi } from 'vitest';
@@ -101,5 +101,54 @@ describe('Select', () => {
     await user.keyboard('{ArrowDown}{Escape}');
     expect(screen.queryByRole('listbox')).toBeNull();
     expect(trigger.textContent).toContain('Select…');
+  });
+
+  it('still posts its value after React resets the form on a submit', async () => {
+    // React 19 resets a `<form action>` after every submit. The hidden mirror used to go blank
+    // while the trigger kept showing the choice, so the SECOND save posted nothing.
+    const user = userEvent.setup();
+    const posted: string[] = [];
+    function FormHarness() {
+      const [value, setValue] = useState<string>();
+      const [many, setMany] = useState<string[]>([]);
+      return (
+        <form
+          action={async (fd: FormData) => {
+            posted.push(`${String(fd.get('one'))}|${fd.getAll('many').join(',')}`);
+          }}
+        >
+          <Select
+            name="one"
+            aria-label="One"
+            options={OPTIONS}
+            value={value}
+            onValueChange={setValue}
+          />
+          <Select
+            name="many"
+            multiple
+            aria-label="Many"
+            options={OPTIONS}
+            values={many}
+            onValuesChange={setMany}
+          />
+          <button type="submit">Save</button>
+        </form>
+      );
+    }
+    render(<FormHarness />);
+    await user.click(screen.getByRole('combobox', { name: 'One' }));
+    await user.click(screen.getByRole('option', { name: 'Science' }));
+    await user.click(screen.getByRole('combobox', { name: 'Many' }));
+    await user.click(screen.getByRole('option', { name: 'Math' }));
+    await user.keyboard('{Escape}');
+
+    for (let i = 0; i < 2; i++) {
+      await act(async () => {
+        await user.click(screen.getByRole('button', { name: 'Save' }));
+        await new Promise((r) => setTimeout(r, 20)); // let the action settle and the reset run
+      });
+    }
+    expect(posted).toEqual(['science|math', 'science|math']);
   });
 });

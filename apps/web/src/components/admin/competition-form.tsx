@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useActionState, useEffect, useRef, useState } from 'react';
-import type { ChangeEvent, FocusEvent, MouseEvent, ReactNode } from 'react';
+import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
+import type { ChangeEvent, FocusEvent, FormEvent, MouseEvent, ReactNode } from 'react';
 import {
   Alert,
   ArrowLeft,
@@ -526,6 +526,17 @@ export function CompetitionForm({
   // deploy mid-save) comes back as a state error instead of rejecting — a rejection here has no
   // boundary short of the root error page, which unmounts this form and everything typed into it.
   const [state, formAction, pending] = useActionState(guardFormAction(action), INITIAL);
+  // Submitted through onSubmit, NOT `<form action>`: React 19 resets a form after every action
+  // it runs, which put every uncontrolled field back to the value the page LOADED with — so after
+  // a refused save the curator's edits were silently gone, and the next save posted the old text.
+  // Dispatching the same action in a transition keeps `pending` and the state flow, minus the
+  // reset. The submitter is passed so the decision buttons' `listing_intent` still posts.
+  const [, startTransition] = useTransition();
+  const submitWithoutReset = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget, (e.nativeEvent as SubmitEvent).submitter);
+    startTransition(() => formAction(data));
+  };
   const { toast } = useToast();
   // Only used to move onto a season this form just created — see the save-applied block below.
   const router = useRouter();
@@ -3782,7 +3793,7 @@ export function CompetitionForm({
 
       {mode === 'create' && headerNotice}
 
-      <form action={formAction} noValidate>
+      <form onSubmit={submitWithoutReset} noValidate>
         {/* Import review round-trip: the payload keys this form has no control for, and the
             organizer name behind the "create as extracted" option. Both are read back by
             buildImportApprovalPayload so approving can never quietly drop what was extracted. */}
